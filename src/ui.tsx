@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 export const verdictLabel = (v: string) =>
   ({ passed: "Đạt", partial: "Đạt một phần", not_passed: "Chưa đạt" })[v] ?? v;
@@ -65,6 +67,25 @@ export function Modal({
         </header>
         {children}
       </section>
+    </div>
+  );
+}
+
+export function Breadcrumb({ items }: { items: { label: string; path?: string }[] }) {
+  return (
+    <div className="breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+      {items.map((item, idx) => (
+        <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {item.path ? (
+            <Link to={item.path} style={{ color: '#64748B', fontWeight: 500, textDecoration: 'none' }}>
+              {item.label}
+            </Link>
+          ) : (
+            <span style={{ color: '#0F172A', fontWeight: 600 }}>{item.label}</span>
+          )}
+          {idx < items.length - 1 && <ChevronRight size={14} style={{ color: '#94A3B8' }} />}
+        </span>
+      ))}
     </div>
   );
 }

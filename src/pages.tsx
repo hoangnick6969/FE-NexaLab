@@ -107,8 +107,8 @@ export function Lessons() {
     <>
       <PageHeading
         eyebrow="THƯ VIỆN KIẾN THỨC"
-        title="Bài học cho những trí tò mò"
-        description="Hiểu khái niệm, khám phá mô hình, rồi tự tay kiểm chứng."
+        title="Thư viện bài học"
+        description="Các chủ đề lý thuyết và bài tập tương tác theo chương trình học."
         action={
           manage ? (
             <button
@@ -576,13 +576,13 @@ export function Classes() {
   return (
     <>
       <PageHeading
-        eyebrow="CÙNG NHAU KHÁM PHÁ"
+        eyebrow="LỚP HỌC & NHÓM"
         title="Lớp học của tôi"
-        description="Nơi giáo viên và học sinh kết nối qua từng thử thách."
+        description="Quản lý danh sách lớp học, phân công bài tập và theo dõi tiến độ."
         action={
           user.role === "TEACHER" ? (
             <button className="primary" onClick={() => setModal("create")}>
-              + Tạo lớp
+              <Plus size={16} /> Tạo lớp
             </button>
           ) : user.role === "STUDENT" ? (
             <button className="primary" onClick={() => setModal("join")}>
@@ -745,7 +745,7 @@ export function Classes() {
                         : "/lessons"
                     }
                   >
-                    Mở bài →
+                    Mở bài
                   </Link>
                 )}
               </div>
@@ -898,11 +898,11 @@ export function ProgressPage() {
   return (
     <>
       <PageHeading
-        eyebrow="TỪNG BƯỚC TIẾN BỘ"
+        eyebrow="TIẾN ĐỘ & KẾT QUẢ"
         title={
           user.role === "PARENT" ? "Đồng hành cùng con" : "Tiến độ học tập"
         }
-        description="Mỗi lần thử đều là một bước tiến trong hành trình hiểu biết."
+        description="Thống kê lịch sử thực hành, tỉ lệ hoàn thành bài tập và mức độ hiểu bài."
       />
       {user.role === "PARENT" && (
         <section className="panel">
@@ -941,10 +941,10 @@ export function ProgressPage() {
         <Empty>
           {user.role === "TEACHER" ? (
             <Link to="/classes">
-              Mở lớp học để xem phân tích từng học sinh →
+              Mở lớp học để xem phân tích từng học sinh
             </Link>
           ) : (
-            <Link to="/admin">Mở quản trị để xem người dùng →</Link>
+            <Link to="/admin">Mở quản trị để xem người dùng</Link>
           )}
         </Empty>
       ) : (
@@ -1027,7 +1027,7 @@ export function Saved() {
     <>
       <PageHeading
         title="Thí nghiệm đã lưu"
-        description="Mở lại cấu hình, tiếp tục thử và khám phá điều mới."
+        description="Danh sách các trạng thái mô phỏng và kết quả thí nghiệm bạn đã lưu."
       />
       <ErrorBox error={q.error || del.error} />
       <div className="lesson-grid">
@@ -1041,7 +1041,7 @@ export function Saved() {
             </Badge>
             <div className="card-footer">
               <Link to={"/labs/" + s.labId} state={{ labState: s.labState }}>
-                Mở lại thí nghiệm →
+                Mở lại thí nghiệm
               </Link>
               <button
                 className="icon-button"
@@ -1123,3 +1123,28 @@ export function SettingsPage() {
   );
 }
 export { default as AdminPage } from "./Admin";
+export function WebGLFallbackPage() {
+  return (
+    <div className="login" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <section className="login-form" style={{ textAlign: 'center', padding: '40px' }}>
+        <div>
+          <h2 style={{ fontSize: '22px', marginBottom: '16px' }}>Không thể hiển thị trang</h2>
+          <p className="muted" style={{ marginBottom: '24px', fontSize: '14px' }}>
+            Hãy tải lại. Nếu mô hình 3D không hiển thị, kiểm tra trình duyệt có hỗ trợ WebGL.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button 
+              className="secondary" 
+              onClick={() => window.location.reload()}
+            >
+              Tải lại trang
+            </button>
+            <Link to="/" className="primary button" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '11px 20px', borderRadius: '12px', background: 'var(--blue)', color: 'white', textDecoration: 'none', fontWeight: 600 }}>
+              Quay lại trang chủ
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
