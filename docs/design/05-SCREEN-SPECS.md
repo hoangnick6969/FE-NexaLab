@@ -3,7 +3,12 @@
 Hệ thống thiết kế đã cung cấp đầy đủ token và component để xây dựng mọi màn hình. Không tạo thêm pattern mới nếu không thực sự cần thiết. Các màn hình được phân loại theo mức độ ưu tiên.
 
 ## P0 — Cốt lõi (Bắt buộc)
-1. **Đăng nhập / Đăng ký / Quên mật khẩu** (3 trạng thái).
+1. **Xác thực theo đối tượng**:
+   - Học sinh đăng nhập mặc định bằng username và mật khẩu do giáo viên cấp, không tự đăng ký và không dùng email để khôi phục.
+   - Lần đăng nhập đầu tiên bắt buộc đổi mật khẩu tạm trước khi vào ứng dụng.
+   - Giáo viên, phụ huynh và quản trị viên chuyển sang tab người lớn để đăng nhập bằng email.
+   - Chỉ phụ huynh được tự đăng ký ở MVP; quên mật khẩu qua email chỉ dành cho người lớn.
+   - Giáo viên cấp hoặc reset tài khoản học sinh trong lớp và nhận thẻ credential chỉ hiển thị một lần.
 2. **Dashboard Học sinh**: Tương quan Hero banner, Stat cards, Assignments.
 3. **Trang Bài học**: Video + lý thuyết + quiz.
 4. **Lab Mạch điện (Sandbox)**: Trải nghiệm tự do.

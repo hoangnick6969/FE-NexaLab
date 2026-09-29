@@ -84,6 +84,7 @@ export default function App() {
       </div>
     );
   if (!user) return <Login />;
+  if (user.mustChangePassword) return <FirstLoginPassword />;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -361,7 +362,11 @@ export default function App() {
   );
 }
 function Login() {
-  const [mode, setMode] = useState(
+  const resetToken = new URLSearchParams(location.search).get("reset");
+  const [audience, setAudience] = useState<"student" | "adult">(
+    resetToken ? "adult" : "student",
+  );
+  const [mode, setMode] = useState<"login" | "register" | "forgot" | "reset">(
     new URLSearchParams(location.search).has("reset") ? "reset" : "login",
   );
   const [message, setMessage] = useState("");
@@ -381,11 +386,13 @@ function Login() {
       setMessage("Đã đổi mật khẩu. Vui lòng đăng nhập.");
       return;
     }
-    const r = await api(
-      "/auth/" + (mode === "register" ? "register" : "login"),
-      "POST",
-      mode === "register" ? { ...b, consent: true } : b,
-    );
+    const path =
+      mode === "register"
+        ? "/auth/register"
+        : audience === "student"
+          ? "/auth/student/login"
+          : "/auth/login";
+    const r = await api(path, "POST", mode === "register" ? { ...b, role: "PARENT", consent: true } : b);
     useAuth.getState().set(r.user, r.accessToken);
   });
   return (
@@ -419,46 +426,65 @@ function Login() {
           <Badge>CHÀO MỪNG ĐẾN NEXALAB</Badge>
           <h2>
             {mode === "login"
-              ? "Bắt đầu khám phá"
+              ? audience === "student"
+                ? "Tiếp tục học tập"
+                : "Đăng nhập dành cho người lớn"
               : mode === "register"
-                ? "Đăng ký tài khoản"
+                ? "Tạo tài khoản phụ huynh"
                 : mode === "forgot"
                   ? "Quên mật khẩu"
                   : "Đặt mật khẩu mới"}
           </h2>
           <p className="muted">
             {mode === "login"
-              ? "Đăng nhập để tiếp tục hành trình học tập."
-              : "Chọn vai trò và điền thông tin để đăng ký tài khoản mới."}
+              ? audience === "student"
+                ? "Dùng tên đăng nhập giáo viên đã cấp cho em."
+                : "Dành cho giáo viên, phụ huynh và quản trị viên."
+              : mode === "register"
+                ? "Phụ huynh dùng email của mình và liên kết với con sau khi đăng nhập."
+                : mode === "forgot"
+                  ? "Nhập email để nhận hướng dẫn đặt lại mật khẩu."
+                  : "Mật khẩu mới cần có ít nhất 12 ký tự."}
           </p>
+          {mode === "login" && (
+            <div className="auth-audience" role="tablist" aria-label="Loại tài khoản">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={audience === "student"}
+                className={audience === "student" ? "active" : ""}
+                onClick={() => setAudience("student")}
+              >
+                Học sinh
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={audience === "adult"}
+                className={audience === "adult" ? "active" : ""}
+                onClick={() => setAudience("adult")}
+              >
+                Giáo viên · Phụ huynh · Admin
+              </button>
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
             }}
           >
-            {mode === "register" && (
-              <>
-                <Field label="Họ và tên" name="fullName" required />
-                <div style={{ marginBottom: '16px' }}>
-                  <label className="field">
-                    <span>Vai trò</span>
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="STUDENT" required defaultChecked /> Học sinh
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="PARENT" required /> Phụ huynh
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="TEACHER" required /> Giáo viên
-                      </label>
-                    </div>
-                  </label>
-                </div>
-              </>
-            )}
-            {mode !== "reset" && (
+            {mode === "register" && <Field label="Họ và tên" name="fullName" required autoComplete="name" />}
+            {mode === "login" && audience === "student" ? (
+              <Field
+                label="Tên đăng nhập"
+                name="username"
+                required
+                autoCapitalize="none"
+                autoComplete="username"
+                placeholder="Ví dụ: minhanh.7a"
+              />
+            ) : mode !== "reset" ? (
               <Field
                 label="Email"
                 name="email"
@@ -466,7 +492,7 @@ function Login() {
                 required
                 autoComplete="email"
               />
-            )}
+            ) : null}
             {mode !== "forgot" && (
               <Field
                 label="Mật khẩu"
@@ -488,11 +514,11 @@ function Login() {
             )}
             <ErrorBox error={action.error} />
             {message && <p className="notice">{message}</p>}
-            <button className="primary wide" disabled={action.isPending}>
+            <button className="primary wide auth-submit" disabled={action.isPending}>
               {action.isPending
                 ? "Đang xử lý…"
                 : mode === "login"
-                  ? "Đăng nhập"
+                  ? audience === "student" ? "Tiếp tục học tập" : "Đăng nhập"
                   : mode === "register"
                     ? "Tạo tài khoản"
                     : "Xác nhận"}
@@ -500,27 +526,65 @@ function Login() {
             </button>
           </form>
           <div className="login-links">
-            <button
-              onClick={() => {
-                setMode(mode === "forgot" ? "login" : "forgot");
-                setMessage("");
-              }}
-            >
-              Quên mật khẩu?
-            </button>
-            <button
-              onClick={() => {
-                setMode(mode === "login" ? "register" : "login");
-                setMessage("");
-              }}
-            >
-              {mode === "login" ? "Đăng ký tài khoản mới" : "Quay lại đăng nhập"}
-            </button>
+            {mode === "login" && audience === "student" ? (
+              <p>Quên mật khẩu? Hãy nhờ giáo viên cấp lại.</p>
+            ) : (
+              <button onClick={() => { setMode(mode === "forgot" ? "login" : "forgot"); setMessage(""); }}>
+                {mode === "forgot" ? "Quay lại đăng nhập" : "Quên mật khẩu?"}
+              </button>
+            )}
+            {audience === "adult" && mode !== "reset" && (
+              <button onClick={() => { setMode(mode === "register" ? "login" : "register"); setMessage(""); }}>
+                {mode === "register" ? "Quay lại đăng nhập" : "Tạo tài khoản phụ huynh"}
+              </button>
+            )}
           </div>
           <p className="tiny muted">
             Không cần camera. Các thí nghiệm được thực hiện hoàn toàn trên trình
             duyệt.
           </p>
+        </div>
+      </section>
+    </div>
+  );
+}
+function FirstLoginPassword() {
+  const user = useAuth((state) => state.user)!;
+  const action = useAction(async (body: any) => {
+    if (body.password !== body.confirmPassword)
+      throw new Error("Hai mật khẩu mới chưa trùng nhau");
+    await api("/auth/password", "POST", {
+      currentPassword: body.currentPassword,
+      password: body.password,
+    });
+    useAuth.getState().set(null, null);
+  });
+  return (
+    <div className="login password-gate">
+      <section className="login-story">
+        <div className="brand"><Atom /> NexaLab.</div>
+        <Badge>BẢO VỆ TÀI KHOẢN CỦA EM</Badge>
+        <h1>Mật khẩu riêng,<br /><em>hành trình riêng.</em></h1>
+        <p>Chỉ em nên biết mật khẩu mới. Đừng dùng lại mật khẩu tạm giáo viên đã cấp.</p>
+        <small>Bước cuối trước khi vào phòng học</small>
+      </section>
+      <section className="login-form">
+        <div>
+          <Badge>LẦN ĐĂNG NHẬP ĐẦU TIÊN</Badge>
+          <h2>Tạo mật khẩu mới</h2>
+          <p className="muted">Xin chào {user.fullName}. Mật khẩu cần có ít nhất 12 ký tự.</p>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            action.mutate(Object.fromEntries(new FormData(event.currentTarget)));
+          }}>
+            <Field label="Mật khẩu tạm" name="currentPassword" type="password" required autoComplete="current-password" />
+            <Field label="Mật khẩu mới" name="password" type="password" minLength={12} required autoComplete="new-password" />
+            <Field label="Nhập lại mật khẩu mới" name="confirmPassword" type="password" minLength={12} required autoComplete="new-password" />
+            <ErrorBox error={action.error} />
+            <button className="primary wide auth-submit" disabled={action.isPending}>
+              {action.isPending ? "Đang lưu…" : "Lưu và đăng nhập lại"}<ArrowRight size={17} />
+            </button>
+          </form>
         </div>
       </section>
     </div>

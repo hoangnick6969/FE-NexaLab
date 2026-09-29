@@ -19,13 +19,20 @@ class Boundary extends React.Component<
   }
   render() {
     return this.state.error ? (
-      <main className="error-page">
+      <main className="error-page" style={{ textAlign: "center", padding: "40px" }}>
         <h1>Không thể hiển thị trang</h1>
-        <p>
+        <p style={{ marginBottom: "24px" }}>
           Hãy tải lại. Nếu mô hình 3D không hiển thị, kiểm tra trình duyệt có hỗ
           trợ WebGL.
         </p>
-        <button onClick={() => location.reload()}>Tải lại</button>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button className="secondary" onClick={() => location.reload()}>
+            Tải lại
+          </button>
+          <button className="primary" onClick={() => { location.href = "/"; }}>
+            Quay lại trang chủ
+          </button>
+        </div>
       </main>
     ) : (
       this.props.children

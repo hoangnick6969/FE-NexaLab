@@ -9,6 +9,8 @@ import {
   Users,
   Trash2,
   Save,
+  Copy,
+  KeyRound,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -551,6 +553,11 @@ export function Classes() {
   const [selected, setSelected] = useState<string | null>(null);
   const [modal, setModal] = useState("");
   const [contentId, setContentId] = useState("circuit");
+  const [credentials, setCredentials] = useState<{
+    username: string;
+    temporaryPassword: string;
+    expiresAt: string;
+  } | null>(null);
   const q = useQuery({
     queryKey: ["classes"],
     queryFn: () => api("/classes"),
@@ -644,10 +651,16 @@ export function Classes() {
                     <tr key={e.studentId}>
                       <td>
                         {e.student.fullName}
-                        <small>{e.student.email}</small>
+                        <small>@{e.student.username}</small>
                       </td>
                       <td>
-                        <Badge>{e.approved ? "Đã duyệt" : "Chờ duyệt"}</Badge>
+                        <Badge>
+                          {e.student.mustChangePassword
+                            ? "Chờ đổi mật khẩu"
+                            : e.approved
+                              ? "Đang hoạt động"
+                              : "Chờ duyệt"}
+                        </Badge>
                       </td>
                       <td>
                         {!e.approved && (
@@ -663,6 +676,25 @@ export function Classes() {
                             Duyệt
                           </button>
                         )}
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            act.mutate(
+                              {
+                                path: `/classes/${selected}/students/${e.studentId}/reset-password`,
+                                method: "POST",
+                              },
+                              {
+                                onSuccess: (data: any) => {
+                                  setCredentials(data.credentials);
+                                  setModal("credentials");
+                                },
+                              },
+                            )
+                          }
+                        >
+                          Cấp lại mật khẩu
+                        </button>
                         <button
                           className="danger-text"
                           onClick={() =>
@@ -760,6 +792,7 @@ export function Classes() {
               join: "Tham gia lớp",
               assign: "Giao bài",
               student: "Cấp tài khoản học sinh",
+              credentials: "Thông tin đăng nhập tạm",
             }[modal] ?? ""
           }
           onClose={() => setModal("")}
@@ -785,13 +818,23 @@ export function Classes() {
                 b.studentIds = new FormData(e.currentTarget).getAll("studentIds");
               }
               if (modal === "student") {
-                path = "/users";
-                b.role = "STUDENT";
+                path = `/classes/${selected}/students`;
                 b.grade = Number(b.grade);
-                b.classId = selected;
                 b.consent = true;
               }
-              act.mutate({ path, body: b }, { onSuccess: () => setModal("") });
+              act.mutate(
+                { path, body: b },
+                {
+                  onSuccess: (data: any) => {
+                    if (modal === "student") {
+                      setCredentials(data.credentials);
+                      setModal("credentials");
+                    } else {
+                      setModal("");
+                    }
+                  },
+                },
+              );
             }}
           >
             {modal === "create" && (
@@ -845,12 +888,14 @@ export function Classes() {
             {modal === "student" && (
               <>
                 <Field label="Họ tên" name="fullName" required />
-                <Field label="Email" name="email" type="email" required />
                 <Field
-                  label="Mật khẩu ban đầu"
-                  name="password"
-                  type="password"
-                  minLength={12}
+                  label="Tên đăng nhập"
+                  name="username"
+                  placeholder="Ví dụ: minhanh.7a"
+                  pattern="[a-z0-9][a-z0-9._-]*[a-z0-9]"
+                  minLength={3}
+                  maxLength={32}
+                  autoCapitalize="none"
                   required
                 />
                 <Field
@@ -865,12 +910,42 @@ export function Classes() {
                   <input type="checkbox" required />
                   Nhà trường đã có chấp thuận xử lý dữ liệu học sinh.
                 </label>
+                <p className="tiny muted">
+                  NexaLab sẽ tạo mật khẩu tạm có hiệu lực trong 24 giờ. Học sinh
+                  phải đổi mật khẩu ngay lần đăng nhập đầu tiên.
+                </p>
               </>
             )}
+            {modal === "credentials" && credentials && (
+              <div className="credentials-card">
+                <div className="credentials-icon"><KeyRound size={22} /></div>
+                <p className="muted">
+                  Chỉ hiển thị một lần. Hãy gửi riêng cho học sinh.
+                </p>
+                <dl>
+                  <div><dt>Tên đăng nhập</dt><dd>{credentials.username}</dd></div>
+                  <div><dt>Mật khẩu tạm</dt><dd>{credentials.temporaryPassword}</dd></div>
+                </dl>
+                <p className="tiny muted">
+                  Hết hạn lúc {new Date(credentials.expiresAt).toLocaleString("vi-VN")}.
+                </p>
+                <button
+                  type="button"
+                  className="secondary wide"
+                  onClick={() => navigator.clipboard.writeText(
+                    `Tên đăng nhập: ${credentials.username}\nMật khẩu tạm: ${credentials.temporaryPassword}`,
+                  )}
+                >
+                  <Copy size={16} /> Sao chép thông tin
+                </button>
+              </div>
+            )}
             <ErrorBox error={act.error} />
-            <button className="primary wide" disabled={act.isPending}>
-              Xác nhận
-            </button>
+            {modal !== "credentials" && (
+              <button className="primary wide" disabled={act.isPending}>
+                {act.isPending ? "Đang xử lý…" : "Xác nhận"}
+              </button>
+            )}
           </form>
         </Modal>
       )}
@@ -1075,7 +1150,7 @@ export function SettingsPage() {
       <PageHeading title="Cài đặt tài khoản" />
       <section className="panel narrow">
         <h2>{user.fullName}</h2>
-        <p>{user.email}</p>
+        <p>{user.role === "STUDENT" ? `@${user.username}` : user.email}</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();

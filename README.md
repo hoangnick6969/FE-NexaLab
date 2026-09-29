@@ -61,14 +61,14 @@ Mở **http://localhost:5173**. Trong môi trường dev, Vite proxy `/api` sang
 
 Backend có hướng dẫn tạo database, migration và seed tại [README BE](https://github.com/hoangnick6969/BE-NexaLab#bắt-đầu). Các tài khoản seed:
 
-| Vai trò | Email |
+| Vai trò | Định danh đăng nhập |
 | --- | --- |
-| Học sinh | `student@nexalab.local` |
+| Học sinh | `nguyenan.8a` (tên đăng nhập) |
 | Giáo viên | `teacher@nexalab.local` |
 | Phụ huynh | `parent@nexalab.local` |
 | Admin | `admin@nexalab.local` |
 
-Mật khẩu do người thiết lập backend chọn qua `SEED_PASSWORD`. Mã lớp mẫu là `NEXA8A`.
+Mật khẩu do người thiết lập backend chọn qua `SEED_PASSWORD`. Học sinh dùng tên đăng nhập do giáo viên cấp; giáo viên, phụ huynh và quản trị viên dùng email. Mã lớp mẫu là `NEXA8A`.
 
 ### Cấu hình API
 

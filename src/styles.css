@@ -1708,8 +1708,44 @@ td small {
 .login-form form {
   margin-top: 30px;
 }
+.auth-audience {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.8fr);
+  gap: 4px;
+  margin-top: 24px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+.auth-audience button {
+  min-height: 44px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.auth-audience button.active {
+  background: #fff;
+  color: #1c453a;
+  box-shadow: 0 1px 4px rgba(30, 58, 45, 0.1);
+}
+.auth-audience button:focus-visible,
+.login-links button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+}
+.auth-submit {
+  min-height: 48px;
+  justify-content: center;
+}
 .login-form .field {
   margin-bottom: 22px;
+}
+.login-form input {
+  min-height: 46px;
+  font-size: 14px;
 }
 .login-links {
   display: flex;
@@ -1717,6 +1753,51 @@ td small {
   margin: 20px 0 35px;
   color: #759064;
   font-size: 10px;
+}
+.login-links p {
+  line-height: 1.6;
+}
+.credentials-card {
+  padding: 8px 0;
+}
+.credentials-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: #1c453a;
+  background: #edf3e9;
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+.credentials-card dl {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 12px;
+}
+.credentials-card dl div {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.credentials-card dt {
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+.credentials-card dd {
+  margin: 0;
+  font: 650 14px "Manrope", sans-serif;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 .boot,
 .error-page {
@@ -1892,6 +1973,16 @@ td small {
   }
 }
 @media (max-width: 680px) {
+  body {
+    min-height: 100dvh;
+    height: auto;
+    padding: 0;
+    overflow: auto;
+  }
+  #root {
+    min-height: 100dvh;
+    overflow: visible;
+  }
   .main {
     padding: 24px 16px;
   }
@@ -1974,6 +2065,9 @@ td small {
   }
   .login {
     grid-template-columns: 1fr;
+    width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
   }
   .login-story {
     display: none;
@@ -1983,6 +2077,9 @@ td small {
   }
   .login-form h2 {
     font-size: 27px;
+  }
+  .auth-audience {
+    grid-template-columns: 1fr;
   }
   .role-note {
     flex-wrap: wrap;

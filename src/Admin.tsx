@@ -50,6 +50,7 @@ export default function Admin() {
                 setEdit(
                   tab === "users"
                     ? {
+                        username: "",
                         email: "",
                         fullName: "",
                         password: "",
@@ -102,7 +103,7 @@ export default function Admin() {
                 <td>
                   {tab === "users" ? (
                     <>
-                      {row.email} <Badge>{row.role}</Badge>
+                      {row.username ? `@${row.username}` : row.email} <Badge>{row.role}</Badge>
                     </>
                   ) : tab === "labs" ? (
                     <Badge>{row.status}</Badge>
@@ -176,15 +177,27 @@ export default function Admin() {
                 />
                 {!edit.id && (
                   <>
-                    <Field
-                      label="Email"
-                      type="email"
-                      value={edit.email}
-                      required
-                      onChange={(e) =>
-                        setEdit({ ...edit, email: e.target.value })
-                      }
-                    />
+                    {edit.role === "STUDENT" ? (
+                      <Field
+                        label="Tên đăng nhập"
+                        value={edit.username}
+                        pattern="[a-z0-9][a-z0-9._-]*[a-z0-9]"
+                        minLength={3}
+                        maxLength={32}
+                        required
+                        onChange={(e) => setEdit({ ...edit, username: e.target.value.toLowerCase() })}
+                      />
+                    ) : (
+                      <Field
+                        label="Email"
+                        type="email"
+                        value={edit.email}
+                        required
+                        onChange={(e) =>
+                          setEdit({ ...edit, email: e.target.value })
+                        }
+                      />
+                    )}
                     <Field
                       label="Mật khẩu"
                       type="password"
@@ -200,7 +213,7 @@ export default function Admin() {
                       <select
                         value={edit.role}
                         onChange={(e) =>
-                          setEdit({ ...edit, role: e.target.value })
+                          setEdit({ ...edit, role: e.target.value, email: "", username: "" })
                         }
                       >
                         {["STUDENT", "TEACHER", "PARENT", "ADMIN"].map((r) => (
