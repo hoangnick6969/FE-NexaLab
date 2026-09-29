@@ -40,7 +40,7 @@ export default function Admin() {
   return (
     <>
       <PageHeading
-        eyebrow="QUẢN TRỊ"
+        eyebrow="VẬN HÀNH NEXALAB"
         title="Quản trị hệ thống"
         action={
           tab !== "labs" ? (
