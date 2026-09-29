@@ -11,14 +11,31 @@ export const useAuth = create<{
   token: string | null;
   set: (user: User | null, token: string | null) => void;
 }>((set) => ({
-  user: { id: "1", email: "test@nexalab.local", fullName: "UI Tester", role: "STUDENT", grade: 8 },
-  token: "mock",
+  user: null,
+  token: null,
   set: (user, token) => set({ user, token }),
 }));
 const base = import.meta.env.VITE_API_URL ?? "/api";
 let refreshPromise: Promise<boolean> | null = null;
 export async function restore() {
-  return true;
+  if (!refreshPromise)
+    refreshPromise = (async () => {
+      try {
+        const r = await fetch(base + "/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!r.ok) return false;
+        const data = await r.json();
+        useAuth.getState().set(data.user, data.accessToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  return refreshPromise;
 }
 export async function api<T = any>(
   path: string,
@@ -26,30 +43,23 @@ export async function api<T = any>(
   body?: unknown,
   retry = true,
 ): Promise<T> {
-  try {
-    const token = useAuth.getState().token;
-    const r = await fetch(base + path, {
-      method,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: "Bearer " + token } : {}),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    if (r.status === 401 && retry && !path.startsWith("/auth/")) {
-      if (await restore()) return api(path, method, body, false);
-      useAuth.getState().set(null, null);
-    }
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.message ?? "Không thể kết nối máy chủ");
-    return data;
-  } catch (e) {
-    console.warn("API Error bypassed for UI testing:", path, e);
-    if (path.includes("/assignments")) return [] as any;
-    if (path.includes("/progress")) return { progress: [], attempts: [] } as any;
-    return {} as any;
+  const token = useAuth.getState().token;
+  const r = await fetch(base + path, {
+    method,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (r.status === 401 && retry && !path.startsWith("/auth/")) {
+    if (await restore()) return api(path, method, body, false);
+    useAuth.getState().set(null, null);
   }
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.message ?? "Không thể kết nối máy chủ");
+  return data;
 }
 
 export async function uploadFile(file: File) {

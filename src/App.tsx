@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import {
   Routes,
   Route,
@@ -21,19 +21,13 @@ import {
   Bell,
   ChevronRight,
   Settings,
+  Sparkles,
   ArrowRight,
   GraduationCap,
-  Search,
-  User,
-  BarChart2,
-  HelpCircle,
-  Flag,
-  Award,
-  Flame,
 } from "lucide-react";
 import { api, useAuth, restore } from "./api";
 import { queryClient } from "./main";
-import { Badge, Empty, ErrorBox, Field, useAction, Breadcrumb } from "./ui";
+import { Badge, Empty, ErrorBox, Field, useAction } from "./ui";
 import {
   Lessons,
   Classes,
@@ -41,7 +35,6 @@ import {
   Saved,
   SettingsPage,
   AdminPage,
-  WebGLFallbackPage,
 } from "./pages";
 const Lab = lazy(() => import("./labs/Lab"));
 const names = {
@@ -53,26 +46,6 @@ const names = {
 export default function App() {
   const { user } = useAuth();
   const [ready, setReady] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
-  const location = useLocation();
-  const profileRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setShowProfile(false);
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
   useEffect(() => {
     restore().finally(() => setReady(true));
   }, []);
@@ -80,7 +53,7 @@ export default function App() {
     return (
       <div className="boot">
         <Atom size={42} />
-        <p>Đang tải dữ liệu…</p>
+        <p>Đang mở phòng khám phá…</p>
       </div>
     );
   if (!user) return <Login />;
@@ -102,51 +75,57 @@ export default function App() {
             <small>Khoa học tự nhiên · THCS</small>
           </div>
         </div>
-        <div className="sidebar-scroll">
-          <p className="nav-caption">DANH MỤC CHÍNH</p>
-          <nav>
-            <NavLink end to="/">
-              <LayoutDashboard />
-              Tổng quan
-            </NavLink>
-            {["STUDENT", "TEACHER"].includes(user.role) && (
-              <NavLink to="/labs">
-                <FlaskConical />
-                Phòng thí nghiệm <span className="nav-count">3</span>
-              </NavLink>
-            )}
-            <NavLink to="/lessons">
-              <BookOpen />
-              Thư viện bài học
-            </NavLink>
-            {["STUDENT", "TEACHER", "ADMIN"].includes(user.role) && (
-              <NavLink to="/classes">
-                <Users />
-                Lớp học của tôi
-              </NavLink>
-            )}
-            <NavLink to="/progress">
-              <ChartNoAxesCombined />
-              {user.role === "PARENT" ? "Tiến độ của con" : "Tiến độ học tập"}
-            </NavLink>
-            {user.role === "STUDENT" && (
-              <NavLink to="/saved">
-                <Bookmark />
-                Thí nghiệm đã lưu
-              </NavLink>
-            )}
-            {user.role === "ADMIN" && (
-              <NavLink to="/admin">
-                <Settings />
-                Quản trị
-              </NavLink>
-            )}
-          </nav>
-          <NavLink className="settings-link" to="/settings">
-            <Settings size={18} />
-            Cài đặt tài khoản
+        <p className="nav-caption">KHÁM PHÁ & HỌC TẬP</p>
+        <nav>
+          <NavLink end to="/">
+            <LayoutDashboard />
+            Tổng quan
           </NavLink>
+          {["STUDENT", "TEACHER"].includes(user.role) && (
+            <NavLink to="/labs">
+              <FlaskConical />
+              Phòng thí nghiệm <span className="nav-count">3</span>
+            </NavLink>
+          )}
+          <NavLink to="/lessons">
+            <BookOpen />
+            Thư viện bài học
+          </NavLink>
+          {["STUDENT", "TEACHER", "ADMIN"].includes(user.role) && (
+            <NavLink to="/classes">
+              <Users />
+              Lớp học của tôi
+            </NavLink>
+          )}
+          <NavLink to="/progress">
+            <ChartNoAxesCombined />
+            {user.role === "PARENT" ? "Tiến độ của con" : "Tiến độ học tập"}
+          </NavLink>
+          {user.role === "STUDENT" && (
+            <NavLink to="/saved">
+              <Bookmark />
+              Thí nghiệm đã lưu
+            </NavLink>
+          )}
+          {user.role === "ADMIN" && (
+            <NavLink to="/admin">
+              <Settings />
+              Quản trị
+            </NavLink>
+          )}
+        </nav>
+        <div className="sidebar-tip">
+          <Sparkles size={22} />
+          <b>Mỗi câu hỏi là một khởi đầu.</b>
+          <p>Thử nghiệm, quan sát và tìm ra câu trả lời của riêng em.</p>
+          <Link to="/lessons">
+            Khám phá hôm nay <ArrowUpRight size={15} />
+          </Link>
         </div>
+        <NavLink className="settings-link" to="/settings">
+          <Settings size={18} />
+          Cài đặt tài khoản
+        </NavLink>
         <div className="user-card">
           <span className="avatar">
             {user.fullName.split(" ").at(-1)?.slice(0, 1)}
@@ -170,155 +149,20 @@ export default function App() {
       </aside>
       <div className="main-wrap">
         <header className="topbar">
-          <Breadcrumb 
-            items={[
-              { label: 'Không gian học tập' },
-              { label: 'NexaLab' }
-            ]} 
-          />
-
-          {/* ── Search ── */}
-          <div className="topbar-search" ref={searchRef}>
-            <Search size={15} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Tìm bài học, chủ đề..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              autoComplete="off"
-            />
-            {searchFocused && (
-              <div className="search-results">
-                <div className="search-results-header">Gợi ý</div>
-                {[
-                  { icon: <FlaskConical size={16} />, iconBg: '#DBEAFE', iconColor: '#1D4ED8', title: 'Phản ứng oxi hoá khử', meta: 'Hóa học · Lớp 9' },
-                  { icon: <BookOpen size={16} />, iconBg: '#F0FDF4', iconColor: '#16A34A', title: 'Mạch điện đơn giản', meta: 'Vật lý · Lớp 8' },
-                  { icon: <FlaskConical size={16} />, iconBg: '#FFF7ED', iconColor: '#EA580C', title: 'Khúc xạ ánh sáng', meta: 'Vật lý · Lớp 7' },
-                  { icon: <BookOpen size={16} />, iconBg: '#FDF4FF', iconColor: '#9333EA', title: 'Tế bào sinh vật', meta: 'Sinh học · Lớp 8' },
-                ].filter(r => !searchQuery || r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.meta.toLowerCase().includes(searchQuery.toLowerCase()) || searchQuery.length === 0).map((r, i) => (
-                  <div key={i} className="search-result-item">
-                    <div className="search-result-icon" style={{ background: r.iconBg, color: r.iconColor }}>{r.icon}</div>
-                    <div>
-                      <div className="search-result-title">{r.title}</div>
-                      <div className="search-result-meta">{r.meta}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div>
+            <span>Không gian học tập</span>
+            <ChevronRight size={14} />
+            <b>NexaLab</b>
           </div>
-
-          {/* ── Right actions ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: '#FEF2F2', color: '#E11D48', padding: '6px 12px', borderRadius: '999px', fontWeight: 600, fontSize: '12px', gap: '5px' }}>
-              <Flame size={14} />
-              <span>3 ngày</span>
-            </div>
-
-            {/* Notification dropdown */}
-            <div className="tb-dropdown-wrap" ref={notifRef}>
-              <button 
-                className="icon-button" 
-                onClick={() => { setShowNotifications(p => !p); setShowProfile(false); }}
-                style={{ position: 'relative', background: showNotifications ? '#EFF6FF' : '#F1F5F9', borderRadius: '999px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showNotifications ? 'var(--blue)' : undefined }}
-              >
-                <Bell size={16} />
-                <span style={{ position: 'absolute', top: '0px', right: '0px', background: '#E11D48', color: 'white', fontSize: '9px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '999px', fontWeight: 700 }}>2</span>
-              </button>
-              {showNotifications && (
-                <div className="tb-dropdown notif-dropdown">
-                  <div className="notif-dropdown-header">
-                    <h4>Thông báo</h4>
-                    <button className="notif-mark-all">Xem tất cả</button>
-                  </div>
-                  <div className="notif-list">
-                    <div className="notif-item unread">
-                      <div className="notif-dot" />
-                      <div className="notif-item-icon" style={{ background: '#DBEAFE', color: '#1D4ED8' }}><FlaskConical size={16} /></div>
-                      <div className="notif-item-body">
-                        <div className="notif-item-title">Thử nghiệm Hóa học đã được chấm điểm</div>
-                        <div className="notif-item-desc">Bài "Phản ứng Oxi hoá khử" của bạn đã được giáo viên xem xét.</div>
-                        <div className="notif-item-time">5 phút trước</div>
-                      </div>
-                    </div>
-                    <div className="notif-item unread">
-                      <div className="notif-dot" />
-                      <div className="notif-item-icon" style={{ background: '#FEF9C3', color: '#CA8A04' }}><Users size={16} /></div>
-                      <div className="notif-item-body">
-                        <div className="notif-item-title">Giáo viên giao bài tập mới</div>
-                        <div className="notif-item-desc">Lớp "Khoa học lớp 9" có bài mới cần hoàn thành trước 20/9.</div>
-                        <div className="notif-item-time">2 giờ trước</div>
-                      </div>
-                    </div>
-                    <div className="notif-item">
-                      <div style={{ width: '7px', flexShrink: 0 }} />
-                      <div className="notif-item-icon" style={{ background: '#F0FDF4', color: '#16A34A' }}><ChartNoAxesCombined size={16} /></div>
-                      <div className="notif-item-body">
-                        <div className="notif-item-title">Tiến độ tuần này</div>
-                        <div className="notif-item-desc">Bạn đã hoàn thành 3/5 mục tiêu tuần. Thêm 2 bài nữa nhé!</div>
-                        <div className="notif-item-time">Hôm qua</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="notif-dropdown-footer">Xem tất cả thông báo</div>
-                </div>
-              )}
-            </div>
-
-            {/* Profile dropdown */}
-            <div className="tb-dropdown-wrap" ref={profileRef}>
-              <button
-                onClick={() => { setShowProfile(p => !p); setShowNotifications(false); }}
-                aria-label="Tài khoản"
-                className="avatar small"
-                style={{ margin: 0, cursor: 'pointer', outline: showProfile ? '2px solid var(--blue)' : 'none', outlineOffset: '2px' }}
-              >
-                {user.fullName.charAt(0)}
-              </button>
-              {showProfile && (
-                <div className="tb-dropdown profile-dropdown">
-                  <div className="profile-dropdown-header">
-                    <div className="profile-dd-avatar">{user.fullName.charAt(0)}</div>
-                    <div>
-                      <div className="profile-dd-name">{user.fullName}</div>
-                      <div className="profile-dd-role">{names[user.role]}</div>
-                    </div>
-                  </div>
-                  <div className="profile-menu">
-                    <Link to="/settings" className="profile-menu-item" onClick={() => setShowProfile(false)}>
-                      <User size={15} /> Thông tin cá nhân
-                    </Link>
-                    <Link to="/progress" className="profile-menu-item" onClick={() => setShowProfile(false)}>
-                      <BarChart2 size={15} /> Tình trạng học tập
-                    </Link>
-                    <Link to="/settings" className="profile-menu-item" onClick={() => setShowProfile(false)}>
-                      <Settings size={15} /> Cài đặt
-                    </Link>
-                    {user.role === 'STUDENT' && (
-                      <button className="profile-menu-item" onClick={() => setShowProfile(false)}>
-                        <Flag size={15} /> Báo cáo giáo viên
-                      </button>
-                    )}
-                    <button className="profile-menu-item" onClick={() => setShowProfile(false)}>
-                      <HelpCircle size={15} /> Trợ giúp
-                    </button>
-                    <div className="profile-menu-divider" />
-                    <button
-                      className="profile-menu-item danger"
-                      onClick={async () => {
-                        setShowProfile(false);
-                        await api("/auth/logout", "POST");
-                        useAuth.getState().set(null, null);
-                        queryClient.clear();
-                      }}
-                    >
-                      <LogOut size={15} /> Đăng xuất
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+          <div>
+            <span className="online-dot" /> Sẵn sàng khám phá{" "}
+            <Link
+              to="/settings"
+              aria-label="Tài khoản"
+              className="avatar small"
+            >
+              {user.fullName.charAt(0)}
+            </Link>
           </div>
         </header>
         <main className="main">
@@ -347,7 +191,6 @@ export default function App() {
                   user.role === "ADMIN" ? <AdminPage /> : <Navigate to="/" />
                 }
               />
-              <Route path="/fallback" element={<WebGLFallbackPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
@@ -384,7 +227,7 @@ function Login() {
     const r = await api(
       "/auth/" + (mode === "register" ? "register" : "login"),
       "POST",
-      mode === "register" ? { ...b, consent: true } : b,
+      mode === "register" ? { ...b, role: "PARENT", consent: true } : b,
     );
     useAuth.getState().set(r.user, r.accessToken);
   });
@@ -421,7 +264,7 @@ function Login() {
             {mode === "login"
               ? "Bắt đầu khám phá"
               : mode === "register"
-                ? "Đăng ký tài khoản"
+                ? "Tài khoản phụ huynh"
                 : mode === "forgot"
                   ? "Quên mật khẩu"
                   : "Đặt mật khẩu mới"}
@@ -429,7 +272,7 @@ function Login() {
           <p className="muted">
             {mode === "login"
               ? "Đăng nhập để tiếp tục hành trình học tập."
-              : "Chọn vai trò và điền thông tin để đăng ký tài khoản mới."}
+              : "Tài khoản học sinh được giáo viên hoặc nhà trường cấp."}
           </p>
           <form
             onSubmit={(e) => {
@@ -438,25 +281,7 @@ function Login() {
             }}
           >
             {mode === "register" && (
-              <>
-                <Field label="Họ và tên" name="fullName" required />
-                <div style={{ marginBottom: '16px' }}>
-                  <label className="field">
-                    <span>Vai trò</span>
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="STUDENT" required defaultChecked /> Học sinh
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="PARENT" required /> Phụ huynh
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
-                        <input type="radio" name="role" value="TEACHER" required /> Giáo viên
-                      </label>
-                    </div>
-                  </label>
-                </div>
-              </>
+              <Field label="Họ và tên" name="fullName" required />
             )}
             {mode !== "reset" && (
               <Field
@@ -514,7 +339,7 @@ function Login() {
                 setMessage("");
               }}
             >
-              {mode === "login" ? "Đăng ký tài khoản mới" : "Quay lại đăng nhập"}
+              {mode === "login" ? "Đăng ký phụ huynh" : "Quay lại đăng nhập"}
             </button>
           </div>
           <p className="tiny muted">
@@ -566,14 +391,116 @@ function Dashboard() {
   return (
     <>
       <PageHeading
+        eyebrow="MỖI NGÀY, MỘT ĐIỀU MỚI"
         title={
-          "Chào " + user.fullName.split(" ").at(-1) + "!"
+          "Chào " + user.fullName.split(" ").at(-1) + ", cùng khám phá nhé!"
         }
-        description="Theo dõi tiến độ học tập, nhiệm vụ được giao và tiếp tục các bài thực hành."
+        description="Một câu hỏi nhỏ hôm nay có thể mở ra cả một thế giới."
         action={
           <Badge tone="outline">KHOA HỌC TỰ NHIÊN · LỚP {user.grade}</Badge>
         }
       />
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="hero-kicker">
+            <span /> HỌC BẰNG CÁCH TỰ TAY LÀM
+          </span>
+          <h2>
+            Đừng chỉ đọc về khoa học.
+            <br />
+            <em>Hãy chạm vào nó.</em>
+          </h2>
+          <p>
+            Lắp một mạch điện. Khám phá đôi mắt.
+            <br />
+            Nhìn thấy những phản ứng kỳ diệu.
+          </p>
+          <Link
+            className="cream-button"
+            to={
+              ["STUDENT", "TEACHER"].includes(user.role)
+                ? "/labs/circuit"
+                : "/progress"
+            }
+          >
+            Bắt đầu khám phá <ArrowUpRight size={19} />
+          </Link>
+          <div className="hero-foot">
+            <span>01 — 03</span>
+            <i />
+            <span>Phòng lab luôn rộng mở</span>
+          </div>
+        </div>
+        <div className="hero-graphic">
+          <svg viewBox="0 0 450 300" aria-label="Minh họa quỹ đạo nguyên tử">
+            <defs>
+              <radialGradient id="glow">
+                <stop stopColor="#edbd71" />
+                <stop offset="1" stopColor="#c4a460" />
+              </radialGradient>
+            </defs>
+            <circle
+              cx="230"
+              cy="145"
+              r="115"
+              fill="none"
+              stroke="#57776b"
+              strokeDasharray="3 6"
+            />
+            <g fill="none" stroke="#9dbeac" strokeWidth="1.3">
+              <ellipse
+                cx="230"
+                cy="145"
+                rx="148"
+                ry="53"
+                transform="rotate(-30 230 145)"
+              />
+              <ellipse
+                cx="230"
+                cy="145"
+                rx="148"
+                ry="53"
+                transform="rotate(35 230 145)"
+              />
+              <ellipse
+                cx="230"
+                cy="145"
+                rx="148"
+                ry="53"
+                transform="rotate(90 230 145)"
+              />
+            </g>
+            <circle cx="230" cy="145" r="34" fill="url(#glow)" />
+            <circle cx="111" cy="213" r="10" fill="#d7e4c2" />
+            <circle cx="283" cy="38" r="7" fill="#dac8a4" />
+            <circle cx="350" cy="224" r="10" fill="#a0cbb4" />
+            <text
+              x="31"
+              y="67"
+              fill="#c8d7ca"
+              fontSize="17"
+              fontFamily="monospace"
+            >
+              E = curiosity²
+            </text>
+            <text x="325" y="86" fill="#abc6b6" fontSize="13">
+              ✦ EXPLORE
+            </text>
+            <text
+              x="163"
+              y="283"
+              fill="#9dbeac"
+              fontSize="11"
+              letterSpacing="4"
+            >
+              A WORLD OF POSSIBILITIES
+            </text>
+          </svg>
+          <div className="floating-note">
+            <span>✧</span> Sai cũng là một cách học.
+          </div>
+        </div>
+      </section>
       {student ? (
         <>
           <div className="stats">
@@ -590,7 +517,7 @@ function Dashboard() {
             <Stat
               label="Thử thách đạt"
               value={attempts.filter((a: any) => a.verdict === "passed").length}
-              icon={<Award />}
+              icon={<Sparkles />}
             />
             <Stat
               label="Bài được giao"
@@ -619,14 +546,14 @@ function Dashboard() {
                   : "/admin"
             }
           >
-            Mở không gian quản lý <ArrowRight size={15} />
+            Mở không gian quản lý →
           </Link>
         </div>
       )}
       <div className="section-heading">
         <div>
-          <h2>Phòng thực hành mô phỏng</h2>
-          <p className="muted">Các chủ đề Vật lý, Sinh học và Hóa học theo chương trình.</p>
+          <h2>Hôm nay, em muốn khám phá gì?</h2>
+          <p className="muted">Ba môn học. Vô vàn điều đáng tò mò.</p>
         </div>
         <Link to="/labs">
           Tất cả phòng lab <ArrowRight size={15} />
@@ -761,9 +688,9 @@ function LabLibrary() {
   return (
     <>
       <PageHeading
-        eyebrow="PHÒNG THÍ NGHIỆM ẢO"
-        title="Phòng thí nghiệm mô phỏng"
-        description="Hệ thống mô phỏng tương tác cho các bộ môn Vật lý, Sinh học và Hóa học."
+        eyebrow="HỌC QUA TRẢI NGHIỆM"
+        title="Phòng thí nghiệm"
+        description="Tự đặt câu hỏi, tự thử nghiệm và kiểm chứng bằng kết quả."
       />
       <LabCards />
       <div className="notice">

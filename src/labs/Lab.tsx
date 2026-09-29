@@ -6,7 +6,7 @@ import {
   Play,
   RotateCcw,
   Bookmark,
-  HelpCircle,
+  Sparkles,
   CheckCircle2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -105,7 +105,7 @@ export default function Lab() {
                 : "HÓA HỌC"}{" "}
             · LỚP 8–9
           </Badge>
-          <h1>{lab?.title ?? "Phòng thực hành"}</h1>
+          <h1>{lab?.title ?? "Phòng khám phá"}</h1>
           <p className="muted">{lab?.learningObjective}</p>
         </div>
         <Badge tone="outline">
@@ -259,8 +259,8 @@ export default function Lab() {
           {user.role === "STUDENT" && (
             <section className="panel tutor-panel">
               <h3>
-                <HelpCircle size={18} />
-                Gợi ý học tập
+                <Sparkles size={19} />
+                Người bạn hướng dẫn
               </h3>
               <span className="tiny muted">
                 {tutorStatus.data?.provider === "anthropic"
