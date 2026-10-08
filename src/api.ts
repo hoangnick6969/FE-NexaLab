@@ -46,6 +46,46 @@ export async function api<T = any>(
   retry = true,
 ): Promise<T> {
   const token = useAuth.getState().token;
+
+  // -- MOCK INTERCEPTOR START --
+  const MOCK = true; // Bật cờ này khi đang dev mockup
+  if (MOCK) {
+    // Giả lập mạng chậm
+    await new Promise(r => setTimeout(r, 400));
+    console.log(`[MOCK API] ${method} ${path}`, body);
+
+    if (path.startsWith("/auth/student/login") || path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
+      const isStudent = path.includes("student");
+      const b = body as any || {};
+      return {
+        user: {
+          id: "mock_user_1",
+          username: isStudent ? b.username || "student" : null,
+          email: !isStudent ? b.email || "teacher@nexalab.vn" : null,
+          fullName: isStudent ? "Học sinh Mẫu" : "Giáo viên Mẫu",
+          role: isStudent ? "STUDENT" : (b.role || "TEACHER"),
+          grade: 9,
+          mustChangePassword: false
+        },
+        accessToken: "mock_access_token"
+      } as any;
+    }
+    
+    if (path === "/auth/logout") return {} as any;
+    
+    // Trả về mock data cho các API fetch phổ biến
+    if (path.startsWith("/progress")) return { progress: [], attempts: [] } as any;
+    if (path.startsWith("/assignments")) return [] as any;
+    if (path.startsWith("/saved")) return [] as any;
+    if (path.startsWith("/classes")) return [] as any;
+    if (path.startsWith("/lessons")) return [] as any;
+    
+    // Mặc định cho tất cả các endpoint GET khác để tránh crash map()
+    if (method === "GET") return [] as any;
+    return {} as any;
+  }
+  // -- MOCK INTERCEPTOR END --
+
   const r = await fetch(base + path, {
     method,
     credentials: "include",
