@@ -1,5 +1,7 @@
 # Screen Specs (Blueprint)
 
+> **Trạng thái:** Inventory legacy. Phân tầng P0/P1/P2 bên dưới có trước PRD hiện tại và không còn là nguồn quyết định. Với Student P0, dùng [08. Student P0 UX Definition](08-STUDENT-P0-UX-DEFINITION.md). Đặc biệt, AI Tutor/Hint là P1; Teacher AI Content Assistant là P0 ở phần UX giáo viên riêng.
+
 Hệ thống thiết kế đã cung cấp đầy đủ token và component để xây dựng mọi màn hình. Không tạo thêm pattern mới nếu không thực sự cần thiết. Các màn hình được phân loại theo mức độ ưu tiên.
 
 ## P0 — Cốt lõi (Bắt buộc)

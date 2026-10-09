@@ -1,17 +1,18 @@
 # UX Patterns & Domain Components
 
+> Với vai trò Học sinh P0, đọc [08. Student P0 UX Definition](08-STUDENT-P0-UX-DEFINITION.md) trước. AI Tutor/Hint là P1 theo PRD, không phải một panel P0.
+
 Những thành phần giao diện mang tính chất đặc thù của miền giáo dục NexaLab.
 
 ## 1. Domain Components (Đặc thù NexaLab)
 
-- **Banner (hero):** Nền `green-900`, `radius-lg`, padding 32. Trái: Nội dung (`h1`, nút). Phải: Minh họa line-art (tối đa 40% chiều rộng).
-- **Stat card:** Cao 132, `radius-md`, padding 20, nền theo `accent` tương ứng.
-- **Lesson / Lab card:** `bg-surface`, viền 1px, `radius-md`. Có dải màu môn học 3px bám mép trái. Thumbnail 4:3.
-- **Hint Ladder (Bậc gợi ý AI):** 4 nấc dọc, cao 8px. Nấc đã dùng tô đặc màu môn học; nấc chưa tới viền 1px `border`.
-- **AI Tutor panel:** `bg-surface`, `radius-lg`. Không dùng bong bóng chat tròn kiểu messenger.
+- **Banner (hero):** Nền `subject-*` khi hero thuộc một bài học cụ thể, hoặc `surface` trong ngữ cảnh trung tính; `radius-lg`, padding 32. Trái: Nội dung (`h1`, một CTA). Phải: Minh họa line-art theo môn (tối đa 40% chiều rộng).
+- **Stat card:** Cao 132, `radius-md`, padding 20, nền `surface`. Chỉ dùng nền `subject-*` khi con số thật sự thuộc một môn, không tô ba card chỉ số bằng ba màu môn cho cân đối thị giác.
+- **Lesson / Lab card:** `surface`, viền 1px, `radius-md`. Có dải màu môn học 3px bám mép trái khi card mang một môn xác định. Thumbnail 4:3.
+- **Hint Ladder và AI Tutor panel (P1):** giữ lại cho giai đoạn sau Release 1; không đưa vào luồng hoặc dashboard Học sinh P0.
 - **Simulation readout:** Lưới mặt đồng hồ đo. Trị số dùng IBM Plex Mono. **Không** đổi màu theo đúng/sai.
 - **Verdict badge:** 3 trạng thái cố định (Pass, Partial, Fail).
-- **Lab viewer (3D / Canvas):** Vùng render `bg-inset` (≥ 60% cao). Toolbar nổi đáy: `bg-surface`, `radius-full`.
+- **Lab viewer (3D / Canvas):** Vùng render `surface-subtle` (≥ 60% cao). Toolbar nổi đáy: `surface`, `radius-full`.
 - **Teacher table & evidence:** Mỗi dòng nhận định AI kèm nút Ghost "Xem bằng chứng". Truy được nguồn.
 
 ## 2. Kỷ luật Thiết kế (Pro-Max Standards)

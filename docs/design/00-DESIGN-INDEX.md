@@ -14,6 +14,9 @@ Mọi quyết định thiết kế tuân theo tinh thần: **Rành mạch, Khoa 
 - [05. Screen Specs (Đặc tả các màn hình)](05-SCREEN-SPECS.md)
 - [06. Content & Copywriting (Giọng văn)](06-CONTENT-I18N.md)
 - [07. Accessibility & QA (Trợ năng và Kiểm thử)](07-ACCESSIBILITY-QA.md)
+- [08. Student P0 UX Definition](08-STUDENT-P0-UX-DEFINITION.md) — nguồn quyết định cho trải nghiệm học sinh Release 1
+
+> **Ưu tiên tài liệu:** `08-STUDENT-P0-UX-DEFINITION.md` ghi đè các quyết định cũ của bộ design system cho vai trò Học sinh P0. `design-system.md` là tài liệu legacy, chỉ dùng để tham khảo cho những pattern chưa được thay thế.
 
 ---
 
@@ -23,6 +26,6 @@ NexaLab từ chối các khuôn mẫu "AI slop" và SaaS chung chung (như bóng
 
 Ba nguyên lý sư phạm chi phối mọi quyết định:
 
-1. **Giảm thiểu tải nhận thức (Cognitive Load Reduction):** Môi trường học tập cần sự tĩnh lặng. `green-900` là điểm neo thị giác duy nhất (sidebar, banner, nút chính). Không có khối đậm thứ hai cạnh tranh sự chú ý.
-2. **Màu sắc mang ý nghĩa tuyệt đối (Semantic Colors):** Màu sắc là dữ liệu. Màu vàng/xanh/tím và màu verdict bị khóa cứng với ý nghĩa của nó (môn học/kết quả), không bao giờ tô ngẫu nhiên để "trang trí cho đỡ trống".
+1. **Giảm thiểu tải nhận thức (Cognitive Load Reduction):** Môi trường học tập cần sự tĩnh lặng. `primary` là điểm neo thị giác cho điều hướng và control; `action` chỉ đánh dấu một bước học tiếp theo. Không có khối đậm thứ hai cạnh tranh sự chú ý.
+2. **Màu sắc mang ý nghĩa tuyệt đối (Semantic Colors):** Màu môn học, màu bước học và màu verdict bị khóa cứng với ý nghĩa của chúng; không tô ngẫu nhiên để “trang trí cho đỡ trống”.
 3. **Mô phỏng chân thực, không giả tạo (Honest UI):** Phân lớp bằng màu nền và viền (Workbench), không dùng bóng đổ chồng lớp. Không sử dụng thanh trình duyệt giả (fake chrome) hay số liệu tự bịa.

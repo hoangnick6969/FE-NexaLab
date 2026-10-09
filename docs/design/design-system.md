@@ -1,5 +1,7 @@
 # NexaLab — Design System v1.1
 
+> **Legacy reference:** tài liệu này trùng lặp và mâu thuẫn một phần với numbered docs. Các token và component trong đây chỉ được giữ để tra lịch sử, không dùng cho UI mới. Source of truth là [01. Design Foundations](01-DESIGN-FOUNDATIONS.md), [02. Component System](02-COMPONENT-SYSTEM.md), [08. Student P0 UX Definition](08-STUDENT-P0-UX-DEFINITION.md) và các tài liệu numbered còn lại.
+
 Tài liệu quy chuẩn thiết kế UI/UX dành riêng cho môi trường giáo dục (Educational Workbench). Giao diện không phải là một "SaaS dashboard" trang trí, mà là một **phòng thí nghiệm kỹ thuật số** — nơi học sinh tập trung vào thao tác, số liệu và kiến thức.
 Mọi quyết định thiết kế tuân theo tinh thần: **Rành mạch, Khoa học, và Phi trang trí.** Mọi màn hình dựng từ token và component trong đây — không tự phát sinh giá trị mới ngoài bảng.
 

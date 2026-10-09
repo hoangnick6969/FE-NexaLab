@@ -1,56 +1,73 @@
 # Component System (Shared Library)
 
-Tập primitive dùng lại ở mọi màn hình — thiết kế trước, không lặp lại quyết định ở từng tính năng.
+Tập primitive dùng lại ở mọi màn hình. Mỗi component nhận token từ [Foundations](01-DESIGN-FOUNDATIONS.md), không tự thêm màu mới theo từng feature.
 
 ## 1. Button
+
 | Loại | Nền | Chữ | Viền |
-|---|---|---|---|
-| Primary | `blue-900` | trắng | không |
-| Secondary | `bg-surface` | `text-primary` | 1px `border` |
-| Ghost | trong suốt | `text-secondary` | không |
-| Destructive | `verdict-fail` 10% | `verdict-fail` | không |
+| --- | --- | --- | --- |
+| Primary | `primary` | trắng | không |
+| Learning action | `action` | `text` | không |
+| Secondary | `surface` | `text` | 1px `border` |
+| Ghost | trong suốt | `text-muted` | không |
+| Destructive | `state-error` | `state-error-ink` | không |
 
-**Trạng thái (Interactive Discipline):** default, hover (tối hơn 8%), active (tối hơn 12%), disabled (opacity 40%), focus-visible (viền 2px blue-900 offset 2px).
+`Learning action` chỉ dùng cho một bước kế tiếp của lộ trình học trên một màn hình. Các hành động còn lại dùng `Primary`, `Secondary` hoặc `Ghost`.
 
-## 2. Input & Textarea
-Nền `bg-inset`, viền 1px `border`, radius `sm`, cao 40, padding ngang 12. 
-- Focus: viền `blue-900` 1.5px + nền `bg-surface`.
-- Error: viền `verdict-fail`, dòng lỗi `caption` màu `verdict-fail` phía dưới.
+**Trạng thái:** default, hover (tối hơn 8%), active (tối hơn 12%), disabled (opacity 40%), focus-visible (viền 2px `primary` offset 2px). Kích thước tap tối thiểu là 44×44px.
 
-## 3. Select / Dropdown
-Giống Input, thêm icon chevron phải 16px. Menu mở: `bg-surface`, radius `sm`, shadow cấp 2, item cao 36, hover nền `bg-inset`.
+## 2. Input and textarea
 
-## 4. Checkbox / Radio / Toggle
-Kích thước 20×20. Trạng thái on dùng `blue-900`. Không dùng màu accent cho control.
+Nền `surface-subtle`, viền 1px `border`, radius `sm`, cao 40, padding ngang 12.
 
-## 5. Tag / Badge / Chip
+- Focus: viền `primary` 1.5px + nền `surface`.
+- Error: viền `state-error-ink`, dòng lỗi `caption` cùng màu phía dưới.
+
+## 3. Select and dropdown
+
+Giống Input, thêm icon chevron phải 16px. Menu mở: `surface`, radius `sm`, shadow cấp 2, item cao 36, hover nền `surface-subtle`.
+
+## 4. Checkbox, radio and toggle
+
+Kích thước 20×20. Trạng thái on dùng `primary`. Không dùng màu môn học cho control.
+
+## 5. Tag, badge and chip
+
 Radius `full`, padding 4/12.
-- **Màu môn học**: viền mảnh, nền trong suốt.
-- **Verdict**: nền màu verdict 12%, chữ verdict đậm.
-- **Trung tính**: nền `bg-inset`, chữ `text-secondary`.
+
+- **Môn học:** nền `subject-*` và chữ `subject-*-ink`, chỉ khi tag đại diện cho môn học thực tế.
+- **Verdict:** nền state 12%, icon và chữ state đậm.
+- **Trung tính:** nền `surface-subtle`, chữ `text-muted`.
 
 ## 6. Avatar
-Tròn, 3 cỡ 24/32/40. Không có ảnh: hiển thị chữ cái đầu tên, nền `blue-200`, chữ `blue-900`.
+
+Tròn, 3 cỡ 24/32/40. Không có ảnh: hiển thị chữ cái đầu tên, nền `surface-subtle`, chữ `primary`.
 
 ## 7. Tooltip
-Nền `text-primary` (đảo màu), chữ trắng `caption`, radius `sm`, padding 6/10, xuất hiện sau 400ms hover.
 
-## 8. Modal / Dialog
-Radius `lg`, padding 32, max-width 480 (xác nhận) hoặc 720 (form dài). Overlay `rgba(22,33,28,.32)`.
+Nền `text` (đảo màu), chữ trắng `caption`, radius `sm`, padding 6/10, xuất hiện sau 400ms hover.
 
-## 9. Toast / Snackbar
-Góc dưới phải, `bg-surface`, viền trái 3px màu ngữ nghĩa, radius `sm`, tự ẩn sau 4s. Tối đa xếp chồng 2.
+## 8. Modal and dialog
 
-## 10. Tabs (Segmented control)
-Nền `bg-inset`, radius `full`, tab active nền `blue-900` chữ trắng. Dùng cho chuyển view, không cho điều hướng cấp trang.
+Radius `lg`, padding 32, max-width 480 (xác nhận) hoặc 720 (form dài). Overlay `rgba(20,32,43,.32)`.
 
-## 11. Breadcrumb & Pagination
-Breadcrumb: `caption`, phân cách bằng chevron 12px.
-Pagination: Chip tròn 32px, trang hiện tại nền `blue-900`.
+## 9. Toast and snackbar
+
+Góc dưới phải, `surface`, viền trái 3px màu ngữ nghĩa, radius `sm`, tự ẩn sau 4s. Tối đa xếp chồng 2.
+
+## 10. Tabs
+
+Nền `surface-subtle`, radius `full`, tab active nền `primary` chữ trắng. Dùng cho chuyển view, không cho điều hướng cấp trang.
+
+## 11. Breadcrumb and pagination
+
+Breadcrumb: `caption`, phân cách bằng chevron 12px. Pagination: chip tròn 32px, trang hiện tại nền `primary`.
 
 ## 12. Progress bar
-Track `blue-200`, fill `green-500`, radius `full` — dùng cho tiến độ tuyến tính.
 
-## 13. Skeleton & Empty state
-- Skeleton: Khối `bg-inset` bo theo radius component, shimmer ngang.
-- Empty state: Icon đơn sắc 48px + `h2` + `body` + nút Primary.
+Track `surface-subtle`, fill `primary`, radius `full` — dùng cho tiến độ tuyến tính. Khi progress thuộc một bài có môn xác định, fill có thể dùng `subject-*-ink`; không dùng màu môn cho mức độ thành công.
+
+## 13. Skeleton and empty state
+
+- Skeleton: khối `surface-subtle` bo theo radius component, shimmer ngang.
+- Empty state: icon đơn sắc 48px + `h2` + `body` + một nút Primary.

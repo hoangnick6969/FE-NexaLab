@@ -3,7 +3,7 @@
 ## 1. Trợ Năng (Accessibility - CRITICAL)
 
 - **Độ Tương Phản (Contrast):** Mọi cặp chữ/nền phải đạt tiêu chuẩn tối thiểu WCAG AA (tỉ lệ 4.5:1 cho `body`/`label`).
-- **Bàn Phím (Keyboard Navigation):** Mọi phần tử tương tác bắt buộc có trạng thái `focus-visible` hiển thị rõ ràng (viền `2px green-900`, offset 2px).
+- **Bàn Phím (Keyboard Navigation):** Mọi phần tử tương tác bắt buộc có trạng thái `focus-visible` hiển thị rõ ràng (viền `2px primary`, offset 2px).
 - **Touch Targets:** Kích thước vùng chạm tối thiểu phải đạt `44x44px` trên di động/tablet, bao gồm cả icon-only buttons.
 - **Con trỏ (Cursors):** Bắt buộc có class `cursor-pointer` cho mọi thẻ/hàng bấm được.
 - **Motion:** Tôn trọng `prefers-reduced-motion` trong CSS, vô hiệu hóa transform, chỉ giữ lại opacity.
@@ -12,7 +12,7 @@
 
 Sử dụng danh sách này trước khi hoàn thành một màn hình UI:
 
-- [ ] Chỉ có tối đa một khối màu `green-900` đậm đóng vai trò neo thị giác trên màn hình.
+- [ ] Chỉ có tối đa một khối màu `primary` đậm đóng vai trò neo thị giác trên màn hình.
 - [ ] Màu Accent/Verdict tuân thủ đúng tỉ lệ diện tích, không dùng làm màu nền lớn. Không vượt quá 2 màu accent liền kề (ngoại lệ duy nhất: hàng 3 stat card).
 - [ ] Mọi khoảng cách (padding, margin, gap) đều là bội số của 4 (theo §3 Spacing).
 - [ ] Border radius sử dụng đúng cấp bậc (`sm/md/lg/full`), không gán cứng pixel lộn xộn.
