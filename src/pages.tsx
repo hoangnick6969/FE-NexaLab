@@ -1,6 +1,6 @@
 import { useState } from "react";
 import DOMPurify from "dompurify";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Plus,
@@ -546,10 +546,55 @@ export function Lessons() {
     </>
   );
 }
+
+export function AssignedLearning() {
+  const { id } = useParams();
+  const query = useQuery({
+    queryKey: ["assignment", id],
+    queryFn: () => api("/assignments/" + id),
+    enabled: Boolean(id),
+  });
+  if (query.isLoading) return <Empty>Đang tải bài được giao…</Empty>;
+  if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
+  const assignment = query.data;
+  const content = assignment.content;
+  return (
+    <>
+      <PageHeading
+        eyebrow="BÀI ĐƯỢC GIAO"
+        title={content.title}
+        description={assignment.classroom.name}
+      />
+      <section className="panel lesson-content">
+        <p className="eyebrow">
+          {content.subject?.name} · LỚP {content.grade ?? content.subject?.grade}
+        </p>
+        <h2>{content.topic}</h2>
+        <div className="notice">
+          <b>Mục tiêu học tập:</b> {content.learningObjective}
+          <br />
+          <b>Kiến thức nền:</b> {content.prerequisites || "Không yêu cầu"}
+        </div>
+        {assignment.overdue && <Badge tone="outline">Đã quá hạn nhưng vẫn có thể học</Badge>}
+        {assignment.contentType === "lesson" ? (
+          <>
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.content) }} />
+            <p className="notice">Bước đầu tiên: đọc nội dung bài học và ghi lại điều em quan sát được.</p>
+          </>
+        ) : (
+          <Link className="primary" to={"/labs/" + content.id}>
+            Mở phòng lab <ArrowUpRight size={16} />
+          </Link>
+        )}
+      </section>
+    </>
+  );
+}
 export function Classes() {
   const user = useAuth((s) => s.user)!;
   const [selected, setSelected] = useState<string | null>(null);
   const [modal, setModal] = useState("");
+  const [issuedCredentials, setIssuedCredentials] = useState<any>(null);
   const [contentId, setContentId] = useState("circuit");
   const q = useQuery({
     queryKey: ["classes"],
@@ -621,7 +666,7 @@ export function Classes() {
               <div className="button-row">
                 <button
                   className="secondary"
-                  onClick={() => setModal("student")}
+                  onClick={() => { setIssuedCredentials(null); setModal("student"); }}
                 >
                   Cấp tài khoản học sinh
                 </button>
@@ -644,7 +689,7 @@ export function Classes() {
                     <tr key={e.studentId}>
                       <td>
                         {e.student.fullName}
-                        <small>{e.student.email}</small>
+                        <small>Tài khoản: {e.student.username}</small>
                       </td>
                       <td>
                         <Badge>{e.approved ? "Đã duyệt" : "Chờ duyệt"}</Badge>
@@ -663,6 +708,26 @@ export function Classes() {
                             Duyệt
                           </button>
                         )}
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setIssuedCredentials(null);
+                            setModal("reset");
+                            act.mutate(
+                              {
+                                path: `/classes/${selected}/students/${e.studentId}/reset-password`,
+                                method: "POST",
+                              },
+                              {
+                                onSuccess: (data: any) => {
+                                  setIssuedCredentials(data.credentials);
+                                },
+                              },
+                            );
+                          }}
+                        >
+                          Cấp lại mật khẩu
+                        </button>
                         <button
                           className="danger-text"
                           onClick={() =>
@@ -760,6 +825,7 @@ export function Classes() {
               join: "Tham gia lớp",
               assign: "Giao bài",
               student: "Cấp tài khoản học sinh",
+              reset: "Cấp lại mật khẩu học sinh",
             }[modal] ?? ""
           }
           onClose={() => setModal("")}
@@ -785,13 +851,19 @@ export function Classes() {
                 b.studentIds = new FormData(e.currentTarget).getAll("studentIds");
               }
               if (modal === "student") {
-                path = "/users";
-                b.role = "STUDENT";
+                path = "/classes/" + selected + "/students";
                 b.grade = Number(b.grade);
-                b.classId = selected;
                 b.consent = true;
               }
-              act.mutate({ path, body: b }, { onSuccess: () => setModal("") });
+              act.mutate(
+                { path, body: b },
+                {
+                  onSuccess: (data: any) => {
+                    if (modal === "student") setIssuedCredentials(data.credentials);
+                    else setModal("");
+                  },
+                },
+              );
             }}
           >
             {modal === "create" && (
@@ -843,16 +915,18 @@ export function Classes() {
               </>
             )}
             {modal === "student" && (
-              <>
+              issuedCredentials ? (
+                <div className="notice">
+                  <b>Tài khoản đã được cấp</b>
+                  <p>Tên đăng nhập: <code>{issuedCredentials.username}</code></p>
+                  <p>Mật khẩu tạm: <code>{issuedCredentials.temporaryPassword}</code></p>
+                  <p>Hạn dùng: {new Date(issuedCredentials.expiresAt).toLocaleString("vi-VN")}</p>
+                  <p className="tiny">Hãy lưu và gửi riêng thông tin này cho học sinh. Mật khẩu sẽ không hiển thị lại.</p>
+                  <button type="button" className="secondary" onClick={() => { setIssuedCredentials(null); setModal(""); }}>Đã lưu thông tin</button>
+                </div>
+              ) : <>
+                <Field label="Tên đăng nhập" name="username" required autoComplete="username" />
                 <Field label="Họ tên" name="fullName" required />
-                <Field label="Email" name="email" type="email" required />
-                <Field
-                  label="Mật khẩu ban đầu"
-                  name="password"
-                  type="password"
-                  minLength={12}
-                  required
-                />
                 <Field
                   label="Khối lớp"
                   name="grade"
@@ -867,10 +941,21 @@ export function Classes() {
                 </label>
               </>
             )}
-            <ErrorBox error={act.error} />
-            <button className="primary wide" disabled={act.isPending}>
-              Xác nhận
-            </button>
+            {modal === "reset" && (
+              issuedCredentials ? (
+                <div className="notice">
+                  <b>Mật khẩu mới đã được tạo</b>
+                  <p>Tên đăng nhập: <code>{issuedCredentials.username}</code></p>
+                  <p>Mật khẩu tạm: <code>{issuedCredentials.temporaryPassword}</code></p>
+                  <p>Hạn dùng: {new Date(issuedCredentials.expiresAt).toLocaleString("vi-VN")}</p>
+                  <p className="tiny">Hãy lưu và gửi riêng thông tin này cho học sinh. Mật khẩu sẽ không hiển thị lại.</p>
+                  <button type="button" className="secondary" onClick={() => { setIssuedCredentials(null); setModal(""); }}>Đã lưu thông tin</button>
+                </div>
+              ) : (
+                <div className="notice">Đang tạo mật khẩu tạm mới…</div>
+              )
+            )}
+            {modal !== "reset" && !issuedCredentials && <><ErrorBox error={act.error} /><button className="primary wide" disabled={act.isPending}>Xác nhận</button></>}
           </form>
         </Modal>
       )}
