@@ -1508,11 +1508,25 @@ td small {
   margin-bottom: 22px;
 }
 .login-links {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin: 20px 0 35px;
   color: #759064;
   font-size: 10px;
+}
+.login-links button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 6px;
+  color: inherit;
+  line-height: 1.45;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.login-links button:hover {
+  color: var(--green);
+  text-decoration: underline;
 }
 .boot,
 .error-page {
@@ -1780,6 +1794,14 @@ td small {
   }
   .login-form h2 {
     font-size: 27px;
+  }
+  .login-links {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-top: 18px;
+  }
+  .login-links button {
+    min-height: 40px;
   }
   .role-note {
     flex-wrap: wrap;

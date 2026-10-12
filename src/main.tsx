@@ -17,14 +17,14 @@ class Boundary extends React.Component<
   static getDerivedStateFromError() {
     return { error: true };
   }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("NexaLab render error", error, info.componentStack);
+  }
   render() {
     return this.state.error ? (
       <main className="error-page">
         <h1>Không thể hiển thị trang</h1>
-        <p>
-          Hãy tải lại. Nếu mô hình 3D không hiển thị, kiểm tra trình duyệt có hỗ
-          trợ WebGL.
-        </p>
+        <p>Đã xảy ra lỗi khi tải dữ liệu hoặc hiển thị giao diện. Hãy tải lại trang.</p>
         <button onClick={() => location.reload()}>Tải lại</button>
       </main>
     ) : (

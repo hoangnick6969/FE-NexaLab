@@ -30,6 +30,7 @@ import { queryClient } from "./main";
 import { Badge, Empty, ErrorBox, Field, useAction } from "./ui";
 import {
   Lessons,
+  AssignedLearning,
   Classes,
   ProgressPage,
   Saved,
@@ -57,6 +58,7 @@ export default function App() {
       </div>
     );
   if (!user) return <Login />;
+  if (user.mustChangePassword) return <PasswordGate />;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -138,9 +140,12 @@ export default function App() {
             title="Đăng xuất"
             className="icon-button"
             onClick={async () => {
-              await api("/auth/logout", "POST");
-              useAuth.getState().set(null, null);
-              queryClient.clear();
+              try {
+                await api("/auth/logout", "POST");
+              } finally {
+                useAuth.getState().set(null, null);
+                queryClient.clear();
+              }
             }}
           >
             <LogOut size={17} />
@@ -168,7 +173,10 @@ export default function App() {
         <main className="main">
           <Suspense fallback={<Empty>Đang tải phòng thí nghiệm…</Empty>}>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route
+                path="/"
+                element={user.role === "ADMIN" ? <AdminPage /> : <Dashboard />}
+              />
               <Route path="/labs" element={<LabLibrary />} />
               <Route
                 path="/labs/:id"
@@ -181,6 +189,7 @@ export default function App() {
                 }
               />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/assignments/:id" element={<AssignedLearning />} />
               <Route path="/classes" element={<Classes />} />
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/saved" element={<Saved />} />
@@ -203,9 +212,36 @@ export default function App() {
     </div>
   );
 }
+function PasswordGate() {
+  const action = useAction(async (body: any) => {
+    const result = await api("/auth/password", "POST", body);
+    useAuth.getState().set(result.user, result.accessToken);
+    return result;
+  });
+  return (
+    <div className="login">
+      <section className="login-form">
+        <div>
+          <Badge>THIẾT LẬP TÀI KHOẢN</Badge>
+          <h2>Đổi mật khẩu tạm</h2>
+          <p className="muted">Hãy tạo mật khẩu riêng trước khi bắt đầu học.</p>
+          <form onSubmit={(e) => { e.preventDefault(); action.mutate(Object.fromEntries(new FormData(e.currentTarget))); }}>
+            <Field label="Mật khẩu tạm" name="currentPassword" type="password" required autoComplete="current-password" />
+            <Field label="Mật khẩu mới (ít nhất 12 ký tự)" name="password" type="password" minLength={12} required autoComplete="new-password" />
+            <ErrorBox error={action.error} />
+            {action.isSuccess && <p className="notice">Đã đổi mật khẩu. Đang mở không gian học tập…</p>}
+            <button className="primary wide" disabled={action.isPending}>{action.isPending ? "Đang lưu…" : "Lưu và bắt đầu học"}<ArrowRight size={17} /></button>
+          </form>
+        </div>
+      </section>
+    </div>
+  );
+}
 function Login() {
   const [mode, setMode] = useState(
-    new URLSearchParams(location.search).has("reset") ? "reset" : "login",
+    new URLSearchParams(location.search).has("reset")
+      ? "reset"
+      : "student-login",
   );
   const [message, setMessage] = useState("");
   const action = useAction(async (b: any) => {
@@ -225,7 +261,14 @@ function Login() {
       return;
     }
     const r = await api(
-      "/auth/" + (mode === "register" ? "register" : "login"),
+      "/auth/" +
+        (mode === "student-login"
+          ? "student/login"
+          : mode === "admin-login"
+            ? "admin/login"
+            : mode === "register"
+              ? "register"
+              : "login"),
       "POST",
       mode === "register" ? { ...b, role: "PARENT", consent: true } : b,
     );
@@ -261,8 +304,12 @@ function Login() {
         <div>
           <Badge>CHÀO MỪNG ĐẾN NEXALAB</Badge>
           <h2>
-            {mode === "login"
-              ? "Bắt đầu khám phá"
+            {mode === "admin-login"
+              ? "CỔNG QUẢN TRỊ NEXALAB"
+              : mode === "login"
+              ? "Đăng nhập người lớn"
+              : mode === "student-login"
+                ? "Đăng nhập học sinh"
               : mode === "register"
                 ? "Tài khoản phụ huynh"
                 : mode === "forgot"
@@ -270,9 +317,15 @@ function Login() {
                   : "Đặt mật khẩu mới"}
           </h2>
           <p className="muted">
-            {mode === "login"
-              ? "Đăng nhập để tiếp tục hành trình học tập."
-              : "Tài khoản học sinh được giáo viên hoặc nhà trường cấp."}
+            {mode === "admin-login"
+              ? "Đăng nhập dành riêng cho quản trị viên."
+              : mode === "login"
+              ? "Dành cho giáo viên và phụ huynh quản lý việc học."
+              : mode === "student-login"
+                ? "Tài khoản học sinh được giáo viên hoặc nhà trường cấp."
+                : mode === "forgot"
+                  ? "Nhập email giáo viên hoặc phụ huynh để nhận mật khẩu tạm thời."
+                : "Tài khoản phụ huynh dành cho người lớn."}
           </p>
           <form
             onSubmit={(e) => {
@@ -283,7 +336,15 @@ function Login() {
             {mode === "register" && (
               <Field label="Họ và tên" name="fullName" required />
             )}
-            {mode !== "reset" && (
+            {mode === "student-login" && (
+              <Field
+                label="Tên đăng nhập học sinh"
+                name="username"
+                required
+                autoComplete="username"
+              />
+            )}
+            {mode !== "reset" && mode !== "student-login" && (
               <Field
                 label="Email"
                 name="email"
@@ -297,10 +358,10 @@ function Login() {
                 label="Mật khẩu"
                 name="password"
                 type="password"
-                minLength={mode === "login" ? 1 : 12}
+                minLength={mode === "login" || mode === "student-login" || mode === "admin-login" ? 1 : 12}
                 required
                 autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
+                  mode === "login" || mode === "student-login" ? "current-password" : "new-password"
                 }
               />
             )}{" "}
@@ -316,7 +377,7 @@ function Login() {
             <button className="primary wide" disabled={action.isPending}>
               {action.isPending
                 ? "Đang xử lý…"
-                : mode === "login"
+                : mode === "login" || mode === "student-login" || mode === "admin-login"
                   ? "Đăng nhập"
                   : mode === "register"
                     ? "Tạo tài khoản"
@@ -325,6 +386,24 @@ function Login() {
             </button>
           </form>
           <div className="login-links">
+            <button
+              onClick={() => {
+                setMode(mode === "student-login" ? "login" : "student-login");
+                setMessage("");
+              }}
+            >
+              {mode === "student-login"
+                ? "Đăng nhập người lớn"
+                : "Học sinh đăng nhập bằng tên tài khoản"}
+            </button>
+            <button
+              onClick={() => {
+                setMode(mode === "admin-login" ? "student-login" : "admin-login");
+                setMessage("");
+              }}
+            >
+              {mode === "admin-login" ? "Đăng nhập người dùng" : "Cổng quản trị viên"}
+            </button>
             <button
               onClick={() => {
                 setMode(mode === "forgot" ? "login" : "forgot");
@@ -418,6 +497,9 @@ function Dashboard() {
           <Link
             className="cream-button"
             to={
+              student && assignments.data?.length
+                ? "/assignments/" + assignments.data[0].id
+                :
               ["STUDENT", "TEACHER"].includes(user.role)
                 ? "/labs/circuit"
                 : "/progress"
@@ -566,13 +648,15 @@ function Dashboard() {
             <h2>Nhiệm vụ tiếp theo</h2>
             <Badge>{assignments.data?.length ?? 0} bài được giao</Badge>
           </div>
-          {assignments.data?.length ? (
+          {assignments.isLoading ? <Empty>Đang tải bài được giao…</Empty> : assignments.error ? (
+            <div role="alert"><ErrorBox error={assignments.error} /><button onClick={() => assignments.refetch()}>Thử lại</button></div>
+          ) : assignments.data?.length ? (
             assignments.data.map((a: any) => (
               <Link
                 key={a.id}
                 className="assignment-row"
                 to={
-                  a.contentType === "lab" ? "/labs/" + a.contentId : "/lessons"
+                  "/assignments/" + a.id
                 }
               >
                 <span className="assignment-icon">
@@ -583,6 +667,7 @@ function Dashboard() {
                   <small>
                     {a.classroom.name} · Hạn{" "}
                     {new Date(a.dueDate).toLocaleDateString("vi-VN")}
+                    {a.overdue && " · Đã quá hạn, vẫn có thể học"}
                   </small>
                 </div>
                 <ArrowUpRight size={19} />

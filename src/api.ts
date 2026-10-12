@@ -1,10 +1,12 @@
 import { create } from "zustand";
 export type User = {
   id: string;
-  email: string;
+  username?: string | null;
+  email?: string | null;
   fullName: string;
   role: "STUDENT" | "TEACHER" | "PARENT" | "ADMIN";
   grade: number;
+  mustChangePassword?: boolean;
 };
 export const useAuth = create<{
   user: User | null;

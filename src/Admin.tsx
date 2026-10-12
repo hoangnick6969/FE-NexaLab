@@ -6,6 +6,7 @@ import { PageHeading } from "./App";
 export default function Admin() {
   const [tab, setTab] = useState("users");
   const [edit, setEdit] = useState<any>(null);
+  const [resetCredentials, setResetCredentials] = useState<any>(null);
   const q = useQuery({
     queryKey: ["admin", tab],
     queryFn: () => api(tab === "labs" ? "/admin/labs" : "/" + tab),
@@ -102,7 +103,7 @@ export default function Admin() {
                 <td>
                   {tab === "users" ? (
                     <>
-                      {row.email} <Badge>{row.role}</Badge>
+                      {row.email ?? row.username} <Badge>{row.role}</Badge>
                     </>
                   ) : tab === "labs" ? (
                     <Badge>{row.status}</Badge>
@@ -117,6 +118,18 @@ export default function Admin() {
                   >
                     Chỉnh sửa
                   </button>
+                  {tab === "users" && row.role !== "STUDENT" && (
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        api(`/users/${row.id}/reset-password`, "POST")
+                          .then((data) => setResetCredentials(data.credentials))
+                          .catch((e) => alert(e.message));
+                      }}
+                    >
+                      Cấp lại mật khẩu
+                    </button>
+                  )}
                   {tab !== "labs" && (
                     <button
                       className="danger-text"
@@ -332,6 +345,20 @@ export default function Admin() {
               Lưu thay đổi
             </button>
           </form>
+        </Modal>
+      )}
+      {resetCredentials && (
+        <Modal
+          title="Mật khẩu tạm đã được tạo"
+          onClose={() => setResetCredentials(null)}
+        >
+          <div className="notice">
+            <p>Email: <code>{resetCredentials.email}</code></p>
+            <p>Mật khẩu tạm: <code>{resetCredentials.temporaryPassword}</code></p>
+            <p>Hạn dùng: {new Date(resetCredentials.expiresAt).toLocaleString("vi-VN")}</p>
+            <p className="tiny">Hãy gửi riêng thông tin này cho người dùng. Mật khẩu sẽ không hiển thị lại.</p>
+          </div>
+          <button className="secondary" onClick={() => setResetCredentials(null)}>Đã lưu thông tin</button>
         </Modal>
       )}
     </>
