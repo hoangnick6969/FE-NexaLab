@@ -1922,6 +1922,69 @@ td small {
   min-height: 44px;
   max-width: 100%;
 }
+.video-learning {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  min-width: 0;
+}
+.video-learning h4,
+.video-learning h5,
+.video-learning p {
+  margin: 0;
+}
+.video-player {
+  aspect-ratio: 16 / 9;
+  background: #101814;
+  border-radius: 8px;
+  display: block;
+  max-height: 70vh;
+  max-width: 100%;
+  width: 100%;
+}
+.video-placeholder,
+.video-unavailable,
+.video-transcript,
+.video-equivalent,
+.video-save-status {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  padding: 14px;
+}
+.video-placeholder,
+.video-unavailable {
+  background: #f4f5f1;
+  color: var(--muted);
+}
+.video-transcript,
+.video-equivalent {
+  display: grid;
+  gap: 10px;
+  line-height: 1.7;
+}
+.video-transcript p {
+  white-space: pre-wrap;
+}
+.video-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.video-actions button,
+.video-fallback-complete,
+.video-save-status button {
+  min-height: 44px;
+}
+.video-save-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.video-save-status[role="alert"] {
+  border-color: #b56355;
+}
 @media (max-width: 680px) {
   .pathway-step {
     padding: 15px;
@@ -1931,7 +1994,21 @@ td small {
     flex-direction: column;
   }
   .pathway-step-heading .badge,
-  .pathway-continue {
+  .pathway-continue,
+  .video-actions button,
+  .video-fallback-complete,
+  .video-save-status button {
     width: 100%;
+  }
+  .video-learning {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video-learning *,
+  .video-learning *::before,
+  .video-learning *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

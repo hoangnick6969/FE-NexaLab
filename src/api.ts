@@ -97,3 +97,20 @@ export async function openMaterial(url: string) {
     throw e;
   }
 }
+
+export type InlineMaterial = { src: string; revoke: () => void };
+
+export async function inlineMaterial(url: string): Promise<InlineMaterial> {
+  if (!url.startsWith("asset:")) return { src: url, revoke: () => undefined };
+
+  const request = () => fetch(base + "/files/" + url.slice(6), {
+    credentials: "include",
+    headers: { Authorization: "Bearer " + useAuth.getState().token },
+  });
+  let response = await request();
+  if (response.status === 401 && await restore()) response = await request();
+  if (!response.ok) throw new Error("Không tải được video");
+
+  const src = URL.createObjectURL(await response.blob());
+  return { src, revoke: () => URL.revokeObjectURL(src) };
+}
