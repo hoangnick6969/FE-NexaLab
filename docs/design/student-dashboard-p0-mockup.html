@@ -1,231 +1,891 @@
 <!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NexaLab — Dashboard học sinh P0</title>
-  <style>
-    :root {
-      --frame:#c9d3e3; --canvas:#f2f7fa; --surface:#fff; --subtle:#e7eff3; --line:#d5e1e7;
-      --primary:#1f6f78; --action:#f6c945; --text:#14202b; --text-muted:#506070;
-      --physics:#d3ecf7; --physics-ink:#075985; --chemistry:#f5dfc0; --chemistry-ink:#7c3d12;
-      --biology:#d9ebc7; --biology-ink:#2e5d22; --success:#d5efc8; --success-ink:#2f6b2a; 
-      --progress:#fff1c2; --progress-ink:#7a5a00; --practice:#f8d9ee; --practice-ink:#8a2f6a;
-      --error:#fde0dc; --error-ink:#a3281c;
-      --shadow:0 8px 30px rgba(20,32,43,.08);
-    }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--frame); color:var(--text); font-family:"Be Vietnam Pro",ui-sans-serif,system-ui,sans-serif; }
-    button { font:inherit; }
-    .shell { min-height:100dvh; max-width:1440px; margin:auto; display:grid; grid-template-columns:230px minmax(0,1fr); background:var(--canvas); }
-    .rail { padding:28px 16px; background:#e4edf2; }
-    .brand { display:flex; align-items:center; gap:10px; margin:0 8px 30px; font-size:21px; font-weight:800; letter-spacing:-.04em; }
-    .brand-mark { width:36px; height:36px; display:grid; place-items:center; border-radius:14px; background:var(--primary); color:#fff; }
-    .brand-mark svg,.nav-icon { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
-    nav { display:grid; gap:6px; }
-    .nav-item { display:flex; align-items:center; gap:12px; min-height:46px; padding:0 12px; border-radius:999px; color:var(--text-muted); text-decoration:none; font-size:14px; font-weight:600; }
-    .nav-item.active { background:var(--primary); color:#fff; box-shadow:0 6px 16px rgba(31,111,120,.18); }
-    .profile { margin:30px 8px 0; padding:16px 0; border-top:1px solid #c6d6dd; font-size:13px; color:var(--text-muted); }
-    .main { padding:30px; overflow:hidden; }
-    .top { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:25px; }
-    .eyebrow { margin:0 0 4px; color:var(--text-muted); font-size:13px; font-weight:600; text-transform: uppercase; letter-spacing: 0.05em; }
-    h1 { margin:0; font-size:28px; letter-spacing:-.04em; }
-    .account { width:42px; height:42px; border:0; border-radius:50%; background:#fff; color:var(--primary); box-shadow:var(--shadow); font-weight:800; }
-    
-    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
-    .metric { min-height:114px; padding:18px; border:1px solid var(--line); border-radius:24px; background:var(--surface); text-align:left; cursor:pointer; position:relative;}
-    .metric small { display:block; color:var(--text-muted); font-size:12px; font-weight:600; }
-    .metric strong { display:block; margin:8px 0 3px; font-size:30px; letter-spacing:-.05em; font-variant-numeric: tabular-nums; }
-    .metric span { font-size:12px; color:var(--text-muted); }
-    .metric svg { position:absolute; right:18px; top:50%; transform:translateY(-50%); width:20px; height:20px; color:var(--text-muted); }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NexaLab — Dashboard học sinh P0</title>
+    <style>
+      :root {
+        --frame: #c9d3e3;
+        --canvas: #f2f7fa;
+        --surface: #fff;
+        --subtle: #e7eff3;
+        --line: #d5e1e7;
+        --primary: #1f6f78;
+        --action: #f6c945;
+        --text: #14202b;
+        --text-muted: #506070;
+        --physics: #d3ecf7;
+        --physics-ink: #075985;
+        --chemistry: #f5dfc0;
+        --chemistry-ink: #7c3d12;
+        --biology: #d9ebc7;
+        --biology-ink: #2e5d22;
+        --success: #d5efc8;
+        --success-ink: #2f6b2a;
+        --progress: #fff1c2;
+        --progress-ink: #7a5a00;
+        --practice: #f8d9ee;
+        --practice-ink: #8a2f6a;
+        --error: #fde0dc;
+        --error-ink: #a3281c;
+        --shadow: 0 8px 30px rgba(20, 32, 43, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--frame);
+        color: var(--text);
+        font-family: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+      }
+      button {
+        font: inherit;
+      }
+      .shell {
+        min-height: 100dvh;
+        max-width: 1440px;
+        margin: auto;
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr);
+        background: var(--canvas);
+      }
+      .rail {
+        padding: 28px 16px;
+        background: #e4edf2;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 8px 30px;
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+      .brand-mark {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--primary);
+        color: #fff;
+      }
+      .brand-mark svg,
+      .nav-icon {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      nav {
+        display: grid;
+        gap: 6px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 46px;
+        padding: 0 12px;
+        border-radius: 999px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .nav-item.active {
+        background: var(--primary);
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(31, 111, 120, 0.18);
+      }
+      .profile {
+        margin: 30px 8px 0;
+        padding: 16px 0;
+        border-top: 1px solid #c6d6dd;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .main {
+        padding: 30px;
+        overflow: hidden;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 25px;
+      }
+      .eyebrow {
+        margin: 0 0 4px;
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+      .account {
+        width: 42px;
+        height: 42px;
+        border: 0;
+        border-radius: 50%;
+        background: #fff;
+        color: var(--primary);
+        box-shadow: var(--shadow);
+        font-weight: 800;
+      }
 
-    .content { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(260px,.72fr); gap:20px; }
-    .stack { display:grid; gap:20px; }
-    .card { background:var(--surface); border:1px solid rgba(20,32,43,.05); border-radius:24px; box-shadow:var(--shadow); overflow:hidden;}
-    
-    .continue { min-height:230px; padding:28px; background:var(--physics); position:relative; }
-    .continue p { max-width:430px; color:var(--physics-ink); line-height:1.6; }
-    .continue h2 { max-width:450px; margin:8px 0; font-size:26px; letter-spacing:-.04em; }
-    .continue .eyebrow { color:var(--physics-ink); }
-    .button { display:inline-flex; align-items:center; gap:8px; min-height:44px; margin-top:8px; padding:0 18px; border:0; border-radius:999px; background:var(--action); color:#14202b; font-weight:800; cursor:pointer; }
-    .button:hover { background:#e5b72d; }
-    .apparatus { position:absolute; right:28px; bottom:21px; width:126px; height:126px; opacity:.75; }
-    
-    .learning-path-strip { display:flex; gap:12px; padding:22px; overflow-x:auto; }
-    .learning-step-card { flex:1 0 auto; display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:16px; background:var(--canvas); border:1px solid var(--line); min-width:180px;}
-    .learning-step-card.locked { opacity: 0.6; cursor: not-allowed; border: 1px dashed var(--line); background:var(--surface); }
-    .step-icon-sm { width:32px; height:32px; display:grid; place-items:center; border-radius:12px; background:var(--subtle); color:var(--primary); }
-    .locked .step-icon-sm { background: var(--canvas); color:var(--text-muted); }
-    .step-icon-sm svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
-    .learning-step-card > div { flex:1; overflow:hidden;}
-    .learning-step-card strong { display:block; font-size:13px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
-    .learning-step-card small { display:block; color:var(--text-muted); font-size:11px; margin-top:2px; }
-    .step-badge { width:18px; height:18px; border-radius:50%; display:grid; place-items:center; flex-shrink:0;}
-    .step-badge.done { background:var(--success); color:var(--success-ink); }
-    .step-badge.next { background:var(--action); color:var(--text); }
-    .step-badge svg { width:12px; height:12px; stroke-width:2.5; stroke:currentColor; fill:none;}
-    .locked .step-badge { display:none; }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .metric {
+        min-height: 114px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
+        text-align: left;
+        cursor: pointer;
+        position: relative;
+      }
+      .metric small {
+        display: block;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .metric strong {
+        display: block;
+        margin: 8px 0 3px;
+        font-size: 30px;
+        letter-spacing: -0.05em;
+        font-variant-numeric: tabular-nums;
+      }
+      .metric span {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .metric svg {
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: var(--text-muted);
+      }
 
-    .section { padding:22px; }
-    .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
-    .section h2 { margin:0; font-size:18px; letter-spacing:-.025em; }
-    .link { border:0; padding:0; background:none; color:var(--primary); font-size:13px; font-weight:700; cursor:pointer; }
-    
-    .chart { height:132px; padding:18px 4px 0; display:flex; align-items:end; gap:10px; margin-top: 12px;}
-    .bar { flex:1; display:grid; gap:7px; justify-items:center; color:var(--text-muted); font-size:11px; }
-    .bar i { display:block; width:100%; max-width:32px; border-radius:10px 10px 4px 4px; background:var(--primary); opacity:.86; transition: height 0.3s ease; }
-    .bar.empty i { background:var(--canvas); opacity:1; border: 1px dashed var(--line); }
-    
-    .task-list { display:grid; gap:10px; }
-    .task { display:flex; align-items:flex-start; gap:12px; min-width:0; padding:12px; border-radius:16px; background:var(--canvas); }
-    .task-icon { display:grid; place-items:center; width:34px; height:34px; flex:0 0 34px; border-radius:12px; background:var(--chemistry); color:var(--chemistry-ink); font-size:12px; font-weight:800; }
-    .task > div { flex:1; }
-    .task strong { display:block; font-size:14px; }
-    .task small { color:var(--text-muted); font-size:12px; }
-    .due { display:block; margin-top:6px; color:var(--progress-ink); font-size:12px; font-weight:700; background:var(--progress); padding:4px 8px; border-radius:8px; width:fit-content;}
-    .due.past { color:var(--error-ink); background:transparent; padding:0;}
-    
-    .attempt { padding:14px 0; border-bottom:1px solid var(--line); }
-    .attempt:last-child { border-bottom:0; }
-    .attempt-row { display:flex; justify-content:space-between; gap:8px; }
-    .attempt b { font-size:14px; }
-    .attempt p { margin:5px 0 0; color:var(--text-muted); font-size:12px; }
-    
-    .chip { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
-    .chip-success { background: var(--success); color: var(--success-ink); }
-    .chip-practice { background: var(--practice); color: var(--practice-ink); }
+      .content {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.72fr);
+        gap: 20px;
+      }
+      .stack {
+        display: grid;
+        gap: 20px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid rgba(20, 32, 43, 0.05);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
 
-    .bottom-nav { display:none; }
-    @media (max-width:1023px) {
-      .shell { grid-template-columns:1fr; } .rail { display:none; } .main { padding:22px 16px 92px; } .content { grid-template-columns:1fr; }
-      .bottom-nav { position:fixed; z-index:2; right:12px; bottom:12px; left:12px; display:grid; grid-template-columns:repeat(5,1fr); padding:7px; border:1px solid rgba(20,32,43,.08); border-radius:22px; background:rgba(255,255,255,.96); box-shadow:0 12px 34px rgba(20,32,43,.16); }
-      .bottom-nav a { display:grid; justify-items:center; gap:4px; padding:5px 2px; color:var(--text-muted); font-size:10px; font-weight:700; text-decoration:none; }
-      .bottom-nav a.active { color:var(--primary); } .bottom-nav .nav-icon { width:20px; height:20px; }
-    }
-    @media (max-width:620px) {
-      .main { padding-top:20px; } h1 { font-size:24px; } .stats { grid-template-columns:1fr; gap:10px; }
-      .metric { min-height:82px; display:grid; grid-template-columns:1fr auto; align-items:center; } .metric small,.metric span { grid-column:1; }
-      .metric strong { grid-column:2; grid-row:1 / 3; margin:0; font-size:30px; } .continue { min-height:260px; padding:22px; }
-      .continue h2 { max-width:250px; font-size:23px; } .continue p { max-width:235px; font-size:14px; } .apparatus { right:-2px; width:108px; opacity:.42; }
-      .section { padding:18px; }
-    }
-    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <aside class="rail">
-      <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"/></svg></span>NexaLab</div>
-      <nav aria-label="Điều hướng chính">
-        <a class="nav-item active" href="#home"><svg class="nav-icon" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>Trang chủ</a>
-        <a class="nav-item" href="#lessons"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22zM4 5.5V20"/></svg>Bài học</a>
-        <a class="nav-item" href="#labs"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"/></svg>Lab</a>
-        <a class="nav-item" href="#assigned"><svg class="nav-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>Bài được giao</a>
-        <a class="nav-item" href="#progress"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10m8 10V4m8 16v-7"/></svg>Tiến độ</a>
-      </nav>
-      <div class="profile">Lớp 8A · Trường THCS Minh Khai</div>
-    </aside>
+      .continue {
+        min-height: 230px;
+        padding: 28px;
+        background: var(--physics);
+        position: relative;
+      }
+      .continue p {
+        max-width: 430px;
+        color: var(--physics-ink);
+        line-height: 1.6;
+      }
+      .continue h2 {
+        max-width: 450px;
+        margin: 8px 0;
+        font-size: 26px;
+        letter-spacing: -0.04em;
+      }
+      .continue .eyebrow {
+        color: var(--physics-ink);
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        margin-top: 8px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--action);
+        color: #14202b;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .button:hover {
+        background: #e5b72d;
+      }
+      .apparatus {
+        position: absolute;
+        right: 28px;
+        bottom: 21px;
+        width: 126px;
+        height: 126px;
+        opacity: 0.75;
+      }
 
-    <main class="main" id="home">
-      <header class="top"><div><p class="eyebrow">Thứ Ba, 8 tháng 10</p><h1>Chào em, An</h1></div><button class="account" aria-label="Mở tài khoản">NA</button></header>
-      <section class="stats" aria-label="Tiến độ của em">
-        <button class="metric"><small>Tiến độ bài được giao</small><strong>56%</strong><span>Xem 5 bài và lượt làm</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-        <button class="metric"><small>Bài còn lại</small><strong>3</strong><span>Xem hạn nộp của từng bài</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-        <button class="metric"><small>Lượt thực hành</small><strong>12</strong><span>Xem lịch sử từng lượt</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-      </section>
+      .learning-path-strip {
+        display: flex;
+        gap: 12px;
+        padding: 22px;
+        overflow-x: auto;
+      }
+      .learning-step-card {
+        flex: 1 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: var(--canvas);
+        border: 1px solid var(--line);
+        min-width: 180px;
+      }
+      .learning-step-card.locked {
+        opacity: 0.6;
+        cursor: not-allowed;
+        border: 1px dashed var(--line);
+        background: var(--surface);
+      }
+      .step-icon-sm {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--subtle);
+        color: var(--primary);
+      }
+      .locked .step-icon-sm {
+        background: var(--canvas);
+        color: var(--text-muted);
+      }
+      .step-icon-sm svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .learning-step-card > div {
+        flex: 1;
+        overflow: hidden;
+      }
+      .learning-step-card strong {
+        display: block;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .learning-step-card small {
+        display: block;
+        color: var(--text-muted);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+      .step-badge {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .step-badge.done {
+        background: var(--success);
+        color: var(--success-ink);
+      }
+      .step-badge.next {
+        background: var(--action);
+        color: var(--text);
+      }
+      .step-badge svg {
+        width: 12px;
+        height: 12px;
+        stroke-width: 2.5;
+        stroke: currentColor;
+        fill: none;
+      }
+      .locked .step-badge {
+        display: none;
+      }
 
-      <div class="content">
-        <div class="stack">
-          <section class="card">
-            <div class="continue">
-              <p class="eyebrow">Vật lý · Bài 12 · Bước 2/6</p>
-              <h2>Áp suất chất lỏng</h2>
-              <p>Em đã đọc phần khái niệm. Xem video ngắn để quan sát áp suất thay đổi theo độ sâu.</p>
-              <button class="button">Xem video 6 phút</button>
-              <svg class="apparatus" viewBox="0 0 126 126" aria-hidden="true"><path d="M23 108h80M42 108V25h43v83M37 25h53M49 47h29M49 66h29M49 85h29" fill="none" stroke="#075985" stroke-width="4" stroke-linecap="round"/><path d="M42 88h43v20H42z" fill="#fff" stroke="#075985" stroke-width="4"/><path d="M49 95h29" stroke="#075985" stroke-width="4" stroke-linecap="round"/></svg>
-            </div>
-            
-            <div class="learning-path-strip" aria-label="Lộ trình bài học">
-              
-              <div class="learning-step-card">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></span>
-                <div><strong>Nội dung</strong><small>Khái niệm</small></div>
-                <div class="step-badge done" title="Đã hoàn thành"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
-              </div>
-              
-              <div class="learning-step-card">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><rect width="18" height="14" x="3" y="5" rx="2" ry="2"/><path d="m10 9 5 3-5 3z"/></svg></span>
-                <div><strong>Video</strong><small>Áp suất</small></div>
-                <div class="step-badge next" title="Tiếp theo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
-              </div>
-              
-              <div class="learning-step-card locked" title="Hoàn thành Video để mở khóa">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                <div><strong>Thẻ ghi nhớ</strong><small>8 thẻ</small></div>
-              </div>
-              
-              <div class="learning-step-card locked" title="Hoàn thành Thẻ ghi nhớ để mở khóa">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                <div><strong>Kiểm tra nhỏ</strong><small>5 câu</small></div>
-              </div>
-              
-              <div class="learning-step-card locked" title="Vượt qua Kiểm tra nhỏ để mở khóa">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                <div><strong>Lab</strong><small>Mô phỏng 3D</small></div>
-              </div>
-              
-              <div class="learning-step-card locked" title="Hoàn thành Lab để mở khóa">
-                <span class="step-icon-sm"><svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                <div><strong>Thử thách</strong><small>Thực hành</small></div>
-              </div>
-              
-            </div>
-          </section>
+      .section {
+        padding: 22px;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .section h2 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.025em;
+      }
+      .link {
+        border: 0;
+        padding: 0;
+        background: none;
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
 
-          <section class="card section">
-            <div class="section-head"><h2>Hoạt động tuần này</h2><button class="link">Xem chi tiết</button></div>
-            <p style="margin:0;font-size:13px;color:var(--text-muted);">Em đã học 4 ngày trong tuần này.</p>
-            <div class="chart" aria-label="Hoạt động học tập: Thứ Hai 1 hoạt động, Thứ Ba 2 hoạt động, Thứ Tư 0 hoạt động, Thứ Năm 3 hoạt động, Thứ Sáu 1 hoạt động">
-              <div class="bar"><i style="height:38px"></i>T2</div>
-              <div class="bar"><i style="height:68px"></i>T3</div>
-              <div class="bar empty"><i style="height:100%"></i>T4</div>
-              <div class="bar"><i style="height:98px"></i>T5</div>
-              <div class="bar"><i style="height:38px"></i>T6</div>
-            </div>
-          </section>
+      .chart {
+        height: 132px;
+        padding: 18px 4px 0;
+        display: flex;
+        align-items: end;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .bar {
+        flex: 1;
+        display: grid;
+        gap: 7px;
+        justify-items: center;
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+      .bar i {
+        display: block;
+        width: 100%;
+        max-width: 32px;
+        border-radius: 10px 10px 4px 4px;
+        background: var(--primary);
+        opacity: 0.86;
+        transition: height 0.3s ease;
+      }
+      .bar.empty i {
+        background: var(--canvas);
+        opacity: 1;
+        border: 1px dashed var(--line);
+      }
+
+      .task-list {
+        display: grid;
+        gap: 10px;
+      }
+      .task {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        min-width: 0;
+        padding: 12px;
+        border-radius: 16px;
+        background: var(--canvas);
+      }
+      .task-icon {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        border-radius: 12px;
+        background: var(--chemistry);
+        color: var(--chemistry-ink);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .task > div {
+        flex: 1;
+      }
+      .task strong {
+        display: block;
+        font-size: 14px;
+      }
+      .task small {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .due {
+        display: block;
+        margin-top: 6px;
+        color: var(--progress-ink);
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--progress);
+        padding: 4px 8px;
+        border-radius: 8px;
+        width: fit-content;
+      }
+      .due.past {
+        color: var(--error-ink);
+        background: transparent;
+        padding: 0;
+      }
+
+      .attempt {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .attempt:last-child {
+        border-bottom: 0;
+      }
+      .attempt-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .attempt b {
+        font-size: 14px;
+      }
+      .attempt p {
+        margin: 5px 0 0;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .chip {
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .chip-success {
+        background: var(--success);
+        color: var(--success-ink);
+      }
+      .chip-practice {
+        background: var(--practice);
+        color: var(--practice-ink);
+      }
+
+      .bottom-nav {
+        display: none;
+      }
+      @media (max-width: 1023px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          display: none;
+        }
+        .main {
+          padding: 22px 16px 92px;
+        }
+        .content {
+          grid-template-columns: 1fr;
+        }
+        .bottom-nav {
+          position: fixed;
+          z-index: 2;
+          right: 12px;
+          bottom: 12px;
+          left: 12px;
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          padding: 7px;
+          border: 1px solid rgba(20, 32, 43, 0.08);
+          border-radius: 22px;
+          background: rgba(255, 255, 255, 0.96);
+          box-shadow: 0 12px 34px rgba(20, 32, 43, 0.16);
+        }
+        .bottom-nav a {
+          display: grid;
+          justify-items: center;
+          gap: 4px;
+          padding: 5px 2px;
+          color: var(--text-muted);
+          font-size: 10px;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .bottom-nav a.active {
+          color: var(--primary);
+        }
+        .bottom-nav .nav-icon {
+          width: 20px;
+          height: 20px;
+        }
+      }
+      @media (max-width: 620px) {
+        .main {
+          padding-top: 20px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        .stats {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .metric {
+          min-height: 82px;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          align-items: center;
+        }
+        .metric small,
+        .metric span {
+          grid-column: 1;
+        }
+        .metric strong {
+          grid-column: 2;
+          grid-row: 1 / 3;
+          margin: 0;
+          font-size: 30px;
+        }
+        .continue {
+          min-height: 260px;
+          padding: 22px;
+        }
+        .continue h2 {
+          max-width: 250px;
+          font-size: 23px;
+        }
+        .continue p {
+          max-width: 235px;
+          font-size: 14px;
+        }
+        .apparatus {
+          right: -2px;
+          width: 108px;
+          opacity: 0.42;
+        }
+        .section {
+          padding: 18px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="rail">
+        <div class="brand">
+          <span class="brand-mark"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"
+              /></svg></span
+          >NexaLab
         </div>
+        <nav aria-label="Điều hướng chính">
+          <a class="nav-item active" href="#home"
+            ><svg class="nav-icon" viewBox="0 0 24 24">
+              <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /></svg
+            >Trang chủ</a
+          >
+          <a class="nav-item" href="#lessons"
+            ><svg class="nav-icon" viewBox="0 0 24 24">
+              <path
+                d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22zM4 5.5V20"
+              /></svg
+            >Bài học</a
+          >
+          <a class="nav-item" href="#labs"
+            ><svg class="nav-icon" viewBox="0 0 24 24">
+              <path
+                d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"
+              /></svg
+            >Lab</a
+          >
+          <a class="nav-item" href="#assigned"
+            ><svg class="nav-icon" viewBox="0 0 24 24">
+              <path d="m5 12 4 4L19 6" /></svg
+            >Bài được giao</a
+          >
+          <a class="nav-item" href="#progress"
+            ><svg class="nav-icon" viewBox="0 0 24 24">
+              <path d="M4 20V10m8 10V4m8 16v-7" /></svg
+            >Tiến độ</a
+          >
+        </nav>
+        <div class="profile">Lớp 8A · Trường THCS Minh Khai</div>
+      </aside>
 
-        <aside class="stack">
-          <section class="card section" id="assigned">
-            <div class="section-head"><h2>Bài được giao</h2><button class="link">Xem tất cả</button></div>
-            <div class="task-list">
-              <div class="task"><span class="task-icon">Q</span><div><strong>Quiz: Áp suất chất lỏng</strong><small>Vật lý · Bài 12</small><span class="due">Hạn nộp: Thứ Sáu</span></div></div>
-              <div class="task"><span class="task-icon" style="background:var(--biology);color:var(--biology-ink)">L</span><div><strong>Gọi tên các bộ phận mắt</strong><small>Sinh học · video và thẻ học</small><span class="due past">Quá hạn 1 ngày</span></div></div>
-            </div>
-          </section>
-          
-          <section class="card section" id="progress">
-            <div class="section-head"><h2>Lượt thử gần đây</h2><button class="link">Xem lịch sử</button></div>
-            <div class="attempt">
-              <div class="attempt-row"><b>Áp suất chất lỏng</b><span class="chip chip-success">Đạt</span></div>
-              <p>Hôm nay, Lab</p>
-            </div>
-            <div class="attempt">
-              <div class="attempt-row"><b>Pha loãng dung dịch</b><span class="chip chip-practice">Cần luyện thêm</span></div>
-              <p>Thứ Hai, Thử thách</p>
-            </div>
-          </section>
-        </aside>
-      </div>
-    </main>
-  </div>
+      <main class="main" id="home">
+        <header class="top">
+          <div>
+            <p class="eyebrow">Thứ Ba, 8 tháng 10</p>
+            <h1>Chào em, An</h1>
+          </div>
+          <button class="account" aria-label="Mở tài khoản">NA</button>
+        </header>
+        <section class="stats" aria-label="Tiến độ của em">
+          <button class="metric">
+            <small>Tiến độ bài được giao</small><strong>56%</strong
+            ><span>Xem 5 bài và lượt làm</span
+            ><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <button class="metric">
+            <small>Bài còn lại</small><strong>3</strong
+            ><span>Xem hạn nộp của từng bài</span
+            ><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <button class="metric">
+            <small>Lượt thực hành</small><strong>12</strong
+            ><span>Xem lịch sử từng lượt</span
+            ><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </section>
 
-  <nav class="bottom-nav" aria-label="Điều hướng di động">
-    <a class="active" href="#home"><svg class="nav-icon" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>Trang chủ</a>
-    <a href="#lessons"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22zM4 5.5V20"/></svg>Bài học</a>
-    <a href="#labs"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"/></svg>Lab</a>
-    <a href="#assigned"><svg class="nav-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>Bài giao</a>
-    <a href="#progress"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10m8 10V4m8 16v-7"/></svg>Tiến độ</a>
-  </nav>
-</body>
+        <div class="content">
+          <div class="stack">
+            <section class="card">
+              <div class="continue">
+                <p class="eyebrow">Vật lý · Bài 12 · Bước 2/6</p>
+                <h2>Áp suất chất lỏng</h2>
+                <p>
+                  Em đã đọc phần khái niệm. Xem video ngắn để quan sát áp suất
+                  thay đổi theo độ sâu.
+                </p>
+                <button class="button">Xem video 6 phút</button>
+                <svg class="apparatus" viewBox="0 0 126 126" aria-hidden="true">
+                  <path
+                    d="M23 108h80M42 108V25h43v83M37 25h53M49 47h29M49 66h29M49 85h29"
+                    fill="none"
+                    stroke="#075985"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M42 88h43v20H42z"
+                    fill="#fff"
+                    stroke="#075985"
+                    stroke-width="4"
+                  />
+                  <path
+                    d="M49 95h29"
+                    stroke="#075985"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+
+              <div class="learning-path-strip" aria-label="Lộ trình bài học">
+                <div class="learning-step-card">
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <path
+                        d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"
+                      /></svg
+                  ></span>
+                  <div><strong>Nội dung</strong><small>Khái niệm</small></div>
+                  <div class="step-badge done" title="Đã hoàn thành">
+                    <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+                  </div>
+                </div>
+
+                <div class="learning-step-card">
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <rect width="18" height="14" x="3" y="5" rx="2" ry="2" />
+                      <path d="m10 9 5 3-5 3z" /></svg
+                  ></span>
+                  <div><strong>Video</strong><small>Áp suất</small></div>
+                  <div class="step-badge next" title="Tiếp theo">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" />
+                    </svg>
+                  </div>
+                </div>
+
+                <div
+                  class="learning-step-card locked"
+                  title="Hoàn thành Video để mở khóa"
+                >
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg
+                  ></span>
+                  <div><strong>Thẻ ghi nhớ</strong><small>8 thẻ</small></div>
+                </div>
+
+                <div
+                  class="learning-step-card locked"
+                  title="Hoàn thành Thẻ ghi nhớ để mở khóa"
+                >
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg
+                  ></span>
+                  <div><strong>Kiểm tra nhỏ</strong><small>5 câu</small></div>
+                </div>
+
+                <div
+                  class="learning-step-card locked"
+                  title="Vượt qua Kiểm tra nhỏ để mở khóa"
+                >
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg
+                  ></span>
+                  <div><strong>Lab</strong><small>Mô phỏng 3D</small></div>
+                </div>
+
+                <div
+                  class="learning-step-card locked"
+                  title="Hoàn thành Lab để mở khóa"
+                >
+                  <span class="step-icon-sm"
+                    ><svg viewBox="0 0 24 24">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg
+                  ></span>
+                  <div><strong>Thử thách</strong><small>Thực hành</small></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card section">
+              <div class="section-head">
+                <h2>Hoạt động tuần này</h2>
+                <button class="link">Xem chi tiết</button>
+              </div>
+              <p style="margin: 0; font-size: 13px; color: var(--text-muted)">
+                Em đã học 4 ngày trong tuần này.
+              </p>
+              <div
+                class="chart"
+                aria-label="Hoạt động học tập: Thứ Hai 1 hoạt động, Thứ Ba 2 hoạt động, Thứ Tư 0 hoạt động, Thứ Năm 3 hoạt động, Thứ Sáu 1 hoạt động"
+              >
+                <div class="bar"><i style="height: 38px"></i>T2</div>
+                <div class="bar"><i style="height: 68px"></i>T3</div>
+                <div class="bar empty"><i style="height: 100%"></i>T4</div>
+                <div class="bar"><i style="height: 98px"></i>T5</div>
+                <div class="bar"><i style="height: 38px"></i>T6</div>
+              </div>
+            </section>
+          </div>
+
+          <aside class="stack">
+            <section class="card section" id="assigned">
+              <div class="section-head">
+                <h2>Bài được giao</h2>
+                <button class="link">Xem tất cả</button>
+              </div>
+              <div class="task-list">
+                <div class="task">
+                  <span class="task-icon">Q</span>
+                  <div>
+                    <strong>Quiz: Áp suất chất lỏng</strong
+                    ><small>Vật lý · Bài 12</small
+                    ><span class="due">Hạn nộp: Thứ Sáu</span>
+                  </div>
+                </div>
+                <div class="task">
+                  <span
+                    class="task-icon"
+                    style="
+                      background: var(--biology);
+                      color: var(--biology-ink);
+                    "
+                    >L</span
+                  >
+                  <div>
+                    <strong>Gọi tên các bộ phận mắt</strong
+                    ><small>Sinh học · video và thẻ học</small
+                    ><span class="due past">Quá hạn 1 ngày</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card section" id="progress">
+              <div class="section-head">
+                <h2>Lượt thử gần đây</h2>
+                <button class="link">Xem lịch sử</button>
+              </div>
+              <div class="attempt">
+                <div class="attempt-row">
+                  <b>Áp suất chất lỏng</b
+                  ><span class="chip chip-success">Đạt</span>
+                </div>
+                <p>Hôm nay, Lab</p>
+              </div>
+              <div class="attempt">
+                <div class="attempt-row">
+                  <b>Pha loãng dung dịch</b
+                  ><span class="chip chip-practice">Cần luyện thêm</span>
+                </div>
+                <p>Thứ Hai, Thử thách</p>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Điều hướng di động">
+      <a class="active" href="#home"
+        ><svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /></svg
+        >Trang chủ</a
+      >
+      <a href="#lessons"
+        ><svg class="nav-icon" viewBox="0 0 24 24">
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22zM4 5.5V20"
+          /></svg
+        >Bài học</a
+      >
+      <a href="#labs"
+        ><svg class="nav-icon" viewBox="0 0 24 24">
+          <path
+            d="M9 3h6m-5 0v6l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V3"
+          /></svg
+        >Lab</a
+      >
+      <a href="#assigned"
+        ><svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" /></svg
+        >Bài giao</a
+      >
+      <a href="#progress"
+        ><svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="M4 20V10m8 10V4m8 16v-7" /></svg
+        >Tiến độ</a
+      >
+    </nav>
+  </body>
 </html>
