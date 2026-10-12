@@ -554,33 +554,97 @@ export function AssignedLearning() {
     queryFn: () => api("/assignments/" + id),
     enabled: Boolean(id),
   });
+  const lessonId = query.data?.contentType === "lesson" ? query.data.content.id : null;
+  const pathwayQuery = useQuery({
+    queryKey: ["lesson-pathway", lessonId],
+    queryFn: () => api("/lessons/" + lessonId + "/pathway"),
+    enabled: Boolean(lessonId),
+  });
   if (query.isLoading) return <Empty>Đang tải bài được giao…</Empty>;
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
   const assignment = query.data;
   const content = assignment.content;
+  if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
+    return <Empty>Đang tải lộ trình bài học…</Empty>;
+  if (assignment.contentType === "lesson" && pathwayQuery.error)
+    return <div><ErrorBox error={pathwayQuery.error} /><button onClick={() => pathwayQuery.refetch()}>Thử lại</button></div>;
+  const pathway = pathwayQuery.data;
+  const lesson = pathway?.lesson ?? content;
+  const stepNames: Record<string, string> = {
+    READING: "Đọc nội dung bài học",
+    VIDEO: "Xem video hoặc nội dung thay thế",
+    STUDY_CARDS: "Ôn tập với thẻ ghi nhớ",
+    QUIZ: "Kiểm tra kiến thức",
+    LAB: "Thực hành trong phòng lab",
+    CHALLENGE: "Hoàn thành thử thách",
+  };
+  const stateNames: Record<string, string> = {
+    COMPLETED: "Đã hoàn thành",
+    IN_PROGRESS: "Đang học",
+    LOCKED: "Đã khóa",
+  };
+  const continueNames: Record<string, string> = {
+    READING: "Bắt đầu đọc bài",
+    VIDEO: "Xem nội dung video",
+    STUDY_CARDS: "Bắt đầu ôn thẻ",
+  };
+  const lockReasons: Record<string, string> = {
+    PREREQUISITE_INCOMPLETE: "Hoàn thành bước trước để tiếp tục.",
+    QUIZ_NOT_PASSED: "Vượt qua bài kiểm tra để mở khóa bước này.",
+    PRACTICE_NOT_PASSED: "Hoàn thành phần thực hành để mở khóa thử thách.",
+  };
+  const nextStep = pathway?.steps.find((step: any) => step.id === pathway.nextStepId);
   return (
     <>
       <PageHeading
         eyebrow="BÀI ĐƯỢC GIAO"
-        title={content.title}
+        title={lesson.title}
         description={assignment.classroom.name}
       />
       <section className="panel lesson-content">
         <p className="eyebrow">
-          {content.subject?.name} · LỚP {content.grade ?? content.subject?.grade}
+          {lesson.subject?.name} · LỚP {lesson.grade ?? lesson.subject?.grade}
         </p>
-        <h2>{content.topic}</h2>
+        <h2>{lesson.topic}</h2>
         <div className="notice">
-          <b>Mục tiêu học tập:</b> {content.learningObjective}
+          <b>Mục tiêu học tập:</b> {lesson.learningObjective}
           <br />
-          <b>Kiến thức nền:</b> {content.prerequisites || "Không yêu cầu"}
+          <b>Kiến thức nền:</b> {lesson.prerequisites || "Không yêu cầu"}
         </div>
         {assignment.overdue && <Badge tone="outline">Đã quá hạn nhưng vẫn có thể học</Badge>}
-        {assignment.contentType === "lesson" ? (
-          <>
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.content) }} />
-            <p className="notice">Bước đầu tiên: đọc nội dung bài học và ghi lại điều em quan sát được.</p>
-          </>
+        {assignment.contentType === "lesson" && pathway ? (
+          <div className="lesson-pathway" aria-label="Lộ trình bài học">
+            <ol className="pathway-steps">
+              {pathway.steps.map((step: any, index: number) => (
+                <li
+                  id={"step-" + step.id}
+                  className={"pathway-step pathway-step--" + step.state.toLowerCase()}
+                  key={step.id}
+                >
+                  <div className="pathway-step-heading">
+                    <div>
+                      <span className="pathway-position">Bước {index + 1}</span>
+                      <h3>{stepNames[step.type]}</h3>
+                    </div>
+                    <Badge tone={step.state === "COMPLETED" ? "passed" : "outline"}>
+                      {stateNames[step.state]}
+                    </Badge>
+                  </div>
+                  {step.state === "LOCKED" && (
+                    <p className="pathway-lock">{lockReasons[step.lockReasonCode]}</p>
+                  )}
+                  {step.type === "READING" && step.resource?.html && (
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.html) }} />
+                  )}
+                </li>
+              ))}
+            </ol>
+            {nextStep && (
+              <a className="primary pathway-continue" href={"#step-" + nextStep.id}>
+                {continueNames[nextStep.type]}
+              </a>
+            )}
+          </div>
         ) : (
           <Link className="primary" to={"/labs/" + content.id}>
             Mở phòng lab <ArrowUpRight size={16} />

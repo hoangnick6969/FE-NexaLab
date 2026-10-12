@@ -30,14 +30,27 @@ const assert = require('node:assert/strict');
     await page.reload();
     await page.getByRole('link',{name:/A1 Published Lesson/}).click();
     await page.getByRole('heading',{name:'Định luật Ohm',exact:true}).first().waitFor();
+    const stepTitles = await page.locator('.pathway-step h3').allTextContents();
+    assert.deepEqual(stepTitles,[
+      'Đọc nội dung bài học',
+      'Xem video hoặc nội dung thay thế',
+      'Ôn tập với thẻ ghi nhớ',
+      'Kiểm tra kiến thức',
+      'Thực hành trong phòng lab',
+      'Hoàn thành thử thách',
+    ]);
+    assert.equal(await page.getByText('Đang học',{exact:true}).count(),1);
+    assert.equal(await page.getByText('Đã khóa',{exact:true}).count(),5);
+    await page.getByRole('link',{name:'Bắt đầu đọc bài',exact:true}).waitFor();
     for(const width of [390,768,1024,1440]) {
       await page.setViewportSize({width,height:900});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow at ${width}`);
+      assert.equal(await page.locator('.pathway-continue').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.width>=44&&r.height>=44}),true,`continue action at ${width}`);
     }
     await page.getByTitle('Đăng xuất').click();
     await page.getByLabel('Tên đăng nhập học sinh').waitFor();
     await page.reload(); await page.getByLabel('Tên đăng nhập học sinh').waitFor();
     assert.deepEqual(errors,[]);
-    console.log('PASS provision -> password gate -> reload/refresh -> assigned published lesson -> logout -> reload; widths 390/768/1024/1440; duplicate targets rejected; no JS errors');
+    console.log('PASS provision -> password gate -> authoritative ordered pathway -> logout -> reload; widths 390/768/1024/1440; duplicate targets rejected; no JS errors');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});
