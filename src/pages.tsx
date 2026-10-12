@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DOMPurify from "dompurify";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   ArrowUpRight,
@@ -549,6 +549,7 @@ export function Lessons() {
 
 export function AssignedLearning() {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["assignment", id],
     queryFn: () => api("/assignments/" + id),
@@ -560,6 +561,9 @@ export function AssignedLearning() {
     queryFn: () => api("/lessons/" + lessonId + "/pathway"),
     enabled: Boolean(lessonId),
   });
+  const completeReading = useAction(({ lessonId, stepId }: { lessonId: string; stepId: string }) =>
+    api(`/lessons/${lessonId}/steps/${stepId}/progress`, "PUT", { action: "complete" }),
+  );
   if (query.isLoading) return <Empty>Đang tải bài được giao…</Empty>;
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
   const assignment = query.data;
@@ -634,12 +638,34 @@ export function AssignedLearning() {
                     <p className="pathway-lock">{lockReasons[step.lockReasonCode]}</p>
                   )}
                   {step.type === "READING" && step.resource?.html && (
-                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.html) }} />
+                    <section aria-label="Nội dung đọc" className="reading-content">
+                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.html) }} />
+                    </section>
                   )}
                 </li>
               ))}
             </ol>
-            {nextStep && (
+            {nextStep?.type === "READING" && (
+              <>
+                {completeReading.error && <ErrorBox error={completeReading.error} />}
+                <button
+                  className="primary pathway-continue"
+                  type="button"
+                  disabled={completeReading.isPending}
+                  onClick={async () => {
+                    try {
+                      const updated = await completeReading.mutateAsync({ lessonId: String(lessonId), stepId: nextStep.id });
+                      queryClient.setQueryData(["lesson-pathway", lessonId], updated.pathway);
+                    } catch {
+                      // Keep the reading step current so the student can retry.
+                    }
+                  }}
+                >
+                  {completeReading.isPending ? "Đang lưu…" : completeReading.error ? "Thử lưu lại" : "Đánh dấu đã đọc"}
+                </button>
+              </>
+            )}
+            {nextStep && nextStep.type !== "READING" && (
               <a className="primary pathway-continue" href={"#step-" + nextStep.id}>
                 {continueNames[nextStep.type]}
               </a>
