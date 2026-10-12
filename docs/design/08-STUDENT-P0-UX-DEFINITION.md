@@ -1,7 +1,7 @@
 # Student P0 UX Definition
 
-**Status:** Source of truth for the Student role in Release 1 (P0).
-**Product source:** [backend PRD](../../../nexalab-be/docs/product/prd.md), especially FR-01–15 and FR-27.
+**Status:** Source of truth for the Student experience in Release 1, Increment A.
+**Product source:** [backend PRD](../../../nexalab-be/docs/product/prd.md), especially FR-06–15. Release 1 uses a shared four-role architecture; this document intentionally details only the Student-first increment.
 
 ## 1. Audit of the current design docs
 
@@ -14,7 +14,7 @@
 
 ## 2. Scope and decisions
 
-**Scope:** Vietnamese THCS Natural Science, Grades 8–9, Student role only, Release 1.
+**Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher, Parent, and Admin remain in the shared architecture but their complete UX is deferred to later increments.
 
 **Learning loop:** **Học → Quiz → Thực hành/Mô phỏng → Thử thách → Thử lại → Tiến độ**.
 
@@ -32,7 +32,7 @@ The canonical content order within a lesson is:
 
 ```
 [Nội dung đọc] → [Video] → [Thẻ ghi nhớ] → [Bài kiểm tra nhỏ]
-         ↓ (only after quiz passed or teacher unlocks)
+         ↓ (only after quiz passed at 50% in Increment A)
 [Thực hành / Lab / Mô phỏng 3D]
          ↓ (only after practical completed)
 [Thử thách]
@@ -167,6 +167,7 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 - Show: title, duration chip, playback-progress bar, transcript toggle.
 - States: loading skeleton → playing → paused → completed (check mark on thumbnail) → unavailable (retry CTA + alternative text).
 - Do not autoplay. Respect `prefers-reduced-motion` by pausing auto-advance.
+- Official completion occurs at 90% watched or the media `ended` event. Seeking cannot reduce the recorded high-water mark. If video is unavailable, show the approved transcript/equivalent content and an explicit completion action; do not silently skip the step.
 
 **Study cards:**
 - One card at a time. Previous/Next buttons with keyboard support (arrow keys). Card count: "3 / 8".
@@ -175,10 +176,10 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 - Flip animation on `transform: rotateY` only; respect `prefers-reduced-motion` by skipping flip.
 
 **Quiz:**
-- Multiple choice or short answer, rendered question-by-question.
+- Increment A uses multiple choice only, rendered question-by-question. Short-answer/manual grading is deferred.
 - Show question number and total: *"Câu 3 / 5"*.
 - Submit button disabled until an answer is selected. No partial saves shown to the student.
-- **Outcome state:** Passed → unlock Lab step (animate lock → unlock, 220ms opacity/transform). Not passed → show coach copy and a *"Thử lại"* button. Never show a score percentage as an achievement.
+- **Outcome state:** Score ≥50% → the server unlocks Lab (animate lock → unlock, 220ms opacity/transform after confirmation). Not passed → show coach copy and a *"Thử lại"* button. Never show a score percentage as an achievement or unlock from client state alone.
 
 **Locked-step card (Lab or Challenge):**
 - Greyed surface, lock icon, label *"Hoàn thành [previous step] để mở khoá."*
