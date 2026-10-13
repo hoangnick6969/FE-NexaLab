@@ -17,8 +17,8 @@ class Boundary extends React.Component<
   static getDerivedStateFromError() {
     return { error: true };
   }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("NexaLab render error", error, info.componentStack);
+  componentDidCatch() {
+    console.error("NexaLab render error");
   }
   render() {
     return this.state.error ? (

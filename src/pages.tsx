@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { api, inlineMaterial, useAuth, uploadFile, openMaterial, type QuizAttemptRequest, type QuizAttemptResponse, type StudentQuiz } from "./api";
+import { api, inlineMaterial, useAuth, uploadFile, openMaterial, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentLearningStep, type StudentPathway, type StudentQuiz } from "./api";
 import {
   Badge,
   Empty,
@@ -526,8 +526,8 @@ function VideoLearningStep({
   onReconciled,
 }: {
   lessonId: string;
-  step: any;
-  onReconciled: (pathway: any) => void;
+  step: StudentLearningStep;
+  onReconciled: (pathway: StudentPathway) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const confirmedPositionRef = useRef(step.lastPosition ?? 0);
@@ -727,7 +727,7 @@ function VideoLearningStep({
           </button>
         )}
       </div>
-      {showTranscript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
+      {showTranscript && step.resource?.transcript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
       {showEquivalent && step.resource?.equivalentText && (
         <div id={`video-equivalent-${step.id}`} className="video-equivalent">
           <h5>Nội dung thay thế</h5>
@@ -763,8 +763,8 @@ function StudyCardsStep({
   onReconciled,
 }: {
   lessonId: string;
-  step: any;
-  onReconciled: (pathway: any) => void;
+  step: StudentLearningStep;
+  onReconciled: (pathway: StudentPathway) => void;
 }) {
   const cards = step.resource?.cards ?? [];
   const visited = new Set<string>(step.visitedCardIds ?? []);
@@ -856,12 +856,12 @@ function QuizLearningStep({
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [confirmed, setConfirmed] = useState<any>(null);
+  const [confirmed, setConfirmed] = useState<QuizAttemptSummary | null>(null);
   const quizQuery = useQuery<StudentQuiz>({
     queryKey: ["student-quiz", lessonId],
     queryFn: () => api(`/lessons/${lessonId}/quiz`),
   });
-  const historyQuery = useQuery<any>({
+  const historyQuery = useQuery<QuizAttemptHistoryResponse>({
     queryKey: ["student-quiz-attempts", lessonId],
     queryFn: () => api(`/lessons/${lessonId}/quiz-attempts`),
   });
@@ -900,7 +900,7 @@ function QuizLearningStep({
 
   useEffect(() => {
     if (!draft.pending || !historyQuery.data?.attempts) return;
-    const saved = historyQuery.data.attempts.find((attempt: any) => attempt.idempotencyKey === draft.pending?.idempotencyKey);
+    const saved = historyQuery.data.attempts.find((attempt) => attempt.idempotencyKey === draft.pending?.idempotencyKey);
     if (!saved) return;
     persist({ answers: {}, pending: null });
     queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId] });
@@ -915,8 +915,8 @@ function QuizLearningStep({
   );
 
   const attempts = historyQuery.data?.attempts ?? [];
-  const latest = attempts.find((attempt: any) => attempt.latest);
-  const passed = confirmed?.passed || attempts.some((attempt: any) => attempt.passed);
+  const latest = attempts.find((attempt) => attempt.latest);
+  const passed = confirmed?.passed || attempts.some((attempt) => attempt.passed);
   return (
     <section className="quiz-learning" aria-label="Bài kiểm tra kiến thức">
       {passed ? (
@@ -937,14 +937,14 @@ function QuizLearningStep({
       {attempts.length > 0 && (
         <div className="quiz-history" aria-label="Lịch sử làm bài">
           <h5>Lịch sử làm bài</h5>
-          {attempts.map((attempt: any, attemptIndex: number) => (
+          {attempts.map((attempt, attemptIndex) => (
             <details key={attempt.id} open={attempt.latest}>
               <summary>
                 Lượt {attempts.length - attemptIndex} · {attempt.correctCount}/{attempt.questionCount} câu · {Math.round(attempt.score)} điểm
                 {attempt.latest && " · Mới nhất"}{attempt.best && " · Điểm cao nhất"}
               </summary>
               <ol>
-                {attempt.results.map((result: any, resultIndex: number) => (
+                {attempt.results.map((result) => (
                   <li key={result.questionId}>
                     <b>{result.prompt}</b><br />
                     Bạn chọn: {result.selectedOptionText || "Chưa có đáp án"} · {result.correct ? "Đúng" : "Chưa đúng"}
@@ -1006,7 +1006,7 @@ export function AssignedLearning() {
     enabled: Boolean(id),
   });
   const lessonId = query.data?.contentType === "lesson" ? query.data.content.id : null;
-  const pathwayQuery = useQuery({
+  const pathwayQuery = useQuery<StudentPathway>({
     queryKey: ["lesson-pathway", lessonId],
     queryFn: () => api("/lessons/" + lessonId + "/pathway"),
     enabled: Boolean(lessonId),
@@ -1048,7 +1048,7 @@ export function AssignedLearning() {
     QUIZ_NOT_PASSED: "Vượt qua bài kiểm tra để mở khóa bước này.",
     PRACTICE_NOT_PASSED: "Hoàn thành phần thực hành để mở khóa thử thách.",
   };
-  const nextStep = pathway?.steps.find((step: any) => step.id === pathway.nextStepId);
+  const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
   return (
     <>
       <PageHeading
@@ -1070,7 +1070,7 @@ export function AssignedLearning() {
         {assignment.contentType === "lesson" && pathway ? (
           <div className="lesson-pathway" aria-label="Lộ trình bài học">
             <ol className="pathway-steps">
-              {pathway.steps.map((step: any, index: number) => (
+              {pathway.steps.map((step, index) => (
                 <li
                   id={"step-" + step.id}
                   className={"pathway-step pathway-step--" + step.state.toLowerCase()}
@@ -1086,7 +1086,7 @@ export function AssignedLearning() {
                     </Badge>
                   </div>
                   {step.state === "LOCKED" && (
-                    <p className="pathway-lock">{lockReasons[step.lockReasonCode]}</p>
+                    <p className="pathway-lock">{step.lockReasonCode ? lockReasons[step.lockReasonCode] : "Bước học chưa khả dụng"}</p>
                   )}
                   {step.type === "READING" && step.resource?.html && (
                     <section aria-label="Nội dung đọc" className="reading-content">
