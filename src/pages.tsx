@@ -23,6 +23,7 @@ import {
   verdictLabel,
 } from "./ui";
 import { PageHeading } from "./App";
+import { CircuitPathwayStep } from "./labs/CircuitPathwayStep";
 function RichEditor({
   value,
   onChange,
@@ -1042,6 +1043,8 @@ export function AssignedLearning() {
     VIDEO: "Xem nội dung video",
     STUDY_CARDS: "Bắt đầu ôn thẻ",
     QUIZ: "Bắt đầu kiểm tra",
+    LAB: "Bắt đầu thực hành",
+    CHALLENGE: "Hoàn thành thử thách",
   };
   const lockReasons: Record<string, string> = {
     PREREQUISITE_INCOMPLETE: "Hoàn thành bước trước để tiếp tục.",
@@ -1113,6 +1116,15 @@ export function AssignedLearning() {
                   )}
                   {step.type === "QUIZ" && ["IN_PROGRESS", "COMPLETED"].includes(step.state) && (
                     <QuizLearningStep
+                      lessonId={String(lessonId)}
+                      step={step}
+                      onReconciled={(updatedPathway) =>
+                        queryClient.setQueryData(["lesson-pathway", lessonId], updatedPathway)
+                      }
+                    />
+                  )}
+                  {(step.type === "LAB" || step.type === "CHALLENGE") && step.state !== "LOCKED" && (
+                    <CircuitPathwayStep
                       lessonId={String(lessonId)}
                       step={step}
                       onReconciled={(updatedPathway) =>
