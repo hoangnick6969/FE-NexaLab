@@ -8,6 +8,77 @@ export type User = {
   grade: number;
   mustChangePassword?: boolean;
 };
+export type StudentQuiz = {
+  lessonId: string;
+  stepId: string;
+  questions: Array<{ id: string; prompt: string; options: Array<{ id: string; text: string }> }>;
+};
+export type QuizAnswer = { questionId: string; optionId: string };
+export type QuizAttemptRequest = { answers: QuizAnswer[]; idempotencyKey: string };
+export type QuizAttemptResult = { questionId: string; correct: boolean };
+export type QuizAttemptSummary = {
+  id: string;
+  score: number;
+  passed: boolean;
+  correctCount: number;
+  questionCount: number;
+  createdAt: string;
+  results: QuizAttemptResult[];
+};
+export type StudentQuizAttemptHistory = Omit<QuizAttemptSummary, "results"> & {
+  idempotencyKey: string;
+  latest: boolean;
+  best: boolean;
+  results: Array<{
+    questionId: string;
+    prompt: string;
+    selectedOptionText: string;
+    correct: boolean;
+  }>;
+};
+export type QuizAttemptHistoryResponse = { attempts: StudentQuizAttemptHistory[] };
+export type StudentLearningStep = {
+  id: string;
+  type: "READING" | "VIDEO" | "STUDY_CARDS" | "QUIZ" | "LAB" | "CHALLENGE";
+  position: number;
+  required: boolean;
+  state: "COMPLETED" | "IN_PROGRESS" | "LOCKED";
+  progressValue: number;
+  lastPosition: number | null;
+  visitedCardIds?: string[];
+  lockReasonCode: string | null;
+  resource: {
+    html?: string;
+    title?: string;
+    url?: string;
+    type?: string;
+    equivalentText?: string;
+    transcript?: string;
+    cards?: Array<{ id: string; front: string; back: string }>;
+    questions?: StudentQuiz["questions"];
+  } | null;
+};
+export type StudentPathway = {
+  lesson: {
+    id: string;
+    title: string;
+    subject: { id: string; name: string };
+    grade: number;
+    chapter: string;
+    topic: string;
+    learningObjective: string;
+    prerequisites: string;
+  };
+  assignment: { id: string; dueDate: string; overdue: boolean };
+  steps: StudentLearningStep[];
+  nextStepId: string | null;
+  updatedAt: string;
+};
+export type ApiErrorEnvelope = { message: string };
+export type QuizAttemptResponse = {
+  attempt: QuizAttemptSummary;
+  pathway: StudentPathway;
+};
 export const useAuth = create<{
   user: User | null;
   token: string | null;
