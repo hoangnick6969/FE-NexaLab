@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../api";
-import { Badge, ErrorBox, useAction, verdictLabel } from "../ui";
+import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../ui";
 import { Circuit, defaultCircuit } from "./circuit";
 import { Chemistry } from "./chemistry";
 const Eye = lazy(() => import("./eye"));
@@ -147,7 +147,7 @@ export default function Lab() {
           ) : id === "chemistry" ? (
             <Chemistry state={state} onChange={change} result={result} />
           ) : (
-            <Suspense fallback={<p>Đang tải mô hình 3D…</p>}>
+            <Suspense fallback={<InlineLoader message="Đang nạp mô hình 3D giải phẫu mắt…" />}>
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
           )}

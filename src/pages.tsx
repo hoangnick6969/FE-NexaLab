@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -21,6 +21,10 @@ import {
   Modal,
   useAction,
   verdictLabel,
+  PageLoader,
+  InlineLoader,
+  Skeleton,
+  CardSkeleton,
 } from "./ui";
 import { PageHeading } from "./App";
 function RichEditor({
@@ -139,6 +143,7 @@ export function Lessons() {
       </div>
       <ErrorBox error={q.error} />
       <div className="lesson-grid">
+        {q.isLoading && <CardSkeleton count={6} />}
         {q.data
           ?.filter(
             (l: any) =>
@@ -183,7 +188,7 @@ export function Lessons() {
             </article>
           ))}
       </div>
-      {q.data?.length === 0 && <Empty>Chưa có bài học.</Empty>}
+      {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
       {view && (
         <Modal title={view.title} onClose={() => setView(null)}>
           <p className="muted">
@@ -906,7 +911,7 @@ function QuizLearningStep({
     queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId] });
   }, [draft.pending, historyQuery.data, lessonId, queryClient]);
 
-  if (quizQuery.isLoading) return <section className="quiz-learning" aria-label="Bài kiểm tra"><p>Đang tải bài kiểm tra…</p></section>;
+  if (quizQuery.isLoading) return <section className="quiz-learning" aria-label="Bài kiểm tra"><InlineLoader message="Đang nạp bài kiểm tra trắc nghiệm…" /></section>;
   if (quizQuery.error || !quizQuery.data) return (
     <section className="quiz-learning" aria-label="Bài kiểm tra">
       <ErrorBox error={quizQuery.error ?? new Error("Bài kiểm tra chưa khả dụng")} />
@@ -999,6 +1004,7 @@ function QuizLearningStep({
 
 export function AssignedLearning() {
   const { id } = useParams();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["assignment", id],
@@ -1011,15 +1017,26 @@ export function AssignedLearning() {
     queryFn: () => api("/lessons/" + lessonId + "/pathway"),
     enabled: Boolean(lessonId),
   });
+  useEffect(() => {
+    if (!location.hash) return;
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, query.data, pathwayQuery.data]);
   const completeReading = useAction(({ lessonId, stepId }: { lessonId: string; stepId: string }) =>
     api(`/lessons/${lessonId}/steps/${stepId}/progress`, "PUT", { action: "complete" }),
   );
-  if (query.isLoading) return <Empty>Đang tải bài được giao…</Empty>;
+  if (query.isLoading) return <PageLoader message="Đang nạp bài học được giao…" caption="NexaLab · Phòng thí nghiệm mô phỏng" />;
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
   const assignment = query.data;
   const content = assignment.content;
   if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
-    return <Empty>Đang tải lộ trình bài học…</Empty>;
+    return <PageLoader message="Đang nạp lộ trình bài học…" caption="NexaLab · Khoa học tự nhiên" />;
   if (assignment.contentType === "lesson" && pathwayQuery.error)
     return <div><ErrorBox error={pathwayQuery.error} /><button onClick={() => pathwayQuery.refetch()}>Thử lại</button></div>;
   const pathway = pathwayQuery.data;
@@ -1208,6 +1225,7 @@ export function Classes() {
         error={q.error || roster.error || analytics.error || act.error}
       />
       <div className="class-grid">
+        {q.isLoading && <CardSkeleton count={3} />}
         {q.data?.map((c: any) => (
           <button
             key={c.id}
@@ -1663,9 +1681,11 @@ export function ProgressPage() {
                 )}
               </section>
             </>
+          ) : q.isLoading && student ? (
+            <InlineLoader message="Đang phân tích tiến độ học tập…" />
           ) : (
             <Empty>
-              {student ? "Đang tải tiến độ…" : "Chọn học sinh để xem tiến độ."}
+              {student ? "Chưa có dữ liệu tiến độ." : "Chọn học sinh để xem tiến độ."}
             </Empty>
           )}
         </>
@@ -1684,6 +1704,7 @@ export function Saved() {
       />
       <ErrorBox error={q.error || del.error} />
       <div className="lesson-grid">
+        {q.isLoading && <CardSkeleton count={3} />}
         {q.data?.map((s: any) => (
           <article className="panel" key={s.id}>
             <Badge>{s.labId}</Badge>
@@ -1707,7 +1728,7 @@ export function Saved() {
           </article>
         ))}
       </div>
-      {q.data?.length === 0 && (
+      {q.data && q.data.length === 0 && (
         <Empty>
           Chạy một thí nghiệm rồi chọn “Lưu thí nghiệm” để bắt đầu hồ sơ.
         </Empty>
