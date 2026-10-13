@@ -25,7 +25,7 @@ import {
   ArrowRight,
   GraduationCap,
 } from "lucide-react";
-import { api, useAuth, restore } from "./api";
+import { api, useAuth, restore, type MyProgressResponse } from "./api";
 import { queryClient } from "./main";
 import { Badge, Empty, ErrorBox, Field, useAction } from "./ui";
 import {
@@ -455,9 +455,9 @@ export function PageHeading({
 function Dashboard() {
   const user = useAuth((s) => s.user)!;
   const student = user.role === "STUDENT";
-  const stats = useQuery({
-    queryKey: ["progress", user.id],
-    queryFn: () => api("/progress/" + user.id),
+  const stats = useQuery<MyProgressResponse>({
+    queryKey: ["me-progress"],
+    queryFn: () => api("/me/progress"),
     enabled: student,
   });
   const assignments = useQuery({
@@ -465,8 +465,7 @@ function Dashboard() {
     queryFn: () => api("/assignments"),
     enabled: student,
   });
-  const p = stats.data?.progress ?? [];
-  const attempts = stats.data?.attempts ?? [];
+  const summary = stats.data?.summary;
   return (
     <>
       <PageHeading
@@ -587,18 +586,18 @@ function Dashboard() {
         <>
           <div className="stats">
             <Stat
-              label="Bài học hoàn thành"
-              value={p.filter((x: any) => x.status === "completed").length}
+              label="Bài được giao đã hoàn thành"
+              value={summary ? summary.completedAssignments : "—"}
               icon={<BookOpen />}
             />
             <Stat
-              label="Lần thử nghiệm"
-              value={attempts.length}
+              label="Lượt thực hành"
+              value={summary ? summary.practicalAttempts : "—"}
               icon={<FlaskConical />}
             />
             <Stat
-              label="Thử thách đạt"
-              value={attempts.filter((a: any) => a.verdict === "passed").length}
+              label="Lượt thực hành đạt"
+              value={summary ? summary.passedPracticals : "—"}
               icon={<Sparkles />}
             />
             <Stat
@@ -687,14 +686,14 @@ function Stat({
   icon,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
 }) {
   return (
     <div className="stat">
       <span>{icon}</span>
       <div>
-        <strong>{value.toString().padStart(2, "0")}</strong>
+        <strong>{typeof value === "number" ? value.toString().padStart(2, "0") : value}</strong>
         <p>{label}</p>
       </div>
     </div>

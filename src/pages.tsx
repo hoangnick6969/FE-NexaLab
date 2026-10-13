@@ -24,6 +24,7 @@ import {
 } from "./ui";
 import { PageHeading } from "./App";
 import { CircuitPathwayStep } from "./labs/CircuitPathwayStep";
+import { StudentProgress } from "./progress";
 function RichEditor({
   value,
   onChange,
@@ -92,9 +93,6 @@ export function Lessons() {
   });
   const save = useAction((b: any) =>
     api("/lessons" + (b.id ? "/" + b.id : ""), b.id ? "PUT" : "POST", b),
-  );
-  const complete = useAction(() =>
-    api("/lessons/" + view.id + "/complete", "POST"),
   );
   return (
     <>
@@ -228,12 +226,11 @@ export function Lessons() {
               ))}
             </section>
           )}
-          {!view.questions.length && user.role === "STUDENT" && (
-            <button className="primary" onClick={() => complete.mutate(null)}>
-              Đánh dấu hoàn thành
-            </button>
+          {user.role === "STUDENT" && (
+            <p className="tiny muted">
+              Tiến độ chính thức được ghi nhận khi em học bài này trong mục Bài được giao.
+            </p>
           )}
-          <ErrorBox error={complete.error} />
         </Modal>
       )}
       {edit && (
@@ -1012,6 +1009,12 @@ export function AssignedLearning() {
     queryFn: () => api("/lessons/" + lessonId + "/pathway"),
     enabled: Boolean(lessonId),
   });
+  const pathwayLoaded = Boolean(pathwayQuery.data);
+  useEffect(() => {
+    // Deep links from the Progress page (#step-<id>) resolve once the pathway renders.
+    if (!pathwayLoaded || !window.location.hash.startsWith("#step-")) return;
+    document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView({ block: "start" });
+  }, [pathwayLoaded]);
   const completeReading = useAction(({ lessonId, stepId }: { lessonId: string; stepId: string }) =>
     api(`/lessons/${lessonId}/steps/${stepId}/progress`, "PUT", { action: "complete" }),
   );
@@ -1555,7 +1558,7 @@ export function ProgressPage() {
   const q = useQuery({
     queryKey: ["progress", student],
     queryFn: () => api("/progress/" + student),
-    enabled: !!student,
+    enabled: !!student && user.role !== "STUDENT",
   });
   const link = useAction((code: string) =>
     api("/children/link", "POST", { code, consent: true }),
@@ -1602,7 +1605,9 @@ export function ProgressPage() {
           <ErrorBox error={link.error || children.error} />
         </section>
       )}
-      {["TEACHER", "ADMIN"].includes(user.role) ? (
+      {user.role === "STUDENT" ? (
+        <StudentProgress />
+      ) : ["TEACHER", "ADMIN"].includes(user.role) ? (
         <Empty>
           {user.role === "TEACHER" ? (
             <Link to="/classes">
