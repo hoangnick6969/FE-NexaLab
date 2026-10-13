@@ -8,7 +8,7 @@ const username = process.env.TEST_STUDENT_USERNAME;
 const password = process.env.TEST_STUDENT_PASSWORD;
 
 async function login(page: Page) {
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByLabel("Tên đăng nhập học sinh").fill(username!);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password!);
   const response = page.waitForResponse((item) => item.request().method() === "POST" && item.url().endsWith("/api/auth/student/login"));
