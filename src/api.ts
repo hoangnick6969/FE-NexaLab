@@ -8,6 +8,25 @@ export type User = {
   grade: number;
   mustChangePassword?: boolean;
 };
+export type StudentQuiz = {
+  lessonId: string;
+  stepId: string;
+  questions: Array<{ id: string; prompt: string; options: Array<{ id: string; text: string }> }>;
+};
+export type QuizAnswer = { questionId: string; optionId: string };
+export type QuizAttemptRequest = { answers: QuizAnswer[]; idempotencyKey: string };
+export type QuizAttemptResponse = {
+  attempt: {
+    id: string;
+    score: number;
+    passed: boolean;
+    correctCount: number;
+    questionCount: number;
+    createdAt: string;
+    results: Array<{ questionId: string; correct: boolean }>;
+  };
+  pathway: any;
+};
 export const useAuth = create<{
   user: User | null;
   token: string | null;
