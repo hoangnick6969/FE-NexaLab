@@ -46,18 +46,32 @@ export async function api<T = any>(
   retry = true,
 ): Promise<T> {
   const token = useAuth.getState().token;
-  const r = await fetch(base + path, {
-    method,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
+  const safeRead = method === "GET";
+  let r: Response;
+  try {
+    r = await fetch(base + path, {
+      method,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  } catch (error) {
+    if (safeRead && retry) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return api(path, method, body, false);
+    }
+    throw error;
+  }
   if (r.status === 401 && retry && !path.startsWith("/auth/")) {
     if (await restore()) return api(path, method, body, false);
     useAuth.getState().set(null, null);
+  }
+  if (safeRead && retry && [502, 503, 504].includes(r.status)) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return api(path, method, body, false);
   }
   const data = await r.json();
   if (!r.ok) throw new Error(data.message ?? "Không thể kết nối máy chủ");
