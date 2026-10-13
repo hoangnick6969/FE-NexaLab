@@ -12,11 +12,6 @@ import {
 import { Circuit, defaultCircuit } from "./circuit";
 import { api } from "../api";
 import { Badge, ErrorBox } from "../ui";
-import {
-  mockAttemptPassed,
-  mockAttemptPartial,
-  mockAttemptNeedsPractice,
-} from "../../tests/fixtures/circuit-contract-fixtures";
 
 export interface CircuitPathwayStepProps {
   lessonId: string;
@@ -58,7 +53,7 @@ export function CircuitPathwayStep({
     return () => clearTimeout(timer);
   }, []);
 
-  // 3. Submit attempt to backend with graceful fallback to frozen fixtures
+  // 3. Submit attempt to backend
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
@@ -73,38 +68,19 @@ export function CircuitPathwayStep({
     };
 
     try {
-      // Try real backend first
       const response = await api("/attempts", "POST", payload);
-      setAttempt(response.attempt ?? response);
+      const attemptData = response.attempt
+        ? {
+            ...response.attempt,
+            retryGuidance: response.retryGuidance ?? response.attempt.retryGuidance ?? null,
+          }
+        : response;
+      setAttempt(attemptData);
       if (response.pathway && onReconciled) {
         onReconciled(response.pathway);
       }
     } catch (err: any) {
-      // If backend route is not ready yet (A3 branch running), fallback to deterministic sim & fixtures
-      console.warn("Backend /attempts unreachable or unmigrated, evaluating with frozen contract:", err);
-      
-      let fallbackResult: any;
-      if (preview && preview.status === "lit" && !preview.overcurrent) {
-        fallbackResult = mockAttemptPassed;
-      } else if (preview && preview.overcurrent) {
-        fallbackResult = mockAttemptPartial;
-      } else {
-        fallbackResult = mockAttemptNeedsPractice;
-      }
-
-      setAttempt({
-        ...fallbackResult.attempt,
-        labState, // retain current student state
-        durationMs,
-      });
-
-      if (fallbackResult.attempt.verdict === "passed" && onReconciled) {
-        // Construct reconciled mock pathway with this step completed
-        const updatedSteps = (step.pathway?.steps ?? []).map((s: any) =>
-          s.id === step.id ? { ...s, state: "COMPLETED", progressValue: 100 } : s
-        );
-        onReconciled({ steps: updatedSteps });
-      }
+      setError(err?.message || "Lỗi khi lưu kết quả bài tập. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -240,13 +216,20 @@ export function CircuitPathwayStep({
               <AlertCircle size={24} color={verdict === "partial" ? "#ffab00" : "#70a1ff"} />
             )}
             <div>
-              <b style={{ fontSize: "1.05rem" }}>
-                {isPassed
-                  ? "Xuất sắc! Mạch điện đã hoạt động an toàn"
-                  : verdict === "partial"
-                  ? "Mạch điện cần điều chỉnh thêm"
-                  : "Mạch chưa hoàn thiện"}
-              </b>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <b style={{ fontSize: "1.05rem" }}>
+                  {isPassed
+                    ? "Xuất sắc! Mạch điện đã hoạt động an toàn"
+                    : verdict === "partial"
+                    ? "Mạch điện cần điều chỉnh thêm"
+                    : "Mạch chưa hoàn thiện"}
+                </b>
+                {attempt.attemptNumber && (
+                  <Badge tone="outline">
+                    Lượt #{attempt.attemptNumber}
+                  </Badge>
+                )}
+              </div>
               <p style={{ margin: "0.2rem 0 0", fontSize: "0.9rem", color: "var(--muted, #a0a0aa)" }}>
                 {attempt.simulationResult?.message ??
                   (isPassed
