@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   ArrowUpRight,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { api, useAuth, uploadFile, openMaterial } from "./api";
+import { api, inlineMaterial, useAuth, uploadFile, openMaterial } from "./api";
 import {
   Badge,
   Empty,
@@ -547,40 +547,462 @@ export function Lessons() {
   );
 }
 
+type VideoObservation = {
+  positionSeconds: number;
+  durationSeconds: number;
+  ended: boolean;
+};
+
+function VideoLearningStep({
+  lessonId,
+  step,
+  onReconciled,
+}: {
+  lessonId: string;
+  step: any;
+  onReconciled: (pathway: any) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const confirmedPositionRef = useRef(step.lastPosition ?? 0);
+  const unsentRef = useRef<VideoObservation | null>(null);
+  const pendingRef = useRef(false);
+  const flushRequestedRef = useRef(false);
+  const failedActionRef = useRef<"video" | "fallback" | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(Boolean(step.resource?.url));
+  const [mediaUnavailable, setMediaUnavailable] = useState(!step.resource?.url);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [showEquivalent, setShowEquivalent] = useState(!step.resource?.url);
+  const [localPosition, setLocalPosition] = useState<number>(step.lastPosition ?? 0);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    confirmedPositionRef.current = step.lastPosition ?? 0;
+    setLocalPosition((current) => Math.max(current, step.lastPosition ?? 0));
+  }, [step.lastPosition]);
+
+  useEffect(() => {
+    if (!step.resource?.url) {
+      setSource(null);
+      setSourceLoading(false);
+      setMediaUnavailable(true);
+      return;
+    }
+    let active = true;
+    let revoke: () => void = () => undefined;
+    setSource(null);
+    setSourceLoading(true);
+    setMediaUnavailable(false);
+    inlineMaterial(step.resource.url)
+      .then((material) => {
+        revoke = material.revoke;
+        if (!active) return material.revoke();
+        setSource(material.src);
+        setSourceLoading(false);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSourceLoading(false);
+        setMediaUnavailable(true);
+        setSaveError(error instanceof Error ? error.message : "Không tải được video");
+      });
+    return () => {
+      active = false;
+      revoke();
+    };
+  }, [step.resource?.url]);
+
+  const sendObservation = async () => {
+    if (pendingRef.current || !unsentRef.current) return;
+    const observation = unsentRef.current;
+    let succeeded = false;
+    pendingRef.current = true;
+    failedActionRef.current = "video";
+    setSaveState("saving");
+    setSaveError("");
+    try {
+      const updated = await api<any>(
+        `/lessons/${lessonId}/steps/${step.id}/progress`,
+        "PUT",
+        {
+          action: observation.ended ? "ended" : "heartbeat",
+          positionSeconds: observation.positionSeconds,
+          durationSeconds: observation.durationSeconds,
+        },
+      );
+      const confirmed = updated.step.lastPosition ?? observation.positionSeconds;
+      confirmedPositionRef.current = Math.max(confirmedPositionRef.current, confirmed);
+      if (
+        unsentRef.current &&
+        unsentRef.current.positionSeconds <= confirmedPositionRef.current &&
+        (!unsentRef.current.ended || updated.step.state === "COMPLETED")
+      ) unsentRef.current = null;
+      failedActionRef.current = null;
+      setSaveState("saved");
+      onReconciled(updated.pathway);
+      succeeded = true;
+    } catch (error) {
+      setSaveState("error");
+      setSaveError(error instanceof Error ? error.message : "Chưa lưu được tiến độ");
+    } finally {
+      pendingRef.current = false;
+      if (succeeded && flushRequestedRef.current && unsentRef.current) {
+        flushRequestedRef.current = false;
+        void sendObservation();
+      }
+    }
+  };
+
+  const observe = (element: HTMLVideoElement, flush = false, ended = false) => {
+    if (!Number.isFinite(element.currentTime) || !Number.isFinite(element.duration) || element.duration < 0)
+      return;
+    const durationSeconds = Math.min(86400, Math.max(0, Math.floor(element.duration)));
+    const positionSeconds = Math.min(durationSeconds, Math.max(0, Math.floor(element.currentTime)));
+    const previous = unsentRef.current;
+    unsentRef.current = {
+      positionSeconds: Math.max(previous?.positionSeconds ?? 0, positionSeconds),
+      durationSeconds: Math.max(previous?.durationSeconds ?? 0, durationSeconds, positionSeconds),
+      ended: Boolean(previous?.ended || ended),
+    };
+    setLocalPosition((current) => Math.max(current, positionSeconds));
+    const reachedBatch = unsentRef.current.positionSeconds - confirmedPositionRef.current >= 10;
+    if (flush || reachedBatch) flushRequestedRef.current = true;
+    if ((flush || reachedBatch) && saveState !== "error") void sendObservation();
+  };
+
+  const completeFallback = async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    failedActionRef.current = "fallback";
+    setSaveState("saving");
+    setSaveError("");
+    try {
+      const updated = await api<any>(
+        `/lessons/${lessonId}/steps/${step.id}/progress`,
+        "PUT",
+        { action: "complete-fallback" },
+      );
+      unsentRef.current = null;
+      flushRequestedRef.current = false;
+      confirmedPositionRef.current = updated.step.lastPosition ?? 0;
+      setLocalPosition(updated.step.lastPosition ?? 0);
+      failedActionRef.current = null;
+      setSaveState("saved");
+      onReconciled(updated.pathway);
+    } catch (error) {
+      setSaveState("error");
+      setSaveError(error instanceof Error ? error.message : "Chưa lưu được tiến độ");
+    } finally {
+      pendingRef.current = false;
+    }
+  };
+
+  const retry = () => {
+    if (failedActionRef.current === "fallback") void completeFallback();
+    else void sendObservation();
+  };
+  const officialPosition = step.lastPosition ?? 0;
+  const hasUnsentEvidence = localPosition > officialPosition || Boolean(unsentRef.current?.ended);
+
+  return (
+    <section className="video-learning" aria-label="Nội dung video">
+      <h4>{step.resource?.title}</h4>
+      {sourceLoading && <p className="video-placeholder">Đang chuẩn bị video…</p>}
+      {source && (
+        <video
+          ref={videoRef}
+          className="video-player"
+          controls
+          preload="metadata"
+          src={source}
+          onLoadedMetadata={(event) => {
+            const resumeAt = step.lastPosition ?? 0;
+            if (resumeAt > 0 && resumeAt < event.currentTarget.duration)
+              event.currentTarget.currentTime = resumeAt;
+          }}
+          onTimeUpdate={(event) => observe(event.currentTarget)}
+          onPause={(event) => observe(event.currentTarget, true)}
+          onEnded={(event) => observe(event.currentTarget, true, true)}
+          onError={() => setMediaUnavailable(true)}
+        >
+          Trình duyệt không hỗ trợ phát video.
+        </video>
+      )}
+      {mediaUnavailable && (
+        <p className="video-unavailable" role="status">
+          {step.resource?.equivalentText
+            ? "Video hiện không phát được. Bạn vẫn có thể học bằng nội dung thay thế đã xuất bản."
+            : "Video hiện không phát được. Hãy tải lại trang hoặc báo cho giáo viên."}
+        </p>
+      )}
+      <div className="video-actions">
+        {step.resource?.transcript && (
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={showTranscript}
+            aria-controls={`video-transcript-${step.id}`}
+            onClick={() => setShowTranscript((value) => !value)}
+          >
+            {showTranscript ? "Ẩn bản chép lời" : "Xem bản chép lời"}
+          </button>
+        )}
+        {step.resource?.equivalentText && (
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={showEquivalent}
+            aria-controls={`video-equivalent-${step.id}`}
+            onClick={() => setShowEquivalent((value) => !value)}
+          >
+            {showEquivalent ? "Ẩn nội dung thay thế" : "Xem nội dung thay thế"}
+          </button>
+        )}
+      </div>
+      {showTranscript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
+      {showEquivalent && step.resource?.equivalentText && (
+        <div id={`video-equivalent-${step.id}`} className="video-equivalent">
+          <h5>Nội dung thay thế</h5>
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.equivalentText) }} />
+          {step.state !== "COMPLETED" && (
+            <button
+              type="button"
+              className="primary video-fallback-complete"
+              disabled={saveState === "saving"}
+              onClick={() => void completeFallback()}
+            >
+              Hoàn thành bằng nội dung thay thế
+            </button>
+          )}
+        </div>
+      )}
+      <div className="video-save-status" role={saveState === "error" ? "alert" : "status"}>
+        {saveState === "saving" && "Đang lưu tiến độ…"}
+        {saveState === "saved" && `Đã lưu ${step.progressValue}%`}
+        {saveState === "idle" && `Đã lưu ${step.progressValue}%${officialPosition ? ` · tiếp tục từ ${officialPosition} giây` : ""}`}
+        {hasUnsentEvidence && saveState !== "saving" && saveState !== "error" && ` · Chưa lưu: ${localPosition} giây`}
+        {saveState === "error" && (
+          <><span>{saveError || "Chưa lưu được tiến độ"}</span><button type="button" onClick={retry}>Thử lưu lại</button></>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StudyCardsStep({
+  lessonId,
+  step,
+  onReconciled,
+}: {
+  lessonId: string;
+  step: any;
+  onReconciled: (pathway: any) => void;
+}) {
+  const cards = step.resource?.cards ?? [];
+  const visited = new Set<string>(step.visitedCardIds ?? []);
+  const [index, setIndex] = useState(0);
+  const [showBack, setShowBack] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const [error, setError] = useState("");
+  const card = cards[index];
+  const visit = async (complete = false) => {
+    if (!card || saveState === "saving") return;
+    setSaveState("saving");
+    setError("");
+    try {
+      const updated = await api<any>(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", {
+        action: complete ? "complete" : "visit",
+        cardIndex: index,
+      });
+      onReconciled(updated.pathway);
+      setSaveState("idle");
+    } catch (e) {
+      setSaveState("error");
+      setError(e instanceof Error ? e.message : "Chưa lưu được lượt ôn thẻ");
+    }
+  };
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") setIndex((value) => Math.max(0, value - 1));
+      if (event.key === "ArrowRight") setIndex((value) => Math.min(cards.length - 1, value + 1));
+      if (event.key === "Enter" || event.key === " ") void visit();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cards.length, index, saveState]);
+  if (!card) return <p role="status">Chưa có thẻ học khả dụng.</p>;
+  const isLast = index === cards.length - 1;
+  const allVisited = visited.size === cards.length;
+  return (
+    <section className="study-cards" aria-label="Thẻ ghi nhớ" tabIndex={0}>
+      <div className="study-cards-toolbar">
+        <span>Thẻ {index + 1} / {cards.length}</span>
+        <span>{visited.size} / {cards.length} đã xem</span>
+      </div>
+      <button type="button" className="study-card" onClick={() => setShowBack((value) => !value)} aria-label="Hiện mặt sau của thẻ">
+        <span className="study-card-label">{showBack ? "Mặt sau" : "Mặt trước"}</span>
+        <strong>{showBack ? card.back : card.front}</strong>
+      </button>
+      <div className="study-card-actions">
+        <button type="button" className="secondary" disabled={index === 0} onClick={() => { setIndex((value) => value - 1); setShowBack(false); }}>Trước</button>
+        <button type="button" className="secondary" onClick={() => void visit()} disabled={saveState === "saving"}>
+          {saveState === "saving" ? "Đang lưu…" : "Đánh dấu đã xem"}
+        </button>
+        <button type="button" className="secondary" disabled={isLast} onClick={() => { setIndex((value) => value + 1); setShowBack(false); }}>Sau</button>
+      </div>
+      {isLast && (
+        <button type="button" className="primary" disabled={!allVisited || saveState === "saving"} onClick={() => void visit(true)}>
+          {allVisited ? "Hoàn thành ôn thẻ" : "Xem đủ tất cả thẻ để hoàn thành"}
+        </button>
+      )}
+      {saveState === "error" && <p role="alert">{error} <button type="button" onClick={() => void visit(isLast && allVisited)}>Thử lại</button></p>}
+    </section>
+  );
+}
+
 export function AssignedLearning() {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["assignment", id],
     queryFn: () => api("/assignments/" + id),
     enabled: Boolean(id),
   });
+  const lessonId = query.data?.contentType === "lesson" ? query.data.content.id : null;
+  const pathwayQuery = useQuery({
+    queryKey: ["lesson-pathway", lessonId],
+    queryFn: () => api("/lessons/" + lessonId + "/pathway"),
+    enabled: Boolean(lessonId),
+  });
+  const completeReading = useAction(({ lessonId, stepId }: { lessonId: string; stepId: string }) =>
+    api(`/lessons/${lessonId}/steps/${stepId}/progress`, "PUT", { action: "complete" }),
+  );
   if (query.isLoading) return <Empty>Đang tải bài được giao…</Empty>;
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
   const assignment = query.data;
   const content = assignment.content;
+  if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
+    return <Empty>Đang tải lộ trình bài học…</Empty>;
+  if (assignment.contentType === "lesson" && pathwayQuery.error)
+    return <div><ErrorBox error={pathwayQuery.error} /><button onClick={() => pathwayQuery.refetch()}>Thử lại</button></div>;
+  const pathway = pathwayQuery.data;
+  const lesson = pathway?.lesson ?? content;
+  const stepNames: Record<string, string> = {
+    READING: "Đọc nội dung bài học",
+    VIDEO: "Xem video hoặc nội dung thay thế",
+    STUDY_CARDS: "Ôn tập với thẻ ghi nhớ",
+    QUIZ: "Kiểm tra kiến thức",
+    LAB: "Thực hành trong phòng lab",
+    CHALLENGE: "Hoàn thành thử thách",
+  };
+  const stateNames: Record<string, string> = {
+    COMPLETED: "Đã hoàn thành",
+    IN_PROGRESS: "Đang học",
+    LOCKED: "Đã khóa",
+  };
+  const continueNames: Record<string, string> = {
+    READING: "Bắt đầu đọc bài",
+    VIDEO: "Xem nội dung video",
+    STUDY_CARDS: "Bắt đầu ôn thẻ",
+  };
+  const lockReasons: Record<string, string> = {
+    PREREQUISITE_INCOMPLETE: "Hoàn thành bước trước để tiếp tục.",
+    QUIZ_NOT_PASSED: "Vượt qua bài kiểm tra để mở khóa bước này.",
+    PRACTICE_NOT_PASSED: "Hoàn thành phần thực hành để mở khóa thử thách.",
+  };
+  const nextStep = pathway?.steps.find((step: any) => step.id === pathway.nextStepId);
   return (
     <>
       <PageHeading
         eyebrow="BÀI ĐƯỢC GIAO"
-        title={content.title}
+        title={lesson.title}
         description={assignment.classroom.name}
       />
       <section className="panel lesson-content">
         <p className="eyebrow">
-          {content.subject?.name} · LỚP {content.grade ?? content.subject?.grade}
+          {lesson.subject?.name} · LỚP {lesson.grade ?? lesson.subject?.grade}
         </p>
-        <h2>{content.topic}</h2>
+        <h2>{lesson.topic}</h2>
         <div className="notice">
-          <b>Mục tiêu học tập:</b> {content.learningObjective}
+          <b>Mục tiêu học tập:</b> {lesson.learningObjective}
           <br />
-          <b>Kiến thức nền:</b> {content.prerequisites || "Không yêu cầu"}
+          <b>Kiến thức nền:</b> {lesson.prerequisites || "Không yêu cầu"}
         </div>
         {assignment.overdue && <Badge tone="outline">Đã quá hạn nhưng vẫn có thể học</Badge>}
-        {assignment.contentType === "lesson" ? (
-          <>
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.content) }} />
-            <p className="notice">Bước đầu tiên: đọc nội dung bài học và ghi lại điều em quan sát được.</p>
-          </>
+        {assignment.contentType === "lesson" && pathway ? (
+          <div className="lesson-pathway" aria-label="Lộ trình bài học">
+            <ol className="pathway-steps">
+              {pathway.steps.map((step: any, index: number) => (
+                <li
+                  id={"step-" + step.id}
+                  className={"pathway-step pathway-step--" + step.state.toLowerCase()}
+                  key={step.id}
+                >
+                  <div className="pathway-step-heading">
+                    <div>
+                      <span className="pathway-position">Bước {index + 1}</span>
+                      <h3>{stepNames[step.type]}</h3>
+                    </div>
+                    <Badge tone={step.state === "COMPLETED" ? "passed" : "outline"}>
+                      {stateNames[step.state]}
+                    </Badge>
+                  </div>
+                  {step.state === "LOCKED" && (
+                    <p className="pathway-lock">{lockReasons[step.lockReasonCode]}</p>
+                  )}
+                  {step.type === "READING" && step.resource?.html && (
+                    <section aria-label="Nội dung đọc" className="reading-content">
+                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.html) }} />
+                    </section>
+                  )}
+                  {step.type === "VIDEO" && step.resource && (
+                    <VideoLearningStep
+                      lessonId={String(lessonId)}
+                      step={step}
+                      onReconciled={(updatedPathway) =>
+                        queryClient.setQueryData(["lesson-pathway", lessonId], updatedPathway)
+                      }
+                    />
+                  )}
+                  {step.type === "STUDY_CARDS" && step.resource && (
+                    <StudyCardsStep
+                      lessonId={String(lessonId)}
+                      step={step}
+                      onReconciled={(updatedPathway) =>
+                        queryClient.setQueryData(["lesson-pathway", lessonId], updatedPathway)
+                      }
+                    />
+                  )}
+                </li>
+              ))}
+            </ol>
+            {nextStep?.type === "READING" && (
+              <>
+                {completeReading.error && <ErrorBox error={completeReading.error} />}
+                <button
+                  className="primary pathway-continue"
+                  type="button"
+                  disabled={completeReading.isPending}
+                  onClick={async () => {
+                    try {
+                      const updated = await completeReading.mutateAsync({ lessonId: String(lessonId), stepId: nextStep.id });
+                      queryClient.setQueryData(["lesson-pathway", lessonId], updated.pathway);
+                    } catch {
+                      // Keep the reading step current so the student can retry.
+                    }
+                  }}
+                >
+                  {completeReading.isPending ? "Đang lưu…" : completeReading.error ? "Thử lưu lại" : "Đánh dấu đã đọc"}
+                </button>
+              </>
+            )}
+            {nextStep && !["READING", "VIDEO"].includes(nextStep.type) && (
+              <a className="primary pathway-continue" href={"#step-" + nextStep.id}>
+                {continueNames[nextStep.type]}
+              </a>
+            )}
+          </div>
         ) : (
           <Link className="primary" to={"/labs/" + content.id}>
             Mở phòng lab <ArrowUpRight size={16} />
