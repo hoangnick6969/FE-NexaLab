@@ -3767,6 +3767,250 @@ td small {
   }
 }
 
+/* A5 — official progress and history */
+.badge.practice {
+  background: #f8d9ee;
+  color: #8a2f6a;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.link-button {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.my-progress .table-wrap {
+  position: relative;
+}
+.my-progress .progress-stats {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 8px;
+}
+.my-progress button.stat {
+  text-align: left;
+  width: 100%;
+  min-height: 44px;
+}
+.my-progress button.stat:hover {
+  border-color: #c9d3bd;
+}
+.progress-updated {
+  margin: 0 0 24px;
+}
+.progress-section {
+  margin-top: 24px;
+  scroll-margin-top: 16px;
+}
+.progress-section > h2 {
+  margin-bottom: 14px;
+}
+.assignment-progress {
+  margin-bottom: 16px;
+}
+.assignment-progress > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.assignment-progress h3 {
+  margin: 4px 0;
+}
+.completion-meter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0;
+}
+.completion-meter .progress-track {
+  margin: 0;
+}
+.activity-group h3 {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.activity-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 6px 0;
+}
+.activity-list.compact .activity-row {
+  grid-template-columns: 1fr auto auto auto;
+}
+.activity-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.activity-title b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.load-more {
+  margin-top: 14px;
+}
+.sheet-wrap {
+  position: fixed;
+  inset: 0;
+  background: #1e352966;
+  z-index: 110;
+  display: flex;
+  justify-content: flex-end;
+}
+.evidence-sheet {
+  width: 440px;
+  max-width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #fff;
+  padding: 22px;
+  animation: sheet-in-side 220ms ease-out;
+}
+.evidence-sheet > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.evidence-sheet > header h2 {
+  flex: 1;
+  margin: 0;
+}
+.evidence-sheet .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.evidence-body {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.evidence-body h3,
+.evidence-body h4 {
+  margin: 0;
+}
+.evidence-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 14px;
+  margin: 0;
+}
+.evidence-facts dt {
+  color: var(--muted);
+}
+.evidence-facts dd {
+  margin: 0;
+}
+.question-results {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+.question-results p {
+  margin: 0 0 2px;
+}
+@keyframes sheet-in-side {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes sheet-in-bottom {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@media (max-width: 680px) {
+  .my-progress .progress-stats {
+    grid-template-columns: 1fr;
+  }
+  .completion-meter {
+    grid-template-columns: 1fr;
+  }
+  /* Steps table stacks into one card per step so no column is pushed off screen. */
+  .steps-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .steps-table,
+  .steps-table tbody,
+  .steps-table tr,
+  .steps-table td {
+    display: block;
+    width: 100%;
+  }
+  .steps-table tr {
+    border-top: 1px solid var(--line);
+    padding: 8px 0;
+  }
+  .steps-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    padding: 3px 0;
+  }
+  .steps-table td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+  }
+  .activity-row {
+    grid-template-columns: auto 1fr;
+  }
+  .activity-row time,
+  .activity-row .link-button {
+    grid-column: 2;
+  }
+  .activity-list.compact .activity-row {
+    grid-template-columns: 1fr auto;
+  }
+  .sheet-wrap {
+    align-items: flex-end;
+  }
+  .evidence-sheet {
+    width: 100%;
+    height: auto;
+    max-height: 85vh;
+    border-radius: 14px 14px 0 0;
+    padding: 18px 16px;
+    animation-name: sheet-in-bottom;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evidence-sheet {
+    animation: none;
+  }
+}
+
 /* Student workspace follows the P0 tokens; non-student dashboards keep their current theme. */
 .app-shell-student {
   background: #c9d3e3;

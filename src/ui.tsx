@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 export const verdictLabel = (v: string) =>
-  ({ passed: "Đạt", partial: "Đạt một phần", not_passed: "Chưa đạt" })[v] ?? v;
+  ({ passed: "Đạt", partial: "Đạt một phần", not_passed: "Chưa đạt", needs_practice: "Cần luyện thêm" })[v] ?? v;
 export function Badge({
   children,
   tone = "",
