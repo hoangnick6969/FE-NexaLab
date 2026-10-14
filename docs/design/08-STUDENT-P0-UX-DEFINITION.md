@@ -14,7 +14,7 @@
 
 ## 2. Scope and decisions
 
-**Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher, Parent, and Admin remain in the shared architecture but their complete UX is deferred to later increments.
+**Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher and Parent have role-specific UX contracts in [09-TEACHER-UX-DEFINITION.md](09-TEACHER-UX-DEFINITION.md) and [10-PARENT-UX-DEFINITION.md](10-PARENT-UX-DEFINITION.md); their implementation remains in later increments. Admin UX remains deferred.
 
 **Learning loop:** **Học → Quiz → Thực hành/Mô phỏng → Thử thách → Thử lại → Tiến độ**.
 
