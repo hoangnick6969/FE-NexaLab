@@ -54,7 +54,7 @@ const AssignedLearning = lazy(() =>
   import("./pages").then((m) => ({ default: m.AssignedLearning }))
 );
 const Classes = lazy(() =>
-  import("./pages").then((m) => ({ default: m.Classes }))
+  import("./classes").then((m) => ({ default: m.Classes }))
 );
 const ProgressPage = lazy(() =>
   import("./pages").then((m) => ({ default: m.ProgressPage }))
@@ -1012,13 +1012,20 @@ function StudentDashboard({
               <div role="alert"><ErrorBox error={assignments.error} /><button onClick={() => assignments.refetch()}>Thử lại</button></div>
             ) : assignments.data?.length ? (
               <div className="student-list">
-                {assignments.data.map((item: any) => (
-                  <Link key={item.id} className="student-assignment-row" to={`/assignments/${item.id}`}>
-                    <span className="student-list-icon"><BookOpen size={17} /></span>
-                    <span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · Hạn {new Date(item.dueDate).toLocaleDateString("vi-VN")}</small>{item.overdue && <small className="student-overdue">Đã quá hạn · vẫn có thể học</small>}</span>
-                    <ArrowUpRight size={17} />
-                  </Link>
-                ))}
+                {assignments.data.map((item: any) =>
+                  item.canOpen === false ? (
+                    <div key={item.id} className="student-assignment-row" aria-disabled="true">
+                      <span className="student-list-icon"><BookOpen size={17} /></span>
+                      <span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.notice}</small></span>
+                    </div>
+                  ) : (
+                    <Link key={item.id} className="student-assignment-row" to={`/assignments/${item.id}`}>
+                      <span className="student-list-icon"><BookOpen size={17} /></span>
+                      <span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.dueDate ? "Hạn " + new Date(item.dueDate).toLocaleDateString("vi-VN") : "Không có hạn nộp"}</small>{item.overdue && <small className="student-overdue">Đã quá hạn · vẫn có thể học</small>}{item.notice && <small>{item.notice}</small>}</span>
+                      <ArrowUpRight size={17} />
+                    </Link>
+                  ),
+                )}
               </div>
             ) : (
               <div className="student-empty"><ClipboardList size={22} /><p>Chưa có bài được giao.</p></div>

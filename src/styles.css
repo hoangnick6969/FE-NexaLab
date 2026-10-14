@@ -4772,3 +4772,112 @@ td small {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* B1 teacher operations */
+.danger {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 0;
+  border-radius: 7px;
+  padding: 11px 16px;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #fff;
+  background: #ac6153;
+  cursor: pointer;
+}
+.danger:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.join-code-once {
+  margin: 12px 0;
+}
+.join-code-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.join-code-value code {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+}
+.segmented {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.segmented legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.review-checklist {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 14px 0;
+}
+.review-checklist legend {
+  font-weight: 650;
+  padding: 0 4px;
+}
+.review-checklist textarea,
+.wide-field textarea {
+  width: 100%;
+  resize: vertical;
+}
+.wide-field {
+  grid-column: 1 / -1;
+}
+.publish-blockers {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: #ac6153;
+}
+.coverage-panel table td:first-child {
+  font-weight: 600;
+}
+.student-assignment-row[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: default;
+}
+.section-heading .button-row {
+  flex-wrap: wrap;
+}
+@media (max-width: 520px) {
+  .section-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .section-heading .button-row > button {
+    flex: 1 1 auto;
+  }
+  .assignment-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* B1-T6: failed reads offer a retry instead of a dead end. */
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}

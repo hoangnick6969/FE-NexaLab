@@ -69,12 +69,48 @@ export type StudentPathway = {
     learningObjective: string;
     prerequisites: string;
   };
-  assignment: { id: string; dueDate: string; overdue: boolean };
+  assignment: { id: string; dueDate: string | null; overdue: boolean };
+  /** Archived content a student already started may be continued (B1, MSG-36). */
+  contentArchived?: boolean;
   steps: StudentLearningStep[];
   nextStepId: string | null;
   updatedAt: string;
 };
-export type ApiErrorEnvelope = { message: string };
+export type ApiErrorEnvelope = {
+  statusCode: number;
+  code: string;
+  message: string;
+  details?: unknown;
+};
+/** Thrown for every non-2xx API response; branch on `code`, show `message`. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+export const isApiError = (error: unknown, code?: string): error is ApiError =>
+  error instanceof ApiError && (code === undefined || error.code === code);
+export const idempotencyKey = (): string => crypto.randomUUID();
+async function readError(r: Response): Promise<ApiError> {
+  let data: Partial<ApiErrorEnvelope> = {};
+  try {
+    data = await r.json();
+  } catch {
+    // Non-JSON gateway errors still produce a typed error.
+  }
+  return new ApiError(
+    data.statusCode ?? r.status,
+    typeof data.code === "string" ? data.code : "HTTP_" + r.status,
+    data.message ?? "Không thể kết nối máy chủ",
+    data.details,
+  );
+}
 export type QuizAttemptResponse = {
   attempt: QuizAttemptSummary;
   pathway: StudentPathway;
@@ -115,13 +151,17 @@ export type MyProgressStep = {
   } | null;
 };
 export type MyProgressAssignment = {
+  /** LESSON pathway, or a standalone LAB assignment (B1, D3). */
+  kind: "LESSON" | "LAB";
   assignmentId: string;
-  lessonId: string;
+  lessonId: string | null;
+  labId: string | null;
   title: string;
   lessonTitle: string;
   subject: { id: string; name: string };
   chapter: string;
-  dueDate: string;
+  contentArchived: boolean;
+  dueDate: string | null;
   overdue: boolean;
   completed: boolean;
   completedRequired: number;
@@ -243,6 +283,7 @@ export async function api<T = any>(
   method = "GET",
   body?: unknown,
   retry = true,
+  headers: Record<string, string> = {},
 ): Promise<T> {
   const token = useAuth.getState().token;
   const safeRead = method === "GET";
@@ -254,27 +295,31 @@ export async function api<T = any>(
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...headers,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   } catch (error) {
     if (safeRead && retry) {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      return api(path, method, body, false);
+      return api(path, method, body, false, headers);
     }
     throw error;
   }
   if (r.status === 401 && retry && !path.startsWith("/auth/")) {
-    if (await restore()) return api(path, method, body, false);
+    if (await restore()) return api(path, method, body, false, headers);
     useAuth.getState().set(null, null);
   }
   if (safeRead && retry && [502, 503, 504].includes(r.status)) {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    return api(path, method, body, false);
+    return api(path, method, body, false, headers);
   }
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.message ?? "Không thể kết nối máy chủ");
-  return data;
+  if (!r.ok) throw await readError(r);
+  return r.json();
+}
+/** Retryable mutation: the same key is reused when the network call is retried. */
+export function mutate<T = any>(path: string, method: string, body: unknown, key = idempotencyKey()) {
+  return api<T>(path, method, body, true, { "Idempotency-Key": key });
 }
 
 export async function uploadFile(file: File) {
@@ -286,9 +331,8 @@ export async function uploadFile(file: File) {
     headers: { Authorization: "Bearer " + useAuth.getState().token },
     body: data,
   });
-  const result = await r.json();
-  if (!r.ok) throw new Error(result.message);
-  return result;
+  if (!r.ok) throw await readError(r);
+  return r.json();
 }
 export async function openMaterial(url: string) {
   if (!url.startsWith("asset:")) {

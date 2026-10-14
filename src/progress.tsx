@@ -171,7 +171,10 @@ function AssignmentProgress({
           <p className="eyebrow">{assignment.subject.name} · {assignment.chapter}</p>
           <h3>{assignment.title}</h3>
           <p className="tiny muted">
-            Hạn: {new Date(assignment.dueDate).toLocaleDateString("vi-VN")} {assignment.overdue && !assignment.completed && <Badge tone="outline">Đã quá hạn</Badge>}
+            {assignment.dueDate ? "Hạn: " + new Date(assignment.dueDate).toLocaleDateString("vi-VN") : "Không có hạn nộp"}{" "}
+            {assignment.kind === "LAB" && <Badge tone="outline">Bài thực hành</Badge>}{" "}
+            {assignment.contentArchived && <Badge tone="outline">Nội dung đã lưu trữ</Badge>}{" "}
+            {assignment.overdue && !assignment.completed && <Badge tone="outline">Đã quá hạn</Badge>}
           </p>
         </div>
         <Link className="primary" to={stepLink(assignment.assignmentId, assignment.nextStepId)!}>

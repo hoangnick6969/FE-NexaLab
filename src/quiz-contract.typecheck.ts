@@ -30,7 +30,7 @@ export const studentQuizContractTypecheck = {
       results: [{ questionId: "question-id", prompt: "Prompt", selectedOptionText: "Option", correct: true }],
     }],
   },
-  error: { message: "Bài kiểm tra chưa khả dụng" },
+  error: { statusCode: 404, code: "NOT_FOUND", message: "Bài kiểm tra chưa khả dụng" },
 } satisfies {
   quiz: StudentQuiz;
   request: QuizAttemptRequest;
