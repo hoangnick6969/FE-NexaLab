@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useState } from "react";
 import {
   Routes,
   Route,
@@ -216,6 +216,9 @@ export default function App() {
   const { user } = useAuth();
   const location = useLocation();
   const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [location.pathname, location.hash]);
   useEffect(() => {
     restore().finally(() => setReady(true));
   }, []);

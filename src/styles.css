@@ -1634,6 +1634,20 @@ td small {
   padding: 20px;
 }
 
+.litmus-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.litmus-jar { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border: 1px solid #dce5df; border-radius: 14px; }
+.litmus-jar > strong { align-self: stretch; }
+.litmus-jar .field { width: 100%; }
+.litmus-jar .text-button { text-align: center; }
+.litmus-vessel { position: relative; width: 110px; height: 150px; margin-top: 55px; border: 3px solid #91aaa8; border-top: 5px solid #91aaa8; border-radius: 4px 4px 22px 22px; background: #f7fbfb; }
+.litmus-liquid { position: absolute; inset: 54px 0 0; background: #c8e0e6; border-radius: 20% 20% 18px 18px; }
+.litmus-strip { position: absolute; top: -48px; left: calc(50% - 7px); width: 14px; height: 105px; background: #8b65a5; border: 1px solid #644677; transform: rotate(8deg); transition: top .6s ease, background .6s ease .5s; z-index: 2; }
+.litmus-strip--red, .litmus-strip--purple, .litmus-strip--blue { top: 35px; }
+.litmus-strip--red { background: #d55257; }
+.litmus-strip--purple { background: #8b65a5; }
+.litmus-strip--blue { background: #457ac2; }
+@media (max-width: 850px) { .litmus-grid { grid-template-columns: 1fr; } }
+
 .beaker-scene {
   position: relative;
   height: 310px;
