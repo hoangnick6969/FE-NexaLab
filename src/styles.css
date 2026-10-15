@@ -2940,6 +2940,7 @@ td small {
 
 .admin-tabs {
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .admin-tabs button {
@@ -4970,4 +4971,35 @@ td small {
   display: grid;
   gap: 6px;
   overflow-wrap: anywhere;
+}
+
+/* C2 admin console */
+.admin-detail { min-width: 0; }
+.admin-detail table { display: block; overflow-x: auto; }
+.admin-status { display: inline-flex; align-items: center; gap: 4px; }
+.admin-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 12px 0; }
+.admin-filters .field { min-width: 160px; flex: 1 1 160px; }
+.admin-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 12px 0; }
+.admin-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.admin-card strong { font-size: 24px; }
+.admin-dialog textarea { width: 100%; min-height: 72px; }
+.admin-effect { margin-bottom: 12px; }
+.admin-detail h3 { margin: 14px 0 6px; font-size: 14px; }
+.admin-actions { flex-wrap: wrap; margin-top: 14px; }
+.admin-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-resolutions { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+.admin-resolution { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.admin-resolution > span { flex: 1 1 200px; }
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.admin-list { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 6px; font-size: 13px; }
+.admin-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.admin-inline .field { flex: 1 1 140px; }
+.admin-ack { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.admin-more { margin-top: 12px; }
+.admin-stale { margin: 4px 0; }
+.admin-version-form { display: grid; gap: 10px; margin-top: 16px; }
+.admin-blockers { margin: 0; padding-left: 18px; }
+@media (max-width: 640px) {
+  .admin-filters .field, .admin-inline .field { flex-basis: 100%; }
 }
