@@ -29,6 +29,16 @@ import {
 import { PageHeading } from "./App";
 import { CircuitPathwayStep } from "./labs/CircuitPathwayStep";
 import { StudentProgress } from "./progress";
+import {
+  AttributionNote,
+  CoverageTable,
+  LibraryFiltersBar,
+  PreviewModal,
+  ReleaseReviews,
+  TaxonomyFields,
+  libraryQuery,
+  type LibraryFilters,
+} from "./library";
 function RichEditor({
   value,
   onChange,
@@ -81,6 +91,9 @@ const blankLesson = {
   labId: "circuit",
   materials: [],
   questions: [],
+  domain: null,
+  outcomeCodes: [],
+  challengeParams: null,
 };
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
@@ -98,13 +111,17 @@ export function Lessons() {
   const save = useAction((b: any) =>
     api("/lessons" + (b.id ? "/" + b.id : ""), b.id ? "PUT" : "POST", b),
   );
-  // B1-T4: library metadata (scope, editability, readiness, coverage).
+  // B1-T4: library metadata (scope, editability, readiness, coverage) and filters.
+  const [libraryFilters, setLibraryFilters] = useState<LibraryFilters>({ grade: "", domain: "", outcome: "", scope: "ALL" });
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const library = useQuery({
-    queryKey: ["teacher-content"],
-    queryFn: () => api("/teacher/content"),
+    queryKey: ["teacher-content", libraryFilters],
+    queryFn: () => api(libraryQuery(libraryFilters)),
     enabled: manage,
+    placeholderData: (previous) => previous,
   });
   const meta = new Map<string, any>((library.data?.items ?? []).map((item: any) => [item.id, item]));
+  const filtersActive = manage && Object.entries(libraryFilters).some(([key, value]) => (key === "scope" ? value !== "ALL" : Boolean(value)));
   const clone = useAction((id: string) => mutate("/lessons/" + id + "/clone", "POST", undefined, idempotencyKey()));
   const startClone = (id: string) =>
     clone.mutate(id, {
@@ -153,35 +170,24 @@ export function Lessons() {
         />
       </div>
       <ErrorBox error={q.error || clone.error} />
+      {manage && (
+        <LibraryFiltersBar
+          filters={libraryFilters}
+          onChange={setLibraryFilters}
+          taxonomy={library.data?.taxonomy}
+          outcomes={library.data?.outcomes ?? []}
+        />
+      )}
+      {manage && library.error && (
+        <div className="load-error">
+          <ErrorBox error={library.error} />
+          <button type="button" onClick={() => library.refetch()}>
+            Thử lại
+          </button>
+        </div>
+      )}
       {manage && library.data && (
-        <section className="panel coverage-panel" aria-labelledby="coverage-title">
-          <h2 id="coverage-title">Thư viện nội dung lớp 8–9</h2>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Khối</th>
-                  <th>Bài nền đã phát hành</th>
-                  <th>Dữ liệu mẫu</th>
-                  <th>Bài riêng đã xuất bản</th>
-                  <th>Bản nháp của tôi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {library.data.coverage.map((row: any) => (
-                  <tr key={row.grade}>
-                    <td>Khối {row.grade}</td>
-                    <td>{row.releasedBaseline}</td>
-                    <td>{row.syntheticFixtures}</td>
-                    <td>{row.ownPublished}</td>
-                    <td>{row.ownDrafts}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="tiny muted">{library.data.coverageNote}</p>
-        </section>
+        <CoverageTable rows={library.data.coverage} note={library.data.coverageNote} outcomes={library.data.outcomes} />
       )}
       <div className="lesson-grid">
         {q.isLoading && <CardSkeleton count={6} />}
@@ -189,7 +195,8 @@ export function Lessons() {
           ?.filter(
             (l: any) =>
               (filter === "all" || l.subjectId === filter) &&
-              l.title.toLowerCase().includes(search.toLowerCase()),
+              l.title.toLowerCase().includes(search.toLowerCase()) &&
+              (!filtersActive || meta.has(l.id)),
           )
           .map((l: any) => (
             <article className="panel lesson-card" key={l.id}>
@@ -210,6 +217,7 @@ export function Lessons() {
                   <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
                   {l.synthetic && <Badge tone="outline">Dữ liệu mẫu</Badge>}
                   {meta.get(l.id)?.structureLocked && <Badge tone="outline">Đang được dùng</Badge>}
+                  {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">Thử thách tùy chỉnh</Badge>}
                 </div>
               )}
               <small className="eyebrow">
@@ -233,6 +241,11 @@ export function Lessons() {
                     </button>
                   )}
                 {manage && (
+                  <button className="text-button" onClick={() => setPreviewId(l.id)}>
+                    Xem trước
+                  </button>
+                )}
+                {manage && (
                   <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>
                     Tạo bản riêng
                   </button>
@@ -242,6 +255,10 @@ export function Lessons() {
           ))}
       </div>
       {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
+      {filtersActive && library.data && library.data.items.length === 0 && (
+        <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
+      )}
+      {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
       {view && (
         <Modal title={view.title} onClose={() => setView(null)}>
           <p className="muted">
@@ -290,6 +307,7 @@ export function Lessons() {
               Tiến độ chính thức được ghi nhận khi em học bài này trong mục Bài được giao.
             </p>
           )}
+          <AttributionNote value={meta.get(view.id)?.attribution} />
         </Modal>
       )}
       {edit && (
@@ -361,7 +379,7 @@ export function Lessons() {
                 <select
                   value={edit.labId ?? ""}
                   onChange={(e) =>
-                    setEdit({ ...edit, labId: e.target.value || null })
+                    setEdit({ ...edit, labId: e.target.value || null, challengeParams: null })
                   }
                 >
                   <option value="">Không có</option>
@@ -370,6 +388,15 @@ export function Lessons() {
                   <option value="chemistry">Phản ứng</option>
                 </select>
               </label>
+              {user.role === "ADMIN" && !edit.id && (
+                <label className="field">
+                  <span>Phạm vi</span>
+                  <select value={edit.scope ?? "TEACHER_PRIVATE"} onChange={(e) => setEdit({ ...edit, scope: e.target.value })}>
+                    <option value="TEACHER_PRIVATE">Bài riêng</option>
+                    <option value="SHARED_LIBRARY">Thư viện chung (cần duyệt có tên)</option>
+                  </select>
+                </label>
+              )}
               <label className="field">
                 <span>Trạng thái</span>
                 <select
@@ -586,7 +613,11 @@ export function Lessons() {
             >
               + Thêm câu hỏi
             </button>
+            <TaxonomyFields edit={edit} setEdit={setEdit} taxonomy={library.data?.taxonomy} outcomes={library.data?.outcomes ?? []} />
             <ReviewChecklist value={edit.review} onChange={(review) => setEdit((s: any) => ({ ...s, review }))} />
+            {user.role === "ADMIN" && edit.id && edit.scope === "SHARED_LIBRARY" && meta.get(edit.id)?.releaseReview && (
+              <ReleaseReviews lessonId={edit.id} reviews={meta.get(edit.id).releaseReview} />
+            )}
             <ErrorBox error={save.error} />
             {isApiError(save.error, "PUBLISH_BLOCKED") && Array.isArray((save.error.details as any)?.missing) && (
               <ul className="publish-blockers">
@@ -1238,6 +1269,7 @@ export function AssignedLearning() {
         {pathway?.contentArchived && (
           <p className="notice" role="status">Nội dung này không còn được cập nhật. Em vẫn có thể học tiếp phần đã bắt đầu.</p>
         )}
+        <AttributionNote value={pathway?.attribution} />
         {assignment.contentType === "lesson" && pathway ? (
           <div className="lesson-pathway" aria-label="Lộ trình bài học">
             <ol className="pathway-steps">

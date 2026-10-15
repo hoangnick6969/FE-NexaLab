@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const password = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD ?? "acceptance-pilot-2026";
 
 async function login(page: Page) {
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByLabel("Tên đăng nhập học sinh").fill("student.active");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   const response = page.waitForResponse((item) =>

@@ -70,6 +70,8 @@ export type StudentPathway = {
     prerequisites: string;
   };
   assignment: { id: string; dueDate: string | null; overdue: boolean };
+  /** Sources/license of the lesson (B1-T4); synthetic fixtures carry a note instead. */
+  attribution?: { sources: string | null; license: string | null; licenseLabel: string | null; synthetic: boolean; note: string | null };
   /** Archived content a student already started may be continued (B1, MSG-36). */
   contentArchived?: boolean;
   steps: StudentLearningStep[];

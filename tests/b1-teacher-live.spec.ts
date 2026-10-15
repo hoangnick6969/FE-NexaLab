@@ -35,7 +35,9 @@ async function studentLogin(browser: Browser, username: string, password: string
   await page.goto("/login");
   await page.getByLabel("Tên đăng nhập học sinh").fill(username);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
+  const response = page.waitForResponse((item) => item.request().method() === "POST" && item.url().endsWith("/api/auth/student/login"));
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  expect((await response).status(), "student login").toBe(201);
   if (temporary) {
     await page.getByLabel("Mật khẩu tạm").fill(password);
     await page.getByLabel("Mật khẩu mới (ít nhất 12 ký tự)").fill(studentPassword);
@@ -219,6 +221,131 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     await rosterAlert.getByRole("button", { name: "Thử lại" }).click();
     await expect(rosterAlert).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Thành viên lớp" })).toBeVisible();
+    await noHorizontalOverflow(page);
+  });
+
+  test("content library filters, coverage, preview and a private challenge variant reach the student", async ({ page, browser }) => {
+    test.skip(!classId, "requires the journey above");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await teacherLogin(page);
+    await page.goto("/lessons");
+
+    // Coverage is per grade × domain with numerator/denominator and gaps, fixtures shown apart.
+    const coverage = page.locator(".coverage-panel");
+    await expect(coverage.getByRole("heading", { name: "Độ bao phủ yêu cầu cần đạt lớp 8–9" })).toBeVisible();
+    const energyRow = coverage.locator("tr", { hasText: "Lớp 8" }).filter({ hasText: "Năng lượng và sự biến đổi" });
+    await expect(energyRow).toContainText("Chưa có bản đồ");
+    await expect(energyRow).toContainText(/\d+\/\d+/);
+    await energyRow.getByText(/yêu cầu$/).click();
+    await expect(energyRow.locator(".gap-list")).toContainText("FX8-ENERGY-02");
+
+    // Domain and outcome filters narrow the cards.
+    const filters = page.getByRole("group", { name: "Lọc thư viện nội dung" });
+    await filters.getByLabel("Mạch nội dung").selectOption("ENERGY");
+    await expect(page.locator(".lesson-card", { hasText: "Cấu tạo mắt người" })).toHaveCount(0);
+    const circuitCard = page.locator(".lesson-card").filter({ has: page.getByRole("heading", { name: "Định luật Ohm", exact: true }) }).first();
+    await expect(circuitCard).toBeVisible();
+    await filters.getByLabel("Yêu cầu cần đạt").selectOption("FX8-ENERGY-01");
+    await expect(circuitCard).toBeVisible();
+
+    // Preview shows text alternatives, readiness blockers and the fixture note.
+    await circuitCard.getByRole("button", { name: "Xem trước" }).click();
+    const preview = page.getByRole("dialog", { name: /Xem trước/ });
+    await expect(preview.locator(".preview-steps li").first()).toBeVisible();
+    await expect(preview.getByText("Chưa thể xuất bản. Còn thiếu:")).toBeVisible();
+    await expect(preview.getByLabel("Nguồn và giấy phép")).toContainText("Nội dung minh họa");
+    await preview.getByRole("button", { name: "Đóng" }).click();
+
+    // A private variant with a stricter, in-range challenge parameter.
+    const title = `${prefix} Thử thách 10 mA`;
+    await page.getByRole("button", { name: "Tạo bài học" }).click();
+    const editor = page.getByRole("dialog", { name: "Tạo bài học" });
+    for (const [label, value] of [
+      ["Tên bài", title],
+      ["Chương", "Điện"],
+      ["Chủ đề", "Định luật Ohm"],
+      ["Mục tiêu", "Giữ dòng điện qua LED dưới mức giáo viên đặt"],
+      ["Kiến thức nền", "Mạch điện kín"],
+    ])
+      await editor.getByLabel(label, { exact: true }).fill(value);
+    await editor.locator(".ProseMirror").click();
+    await page.keyboard.type("Dòng điện qua LED phụ thuộc điện trở mắc nối tiếp.");
+    await editor.getByLabel("Trạng thái").selectOption("published");
+    await editor.getByLabel("Mạch nội dung KHTN").selectOption("ENERGY");
+    await editor.getByRole("group", { name: "Yêu cầu cần đạt" }).getByLabel(/FX8-ENERGY-01/).check();
+    await editor.getByLabel("Thêm thử thách tùy chỉnh sau phần thực hành").check();
+    const maxCurrent = editor.getByLabel(/Dòng tối đa qua mỗi nhánh LED/);
+    await maxCurrent.fill("25");
+    await editor.getByLabel("Nguồn căn cứ cho các nội dung khoa học").fill("Tài liệu tự biên soạn kiểm thử Playwright B1");
+    await editor.getByLabel("Yêu cầu cần đạt liên quan").fill("Lắp mạch kín an toàn");
+    await editor.getByLabel("Tôi đã kiểm tra đáp án của mọi câu hỏi").check();
+    await editor.getByLabel("Nội dung không hướng dẫn thao tác nguy hiểm").check();
+    await editor.getByLabel("Học liệu có văn bản thay thế hoặc bản chép lời").check();
+    // Out of range is stopped in the form (the API rejects it too: INVALID_CHALLENGE_PARAMS).
+    await editor.getByRole("button", { name: "Lưu bài học" }).click();
+    expect(await maxCurrent.evaluate((input: HTMLInputElement) => input.validity.rangeOverflow)).toBe(true);
+    await expect(editor).toBeVisible();
+    await maxCurrent.fill("10");
+    await editor.getByRole("button", { name: "Lưu bài học" }).click();
+    await expect(editor).toHaveCount(0);
+    await filters.getByLabel("Nguồn").selectOption("TEACHER_PRIVATE");
+    const variantCard = page.locator(".lesson-card", { hasText: title });
+    await expect(variantCard).toContainText("Thử thách tùy chỉnh");
+    await noHorizontalOverflow(page);
+
+    // Assign it; the student finishes the lab and sees the teacher's objective and attribution.
+    const login = await call("/auth/login", "POST", { email: teacherEmail, password: teacherPassword });
+    const token = login.data.accessToken;
+    const lessons = await call("/teacher/content?scope=TEACHER_PRIVATE", "GET", undefined, token);
+    const lessonId = lessons.data.items.find((item: any) => item.title === title).id;
+    const assigned = await call(`/classes/${classId}/assignments`, "POST", { contentType: "lesson", contentId: lessonId }, token);
+    expect(assigned.status).toBe(201);
+    const studentAuth = await call("/auth/student/login", "POST", { username: `${prefix}-a`, password: studentPassword });
+    const studentToken = studentAuth.data.accessToken;
+    const path = await call(`/lessons/${lessonId}/pathway`, "GET", undefined, studentToken);
+    for (const step of path.data.steps) {
+      if (step.type === "READING") await call(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", { action: "complete" }, studentToken);
+      if (step.type === "VIDEO") await call(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", { action: "complete-fallback" }, studentToken);
+      if (step.type === "LAB") {
+        const lab = await call(
+          "/attempts",
+          "POST",
+          {
+            challengeId: "circuit_001",
+            lessonStepId: step.id,
+            durationMs: 1000,
+            labState: {
+              nodes: [
+                { id: "b", type: "battery", value: 9 },
+                { id: "r", type: "resistor", value: 470 },
+                { id: "l", type: "led" },
+              ],
+              edges: [
+                { source: "b", target: "r" },
+                { source: "r", target: "l" },
+                { source: "l", target: "b" },
+              ],
+            },
+          },
+          studentToken,
+        );
+        expect(lab.data.verdict).toBe("passed");
+      }
+    }
+    const student = await studentLogin(browser, `${prefix}-a`, studentPassword);
+    await student.goto(`/assignments/${assigned.data.assignment.id}`);
+    await expect(student.getByText("Yêu cầu của thử thách:")).toBeVisible();
+    await expect(student.locator(".circuit-challenge-card").last()).toContainText("10 mA");
+    await expect(student.getByLabel("Nguồn và giấy phép")).toContainText("Tài liệu tự biên soạn kiểm thử Playwright B1");
+    await expect(student.getByLabel("Nguồn và giấy phép")).toContainText("Tự biên soạn");
+    await student.context().close();
+  });
+
+  test("content library has no horizontal overflow at 390px", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await teacherLogin(page);
+    await page.goto("/lessons");
+    await expect(page.locator(".coverage-panel")).toBeVisible();
     await noHorizontalOverflow(page);
   });
 

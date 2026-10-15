@@ -4881,3 +4881,58 @@ td small {
   justify-content: space-between;
   gap: 8px 16px;
 }
+
+/* B1-T4: library filters, coverage gaps, preview, attribution. */
+.library-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 14px;
+  margin: 0 0 14px;
+}
+.library-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.gap-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-width: 360px;
+}
+.outcome-picks {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+.preview-steps {
+  padding-left: 20px;
+}
+.preview-steps h3 {
+  font-size: 1rem;
+  margin: 12px 0 4px;
+}
+.preview-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.attribution {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 8px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.attribution p {
+  margin: 2px 0;
+}
+.release-reviews {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.release-reviews li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}

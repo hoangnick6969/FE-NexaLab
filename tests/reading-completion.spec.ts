@@ -13,7 +13,7 @@ test("assigned reading completion retries and resumes from server evidence", asy
     }
     await route.continue();
   });
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByLabel("Tên đăng nhập học sinh").fill("student.active");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   const loginResponse = page.waitForResponse(
