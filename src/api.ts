@@ -56,6 +56,9 @@ export type StudentLearningStep = {
     transcript?: string;
     cards?: Array<{ id: string; front: string; back: string }>;
     questions?: StudentQuiz["questions"];
+    labId?: string;
+    challengeId?: string;
+    sameAsLab?: boolean;
   } | null;
 };
 export type StudentPathway = {

@@ -149,6 +149,7 @@ export function Lessons() {
         <div className="tabs">
           {[
             ["all", "Tất cả"],
+            ["khtn", "Khoa học tự nhiên"],
             ["physics", "Vật lý"],
             ["biology", "Sinh học"],
             ["chemistry", "Hóa học"],
@@ -1273,7 +1274,7 @@ export function AssignedLearning() {
         {assignment.contentType === "lesson" && pathway ? (
           <div className="lesson-pathway" aria-label="Lộ trình bài học">
             <ol className="pathway-steps">
-              {pathway.steps.map((step, index) => (
+              {pathway.steps.filter((step) => !step.resource?.sameAsLab).map((step, index) => (
                 <li
                   id={"step-" + step.id}
                   className={"pathway-step pathway-step--" + step.state.toLowerCase()}

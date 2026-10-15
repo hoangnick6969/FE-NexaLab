@@ -10,7 +10,7 @@ const Eye = lazy(() => import("./eye"));
 
 type Props = { lessonId: string; step: any; onReconciled?: (pathway: any) => void };
 
-const initialState = (labId: string) => (labId === "chemistry" ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 } : { answers: {} });
+const initialState = (labId: string) => (labId === "chemistry" ? { samples: {} } : { answers: {} });
 
 /**
  * LAB/CHALLENGE step of an assigned lesson. The server names the model and the
@@ -47,11 +47,13 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [newRun, setNewRun] = useState(false);
   const started = useRef(Date.now());
   const idempotencyKey = useRef(crypto.randomUUID());
 
   const change = (next: any) => {
     setLabState(next);
+    setNewRun(true);
     if (attempt) {
       // A changed setup is a new attempt; the workspace itself is preserved.
       setAttempt(null);
@@ -84,10 +86,10 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
     idempotencyKey.current = crypto.randomUUID();
   };
   const result = attempt?.simulationResult;
-  const passed = attempt?.verdict === "passed";
+  const passed = attempt ? attempt.verdict === "passed" : step.state === "COMPLETED" && !newRun;
 
   return (
-    <section className="practical-step" aria-label={labId === "chemistry" ? "Khu vực thực hành phản ứng hóa học" : "Khu vực thực hành cấu tạo mắt"}>
+    <section className="practical-step" aria-label={labId === "chemistry" ? "Khu vực thực hành đo pH" : "Khu vực thực hành cấu tạo mắt"}>
       <div className="circuit-challenge-card practical-card">
         <div className="practical-card-head">
           <h4>{workspace.title}</h4>
@@ -102,7 +104,7 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
         {labId === "eye" && <p className="tiny muted">Bấm “Kiểm tra tên gọi”, chọn từng bộ phận rồi nhập tên của nó.</p>}
       </div>
       {labId === "chemistry" ? (
-        <Chemistry state={labState} onChange={change} result={result} />
+        <Chemistry key={resetKey} state={labState} onChange={change} result={result} />
       ) : (
         <Suspense fallback={<InlineLoader message="Đang nạp mô hình 3D giải phẫu mắt…" />}>
           <Eye key={resetKey} state={labState} onChange={change} />
@@ -114,6 +116,8 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
           className="text-button"
           onClick={() => {
             change(initialState(labId));
+            started.current = Date.now();
+            idempotencyKey.current = crypto.randomUUID();
             setResetKey((k) => k + 1);
           }}
         >
@@ -125,7 +129,7 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
           </button>
         ) : (
           <button type="button" className="primary" onClick={submit} disabled={pending || passed}>
-            <Play size={15} /> {pending ? "Đang chấm…" : labId === "eye" ? "Chấm tên bộ phận" : "Chạy thí nghiệm"}
+            <Play size={15} /> {pending ? "Đang chấm…" : labId === "eye" ? "Chấm tên bộ phận" : labId === "chemistry" ? "Kiểm tra kết quả" : "Chạy thí nghiệm"}
           </button>
         )}
       </div>
@@ -142,8 +146,7 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
           <Badge tone={attempt.verdict}>{verdictLabel(attempt.verdict)}</Badge>
           {labId === "chemistry" && result && (
             <p>
-              {result.equation}: sản phẩm {Number(result.extent.toFixed(6))} mol · dư {result.a} {Number(result.remainingA.toFixed(6))} mol · dư{" "}
-              {result.b} {Number(result.remainingB.toFixed(6))} mol
+              {result.phenomenon}
             </p>
           )}
           {labId === "eye" && result && <p>Đúng {result.score}% tên bộ phận.</p>}

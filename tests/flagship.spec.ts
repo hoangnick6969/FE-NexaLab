@@ -3,7 +3,9 @@ const testPassword = process.env.SEED_PASSWORD;
 if (!testPassword) throw new Error("Set SEED_PASSWORD to the password configured by the backend seed.");
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Email", { exact: true }).fill("student@nexalab.local");
+  await page
+    .getByLabel("Tên đăng nhập học sinh", { exact: true })
+    .fill("nguyenan.8a");
   await page
     .getByLabel("Mật khẩu", { exact: true })
     .fill(testPassword);

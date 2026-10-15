@@ -1,12 +1,13 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 (async () => {
-  const api = 'http://127.0.0.1:4409/api';
+  const api = process.env.TEST_API ?? 'http://127.0.0.1:4000/api';
   async function request(path, body, token) {
     const r = await fetch(api + path, { method: body ? 'POST' : 'GET', headers: { 'Content-Type':'application/json', ...(token ? {Authorization:`Bearer ${token}`} : {}) }, ...(body ? {body:JSON.stringify(body)} : {}) });
     return {status:r.status, data:await r.json()};
   }
-  const owner = await request('/auth/login', {email:'teacher.owner@nexalab.local',password:'AcceptanceOnly-2026!'});
+  const fixturePassword = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD;
+  const owner = await request('/auth/login', {email:'teacher.owner@nexalab.local',password:fixturePassword});
   assert.equal(owner.status,201);
   const username = 'a1browser'+Date.now();
   const student = await request('/classes/class-pilot-a/students', {username, fullName:'A1 Browser Student', grade:8,consent:true}, owner.data.accessToken);
@@ -19,7 +20,7 @@ const assert = require('node:assert/strict');
   try {
     const page=await browser.newPage(); const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
-    await page.goto('http://127.0.0.1:5199/');
+    await page.goto(process.env.TEST_WEB ?? 'http://127.0.0.1:5173');
     await page.getByLabel('Tên đăng nhập học sinh').fill(username);
     await page.getByLabel('Mật khẩu',{exact:true}).fill(student.data.credentials.temporaryPassword);
     await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
