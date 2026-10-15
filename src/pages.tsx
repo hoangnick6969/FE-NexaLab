@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { api, inlineMaterial, useAuth, uploadFile, openMaterial, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentLearningStep, type StudentPathway, type StudentQuiz } from "./api";
+import { api, idempotencyKey, inlineMaterial, isApiError, mutate, useAuth, uploadFile, openMaterial, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentLearningStep, type StudentPathway, type StudentQuiz } from "./api";
 import {
   Badge,
   Empty,
@@ -27,8 +27,18 @@ import {
   CardSkeleton,
 } from "./ui";
 import { PageHeading } from "./App";
-import { CircuitPathwayStep } from "./labs/CircuitPathwayStep";
+import { PracticalPathwayStep } from "./labs/PracticalPathwayStep";
 import { StudentProgress } from "./progress";
+import {
+  AttributionNote,
+  CoverageTable,
+  LibraryFiltersBar,
+  PreviewModal,
+  ReleaseReviews,
+  TaxonomyFields,
+  libraryQuery,
+  type LibraryFilters,
+} from "./library";
 function RichEditor({
   value,
   onChange,
@@ -81,6 +91,9 @@ const blankLesson = {
   labId: "circuit",
   materials: [],
   questions: [],
+  domain: null,
+  outcomeCodes: [],
+  challengeParams: null,
 };
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
@@ -98,6 +111,22 @@ export function Lessons() {
   const save = useAction((b: any) =>
     api("/lessons" + (b.id ? "/" + b.id : ""), b.id ? "PUT" : "POST", b),
   );
+  // B1-T4: library metadata (scope, editability, readiness, coverage) and filters.
+  const [libraryFilters, setLibraryFilters] = useState<LibraryFilters>({ grade: "", domain: "", outcome: "", scope: "ALL" });
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const library = useQuery({
+    queryKey: ["teacher-content", libraryFilters],
+    queryFn: () => api(libraryQuery(libraryFilters)),
+    enabled: manage,
+    placeholderData: (previous) => previous,
+  });
+  const meta = new Map<string, any>((library.data?.items ?? []).map((item: any) => [item.id, item]));
+  const filtersActive = manage && Object.entries(libraryFilters).some(([key, value]) => (key === "scope" ? value !== "ALL" : Boolean(value)));
+  const clone = useAction((id: string) => mutate("/lessons/" + id + "/clone", "POST", undefined, idempotencyKey()));
+  const startClone = (id: string) =>
+    clone.mutate(id, {
+      onSuccess: (copy: any) => setEdit({ ...copy, review: copy.review ?? null }),
+    });
   return (
     <>
       <PageHeading
@@ -140,14 +169,34 @@ export function Lessons() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <ErrorBox error={q.error} />
+      <ErrorBox error={q.error || clone.error} />
+      {manage && (
+        <LibraryFiltersBar
+          filters={libraryFilters}
+          onChange={setLibraryFilters}
+          taxonomy={library.data?.taxonomy}
+          outcomes={library.data?.outcomes ?? []}
+        />
+      )}
+      {manage && library.error && (
+        <div className="load-error">
+          <ErrorBox error={library.error} />
+          <button type="button" onClick={() => library.refetch()}>
+            Thử lại
+          </button>
+        </div>
+      )}
+      {manage && library.data && (
+        <CoverageTable rows={library.data.coverage} note={library.data.coverageNote} outcomes={library.data.outcomes} />
+      )}
       <div className="lesson-grid">
         {q.isLoading && <CardSkeleton count={6} />}
         {q.data
           ?.filter(
             (l: any) =>
               (filter === "all" || l.subjectId === filter) &&
-              l.title.toLowerCase().includes(search.toLowerCase()),
+              l.title.toLowerCase().includes(search.toLowerCase()) &&
+              (!filtersActive || meta.has(l.id)),
           )
           .map((l: any) => (
             <article className="panel lesson-card" key={l.id}>
@@ -163,6 +212,14 @@ export function Lessons() {
                       : "Lưu trữ"}
                 </Badge>
               </div>
+              {manage && (
+                <div className="badge-row">
+                  <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
+                  {l.synthetic && <Badge tone="outline">Dữ liệu mẫu</Badge>}
+                  {meta.get(l.id)?.structureLocked && <Badge tone="outline">Đang được dùng</Badge>}
+                  {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">Thử thách tùy chỉnh</Badge>}
+                </div>
+              )}
               <small className="eyebrow">
                 {l.subject.name} · LỚP {l.grade}
               </small>
@@ -178,16 +235,30 @@ export function Lessons() {
                   Mở bài học <ArrowUpRight size={16} />
                 </button>
                 {manage &&
-                  (l.authorId === user.id || user.role === "ADMIN") && (
+                  ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && (
                     <button className="text-button" onClick={() => setEdit(l)}>
                       Chỉnh sửa
                     </button>
                   )}
+                {manage && (
+                  <button className="text-button" onClick={() => setPreviewId(l.id)}>
+                    Xem trước
+                  </button>
+                )}
+                {manage && (
+                  <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>
+                    Tạo bản riêng
+                  </button>
+                )}
               </div>
             </article>
           ))}
       </div>
       {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
+      {filtersActive && library.data && library.data.items.length === 0 && (
+        <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
+      )}
+      {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
       {view && (
         <Modal title={view.title} onClose={() => setView(null)}>
           <p className="muted">
@@ -236,6 +307,7 @@ export function Lessons() {
               Tiến độ chính thức được ghi nhận khi em học bài này trong mục Bài được giao.
             </p>
           )}
+          <AttributionNote value={meta.get(view.id)?.attribution} />
         </Modal>
       )}
       {edit && (
@@ -249,6 +321,19 @@ export function Lessons() {
               save.mutate(edit, { onSuccess: () => setEdit(null) });
             }}
           >
+            {edit.clonedFromId && (
+              <p className="notice">Bản riêng tạo từ một bài khác. Thay đổi ở đây không ảnh hưởng bài gốc hay các lớp khác.</p>
+            )}
+            {meta.get(edit.id)?.structureLocked && (
+              <p className="notice">
+                Bài đang được giao hoặc đã có kết quả học tập: chỉ sửa được thông tin mô tả hoặc lưu trữ. Để đổi nội dung,
+                câu hỏi hay phòng lab, hãy{" "}
+                <button type="button" className="text-button" onClick={() => startClone(edit.id)}>
+                  tạo bản riêng
+                </button>
+                .
+              </p>
+            )}
             <div className="form-grid">
               {[
                 ["title", "Tên bài"],
@@ -294,7 +379,7 @@ export function Lessons() {
                 <select
                   value={edit.labId ?? ""}
                   onChange={(e) =>
-                    setEdit({ ...edit, labId: e.target.value || null })
+                    setEdit({ ...edit, labId: e.target.value || null, challengeParams: null })
                   }
                 >
                   <option value="">Không có</option>
@@ -303,6 +388,15 @@ export function Lessons() {
                   <option value="chemistry">Phản ứng</option>
                 </select>
               </label>
+              {user.role === "ADMIN" && !edit.id && (
+                <label className="field">
+                  <span>Phạm vi</span>
+                  <select value={edit.scope ?? "TEACHER_PRIVATE"} onChange={(e) => setEdit({ ...edit, scope: e.target.value })}>
+                    <option value="TEACHER_PRIVATE">Bài riêng</option>
+                    <option value="SHARED_LIBRARY">Thư viện chung (cần duyệt có tên)</option>
+                  </select>
+                </label>
+              )}
               <label className="field">
                 <span>Trạng thái</span>
                 <select
@@ -380,6 +474,23 @@ export function Lessons() {
                   <option value="pdf">PDF</option>
                   <option value="image">Ảnh</option>
                 </select>
+                {m.type === "video" && (
+                  <label className="field wide-field">
+                    <span>Bản chép lời video (bắt buộc khi xuất bản)</span>
+                    <textarea
+                      value={m.transcript ?? ""}
+                      rows={3}
+                      onChange={(e) =>
+                        setEdit({
+                          ...edit,
+                          materials: edit.materials.map((x: any, j: number) =>
+                            j === i ? { ...x, transcript: e.target.value } : x,
+                          ),
+                        })
+                      }
+                    />
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={() =>
@@ -502,7 +613,24 @@ export function Lessons() {
             >
               + Thêm câu hỏi
             </button>
+            <TaxonomyFields edit={edit} setEdit={setEdit} taxonomy={library.data?.taxonomy} outcomes={library.data?.outcomes ?? []} />
+            <ReviewChecklist value={edit.review} onChange={(review) => setEdit((s: any) => ({ ...s, review }))} />
+            {user.role === "ADMIN" && edit.id && edit.scope === "SHARED_LIBRARY" && meta.get(edit.id)?.releaseReview && (
+              <ReleaseReviews lessonId={edit.id} reviews={meta.get(edit.id).releaseReview} />
+            )}
             <ErrorBox error={save.error} />
+            {isApiError(save.error, "PUBLISH_BLOCKED") && Array.isArray((save.error.details as any)?.missing) && (
+              <ul className="publish-blockers">
+                {(save.error.details as any).missing.map((item: string) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
+            {isApiError(save.error, "LESSON_STRUCTURE_LOCKED") && edit.id && (
+              <button type="button" className="secondary" onClick={() => startClone(edit.id)}>
+                Tạo bản riêng để thay đổi
+              </button>
+            )}
             <button
               className="primary wide form-submit"
               disabled={save.isPending}
@@ -514,6 +642,60 @@ export function Lessons() {
         </Modal>
       )}
     </>
+  );
+}
+
+const licenseOptions: Array<[string, string]> = [
+  ["ORIGINAL", "Tự biên soạn"],
+  ["CC0", "CC0"],
+  ["CC_BY", "CC BY"],
+  ["CC_BY_SA", "CC BY-SA"],
+  ["SCHOOL_OWNED", "Tài liệu thuộc nhà trường"],
+];
+/** D1 self-review checklist required to publish teacher-private content. */
+function ReviewChecklist({ value, onChange }: { value: any; onChange: (value: any) => void }) {
+  const review = value ?? {
+    sources: "",
+    license: "ORIGINAL",
+    outcome: "",
+    answerKeyChecked: false,
+    safetyChecked: false,
+    accessibilityChecked: false,
+  };
+  const set = (patch: any) => onChange({ ...review, ...patch });
+  return (
+    <fieldset className="review-checklist">
+      <legend>Phiếu tự kiểm duyệt (bắt buộc để xuất bản)</legend>
+      <label className="field">
+        <span>Nguồn căn cứ cho các nội dung khoa học</span>
+        <textarea rows={2} value={review.sources} onChange={(e) => set({ sources: e.target.value })} />
+      </label>
+      <div className="form-grid">
+        <label className="field">
+          <span>Giấy phép sử dụng</span>
+          <select value={review.license} onChange={(e) => set({ license: e.target.value })}>
+            {licenseOptions.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="Yêu cầu cần đạt liên quan" value={review.outcome} onChange={(e) => set({ outcome: e.target.value })} />
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={review.answerKeyChecked} onChange={(e) => set({ answerKeyChecked: e.target.checked })} />
+        Tôi đã kiểm tra đáp án của mọi câu hỏi
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={review.safetyChecked} onChange={(e) => set({ safetyChecked: e.target.checked })} />
+        Nội dung không hướng dẫn thao tác nguy hiểm
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={review.accessibilityChecked} onChange={(e) => set({ accessibilityChecked: e.target.checked })} />
+        Học liệu có văn bản thay thế hoặc bản chép lời
+      </label>
+    </fieldset>
   );
 }
 
@@ -1084,6 +1266,10 @@ export function AssignedLearning() {
           <b>Kiến thức nền:</b> {lesson.prerequisites || "Không yêu cầu"}
         </div>
         {assignment.overdue && <Badge tone="outline">Đã quá hạn nhưng vẫn có thể học</Badge>}
+        {pathway?.contentArchived && (
+          <p className="notice" role="status">Nội dung này không còn được cập nhật. Em vẫn có thể học tiếp phần đã bắt đầu.</p>
+        )}
+        <AttributionNote value={pathway?.attribution} />
         {assignment.contentType === "lesson" && pathway ? (
           <div className="lesson-pathway" aria-label="Lộ trình bài học">
             <ol className="pathway-steps">
@@ -1138,7 +1324,7 @@ export function AssignedLearning() {
                     />
                   )}
                   {(step.type === "LAB" || step.type === "CHALLENGE") && step.state !== "LOCKED" && (
-                    <CircuitPathwayStep
+                    <PracticalPathwayStep
                       lessonId={String(lessonId)}
                       step={step}
                       onReconciled={(updatedPathway) =>
@@ -1181,379 +1367,6 @@ export function AssignedLearning() {
           </Link>
         )}
       </section>
-    </>
-  );
-}
-export function Classes() {
-  const user = useAuth((s) => s.user)!;
-  const [selected, setSelected] = useState<string | null>(null);
-  const [modal, setModal] = useState("");
-  const [issuedCredentials, setIssuedCredentials] = useState<any>(null);
-  const [contentId, setContentId] = useState("circuit");
-  const q = useQuery({
-    queryKey: ["classes"],
-    queryFn: () => api("/classes"),
-    enabled: user.role !== "PARENT",
-  });
-  const roster = useQuery({
-    queryKey: ["roster", selected],
-    queryFn: () => api("/classes/" + selected + "/students"),
-    enabled: !!selected && user.role === "TEACHER",
-  });
-  const analytics = useQuery({
-    queryKey: ["analytics", selected],
-    queryFn: () => api("/classes/" + selected + "/analytics"),
-    enabled: !!selected && user.role === "TEACHER",
-  });
-  const lessons = useQuery({
-    queryKey: ["lessons"],
-    queryFn: () => api("/lessons"),
-  });
-  const act = useAction(({ path, method = "POST", body }: any) =>
-    api(path, method, body),
-  );
-  return (
-    <>
-      <PageHeading
-        eyebrow="CÙNG NHAU KHÁM PHÁ"
-        title="Lớp học của tôi"
-        description="Nơi giáo viên và học sinh kết nối qua từng thử thách."
-        action={
-          user.role === "TEACHER" ? (
-            <button className="primary" onClick={() => setModal("create")}>
-              + Tạo lớp
-            </button>
-          ) : user.role === "STUDENT" ? (
-            <button className="primary" onClick={() => setModal("join")}>
-              Tham gia bằng mã
-            </button>
-          ) : null
-        }
-      />
-      <ErrorBox
-        error={q.error || roster.error || analytics.error || act.error}
-      />
-      <div className="class-grid">
-        {q.isLoading && <CardSkeleton count={3} />}
-        {q.data?.map((c: any) => (
-          <button
-            key={c.id}
-            className={
-              "panel class-card " + (selected === c.id ? "selected" : "")
-            }
-            onClick={() => setSelected(c.id)}
-          >
-            <Users size={24} />
-            <h3>{c.name}</h3>
-            <p>
-              Khối {c.grade} · {c._count.enrollments} thành viên
-            </p>
-            {user.role === "TEACHER" && <Badge>Mã lớp: {c.joinCode}</Badge>}
-            <p>{c.assignments.length} bài đã giao</p>
-          </button>
-        ))}
-      </div>
-      {selected && user.role === "TEACHER" && (
-        <>
-          <section className="panel">
-            <div className="section-heading">
-              <h2>Thành viên lớp</h2>
-              <div className="button-row">
-                <button
-                  className="secondary"
-                  onClick={() => { setIssuedCredentials(null); setModal("student"); }}
-                >
-                  Cấp tài khoản học sinh
-                </button>
-                <button className="primary" onClick={() => setModal("assign")}>
-                  Giao bài
-                </button>
-              </div>
-            </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Học sinh</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roster.data?.map((e: any) => (
-                    <tr key={e.studentId}>
-                      <td>
-                        {e.student.fullName}
-                        <small>Tài khoản: {e.student.username}</small>
-                      </td>
-                      <td>
-                        <Badge>{e.approved ? "Đã duyệt" : "Chờ duyệt"}</Badge>
-                      </td>
-                      <td>
-                        {!e.approved && (
-                          <button
-                            className="text-button"
-                            onClick={() =>
-                              act.mutate({
-                                path: `/classes/${selected}/students/${e.studentId}`,
-                                method: "PUT",
-                              })
-                            }
-                          >
-                            Duyệt
-                          </button>
-                        )}
-                        <button
-                          className="text-button"
-                          onClick={() => {
-                            setIssuedCredentials(null);
-                            setModal("reset");
-                            act.mutate(
-                              {
-                                path: `/classes/${selected}/students/${e.studentId}/reset-password`,
-                                method: "POST",
-                              },
-                              {
-                                onSuccess: (data: any) => {
-                                  setIssuedCredentials(data.credentials);
-                                },
-                              },
-                            );
-                          }}
-                        >
-                          Cấp lại mật khẩu
-                        </button>
-                        <button
-                          className="danger-text"
-                          onClick={() =>
-                            act.mutate({
-                              path: `/classes/${selected}/students/${e.studentId}`,
-                              method: "DELETE",
-                            })
-                          }
-                        >
-                          Xóa khỏi lớp
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <section className="panel">
-            <h2>Phân tích quá trình thực hành</h2>
-            {analytics.data?.map((s: any) => (
-              <div className="analytics-student" key={s.id}>
-                <h3>{s.fullName}</h3>
-                <p>
-                  {s.attempts.length} lượt thử ·{" "}
-                  {
-                    s.progress.filter((p: any) => p.status === "completed")
-                      .length
-                  }{" "}
-                  nội dung hoàn thành · Mức gợi ý cao nhất{" "}
-                  {Math.max(0, ...s.progress.map((p: any) => p.lastHintLevel))}
-                </p>
-                {s.misconceptions.map((m: any, i: number) => (
-                  <div className="notice" key={i}>
-                    <b>Giả thuyết cần giáo viên xác minh:</b> {m.hypothesis}
-                    <p>
-                      Mức tin cậy: {m.confidence} · Chứng cứ:{" "}
-                      {m.evidence.join(", ")}
-                    </p>
-                  </div>
-                ))}
-                <details>
-                  <summary>Xem lượt thử và gợi ý làm chứng cứ</summary>
-                  {s.attempts.map((a: any) => (
-                    <div className="attempt-evidence" key={a.id}>
-                      <b>{a.id}</b> · {verdictLabel(a.verdict)} ·{" "}
-                      {new Date(a.createdAt).toLocaleString("vi-VN")}
-                      <pre>{JSON.stringify(a.simulationResult, null, 2)}</pre>
-                      {a.hints.map((h: any) => (
-                        <p key={h.id}>
-                          Mức {h.level}: {h.content}
-                        </p>
-                      ))}
-                    </div>
-                  ))}
-                </details>
-              </div>
-            ))}
-          </section>
-        </>
-      )}
-      {selected && (
-        <section className="panel">
-          <h2>Bài đã giao</h2>
-          {q.data
-            ?.find((c: any) => c.id === selected)
-            ?.assignments.map((a: any) => (
-              <div className="assignment-row" key={a.id}>
-                <div>
-                  <b>{a.title}</b>
-                  <small>
-                    Hạn {new Date(a.dueDate).toLocaleString("vi-VN")}
-                  </small>
-                </div>
-                {user.role === "STUDENT" && (
-                  <Link
-                    to={
-                      a.contentType === "lab"
-                        ? "/labs/" + a.contentId
-                        : "/lessons"
-                    }
-                  >
-                    Mở bài →
-                  </Link>
-                )}
-              </div>
-            ))}
-        </section>
-      )}
-      {modal && (
-        <Modal
-          title={
-            {
-              create: "Tạo lớp mới",
-              join: "Tham gia lớp",
-              assign: "Giao bài",
-              student: "Cấp tài khoản học sinh",
-              reset: "Cấp lại mật khẩu học sinh",
-            }[modal] ?? ""
-          }
-          onClose={() => setModal("")}
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const b: any = Object.fromEntries(new FormData(e.currentTarget));
-              let path = "";
-              if (modal === "create") {
-                path = "/classes";
-                b.grade = Number(b.grade);
-              }
-              if (modal === "join") path = "/classes/join";
-              if (modal === "assign") {
-                path = "/classes/" + selected + "/assignments";
-                b.contentType = ["circuit", "eye", "chemistry"].includes(
-                  b.contentId,
-                )
-                  ? "lab"
-                  : "lesson";
-                b.dueDate = new Date(b.dueDate).toISOString();
-                b.studentIds = new FormData(e.currentTarget).getAll("studentIds");
-              }
-              if (modal === "student") {
-                path = "/classes/" + selected + "/students";
-                b.grade = Number(b.grade);
-                b.consent = true;
-              }
-              act.mutate(
-                { path, body: b },
-                {
-                  onSuccess: (data: any) => {
-                    if (modal === "student") setIssuedCredentials(data.credentials);
-                    else setModal("");
-                  },
-                },
-              );
-            }}
-          >
-            {modal === "create" && (
-              <>
-                <Field label="Tên lớp" name="name" required />
-                <Field
-                  label="Khối lớp"
-                  name="grade"
-                  type="number"
-                  min={6}
-                  max={9}
-                  defaultValue={8}
-                />
-              </>
-            )}
-            {modal === "join" && (
-              <Field label="Mã tham gia lớp" name="code" required />
-            )}
-            {modal === "assign" && (
-              <>
-                <Field label="Tên nhiệm vụ" name="title" required />
-                <label className="field">
-                  <span>Nội dung</span>
-                  <select name="contentId">
-                    <optgroup label="Phòng lab">
-                      <option value="circuit">Mạch điện</option>
-                      <option value="eye">Mắt người</option>
-                      <option value="chemistry">Phản ứng</option>
-                    </optgroup>
-                    <optgroup label="Bài học">
-                      {lessons.data
-                        ?.filter((l: any) => l.status === "published")
-                        .map((l: any) => (
-                          <option key={l.id} value={l.id}>
-                            {l.title}
-                          </option>
-                        ))}
-                    </optgroup>
-                  </select>
-                </label>
-                <Field
-                  label="Hạn nộp"
-                  name="dueDate"
-                  type="datetime-local"
-                  required
-                />
-                <p className="tiny muted">Không chọn học sinh để giao cả lớp; chọn bên dưới để giao cho một nhóm.</p>
-                {roster.data?.filter((r: any) => r.approved).map((r: any) => <label className="check" key={r.studentId}><input type="checkbox" name="studentIds" value={r.studentId}/>{r.student.fullName}</label>)}
-              </>
-            )}
-            {modal === "student" && (
-              issuedCredentials ? (
-                <div className="notice">
-                  <b>Tài khoản đã được cấp</b>
-                  <p>Tên đăng nhập: <code>{issuedCredentials.username}</code></p>
-                  <p>Mật khẩu tạm: <code>{issuedCredentials.temporaryPassword}</code></p>
-                  <p>Hạn dùng: {new Date(issuedCredentials.expiresAt).toLocaleString("vi-VN")}</p>
-                  <p className="tiny">Hãy lưu và gửi riêng thông tin này cho học sinh. Mật khẩu sẽ không hiển thị lại.</p>
-                  <button type="button" className="secondary" onClick={() => { setIssuedCredentials(null); setModal(""); }}>Đã lưu thông tin</button>
-                </div>
-              ) : <>
-                <Field label="Tên đăng nhập" name="username" required autoComplete="username" />
-                <Field label="Họ tên" name="fullName" required />
-                <Field
-                  label="Khối lớp"
-                  name="grade"
-                  type="number"
-                  min={6}
-                  max={9}
-                  defaultValue={8}
-                />
-                <label className="check">
-                  <input type="checkbox" required />
-                  Nhà trường đã có chấp thuận xử lý dữ liệu học sinh.
-                </label>
-              </>
-            )}
-            {modal === "reset" && (
-              issuedCredentials ? (
-                <div className="notice">
-                  <b>Mật khẩu mới đã được tạo</b>
-                  <p>Tên đăng nhập: <code>{issuedCredentials.username}</code></p>
-                  <p>Mật khẩu tạm: <code>{issuedCredentials.temporaryPassword}</code></p>
-                  <p>Hạn dùng: {new Date(issuedCredentials.expiresAt).toLocaleString("vi-VN")}</p>
-                  <p className="tiny">Hãy lưu và gửi riêng thông tin này cho học sinh. Mật khẩu sẽ không hiển thị lại.</p>
-                  <button type="button" className="secondary" onClick={() => { setIssuedCredentials(null); setModal(""); }}>Đã lưu thông tin</button>
-                </div>
-              ) : (
-                <div className="notice">Đang tạo mật khẩu tạm mới…</div>
-              )
-            )}
-            {modal !== "reset" && !issuedCredentials && <><ErrorBox error={act.error} /><button className="primary wide" disabled={act.isPending}>Xác nhận</button></>}
-          </form>
-        </Modal>
-      )}
     </>
   );
 }

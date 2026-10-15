@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { simulate } from "@nexalab/sim";
 import {
   Play,
@@ -35,6 +36,12 @@ export function CircuitPathwayStep({
   const [error, setError] = useState<string | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
+  // A teacher challenge variant carries its own objective (B1-T4); the lab step uses the model default.
+  const workspace = useQuery({
+    queryKey: ["step-lab", lessonId, step.id],
+    queryFn: () => api(`/lessons/${lessonId}/steps/${step.id}/lab`),
+    enabled: step.type === "CHALLENGE",
+  });
 
   // 2. Client-side preview parity calculation using @nexalab/sim
   const preview = useMemo(() => {
@@ -142,6 +149,11 @@ export function CircuitPathwayStep({
           {step.resource?.instruction ??
             "Hãy kéo thả nguồn điện, điện trở thích hợp và công tắc để nối kín mạch điện làm đèn LED sáng an toàn."}
         </p>
+        {step.type === "CHALLENGE" && workspace.data?.targetObjective && (
+          <p className="notice" style={{ margin: "0.5rem 0 0" }}>
+            <b>Yêu cầu của thử thách:</b> {workspace.data.targetObjective}
+          </p>
+        )}
 
         {preview && (
           <div

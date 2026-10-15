@@ -4,7 +4,7 @@ const password = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD;
 if (!password) throw new Error("Set SEED_FIXTURE_PASSWORD or SEED_PASSWORD from the backend seed.");
 
 async function login(page: Page) {
-  await page.goto("/");
+  await page.goto("/login");
   await page.getByLabel("Tên đăng nhập học sinh").fill("student.active");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password!);
   const response = page.waitForResponse((item) => item.request().method() === "POST" && item.url().endsWith("/api/auth/student/login"));
