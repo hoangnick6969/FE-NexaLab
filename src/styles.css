@@ -4936,3 +4936,38 @@ td small {
   justify-content: space-between;
   gap: 4px 12px;
 }
+
+/* Chemistry and eye practical steps inside an assigned lesson. */
+.practical-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+  min-width: 0;
+}
+.practical-card {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+.practical-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.practical-card-head h4 {
+  margin: 0;
+}
+.practical-step .lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.practical-result {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}

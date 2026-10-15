@@ -27,7 +27,7 @@ import {
   CardSkeleton,
 } from "./ui";
 import { PageHeading } from "./App";
-import { CircuitPathwayStep } from "./labs/CircuitPathwayStep";
+import { PracticalPathwayStep } from "./labs/PracticalPathwayStep";
 import { StudentProgress } from "./progress";
 import {
   AttributionNote,
@@ -1324,7 +1324,7 @@ export function AssignedLearning() {
                     />
                   )}
                   {(step.type === "LAB" || step.type === "CHALLENGE") && step.state !== "LOCKED" && (
-                    <CircuitPathwayStep
+                    <PracticalPathwayStep
                       lessonId={String(lessonId)}
                       step={step}
                       onReconciled={(updatedPathway) =>

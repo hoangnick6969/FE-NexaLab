@@ -1,4 +1,8 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect as baseExpect, test, type Browser, type Page } from "@playwright/test";
+
+// Real dependencies may be a remote database (~2 s per join, ~5 s per graded
+// practical attempt on the shared dev link); a wrong state still fails.
+const expect = baseExpect.configure({ timeout: 20000 });
 
 // Real FE/API/database journey for Epic B1 (B1-T6). Requires a running API
 // and web app with a seeded database; identities come from the environment:
@@ -24,9 +28,18 @@ async function teacherLogin(page: Page) {
   await page.getByRole("button", { name: "Đăng nhập người lớn" }).click();
   await page.getByLabel("Email").fill(teacherEmail);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(teacherPassword!);
-  const response = page.waitForResponse((item) => item.request().method() === "POST" && item.url().endsWith("/api/auth/login"));
-  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  expect((await response).ok()).toBeTruthy();
+  const submit = async () => {
+    const response = page.waitForResponse((item) => item.request().method() === "POST" && item.url().endsWith("/api/auth/login"));
+    await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+    return (await response).status();
+  };
+  let status = await submit();
+  if (status === 429) {
+    // The API allows 10 logins per minute per IP; this suite logs in more often than that.
+    await page.waitForTimeout(61000);
+    status = await submit();
+  }
+  expect(status).toBe(201);
 }
 
 async function studentLogin(browser: Browser, username: string, password: string, temporary = false) {
@@ -53,6 +66,7 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 test.describe.serial("B1 teacher operations (real dependencies)", () => {
+  test.describe.configure({ timeout: 180000 });
   let classId = "";
   let className = "";
 
@@ -338,6 +352,96 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     await expect(student.locator(".circuit-challenge-card").last()).toContainText("10 mA");
     await expect(student.getByLabel("Nguồn và giấy phép")).toContainText("Tài liệu tự biên soạn kiểm thử Playwright B1");
     await expect(student.getByLabel("Nguồn và giấy phép")).toContainText("Tự biên soạn");
+    await student.context().close();
+  });
+
+  test("chemistry and eye practical steps run in their own workspaces inside the pathway", async ({ browser }) => {
+    test.skip(!classId, "requires the journey above");
+    const login = await call("/auth/login", "POST", { email: teacherEmail, password: teacherPassword });
+    const token = login.data.accessToken;
+    const review = {
+      sources: "Tài liệu tự biên soạn kiểm thử Playwright B1",
+      license: "ORIGINAL",
+      outcome: "Thực hành mô phỏng",
+      answerKeyChecked: true,
+      safetyChecked: true,
+      accessibilityChecked: true,
+    };
+    const base = {
+      subjectId: "chemistry",
+      chapter: "Phản ứng hóa học",
+      grade: 8,
+      topic: "Tỉ lệ mol",
+      learningObjective: "Cho hai chất phản ứng vừa đủ",
+      prerequisites: "Phương trình hóa học",
+      curriculum: "GDPT 2018 – KHTN 8",
+      content: "<p>Hệ số trong phương trình cho biết tỉ lệ số mol.</p>",
+      status: "published",
+      review,
+      questions: [],
+    };
+    const chem = await call("/lessons", "POST", { ...base, title: `${prefix} Trung hòa`, labId: "chemistry", challengeParams: { reactionId: "naoh-hcl" } }, token);
+    const eye = await call(
+      "/lessons",
+      "POST",
+      { ...base, title: `${prefix} Cấu tạo mắt`, subjectId: "biology", chapter: "Cơ thể người", topic: "Mắt", learningObjective: "Gọi tên bộ phận của mắt", labId: "eye" },
+      token,
+    );
+    expect([chem.status, eye.status]).toEqual([201, 201]);
+    const chemAssign = await call(`/classes/${classId}/assignments`, "POST", { contentType: "lesson", contentId: chem.data.id }, token);
+    const eyeAssign = await call(`/classes/${classId}/assignments`, "POST", { contentType: "lesson", contentId: eye.data.id }, token);
+    const studentAuth = await call("/auth/student/login", "POST", { username: `${prefix}-a`, password: studentPassword });
+    for (const lessonId of [chem.data.id, eye.data.id]) {
+      const path = await call(`/lessons/${lessonId}/pathway`, "GET", undefined, studentAuth.data.accessToken);
+      for (const step of path.data.steps) {
+        if (step.type === "READING") await call(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", { action: "complete" }, studentAuth.data.accessToken);
+        if (step.type === "VIDEO") await call(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", { action: "complete-fallback" }, studentAuth.data.accessToken);
+      }
+    }
+
+    // Grading recomputes the pathway server-side; over a remote dev database that can take several seconds.
+    const graded = { timeout: 20000 };
+    const student = await studentLogin(browser, `${prefix}-a`, studentPassword);
+    await student.setViewportSize({ width: 1024, height: 900 });
+    await student.goto(`/assignments/${chemAssign.data.assignment.id}`);
+    const chemistry = student.getByRole("region", { name: "Khu vực thực hành phản ứng hóa học" });
+    const lab = chemistry.first();
+    await expect(lab.getByLabel("Phản ứng trong thư viện")).toBeVisible(graded);
+    await lab.getByLabel("Lượng Mg (mol)").fill("0.2");
+    await lab.getByLabel("Lượng HCl (mol)").fill("0.2");
+    await lab.getByRole("button", { name: "Chạy thí nghiệm" }).click();
+    await expect(lab.getByRole("status")).toContainText("Đạt một phần", graded);
+    await expect(lab.getByRole("status")).toContainText("dư", graded);
+    await expect(lab.getByRole("status")).not.toContainText("LED", graded);
+    await lab.getByRole("button", { name: "Thử lại" }).click();
+    await lab.getByLabel("Lượng Mg (mol)").fill("0.1");
+    await lab.getByRole("button", { name: "Chạy thí nghiệm" }).click();
+    await expect(lab.getByRole("status")).toContainText("Đạt", graded);
+
+    // The teacher's challenge appears after the lab and names the required reaction.
+    const challenge = chemistry.nth(1);
+    await expect(challenge.getByText("Yêu cầu của thử thách:")).toBeVisible(graded);
+    await expect(challenge).toContainText("NaOH");
+    await challenge.getByLabel("Phản ứng trong thư viện").selectOption("naoh-hcl");
+    await challenge.getByLabel("Lượng NaOH (mol)").fill("0.1");
+    await challenge.getByLabel("Lượng HCl (mol)").fill("0.1");
+    await challenge.getByRole("button", { name: "Chạy thí nghiệm" }).click();
+    await expect(challenge.getByRole("status")).toContainText("Đạt", graded);
+    await expect(challenge.getByText("Đã đạt", { exact: true })).toBeVisible(graded);
+    await noHorizontalOverflow(student);
+
+    // Eye: name all eight parts in the 3D model's check mode.
+    await student.goto(`/assignments/${eyeAssign.data.assignment.id}`);
+    const anatomy = student.getByRole("region", { name: "Khu vực thực hành cấu tạo mắt" }).first();
+    await anatomy.getByRole("button", { name: "Kiểm tra tên gọi" }).click(graded);
+    const names = ["Giác mạc", "Thủy dịch", "Đồng tử", "Thể thủy tinh", "Dịch kính", "Võng mạc", "Dây thần kinh thị giác", "Củng mạc"];
+    for (const [index, name] of names.entries()) {
+      await anatomy.getByRole("button", { name: "#" + (index + 1), exact: true }).click();
+      await anatomy.getByLabel(`Tên bộ phận #${index + 1}`).fill(name);
+    }
+    await anatomy.getByRole("button", { name: "Chấm tên bộ phận" }).click();
+    await expect(anatomy.getByRole("status")).toContainText("Đúng 100%", graded);
+    await expect(anatomy.getByText("Đã đạt", { exact: true })).toBeVisible(graded);
     await student.context().close();
   });
 

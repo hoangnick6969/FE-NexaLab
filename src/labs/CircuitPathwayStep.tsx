@@ -149,7 +149,7 @@ export function CircuitPathwayStep({
           {step.resource?.instruction ??
             "Hãy kéo thả nguồn điện, điện trở thích hợp và công tắc để nối kín mạch điện làm đèn LED sáng an toàn."}
         </p>
-        {workspace.data?.targetObjective && (
+        {step.type === "CHALLENGE" && workspace.data?.targetObjective && (
           <p className="notice" style={{ margin: "0.5rem 0 0" }}>
             <b>Yêu cầu của thử thách:</b> {workspace.data.targetObjective}
           </p>
