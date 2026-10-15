@@ -1382,12 +1382,15 @@ export function ProgressPage() {
   });
   const q = useQuery({
     queryKey: ["progress", student],
-    queryFn: () => api("/progress/" + student),
+    queryFn: () => api(user.role === "PARENT" ? "/children/" + student + "/progress" : "/progress/" + student),
     enabled: !!student && user.role !== "STUDENT",
   });
   const link = useAction((code: string) =>
-    api("/children/link", "POST", { code, consent: true }),
+    api("/children/link", "POST", { code }),
   );
+  const verifyEmail = useAction(() => api("/auth/email/verify", "POST"));
+  const consent = useAction(() => api("/auth/consents", "POST", { purpose: "PARENT_CHILD_PROGRESS", version: "2026-10-v1", contentHash: "dev" }));
+  const unlink = useAction((id: string) => api("/children/" + id + "/link", "DELETE"));
   return (
     <>
       <PageHeading
@@ -1401,14 +1404,15 @@ export function ProgressPage() {
         <section className="panel">
           <h3>Học sinh đã liên kết</h3>
           <div className="button-row">
+            <button className="secondary" onClick={() => verifyEmail.mutate()}>Xác minh email</button>
+            <button className="secondary" onClick={() => consent.mutate()}>Chấp thuận theo dõi tiến độ</button>
+          </div>
+          <div className="button-row">
             {children.data?.map((c: any) => (
-              <button
-                className="secondary"
-                key={c.student.id}
-                onClick={() => setStudent(c.student.id)}
-              >
-                {c.student.fullName}
-              </button>
+              <span key={c.student.id}>
+                <button className="secondary" onClick={() => setStudent(c.student.id)}>{c.student.fullName}</button>
+                <button className="icon-button" aria-label="Hủy liên kết" onClick={() => unlink.mutate(c.student.id)}>×</button>
+              </span>
             ))}
           </div>
           <form
@@ -1424,8 +1428,7 @@ export function ProgressPage() {
             </button>
           </form>
           <p className="tiny muted">
-            Liên kết xác nhận quyền truy cập tiến độ của con; nội dung gợi ý chi
-            tiết không được hiển thị.
+            Liên kết chỉ hiển thị tiến độ tổng hợp và hoạt động an toàn của con; không hiển thị đáp án, gợi ý hoặc trạng thái lab thô.
           </p>
           <ErrorBox error={link.error || children.error} />
         </section>
