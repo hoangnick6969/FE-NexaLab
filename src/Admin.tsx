@@ -10,14 +10,16 @@ import { PageHeading } from "./App";
  * destructive or privilege-sensitive action asks for a reason in a dialog that
  * names its effect on access and history. Status is always text + icon.
  */
-type Tab = "overview" | "users" | "taxonomy" | "content" | "simulations" | "assets" | "audit";
+type Tab = "overview" | "users" | "taxonomy" | "content" | "packs" | "simulations" | "assets" | "sources" | "audit";
 const TABS: Array<[Tab, string]> = [
   ["overview", "Tổng quan"],
   ["users", "Người dùng"],
   ["taxonomy", "Phân loại"],
   ["content", "Nội dung"],
+  ["packs", "Gói & phát hành"],
   ["simulations", "Mô phỏng"],
   ["assets", "Tệp"],
+  ["sources", "Nguồn & nhập liệu"],
   ["audit", "Nhật ký"],
 ];
 const ROLE_LABEL: Record<string, string> = { STUDENT: "Học sinh", TEACHER: "Giáo viên", PARENT: "Phụ huynh", ADMIN: "Quản trị viên" };
@@ -55,6 +57,8 @@ function Status({ value }: { value: string }) {
     active: ["Đang hoạt động", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
     disabled: ["Đã vô hiệu hóa", "not_passed", <Ban size={13} aria-hidden key="i" />],
     READY: ["Sẵn sàng", "passed", <ShieldCheck size={13} aria-hidden key="i" />],
+    ACTIVE: ["Đang dùng", "passed", <ShieldCheck size={13} aria-hidden key="i" />],
+    ARCHIVED: ["Đã lưu trữ", "outline", <Archive size={13} aria-hidden key="i" />],
     QUARANTINED: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     quarantined: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     published: ["Đã xuất bản", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
@@ -204,6 +208,8 @@ export default function Admin() {
       {tab === "content" && <Content />}
       {tab === "simulations" && <Simulations />}
       {tab === "assets" && <Assets />}
+      {tab === "packs" && <PacksAndReleases />}
+      {tab === "sources" && <Sources />}
       {tab === "audit" && <AuditExplorer />}
     </>
   );
@@ -1227,6 +1233,7 @@ function LabVersions({ labId, onClose }: { labId: string; onClose: () => void })
           }
         />
       )}
+      <LabPacks labId={labId} />
     </Modal>
   );
 }
@@ -1266,15 +1273,15 @@ function Assets() {
     <section className="panel table-wrap">
       <h2>Tệp và nguồn</h2>
       <p className="tiny muted">
-        Kiểm tra theo cấu hình: chữ ký tệp, đuôi, MIME, kích thước và SHA-256. Hạn mức production chờ Q-DATA-01/Q-C2-03. Lưu trữ R2 và danh
-        mục nguồn (SourceRegistry) chờ Content Foundation.
+        Tệp nằm trong kho lưu trữ riêng tư (R2); mỗi lần thay là một phiên bản mới, bất biến. Máy chủ kiểm chữ ký tệp, đuôi, MIME, kích
+        thước và SHA-256 trước khi cho dùng. Hạn mức production chờ Q-DATA-01/Q-C2-03.
       </p>
       <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label="Lọc tệp">
         <label className="field">
           <span>Trạng thái</span>
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
             <option value="">Tất cả</option>
-            <option value="READY">Sẵn sàng</option>
+            <option value="ACTIVE">Đang dùng</option>
             <option value="QUARANTINED">Đang cách ly</option>
           </select>
         </label>
@@ -1303,10 +1310,14 @@ function Assets() {
             {rows.map((a: any) => (
               <tr key={a.id}>
                 <td>
-                  {a.name}
-                  <p className="tiny muted">
-                    {a.mime} · {Math.ceil(a.size / 1024)} KB · {a.sha256 ? `SHA-256 ${a.sha256.slice(0, 12)}…` : "chưa có checksum"}
-                  </p>
+                  {a.title}
+                  {a.versions.map((v: any) => (
+                    <p className="tiny muted" key={v.id}>
+                      v{v.version} · {v.mime} · {Math.ceil(v.bytes / 1024)} KB ·{" "}
+                      {v.status === "READY" ? "Sẵn sàng" : v.status === "FAILED" ? "Lỗi kiểm tra" : v.status}
+                      {v.sha256 ? ` · SHA-256 ${v.sha256.slice(0, 12)}…` : ""} · {v.storage === "r2" ? "R2" : "lưu trữ local"}
+                    </p>
+                  ))}
                 </td>
                 <td>{a.owner?.fullName ?? a.ownerId}</td>
                 <td>
@@ -1360,7 +1371,7 @@ function Assets() {
       </QueryState>
       {op && (
         <ReasonDialog
-          title={`${labels[op.action]}: ${op.asset.name}`}
+          title={`${labels[op.action]}: ${op.asset.title}`}
           effect={effects[op.action]}
           confirmLabel={labels[op.action]}
           danger={op.action === "quarantine" || op.action === "delete"}
@@ -1408,6 +1419,429 @@ function Assets() {
               </label>
               <Field label="Nguồn / ghi công" value={extra.source ?? ""} onChange={(e) => setExtra({ ...extra, source: e.target.value })} />
             </>
+          )}
+        </ReasonDialog>
+      )}
+    </section>
+  );
+}
+
+// ───────────────────────── simulation packs (CF-T4) ─────────────────────────
+function LabPacks({ labId }: { labId: string }) {
+  const q = useQuery({ queryKey: ["admin", "lab-packs", labId], queryFn: () => api(`/admin/labs/${labId}/packs`) });
+  const act = useAction(({ path, body }: any) => api(path, "POST", body));
+  const [activating, setActivating] = useState<any>(null);
+  return (
+    <section className="admin-detail" aria-label="Gói mô phỏng">
+      <h3>Gói mô phỏng (hoạt động + mô hình + hiển thị)</h3>
+      <p className="tiny muted">
+        Gói ghim hoạt động thực hành đã duyệt, mô hình {q.data?.model?.modelRef ?? "…"}, khoảng tham số, ca mẫu, bản đồ nút và quy tắc hiển
+        thị. Gói mới tạo bằng manifest đã duyệt qua API; kích hoạt chỉ ảnh hưởng lần thực hành sau.
+      </p>
+      <QueryState query={q} empty={q.data?.packs?.length === 0}>
+        <table>
+          <thead>
+            <tr>
+              <th>Gói</th>
+              <th>Trạng thái</th>
+              <th>Ca mẫu</th>
+              <th>Tệp 3D</th>
+              <th>Lần thực hành</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(q.data?.packs ?? []).map((p: any) => (
+              <tr key={p.id}>
+                <td>
+                  {p.key} v{p.version}
+                  <p className="tiny muted">{p.reason}</p>
+                </td>
+                <td>
+                  <Status value={p.status} />
+                </td>
+                <td>
+                  {(p.validation?.golden ?? []).filter((g: any) => g.ok).length}/{(p.validation?.golden ?? []).length} khớp
+                </td>
+                <td>{p.visualAssetVersionId ? `${(p.validation?.glbNodes ?? []).length} nút` : "Không (hiển thị 2D)"}</td>
+                <td>{p.attempts}</td>
+                <td>
+                  {p.status === "draft" && (
+                    <button type="button" className="text-button" onClick={() => setActivating(p)}>
+                      Kích hoạt
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </QueryState>
+      {activating && (
+        <ReasonDialog
+          title={`Kích hoạt gói ${activating.key} v${activating.version}`}
+          effect="Mọi lần thực hành mới của phòng này ghim gói này. Gói đang dùng chuyển sang “đã thay thế”; lần thực hành cũ giữ nguyên cách chấm."
+          confirmLabel="Kích hoạt"
+          pending={act.isPending}
+          error={act.error}
+          onClose={() => setActivating(null)}
+          onSubmit={(reason) =>
+            act.mutate({ path: `/admin/sim-packs/${activating.id}/activate`, body: { reason } }, { onSuccess: () => setActivating(null) })
+          }
+        />
+      )}
+    </section>
+  );
+}
+
+// ───────────────────────── packs, coverage and releases (CF-T1/T3/T5) ─────────────────────────
+const METRICS: Array<[string, string]> = [
+  ["outcomes_mapped", "YCCĐ trong bản đồ"],
+  ["knowledge_units_reviewed", "Đơn vị kiến thức đã duyệt"],
+  ["lessons_released", "Bài đã phát hành"],
+  ["practicals_specified", "Hoạt động thực hành"],
+  ["simulations_available", "Mô phỏng sẵn có"],
+];
+function PacksAndReleases() {
+  const coverage = useQuery({ queryKey: ["admin", "coverage"], queryFn: () => api("/admin/content/coverage") });
+  const packs = useQuery({ queryKey: ["admin", "packs"], queryFn: () => api("/admin/content/packs") });
+  const releases = useQuery({ queryKey: ["admin", "releases"], queryFn: () => api("/admin/releases") });
+  const plan = useAction((manifest: unknown) => api("/admin/releases/plan", "POST", { manifest }));
+  const retire = useAction(({ id, reason }: any) => api(`/admin/releases/${id}/retire`, "POST", { reason, confirm: true }));
+  const [retiring, setRetiring] = useState<any>(null);
+  const [manifestText, setManifestText] = useState("");
+  const [parseError, setParseError] = useState("");
+  const [showSynthetic, setShowSynthetic] = useState(false);
+  const rows = (coverage.data?.rows ?? []).filter((r: any) => r.synthetic === showSynthetic);
+  const cell = (m: any) => (m.denominator === null ? `${m.numerator} / chưa có mẫu số` : `${m.numerator}/${m.denominator}`);
+  return (
+    <>
+      <section className="panel table-wrap">
+        <h2>Báo cáo coverage lớp 8–9</h2>
+        <p className="tiny muted">{coverage.data?.note} Năm chỉ số được báo cáo riêng, không gộp thành một phần trăm.</p>
+        <label className="admin-ack">
+          <input type="checkbox" checked={showSynthetic} onChange={(e) => setShowSynthetic(e.target.checked)} /> Xem dữ liệu minh họa
+          (fixture) thay cho bản phát hành
+        </label>
+        <QueryState query={coverage}>
+          <table>
+            <thead>
+              <tr>
+                <th>Khối · mạch</th>
+                {METRICS.map(([, label]) => (
+                  <th key={label}>{label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r: any) => (
+                <tr key={`${r.grade}-${r.domain}-${r.synthetic}`}>
+                  <td>
+                    Lớp {r.grade} · {r.domain}
+                  </td>
+                  {METRICS.map(([key]) => (
+                    <td key={key} title={r[key].gaps.length ? "Còn thiếu: " + r[key].gaps.join(", ") : ""}>
+                      {cell(r[key])}
+                      {r[key].gaps.length > 0 && <p className="tiny muted">thiếu {r[key].gaps.length}</p>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </QueryState>
+      </section>
+      <section className="panel table-wrap">
+        <h2>Gói nội dung</h2>
+        <QueryState query={packs} empty={packs.data?.length === 0}>
+          <table>
+            <thead>
+              <tr>
+                <th>Gói</th>
+                <th>Namespace</th>
+                <th>Phiên bản</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(packs.data ?? []).map((p: any) => (
+                <tr key={p.key}>
+                  <td>
+                    {p.title}
+                    <p className="tiny muted">{p.key}</p>
+                  </td>
+                  <td>{p.namespace === "fixture" ? "Minh họa (fixture)" : "Phát hành"}</td>
+                  <td>
+                    {p.versions.map((v: any) => (
+                      <div key={v.id} className="tiny">
+                        v{v.version} <Status value={v.status === "released" ? "published" : "retired"} /> {v.lessonId}
+                      </div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </QueryState>
+      </section>
+      <section className="panel table-wrap">
+        <h2>Đợt phát hành</h2>
+        <p className="tiny muted">
+          Áp dụng một đợt phát hành chỉ qua importer (CLI) với người duyệt là quản trị viên khác. Tại đây có thể chạy thử (dry-run) để xem
+          chính xác thay đổi, và gỡ một đợt đã áp dụng.
+        </p>
+        <form
+          className="admin-version-form"
+          aria-label="Chạy thử manifest"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setParseError("");
+            try {
+              plan.mutate(JSON.parse(manifestText));
+            } catch {
+              setParseError("Manifest không phải JSON hợp lệ");
+            }
+          }}
+        >
+          <label className="field">
+            <span>Manifest phát hành (JSON)</span>
+            <textarea rows={6} value={manifestText} onChange={(e) => setManifestText(e.target.value)} />
+          </label>
+          <ErrorBox error={parseError || plan.error} />
+          <button className="secondary" disabled={!manifestText.trim() || plan.isPending}>
+            Chạy thử (không ghi gì)
+          </button>
+        </form>
+        {plan.data && (
+          <div className={plan.data.blocked ? "error" : "notice"} role="status">
+            <p>
+              <b>{plan.data.blocked ? "Bị chặn" : plan.data.alreadyApplied ? "Đã áp dụng trước đó" : "Có thể áp dụng"}</b> · đích{" "}
+              {plan.data.target} · digest {plan.data.digest.slice(0, 12)}…
+            </p>
+            {plan.data.blockers.map((b: string) => (
+              <p key={b}>{b}</p>
+            ))}
+            <ul>
+              {plan.data.sources.map((x: any) => (
+                <li key={x.key}>
+                  Nguồn {x.key}: {x.action} (v{x.version})
+                </li>
+              ))}
+              {plan.data.packs.map((x: any) => (
+                <li key={x.key}>
+                  Gói {x.key}: {x.action} v{x.version}
+                  {x.supersedes ? ` thay v${x.supersedes}` : ""}
+                  {x.errors.length > 0 && (
+                    <ul>
+                      {x.errors.map((e: string) => (
+                        <li key={e}>{e}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <QueryState query={releases} empty={releases.data?.length === 0}>
+          <table>
+            <thead>
+              <tr>
+                <th>Đợt</th>
+                <th>Môi trường</th>
+                <th>Trạng thái</th>
+                <th>Thời điểm</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {(releases.data ?? []).map((r: any) => (
+                <tr key={r.id}>
+                  <td>
+                    {r.name}
+                    <p className="tiny muted">
+                      {r.items.length} mục · {r.importerVersion}
+                    </p>
+                  </td>
+                  <td>{r.environment}</td>
+                  <td>
+                    <Status value={r.status === "APPLIED" ? "published" : "retired"} />
+                  </td>
+                  <td className="tiny">{when(r.createdAt)}</td>
+                  <td>
+                    {r.status === "APPLIED" && (
+                      <button type="button" className="danger-text" onClick={() => setRetiring(r)}>
+                        Gỡ đợt này
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </QueryState>
+      </section>
+      {retiring && (
+        <ReasonDialog
+          title={`Gỡ đợt phát hành ${retiring.name}`}
+          effect="Các bài của đợt này chuyển sang lưu trữ (học sinh đã bắt đầu vẫn học tiếp, kết quả được giữ). Phiên bản gói trước đó được phát hành lại."
+          confirmLabel="Gỡ đợt phát hành"
+          pending={retire.isPending}
+          error={retire.error}
+          onClose={() => setRetiring(null)}
+          onSubmit={(reason) => retire.mutate({ id: retiring.id, reason }, { onSuccess: () => setRetiring(null) })}
+        />
+      )}
+    </>
+  );
+}
+
+// ───────────────────────── sources and ingestion (CF-T3) ─────────────────────────
+function Sources() {
+  const q = useQuery({ queryKey: ["admin", "sources"], queryFn: () => api("/admin/sources") });
+  const act = useAction(({ path, body }: any) => api(path, "POST", body));
+  const [toggling, setToggling] = useState<any>(null);
+  const [running, setRunning] = useState<any>(null);
+  const [lines, setLines] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const ITEM_LABEL: Record<string, string> = {
+    STAGED: "Đưa vào staging",
+    DUPLICATE: "Trùng (dùng lại)",
+    REJECTED: "Bị từ chối",
+    NEEDS_REVIEW: "Cần xem lại",
+  };
+  return (
+    <section className="panel table-wrap">
+      <h2>Danh mục nguồn và nhập liệu</h2>
+      <p className="tiny muted">
+        Danh mục chỉ chứa chính sách nguồn (host, đường dẫn, loại tệp, giấy phép, giới hạn), không chứa bài học. Nhập liệu chỉ đưa ứng viên
+        vào staging; không bao giờ tự xuất bản. Nguồn mới luôn ở trạng thái tắt.
+      </p>
+      <QueryState query={q} empty={q.data?.length === 0}>
+        <table>
+          <thead>
+            <tr>
+              <th>Nguồn</th>
+              <th>Chính sách</th>
+              <th>Trạng thái</th>
+              <th>Lượt gần đây</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(q.data ?? []).map((src: any) => (
+              <tr key={src.key}>
+                <td>
+                  {src.title}
+                  <p className="tiny muted">
+                    {src.key} · v{src.currentVersion}
+                  </p>
+                </td>
+                <td className="tiny">
+                  {src.policy?.connector} · {src.policy?.accessMode} · {src.policy?.license?.code} · {src.policy?.storagePolicy}
+                  <br />
+                  {(src.policy?.allowedHosts ?? []).join(", ")}
+                  {src.problems.length > 0 && <p className="muted">Chưa chạy được: {src.problems.join("; ")}</p>}
+                </td>
+                <td>
+                  <Status value={src.enabled ? "active" : "disabled"} />
+                </td>
+                <td className="tiny">
+                  {src.runs.map((r: any) => (
+                    <div key={r.id}>
+                      {when(r.startedAt)}:{" "}
+                      {Object.entries(r.counts ?? {})
+                        .filter(([, n]) => (n as number) > 0)
+                        .map(([k, n]) => `${ITEM_LABEL[k] ?? k} ${n}`)
+                        .join(", ") || "—"}
+                    </div>
+                  ))}
+                </td>
+                <td className="admin-row-actions">
+                  <button type="button" className={src.enabled ? "danger-text" : "text-button"} onClick={() => setToggling(src)}>
+                    {src.enabled ? "Tắt" : "Bật"}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      act.reset();
+                      setResult(null);
+                      setLines("");
+                      setRunning(src);
+                    }}
+                  >
+                    Chạy nhập liệu
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </QueryState>
+      {toggling && (
+        <ReasonDialog
+          title={`${toggling.enabled ? "Tắt" : "Bật"} nguồn ${toggling.key}`}
+          effect={
+            toggling.enabled
+              ? "Các lượt nhập liệu mới sẽ bị từ chối; dữ liệu đã staging và nội dung đã phát hành không đổi."
+              : "Cho phép nhập liệu theo đúng chính sách hiện tại. Máy chủ kiểm tra hạn rà soát điều khoản và giấy phép trước khi bật."
+          }
+          confirmLabel={toggling.enabled ? "Tắt" : "Bật"}
+          danger={toggling.enabled}
+          pending={act.isPending}
+          error={act.error}
+          onClose={() => setToggling(null)}
+          onSubmit={(reason) =>
+            act.mutate(
+              { path: `/admin/sources/${toggling.key}/${toggling.enabled ? "disable" : "enable"}`, body: { reason } },
+              { onSuccess: () => setToggling(null) },
+            )
+          }
+        />
+      )}
+      {running && (
+        <ReasonDialog
+          title={`Nhập liệu từ ${running.key}`}
+          effect="Mỗi ứng viên được kiểm tra host, đường dẫn, robots, kích thước, loại tệp và giấy phép rồi đưa vào staging. Không có gì được xuất bản."
+          confirmLabel="Chạy"
+          danger={false}
+          pending={act.isPending || !lines.trim()}
+          error={act.error}
+          onClose={() => setRunning(null)}
+          onSubmit={(reason) =>
+            act.mutate(
+              {
+                path: `/admin/sources/${running.key}/runs`,
+                body: {
+                  reason,
+                  items: lines
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                    .slice(0, 20)
+                    .map((l) => {
+                      const [externalId, url] = l.split(/\s+/);
+                      return url ? { externalId, url } : { externalId };
+                    }),
+                },
+              },
+              { onSuccess: setResult },
+            )
+          }
+        >
+          <label className="field">
+            <span>Mỗi dòng: mã ngoài [URL] (tối đa 20)</span>
+            <textarea rows={4} value={lines} onChange={(e) => setLines(e.target.value)} />
+          </label>
+          {result && (
+            <ul className="tiny" role="status">
+              {result.items.map((i: any) => (
+                <li key={i.id}>
+                  {i.externalId}: {ITEM_LABEL[i.status] ?? i.status}
+                  {i.rejection ? ` — ${i.rejection}` : ""}
+                </li>
+              ))}
+            </ul>
           )}
         </ReasonDialog>
       )}

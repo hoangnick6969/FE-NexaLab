@@ -324,19 +324,71 @@ export function mutate<T = any>(path: string, method: string, body: unknown, key
   return api<T>(path, method, body, true, { "Idempotency-Key": key });
 }
 
-export async function uploadFile(file: File) {
-  const data = new FormData();
-  data.append("file", file);
-  const r = await fetch(base + "/files", {
-    method: "POST",
-    credentials: "include",
-    headers: { Authorization: "Bearer " + useAuth.getState().token },
-    body: data,
-  });
-  if (!r.ok) throw await readError(r);
-  return r.json();
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  mp4: "video/mp4",
+  vtt: "text/vtt",
+  glb: "model/gltf-binary",
+};
+/**
+ * CF-T2 upload: the API issues a presigned PUT (or multipart part URLs) to a
+ * private staging key; the browser sends bytes straight to storage, then the
+ * API validates (size, signature, SHA-256) and returns an immutable
+ * `assetv:<versionId>` reference. No storage credential reaches the browser.
+ */
+export async function uploadFile(file: File, onProgress?: (fraction: number) => void) {
+  const mime = MIME_BY_EXTENSION[file.name.split(".").pop()?.toLowerCase() ?? ""] ?? file.type;
+  const started = await api<any>("/assets/uploads", "POST", { fileName: file.name, mime, bytes: file.size, title: file.name });
+  try {
+    let parts: Array<{ partNumber: number; etag: string }> | undefined;
+    if (started.mode === "single") {
+      const r = await fetch(started.upload.url, { method: "PUT", headers: started.upload.headers, body: file });
+      if (!r.ok) throw new Error("Tải tệp lên kho lưu trữ thất bại");
+      onProgress?.(1);
+    } else {
+      parts = [];
+      for (let first = 1; first <= started.partCount; first += 10) {
+        const numbers = Array.from({ length: Math.min(10, started.partCount - first + 1) }, (_, i) => first + i);
+        const signed = await api<any>(`/assets/uploads/${started.versionId}/parts`, "POST", { partNumbers: numbers });
+        for (const { partNumber, url } of signed.parts) {
+          const chunk = file.slice((partNumber - 1) * started.partSize, partNumber * started.partSize);
+          const r = await fetch(url, { method: "PUT", body: chunk });
+          const etag = r.headers.get("ETag");
+          if (!r.ok || !etag) throw new Error("Tải phần " + partNumber + " thất bại");
+          parts.push({ partNumber, etag });
+          onProgress?.(parts.length / started.partCount);
+        }
+      }
+    }
+    const done = await api<any>(`/assets/uploads/${started.versionId}/complete`, "POST", parts ? { parts } : {});
+    const kind = mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime === "video/mp4" ? "video" : mime === "text/vtt" ? "caption" : "model";
+    return { id: done.versionId, assetId: done.assetId, url: done.url as string, type: kind, title: file.name };
+  } catch (error) {
+    if (!(error instanceof ApiError)) await api(`/assets/uploads/${started.versionId}/abort`, "POST").catch(() => undefined);
+    throw error;
+  }
+}
+/** Short-lived read URL for an immutable asset version (`assetv:<id>`). */
+async function versionUrl(url: string) {
+  const access = await api<{ url: string }>("/assets/versions/" + url.slice("assetv:".length) + "/access");
+  return access.url;
 }
 export async function openMaterial(url: string) {
+  if (url.startsWith("assetv:")) {
+    const win = window.open("about:blank", "_blank");
+    if (win) win.opener = null;
+    try {
+      const signed = await versionUrl(url);
+      if (win) win.location.href = signed;
+    } catch (e) {
+      win?.close();
+      throw e;
+    }
+    return;
+  }
   if (!url.startsWith("asset:")) {
     window.open(url, "_blank", "noopener,noreferrer");
     return;
@@ -360,6 +412,8 @@ export async function openMaterial(url: string) {
 export type InlineMaterial = { src: string; revoke: () => void };
 
 export async function inlineMaterial(url: string): Promise<InlineMaterial> {
+  // Signed storage URLs stream directly (range requests for video) and expire on their own.
+  if (url.startsWith("assetv:")) return { src: await versionUrl(url), revoke: () => undefined };
   if (!url.startsWith("asset:")) return { src: url, revoke: () => undefined };
 
   const request = () => fetch(base + "/files/" + url.slice(6), {
