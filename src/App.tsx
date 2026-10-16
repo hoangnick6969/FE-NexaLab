@@ -16,7 +16,6 @@ import {
   BookOpen,
   Users,
   ChartNoAxesCombined,
-  Bookmark,
   LogOut,
   ArrowUpRight,
   Bell,
@@ -52,6 +51,9 @@ const Lessons = lazy(() =>
 );
 const AssignedLearning = lazy(() =>
   import("./pages").then((m) => ({ default: m.AssignedLearning }))
+);
+const StudentAssignments = lazy(() =>
+  import("./pages").then((m) => ({ default: m.StudentAssignments }))
 );
 const LessonDetail = lazy(() =>
   import("./ebook").then((m) => ({ default: m.LessonDetail }))
@@ -134,7 +136,7 @@ function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         { label: isStudent ? "Bài học" : "Thư viện bài học", to: "/lessons" },
-        { label: "Chi tiết bài học", isCurrent: true },
+        { label: "Chi tiết bài tập", isCurrent: true },
       ];
     }
     if (pathname.startsWith("/ebooks/")) {
@@ -163,10 +165,16 @@ function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         {
-          label: isStudent ? "Bài được giao" : "Lớp học",
-          to: isStudent ? "/#student-assignments" : "/classes",
+          label: isStudent ? "Bài tập" : "Lớp học",
+          to: isStudent ? "/assignments" : "/classes",
         },
-        { label: "Chi tiết bài học", isCurrent: true },
+        { label: isStudent ? "Chi tiết bài tập" : "Chi tiết bài học", isCurrent: true },
+      ];
+    }
+    if (pathname === "/assignments") {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: isStudent ? "Bài tập" : "Lớp học", isCurrent: true },
       ];
     }
     if (pathname === "/classes") {
@@ -294,11 +302,7 @@ export default function App() {
               <NavLink end to="/" aria-label="Trang chủ"><LayoutDashboard />Trang chủ</NavLink>
               <NavLink to="/lessons" aria-label="Bài học"><BookOpen />Bài học</NavLink>
               <NavLink to="/labs" aria-label="Phòng thí nghiệm"><FlaskConical />Lab</NavLink>
-              <Link
-                to="/#student-assignments"
-                aria-label="Bài được giao"
-                className={location.hash === "#student-assignments" || location.pathname.startsWith("/assignments/") ? "active" : ""}
-              ><Bookmark />Bài giao</Link>
+              <NavLink to="/assignments" aria-label="Bài tập"><ClipboardList />Bài tập</NavLink>
               <NavLink to="/progress" aria-label="Tiến độ"><ChartNoAxesCombined />Tiến độ</NavLink>
             </>
           ) : (
@@ -375,6 +379,7 @@ export default function App() {
               <Route path="/lessons" element={<Lessons />} />
               <Route path="/lessons/:id" element={<LessonDetail />} />
               <Route path="/ebooks/:subjectId" element={<EbookReader />} />
+              <Route path="/assignments" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/:id" element={<AssignedLearning />} />
               <Route path="/classes" element={<Classes />} />
               <Route path="/progress" element={<ProgressPage />} />
@@ -865,7 +870,7 @@ function StudentDashboard({
         <div>
           <p className="eyebrow">KHÔNG GIAN HỌC TẬP · LỚP {user.grade}</p>
           <h1>Chào {user.fullName.split(" ").at(-1)}</h1>
-          <p className="student-heading-copy">Bài học, bài được giao và những lần em tự thử.</p>
+          <p className="student-heading-copy">Bài học, bài tập và những lần em tự thử.</p>
         </div>
         <Badge tone="outline">KHOA HỌC TỰ NHIÊN</Badge>
       </header>
@@ -881,11 +886,11 @@ function StudentDashboard({
           index={0}
         />
         <StudentStat
-          label="Bài được giao"
+          label="Bài tập"
           value={assignments.isLoading || assignments.error || !assignments.data?.length ? "—" : assignments.data.length}
           detail={assignments.isLoading ? "Đang tải bài giao" : assignments.error ? "Chưa tải được dữ liệu" : assignments.data?.length ? "Sắp đến hạn trước" : "Chưa có bài được giao"}
           icon={<ClipboardList />}
-          to={assignments.data?.[0] ? `/assignments/${assignments.data[0].id}` : "/lessons"}
+          to="/assignments"
           reduceMotion={reduceMotion}
           index={1}
         />
@@ -911,7 +916,7 @@ function StudentDashboard({
           <section className={`student-continue-card subject-${subjectTone}`}>
             <div className="student-continue-copy">
               <span className="student-card-kicker">
-                {assignment ? subjectName || "BÀI ĐƯỢC GIAO" : "BẮT ĐẦU TỪ KIẾN THỨC NỀN"}
+                {assignment ? subjectName || "BÀI HỌC & BÀI TẬP" : "BẮT ĐẦU TỪ KIẾN THỨC NỀN"}
               </span>
               <h2>
                 {assignment
@@ -924,7 +929,7 @@ function StudentDashboard({
                 {assignment
                   ? pathway?.lesson.learningObjective || assignmentDetail.data?.content?.learningObjective || assignment.classroom.name
                   : assignments.isLoading
-                    ? "Đang kiểm tra bài được giao của em."
+                    ? "Đang kiểm tra bài tập của em."
                     : "Đọc, xem nội dung và làm bài kiểm tra nhỏ trước khi mở phần thực hành."}
               </p>
               {pathway && nextStep && (
@@ -936,14 +941,14 @@ function StudentDashboard({
               {pathway && !nextStep && <p className="student-step-position">Em đã xem hết các bước trong bài này.</p>}
               <Link
                 className="student-continue-action"
-                to={assignment ? "/assignments/" + assignment.id : "/lessons"}
+                to={assignment ? (nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${lessonId}` : "/assignments/" + assignment.id) : "/lessons"}
               >
                 {assignment
                   ? nextStep
-                    ? continueNames[nextStep.type]
+                    ? ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) ? `Bài học · ${continueNames[nextStep.type]}` : `Bài tập · ${continueNames[nextStep.type]}`
                     : pathway
                       ? "Xem lại lộ trình bài học"
-                      : "Mở bài được giao"
+                      : "Mở bài tập"
                   : "Chọn bài học để bắt đầu"}
                 <ArrowRight size={18} />
               </Link>
@@ -966,13 +971,15 @@ function StudentDashboard({
           </section>
 
           {pathway && (
-            <section className="student-pathway-card" aria-label="Lộ trình bài học">
+            <section className="student-pathway-card" aria-label="Lộ trình học tập và bài tập">
               <div className="student-pathway-heading">
-                <div><span className="eyebrow">LỘ TRÌNH BÀI HỌC</span><h3>{pathway.lesson.title}</h3></div>
+                <div><span className="eyebrow">BÀI HỌC & BÀI TẬP</span><h3>{pathway.lesson.title}</h3></div>
                 <span>{pathway.steps.filter((step) => step.state === "COMPLETED").length}/{pathway.steps.length} bước</span>
               </div>
+              {([["Bài học", ["READING", "VIDEO", "STUDY_CARDS"]], ["Bài tập", ["QUIZ", "LAB", "CHALLENGE"]]] as const).map(([groupName, types]) => <div className="student-pathway-group" key={groupName}>
+              <h4>{groupName}</h4>
               <ol className="student-pathway-steps">
-                {pathway.steps.map((step) => {
+                {pathway.steps.filter((step) => (types as readonly string[]).includes(step.type)).map((step) => {
                   const isLocked = step.state === "LOCKED";
                   return (
                     <li key={step.id} className={`student-pathway-step ${step.state.toLowerCase()}`}>
@@ -981,7 +988,7 @@ function StudentDashboard({
                           <Lock size={15} strokeWidth={1.75} /><span>{stepNames[step.type]}</span>
                         </button>
                       ) : (
-                        <Link to={`/assignments/${assignment.id}#step-${step.id}`}>
+                        <Link to={lessonId && ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) ? `/lessons/${lessonId}` : `/assignments/${assignment.id}#step-${step.id}`}>
                           {step.state === "COMPLETED" ? <Check size={15} strokeWidth={2} /> : <Clock3 size={15} strokeWidth={1.75} />}
                           <span>{stepNames[step.type]}</span>
                         </Link>
@@ -990,6 +997,7 @@ function StudentDashboard({
                   );
                 })}
               </ol>
+              </div>)}
             </section>
           )}
 
@@ -1020,7 +1028,7 @@ function StudentDashboard({
           <section className="student-related-work">
             <div className="student-section-heading">
               <div><p className="eyebrow">SAU KHI ĐÃ HỌC</p><h2>Mô phỏng và thực hành</h2></div>
-              <Link to="/lessons">Xem bài học <ArrowRight size={15} /></Link>
+            <Link to="/assignments">Xem bài tập <ArrowRight size={15} /></Link>
             </div>
             <p className="student-related-intro">Mỗi mô phỏng gắn với kiến thức em vừa học. Hoàn thành các bước nền tảng để mở phần thực hành phù hợp.</p>
             <LabCards guided />
@@ -1028,9 +1036,9 @@ function StudentDashboard({
         </div>
 
         <aside className="student-dashboard-aside">
-          <section id="student-assignments" className="student-side-card" aria-labelledby="student-assignments-title">
+          <section id="student-exercises" className="student-side-card" aria-labelledby="student-assignments-title">
             <div className="student-section-heading">
-              <div><p className="eyebrow">THEO HẠN HOÀN THÀNH</p><h2 id="student-assignments-title">Bài được giao</h2></div>
+              <div><p className="eyebrow">THEO HẠN HOÀN THÀNH</p><h2 id="student-assignments-title">Bài tập</h2></div>
               <span className="student-side-count">{assignments.data?.length || "—"}</span>
             </div>
             {assignments.isLoading ? <InlineLoader message="Đang nạp bài được giao…" size="sm" /> : assignments.error ? (
@@ -1053,7 +1061,7 @@ function StudentDashboard({
                 )}
               </div>
             ) : (
-              <div className="student-empty"><ClipboardList size={22} /><p>Chưa có bài được giao.</p></div>
+              <div className="student-empty"><ClipboardList size={22} /><p>Chưa có bài tập được giao.</p><Link to="/assignments">Mở danh sách bài tập</Link></div>
             )}
           </section>
 

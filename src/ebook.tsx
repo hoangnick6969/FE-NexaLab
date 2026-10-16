@@ -5,10 +5,12 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, ExternalLink, Highlighter, LoaderCircle, Minus, Plus, Underline } from "lucide-react";
-import { api, openMaterial, useAuth } from "./api";
+import { api, isApiError, openMaterial, useAuth, type StudentPathway } from "./api";
 import { ErrorBox, PageLoader } from "./ui";
 import { PageHeading } from "./App";
 import { AttributionNote, libraryQuery } from "./library";
+import { VideoLearningStep } from "./VideoLearningStep";
+import { StudyCardsStep } from "./StudyCardsStep";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -38,7 +40,8 @@ const httpsUrl = (value: unknown) => {
 export function LessonDetail() {
   const { id = "" } = useParams();
   const user = useAuth((state) => state.user)!;
-  const [section, setSection] = useState<"lesson" | "assessment">("lesson");
+  const [section, setSection] = useState<"lesson" | "video">("lesson");
+  const queryClient = useQueryClient();
   const lessons = useQuery({ queryKey: ["lessons"], queryFn: () => api<any[]>("/lessons") });
   const canViewAttribution = ["TEACHER", "ADMIN"].includes(user.role);
   const library = useQuery({
@@ -48,7 +51,22 @@ export function LessonDetail() {
   });
   const materialOpen = useMutation({ mutationFn: openMaterial });
   const lesson = lessons.data?.find((item) => item.id === id);
-  const questions = Array.isArray(lesson?.questions) ? lesson.questions : [];
+  const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
+  const videoPathway = useQuery<StudentPathway>({
+    queryKey: ["lesson-pathway", id],
+    queryFn: () => api(`/lessons/${encodeURIComponent(id)}/pathway`),
+    enabled: user.role === "STUDENT" && Boolean(id),
+  });
+  const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING");
+  const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO");
+  const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
+  const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type)) ?? [];
+  const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
+  const assignmentMissing = isApiError(videoPathway.error, "ASSIGNMENT_NOT_FOUND");
+  const completeReading = useMutation({
+    mutationFn: () => api(`/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, "PUT", { action: "complete" }),
+    onSuccess: (response: { pathway: StudentPathway }) => queryClient.setQueryData(["lesson-pathway", id], response.pathway),
+  });
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
 
   if (lessons.isLoading) return <PageLoader message="Đang mở bài học…" />;
@@ -63,13 +81,22 @@ export function LessonDetail() {
       {lesson.labId && ["STUDENT", "TEACHER"].includes(user.role) && <Link className="secondary" to={`/labs/${lesson.labId}`}>Mở lab thực hành <ArrowRight size={16} /></Link>}
     </div>
     <div className="lesson-detail-tabs" role="tablist" aria-label="Nội dung bài học">
-      <button type="button" role="tab" aria-selected={section === "lesson"} className={section === "lesson" ? "active" : ""} onClick={() => setSection("lesson")}>Bài học</button>
-      <button type="button" role="tab" aria-selected={section === "assessment"} className={section === "assessment" ? "active" : ""} onClick={() => setSection("assessment")}>Kiểm tra kiến thức <span>{questions.length}</span></button>
+      <button type="button" role="tab" aria-selected={section === "lesson"} className={section === "lesson" ? "active" : ""} onClick={() => setSection("lesson")}>Nội dung bài học</button>
+      {(videoMaterial || videoStep) && <button type="button" role="tab" aria-selected={section === "video"} className={section === "video" ? "active" : ""} onClick={() => setSection("video")}>Video bài giảng</button>}
+      {user.role === "STUDENT" && <Link className="lesson-assignment-link" to={videoPathway.data?.assignment.id ? `/assignments/${videoPathway.data.assignment.id}` : "/assignments"}>Bài tập <ArrowRight size={15} /></Link>}
     </div>
     {section === "lesson" ? <div className="lesson-detail-layout">
       <section className="panel lesson-detail-reading">
         <div className="notice"><b>Mục tiêu bài học</b><p>{lesson.learningObjective}</p>{lesson.prerequisites && <small>Kiến thức nền: {lesson.prerequisites}</small>}</div>
-        <div className="lesson-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content) }} />
+        {user.role === "STUDENT" && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} /> : <div className="lesson-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(readingStep?.resource?.html || lesson.content) }} />}
+        {user.role === "STUDENT" && assignmentMissing && <p className="notice">Em có thể xem nội dung này. Tiến độ và bài tập sẽ được lưu khi giáo viên giao bài cho lớp.</p>}
+        {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
+          {completeReading.error && <ErrorBox error={completeReading.error} />}
+          <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? "Đang lưu tiến độ…" : completeReading.error ? "Thử lưu lại" : "Hoàn thành phần đọc"}</button>
+        </div>}
+        {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">Đã hoàn thành phần đọc. Tiến độ đã được lưu.</p>}
+        {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && videoStep && videoStep.state !== "COMPLETED" && <button className="secondary" type="button" onClick={() => setSection("video")}>Tiếp tục với video bài giảng <ArrowRight size={15} /></button>}
+        {user.role === "STUDENT" && studyCardsStep && <section className="lesson-study-cards"><h2>Ôn tập nhanh</h2>{studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.</p> : <StudyCardsStep lessonId={id} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id], updatedPathway)} />}</section>}
       </section>
       <aside className="lesson-detail-aside">
         <section className="panel"><span className="eyebrow">THUỘC CHƯƠNG</span><h2>{lesson.chapter}</h2><p className="muted">{lesson.topic}</p></section>
@@ -78,10 +105,17 @@ export function LessonDetail() {
         <ErrorBox error={materialOpen.error} />
         {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
       </aside>
-    </div> : <section className="panel lesson-assessment-panel">
-      <div className="assessment-heading"><div><span className="eyebrow">TỰ KIỂM TRA</span><h2>Kiểm tra kiến thức</h2></div><span className="badge outline">{questions.length} câu hỏi</span></div>
-      {user.role === "STUDENT" ? <div className="notice">Bài kiểm tra chính thức sẽ được mở trong bài đã giao để ghi nhận kết quả và tiến độ học tập.</div> : questions.length ? questions.map((question: any, index: number) => <fieldset className="assessment-question" key={question.id ?? index}><legend>{index + 1}. {question.prompt}</legend>{question.options?.map((option: any, optionIndex: number) => <p key={optionIndex}>{typeof option === "string" ? option : option.text}</p>)}</fieldset>) : <p className="muted">Bài học này chưa có câu hỏi kiểm tra.</p>}
-    </section>}
+    </div> : section === "video" ? <section className="panel lesson-video-panel" aria-label="Video bài giảng">
+      <div className="assessment-heading"><div><span className="eyebrow">HỌC QUA VIDEO</span><h2>{videoStep?.resource?.title || videoMaterial?.title || "Video bài giảng"}</h2></div><span className="badge outline">{videoStep?.progressValue ?? 0}% đã lưu</span></div>
+      {user.role !== "STUDENT" ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial?.url) ?? undefined} />
+        : videoPathway.isLoading ? <p className="muted" role="status">Đang tải lộ trình và tiến độ video…</p>
+          : videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} />
+            : assignmentMissing ? <><video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial?.url) ?? undefined} /><p className="notice">Video xem trước. Tiến độ sẽ được lưu khi giáo viên giao bài này.</p></>
+            : videoStep?.resource ? <VideoLearningStep lessonId={id} step={videoStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id], updatedPathway)} />
+              : <div className="notice"><b>Video chưa khả dụng</b><p>Em có thể tiếp tục với phần nội dung bài học.</p></div>}
+      {user.role === "STUDENT" && lessonComplete && <Link className="primary pathway-continue" to={videoPathway.data?.assignment.id ? `/assignments/${videoPathway.data.assignment.id}` : "/assignments"}>Bắt đầu làm bài tập <ArrowRight size={15} /></Link>}
+    </section> : null}
+    {user.role === "STUDENT" && lessonComplete && section === "lesson" && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p><Link className="primary" to={videoPathway.data?.assignment.id ? `/assignments/${videoPathway.data.assignment.id}` : "/assignments"}>Chuyển sang Bài tập <ArrowRight size={16} /></Link></div>}
   </div>;
 }
 
@@ -329,3 +363,4 @@ function rangeForOffsets(container: HTMLElement, startOffset: number, endOffset:
   }
   return null;
 }
+
