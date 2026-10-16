@@ -54,6 +54,8 @@ function RichEditor({
   return (
     <div className="rich-editor">
       <div className="editor-toolbar">
+        <button type="button" aria-label="Tiêu đề cấp 2" aria-pressed={Boolean(editor?.isActive("heading", { level: 2 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
+        <button type="button" aria-label="Tiêu đề cấp 3" aria-pressed={Boolean(editor?.isActive("heading", { level: 3 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
         <button
           type="button"
           onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -72,6 +74,10 @@ function RichEditor({
         >
           Danh sách
         </button>
+        <span className="editor-toolbar-divider" aria-hidden="true" />
+        {["₂", "₃", "⁺", "⁻", "→", "Δ", "°", "±", "×", "μ"].map((symbol) => (
+          <button type="button" key={symbol} aria-label={`Chèn ký hiệu ${symbol}`} title={`Chèn ${symbol}`} onClick={() => editor?.chain().focus().insertContent(symbol).run()}>{symbol}</button>
+        ))}
       </div>
       <EditorContent editor={editor} />
     </div>
@@ -137,11 +143,11 @@ export function Lessons() {
       onSuccess: (copy: any) => setEdit({ ...copy, review: copy.review ?? null }),
     });
   return (
-    <>
+    <div className="student-lessons-page">
       <PageHeading
         eyebrow="THƯ VIỆN KIẾN THỨC"
-        title="Bài học cho những trí tò mò"
-        description="Hiểu khái niệm, khám phá mô hình, rồi tự tay kiểm chứng."
+        title="Bài học"
+        description="Chọn bài học để tiếp tục."
         action={
           manage ? (
             <button
@@ -157,7 +163,7 @@ export function Lessons() {
       {subjects.data?.some((subject: any) => safeEbookUrl(subject.ebookUrl)) && (
         <section className="subject-ebook-links" aria-label="Sách tham khảo theo môn">
           <h2>Sách tham khảo</h2>
-          <p>Liên kết tới nguồn bên ngoài; nội dung và quyền sử dụng do đơn vị phát hành quản lý.</p>
+          <p>Mở sách giáo khoa trực tuyến theo môn học.</p>
           <div>
             {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl)).map((subject: any) => (
               <Link key={subject.id} to={`/ebooks/${subject.id}`}>
@@ -222,18 +228,18 @@ export function Lessons() {
               (!filtersActive || meta.has(l.id)),
           )
           .map((l: any) => (
-            <article className="panel lesson-card" key={l.id}>
+            <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
               <div className="lesson-card-top">
                 <span className={"subject-icon " + l.subjectId}>
                   <BookOpen />
                 </span>
-                <Badge>
+                {manage ? <Badge>
                   {l.status === "published"
                     ? "Đã xuất bản"
                     : l.status === "draft"
                       ? "Bản nháp"
                       : "Lưu trữ"}
-                </Badge>
+                </Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học</span>}
               </div>
               {manage && (
                 <div className="badge-row">
@@ -247,15 +253,19 @@ export function Lessons() {
                 {l.subject.name} · LỚP {l.grade}
               </small>
               <h3>{l.title}</h3>
-              <p>{l.learningObjective}</p>
+              {l.learningObjective && (manage || !/dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(l.learningObjective)) && <p>{l.learningObjective}</p>}
+              {!manage && <div className="student-lesson-context">
+                <span>{l.chapter}</span>
+                {l.topic && <span>{l.topic}</span>}
+              </div>}
               <div className="card-footer">
                 <button
-                  className="text-button"
+                  className={manage ? "text-button" : "student-lesson-open"}
                   onClick={() => {
                     navigate(`/lessons/${l.id}`);
                   }}
                 >
-                  Mở bài học <ArrowUpRight size={16} />
+                  {manage ? "Mở bài học" : "Vào bài học"} <ArrowUpRight size={16} />
                 </button>
                 {manage &&
                   ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && (
@@ -613,7 +623,7 @@ export function Lessons() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 
@@ -846,7 +856,7 @@ export function StudentAssignments() {
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
   return (
     <>
-      <PageHeading eyebrow="LUYỆN TẬP VÀ THỰC HÀNH" title="Bài tập" description="Hoàn thành bài học trước, sau đó làm bài kiểm tra và mở các hoạt động thực hành." />
+      <PageHeading eyebrow="LUYỆN TẬP VÀ THỰC HÀNH" title="Bài tập" description="Bài kiểm tra và hoạt động thực hành sẽ mở theo tiến độ bài học của em." />
       {query.data?.length ? <div className="student-list student-assignment-list">
         {query.data.map((item: any) => item.canOpen === false ? (
           <article key={item.id} className="student-assignment-row" aria-disabled="true">
@@ -920,7 +930,7 @@ export function AssignedLearning() {
   };
   const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
   return (
-    <>
+    <div className="student-assigned-learning">
       <PageHeading
         eyebrow="BÀI TẬP"
         title={lesson.title}
@@ -1001,7 +1011,7 @@ export function AssignedLearning() {
           </Link>
         )}
       </section>
-    </>
+    </div>
   );
 }
 export function ProgressPage() {

@@ -136,7 +136,7 @@ function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         { label: isStudent ? "Bài học" : "Thư viện bài học", to: "/lessons" },
-        { label: "Chi tiết bài tập", isCurrent: true },
+        { label: isStudent ? "Chi tiết bài học" : "Chi tiết bài giảng", isCurrent: true },
       ];
     }
     if (pathname.startsWith("/ebooks/")) {

@@ -11,10 +11,12 @@ type VideoObservation = {
 export function VideoLearningStep({
   lessonId,
   step,
+  hideTranscript = false,
   onReconciled,
 }: {
   lessonId: string;
   step: StudentLearningStep;
+  hideTranscript?: boolean;
   onReconciled: (pathway: StudentPathway) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -162,7 +164,6 @@ export function VideoLearningStep({
 
   return (
     <section className="video-learning" aria-label="Nội dung video">
-      <h4>{step.resource?.title}</h4>
       {sourceLoading && <p className="video-placeholder">Đang chuẩn bị video…</p>}
       {source && (
         <video
@@ -192,7 +193,7 @@ export function VideoLearningStep({
         </p>
       )}
       <div className="video-actions">
-        {step.resource?.transcript && (
+        {step.resource?.transcript && !hideTranscript && (
           <button
             type="button"
             className="secondary"
@@ -215,7 +216,7 @@ export function VideoLearningStep({
           </button>
         )}
       </div>
-      {showTranscript && step.resource?.transcript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
+      {showTranscript && step.resource?.transcript && !hideTranscript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
       {showEquivalent && step.resource?.equivalentText && (
         <div id={`video-equivalent-${step.id}`} className="video-equivalent">
           <h5>Nội dung thay thế</h5>

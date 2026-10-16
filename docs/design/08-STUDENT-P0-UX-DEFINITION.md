@@ -159,13 +159,14 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ### 6.3 Bài học and Bài tập detail
 
-**Bài học page content order (fixed, top-to-bottom):**
-1. Learning objective block (collapsible after first read)
-2. Reading content / materials
-3. Video player
-4. Study cards
+**Bài học page structure:**
+1. Compact lesson title and breadcrumb, followed by one horizontal tab row.
+2. Default tab is **Bài đọc** with the learning objective and reading content. Students choose when to open **Video bài giảng**, **Thẻ ôn tập**, or **Tài liệu**; video is never placed ahead of the reading by default.
+3. Keep one clear transition to Bài tập after the required lesson steps are complete. Ebook access belongs in Tài liệu, not as a competing CTA in the lesson header.
 
-The page has distinct content and video views, and a clear transition to Bài tập. Reading/video/card completion is persisted by the server. Students can revisit completed content.
+The lesson title is the page H1. Main textbook sections use H2 and their subsections use H3, with readable paragraph and list spacing. Preserve Unicode science notation (for example subscripts, superscripts, Greek letters, degree signs, and arrows); do not guess at OCR corrections or silently rewrite equations.
+
+The page uses distinct tabs for reading, video, study cards, and materials when available. Reading/video/card completion is persisted by the server. Students can revisit completed content.
 
 **Bài tập page content order (fixed, top-to-bottom, per section 2b):**
 1. Quiz (visible while locked; available after required Bài học steps)
@@ -175,7 +176,8 @@ The page has distinct content and video views, and a clear transition to Bài t�
 The Bài tập list shows due dates and assigned lessons. Opening an item shows its quiz/practical steps and their server-owned lock states. If the Bài học steps are incomplete, the page links directly back to that lesson and explains what remains.
 
 **Video player:**
-- Show: title, duration chip, playback-progress bar, transcript toggle.
+- Show the player only after the student opens the Video bài giảng tab. Do not autoplay.
+- Show: neutral lesson video title, duration chip, playback-progress bar, and a transcript toggle only when an approved transcript is available.
 - States: loading skeleton → playing → paused → completed (check mark on thumbnail) → unavailable (retry CTA + alternative text).
 - Do not autoplay. Respect `prefers-reduced-motion` by pausing auto-advance.
 - Official completion occurs at 90% watched or the media `ended` event. Seeking cannot reduce the recorded high-water mark. If video is unavailable, show the approved transcript/equivalent content and an explicit completion action; do not silently skip the step.
