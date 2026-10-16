@@ -84,7 +84,7 @@ export function StudentProgress() {
               <span><BookOpen /></span>
               <div>
                 <strong>{summary.activeAssignments ? `${summary.completedAssignments}/${summary.activeAssignments}` : "—"}</strong>
-                <p>Bài được giao đã hoàn thành</p>
+                <p>Bài tập đã hoàn thành</p>
               </div>
             </button>
             <button type="button" className="stat" onClick={() => scrollTo("progress-completion")}>
@@ -106,7 +106,7 @@ export function StudentProgress() {
             Số liệu được máy chủ tính từ từng lần học và lần thử của em. Cập nhật gần nhất: {time(summary.updatedAt)}
           </p>
           <section id="progress-completion" className="progress-section" aria-labelledby="progress-completion-title">
-            <h2 id="progress-completion-title">Bài được giao</h2>
+            <h2 id="progress-completion-title">Bài tập</h2>
             {assignments.length === 0 ? (
               <Empty>
                 Em chưa có bài được giao nào. <Link to="/">Về trang chủ →</Link>

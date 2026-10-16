@@ -16,7 +16,9 @@
 
 **Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher, Parent, and Admin remain in the shared architecture but their complete UX is deferred to later increments.
 
-**Learning loop:** **Học → Quiz → Thực hành/Mô phỏng → Thử thách → Thử lại → Tiến độ**.
+**Learning loop:** **Bài học (đọc → video → thẻ ghi nhớ) → Bài tập (kiểm tra nhỏ → thực hành/lab → thử thách) → Thử lại → Tiến độ**.
+
+The lesson library may show an optional subject-level external ebook/reference link configured by an admin. Label it as an external publisher/source link; opening it does not imply NexaLab hosts or has reproduction rights to the material.
 
 - No leaderboard, streak, badge economy, coins or gems in P0.
 - No Student AI Tutor/Hint in P0. It is P1 and must not appear in Student P0 navigation, CTA copy or dashboard cards.
@@ -28,10 +30,12 @@
 
 > This section corrects a gap in the P0 layout: **simulation and challenge are not the entry point — they are unlocked after the student completes the foundational reading/video/quiz sequence.**
 
-The canonical content order within a lesson is:
+The canonical student experience separates learning materials from assigned practice. The server-owned order remains:
 
 ```
-[Nội dung đọc] → [Video] → [Thẻ ghi nhớ] → [Bài kiểm tra nhỏ]
+[BÀI HỌC: Nội dung đọc] → [Video] → [Thẻ ghi nhớ]
+         ↓
+[BÀI TẬP: Bài kiểm tra nhỏ]
          ↓ (only after quiz passed at 50% in Increment A)
 [Thực hành / Lab / Mô phỏng 3D]
          ↓ (only after practical completed)
@@ -41,7 +45,8 @@ The canonical content order within a lesson is:
 **Gating rules for UI:**
 - A locked step shows a greyed-out card with a lock icon (Lucide `Lock`) and a tooltip explaining the prerequisite. It is **never hidden**, only disabled — so the student can see what is coming.
 - The CTA on the Dashboard Continue card always points to the **next unlocked step**, not the simulation, unless simulation is the next step.
-- The Lesson Detail page renders all steps in fixed order; locked steps are visually distinct but remain in-flow.
+- The Bài học page owns reading, video, and study cards. The separate Bài tập area owns the quiz and assigned practical work; it shows a clear link back when required Bài học steps remain incomplete.
+- Quiz remains the first Bài tập step and the server-calculated 50% pass gate for lab. Renaming the student-facing areas does not change Assignment, LessonStep, or progress ownership in the API/database.
 - The Lab screen must not be reachable directly from the navigation rail unless the student has previously accessed it through a lesson that unlocked it.
 
 **Implication for Dashboard:** the "large Continue card" CTA text must reflect current step — e.g., *"Xem video 6 phút"*, *"Làm bài kiểm tra nhỏ"*, *"Bắt đầu thực hành"* — not a generic label like "Tiếp tục học".
@@ -89,7 +94,7 @@ Cards use a 24px radius; nested cards use 16px. Buttons and chips are pills. Use
 
 | Area | Student content |
 | --- | --- |
-| Left navigation rail | Trang chủ, Bài học, Lab, Bài được giao, Tiến độ, Tài khoản |
+| Left navigation rail | Trang chủ, Bài học, Lab, Bài tập, Tiến độ, Tài khoản |
 | Stat row | Tiến độ bài được giao, bài còn lại, lượt thử lab; neutral unless each metric belongs to a real subject |
 | Main column | Large Continue card, current lesson pathway (content, video, study cards, quiz), then related practical work and weekly activity |
 | Right column | Assignments and due dates, recent attempts |
@@ -98,7 +103,7 @@ Cards use a 24px radius; nested cards use 16px. Buttons and chips are pills. Use
 
 On tablet, move the right column below the main content. On mobile, show one vertical column in this order: stats, Continue card, assignments, recent attempts, remaining content.
 
-The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lab, Bài giao, Tiến độ**. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
+The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lab, Bài tập, Tiến độ**. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
 
 ## 6. Screen definitions
 
@@ -130,8 +135,8 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 - On hover/focus: tooltip showing exact count. `prefers-reduced-motion`: suppress bar grow animation, show static bars immediately.
 - **Edge case — all zero:** Show a gentle empty state inside the chart area with copy *"Chưa có hoạt động tuần này."*
 
-**Assignments + Recent attempts (right column / bottom on mobile):**
-- Assignments: due-date sorted list. Past-due uses `state-error-ink` text color only — no red background, no alarm icon.
+**Bài tập + Recent attempts (right column / bottom on mobile):**
+- Bài tập: due-date sorted list of the student's assigned work. Past-due uses `state-error-ink` text color only — no red background, no alarm icon.
 - Recent attempts: last 3–5 attempts, each showing subject, step type, verdict chip. Never show rank or comparison.
 - **Edge case — no assignments:** Empty state with Lucide `ClipboardList` icon and copy *"Chưa có bài được giao."*
 
@@ -152,19 +157,27 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ---
 
-### 6.3 Lesson detail
+### 6.3 Bài học and Bài tập detail
 
-**Content order (fixed, top-to-bottom, per section 2b):**
-1. Learning objective block (collapsible after first read)
-2. Reading content / materials
-3. Video player
-4. Study cards
-5. Quiz
-6. Lab / Practical (locked until quiz passed — see 2b)
-7. Challenge (locked until lab completed — see 2b)
+**Bài học page structure:**
+1. Compact lesson title and breadcrumb, followed by one horizontal tab row.
+2. Default tab is **Bài đọc** with the learning objective and reading content. Students choose when to open **Video bài giảng**, **Thẻ ôn tập**, or **Tài liệu**; video is never placed ahead of the reading by default.
+3. Keep one clear transition to Bài tập after the required lesson steps are complete. Ebook access belongs in Tài liệu, not as a competing CTA in the lesson header.
+
+The lesson title is the page H1. Main textbook sections use H2 and their subsections use H3, with readable paragraph and list spacing. Preserve Unicode science notation (for example subscripts, superscripts, Greek letters, degree signs, and arrows); do not guess at OCR corrections or silently rewrite equations.
+
+The page uses distinct tabs for reading, video, study cards, and materials when available. Reading/video/card completion is persisted by the server. Students can revisit completed content.
+
+**Bài tập page content order (fixed, top-to-bottom, per section 2b):**
+1. Quiz (visible while locked; available after required Bài học steps)
+2. Lab / Practical (locked until quiz passed — see 2b)
+3. Challenge (locked until lab completed — see 2b)
+
+The Bài tập list shows due dates and assigned lessons. Opening an item shows its quiz/practical steps and their server-owned lock states. If the Bài học steps are incomplete, the page links directly back to that lesson and explains what remains.
 
 **Video player:**
-- Show: title, duration chip, playback-progress bar, transcript toggle.
+- Show the player only after the student opens the Video bài giảng tab. Do not autoplay.
+- Show: neutral lesson video title, duration chip, playback-progress bar, and a transcript toggle only when an approved transcript is available.
 - States: loading skeleton → playing → paused → completed (check mark on thumbnail) → unavailable (retry CTA + alternative text).
 - Do not autoplay. Respect `prefers-reduced-motion` by pausing auto-advance.
 - Official completion occurs at 90% watched or the media `ended` event. Seeking cannot reduce the recorded high-water mark. If video is unavailable, show the approved transcript/equivalent content and an explicit completion action; do not silently skip the step.
