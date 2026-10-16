@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { api, idempotencyKey, inlineMaterial, isApiError, mutate, useAuth, uploadFile, openMaterial, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentLearningStep, type StudentPathway, type StudentQuiz } from "./api";
+import { api, idempotencyKey, inlineMaterial, isApiError, mutate, useAuth, uploadFile, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentLearningStep, type StudentPathway, type StudentQuiz } from "./api";
 import {
   Badge,
   Empty,
@@ -112,9 +112,8 @@ export function Lessons() {
   };
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<any>(null);
+  const navigate = useNavigate();
   const [edit, setEdit] = useState<any>(null);
-  const materialOpen = useAction((url: string) => openMaterial(url));
   const upload = useAction(async (file: File) => {
     const m = await uploadFile(file);
     setEdit((s: any) => ({ ...s, materials: [...s.materials, m] }));
@@ -162,10 +161,9 @@ export function Lessons() {
           <p>Liên kết tới nguồn bên ngoài; nội dung và quyền sử dụng do đơn vị phát hành quản lý.</p>
           <div>
             {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl)).map((subject: any) => (
-              <a key={subject.id} href={safeEbookUrl(subject.ebookUrl)!} target="_blank" rel="noopener noreferrer">
-                <BookOpen size={18} /> {subject.name} <ExternalLink size={14} aria-hidden="true" />
-                <span className="sr-only"> (mở tab mới)</span>
-              </a>
+              <Link key={subject.id} to={`/ebooks/${subject.id}`}>
+                <BookOpen size={18} /> {subject.name} <ArrowUpRight size={14} aria-hidden="true" />
+              </Link>
             ))}
           </div>
         </section>
@@ -255,7 +253,7 @@ export function Lessons() {
                 <button
                   className="text-button"
                   onClick={() => {
-                    setView(l);
+                    navigate(`/lessons/${l.id}`);
                   }}
                 >
                   Mở bài học <ArrowUpRight size={16} />
@@ -285,57 +283,6 @@ export function Lessons() {
         <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
       )}
       {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
-      {view && (
-        <Modal title={view.title} onClose={() => setView(null)}>
-          <p className="muted">
-            {view.chapter} · {view.curriculum}
-          </p>
-          <div className="notice">
-            <b>Mục tiêu:</b> {view.learningObjective}
-            <br />
-            <b>Kiến thức nền:</b> {view.prerequisites}
-          </div>
-          <div
-            className="lesson-content"
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(view.content),
-            }}
-          />
-          {view.materials.map((m: any, i: number) => (
-            <button
-              className="material-link"
-              key={i}
-              onClick={() => materialOpen.mutate(m.url)}
-            >
-              {m.title} ({m.type}) ↗
-            </button>
-          ))}
-          {view.labId && ["STUDENT", "TEACHER"].includes(user.role) && (
-            <Link className="primary" to={"/labs/" + view.labId}>
-              Mở lab thực hành <ArrowUpRight size={16} />
-            </Link>
-          )}
-          {view.questions.length > 0 && (
-            <section className="quiz">
-              <h3>Kiểm tra kiến thức</h3>
-              {user.role === "STUDENT" ? (
-                <p className="notice">Mở bài được giao để làm bài kiểm tra và lưu kết quả chính thức.</p>
-              ) : view.questions.map((q: any, i: number) => (
-                <fieldset key={i}>
-                  <legend>{i + 1}. {q.prompt}</legend>
-                  {q.options.map((o: string, j: number) => <p key={j}>{o}</p>)}
-                </fieldset>
-              ))}
-            </section>
-          )}
-          {user.role === "STUDENT" && (
-            <p className="tiny muted">
-              Tiến độ chính thức được ghi nhận khi em học bài này trong mục Bài được giao.
-            </p>
-          )}
-          <AttributionNote value={meta.get(view.id)?.attribution} />
-        </Modal>
-      )}
       {edit && (
         <Modal
           title={edit.id ? "Chỉnh sửa bài học" : "Tạo bài học"}

@@ -53,6 +53,12 @@ const Lessons = lazy(() =>
 const AssignedLearning = lazy(() =>
   import("./pages").then((m) => ({ default: m.AssignedLearning }))
 );
+const LessonDetail = lazy(() =>
+  import("./ebook").then((m) => ({ default: m.LessonDetail }))
+);
+const EbookReader = lazy(() =>
+  import("./ebook").then((m) => ({ default: m.EbookReader }))
+);
 const Classes = lazy(() =>
   import("./classes").then((m) => ({ default: m.Classes }))
 );
@@ -122,6 +128,20 @@ function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         { label: isStudent ? "Bài học" : "Thư viện bài học", isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/lessons/")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: isStudent ? "Bài học" : "Thư viện bài học", to: "/lessons" },
+        { label: "Chi tiết bài học", isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/ebooks/")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: "Bài học", to: "/lessons" },
+        { label: "Trình đọc ebook", isCurrent: true },
       ];
     }
     if (pathname === "/labs") {
@@ -353,6 +373,8 @@ export default function App() {
                 }
               />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/lessons/:id" element={<LessonDetail />} />
+              <Route path="/ebooks/:subjectId" element={<EbookReader />} />
               <Route path="/assignments/:id" element={<AssignedLearning />} />
               <Route path="/classes" element={<Classes />} />
               <Route path="/progress" element={<ProgressPage />} />
