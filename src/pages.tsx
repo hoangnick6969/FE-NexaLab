@@ -9,6 +9,16 @@ import {
   Trash2,
   Save,
   ExternalLink,
+  Calculator,
+  PenLine,
+  Languages,
+  Landmark,
+  Compass,
+  Monitor,
+  Wrench,
+  Palette,
+  Dumbbell,
+  Telescope,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -101,6 +111,20 @@ const blankLesson = {
   outcomeCodes: [],
   challengeParams: null,
 };
+const khtnSubjectIds = new Set(["khtn", "physics", "biology", "chemistry"]);
+const subjectPreviews = [
+  { name: "Toán", icon: Calculator, topics: "Đại số · Hình học · Thống kê" },
+  { name: "Ngữ văn", icon: PenLine, topics: "Đọc · Viết · Nói và nghe" },
+  { name: "Ngoại ngữ 1", icon: Languages, topics: "Từ vựng · Ngữ pháp · Giao tiếp" },
+  { name: "Lịch sử và Địa lí", icon: Landmark, topics: "Lịch sử · Địa lí" },
+  { name: "Giáo dục công dân", icon: Compass, topics: "Công dân · Pháp luật · Đạo đức" },
+  { name: "Tin học", icon: Monitor, topics: "Máy tính · Dữ liệu · Lập trình" },
+  { name: "Công nghệ", icon: Wrench, topics: "Thiết kế · Kỹ thuật · Đời sống" },
+  { name: "Nghệ thuật", icon: Palette, topics: "Âm nhạc · Mĩ thuật" },
+  { name: "Giáo dục thể chất", icon: Dumbbell, topics: "Vận động · Thể thao" },
+  { name: "Hoạt động trải nghiệm", icon: Telescope, topics: "Trải nghiệm · Hướng nghiệp" },
+];
+const lessonNumber = (title: string) => Number(title.match(/^\s*Bài\s+(\d+)/i)?.[1] ?? Number.MAX_SAFE_INTEGER);
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
@@ -142,6 +166,47 @@ export function Lessons() {
     clone.mutate(id, {
       onSuccess: (copy: any) => setEdit({ ...copy, review: copy.review ?? null }),
     });
+  const lessonMatches = (q.data ?? []).filter((l: any) =>
+    (filter === "all" || (filter === "khtn" && khtnSubjectIds.has(l.subjectId))) &&
+    l.title.toLowerCase().includes(search.toLowerCase()) &&
+    (!filtersActive || meta.has(l.id)),
+  );
+  const groups = new Map<string, { chapter: string; grade: number; lessons: any[]; order: number }>();
+  for (const lesson of lessonMatches) {
+    const chapter = lesson.chapter?.trim() || "Chưa phân chương";
+    const key = `${khtnSubjectIds.has(lesson.subjectId) ? "khtn" : lesson.subjectId}:${lesson.grade}:${chapter.toLocaleLowerCase("vi")}`;
+    const group: { chapter: string; grade: number; lessons: any[]; order: number } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER };
+    group.lessons.push(lesson);
+    group.order = Math.min(group.order, lessonNumber(lesson.title));
+    groups.set(key, group);
+  }
+  const chapterGroups = [...groups.values()]
+    .map((group) => ({ ...group, lessons: group.lessons.sort((a, b) => lessonNumber(a.title) - lessonNumber(b.title) || a.title.localeCompare(b.title, "vi")) }))
+    .sort((a, b) => a.grade - b.grade || a.order - b.order || a.chapter.localeCompare(b.chapter, "vi"));
+  const renderLessonCard = (l: any) => (
+    <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
+      <div className="lesson-card-top">
+        <span className={`subject-icon ${khtnSubjectIds.has(l.subjectId) ? "khtn" : l.subjectId}`}><BookOpen /></span>
+        {manage ? <Badge>{l.status === "published" ? "Đã xuất bản" : l.status === "draft" ? "Bản nháp" : "Lưu trữ"}</Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học</span>}
+      </div>
+      {manage && <div className="badge-row">
+        <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
+        {l.synthetic && <Badge tone="outline">Dữ liệu mẫu</Badge>}
+        {meta.get(l.id)?.structureLocked && <Badge tone="outline">Đang được dùng</Badge>}
+        {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">Thử thách tùy chỉnh</Badge>}
+      </div>}
+      <small className="eyebrow">{khtnSubjectIds.has(l.subjectId) ? "Khoa học tự nhiên" : l.subject.name} · LỚP {l.grade}</small>
+      <h3>{l.title}</h3>
+      {l.learningObjective && (manage || !/dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(l.learningObjective)) && <p>{l.learningObjective}</p>}
+      {!manage && <div className="student-lesson-context"><span>{l.chapter || "Chưa phân chương"}</span>{l.topic && <span>{l.topic}</span>}</div>}
+      <div className="card-footer">
+        <button className={manage ? "text-button" : "student-lesson-open"} onClick={() => navigate(`/lessons/${l.id}`)}>{manage ? "Mở bài học" : "Vào bài học"} <ArrowUpRight size={16} /></button>
+        {manage && ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && <button className="text-button" onClick={() => setEdit(l)}>Chỉnh sửa</button>}
+        {manage && <button className="text-button" onClick={() => setPreviewId(l.id)}>Xem trước</button>}
+        {manage && <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>Tạo bản riêng</button>}
+      </div>
+    </article>
+  );
   return (
     <div className="student-lessons-page">
       <PageHeading
@@ -178,9 +243,6 @@ export function Lessons() {
           {[
             ["all", "Tất cả"],
             ["khtn", "Khoa học tự nhiên"],
-            ["physics", "Vật lý"],
-            ["biology", "Sinh học"],
-            ["chemistry", "Hóa học"],
           ].map(([id, name]) => (
             <button
               key={id}
@@ -218,76 +280,33 @@ export function Lessons() {
       {manage && library.data && (
         <CoverageTable rows={library.data.coverage} note={library.data.coverageNote} outcomes={library.data.outcomes} />
       )}
-      <div className="lesson-grid">
+      {manage ? <div className="lesson-grid">
         {q.isLoading && <CardSkeleton count={6} />}
-        {q.data
-          ?.filter(
-            (l: any) =>
-              (filter === "all" || l.subjectId === filter) &&
-              l.title.toLowerCase().includes(search.toLowerCase()) &&
-              (!filtersActive || meta.has(l.id)),
-          )
-          .map((l: any) => (
-            <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
-              <div className="lesson-card-top">
-                <span className={"subject-icon " + l.subjectId}>
-                  <BookOpen />
-                </span>
-                {manage ? <Badge>
-                  {l.status === "published"
-                    ? "Đã xuất bản"
-                    : l.status === "draft"
-                      ? "Bản nháp"
-                      : "Lưu trữ"}
-                </Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học</span>}
-              </div>
-              {manage && (
-                <div className="badge-row">
-                  <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
-                  {l.synthetic && <Badge tone="outline">Dữ liệu mẫu</Badge>}
-                  {meta.get(l.id)?.structureLocked && <Badge tone="outline">Đang được dùng</Badge>}
-                  {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">Thử thách tùy chỉnh</Badge>}
-                </div>
-              )}
-              <small className="eyebrow">
-                {l.subject.name} · LỚP {l.grade}
-              </small>
-              <h3>{l.title}</h3>
-              {l.learningObjective && (manage || !/dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(l.learningObjective)) && <p>{l.learningObjective}</p>}
-              {!manage && <div className="student-lesson-context">
-                <span>{l.chapter}</span>
-                {l.topic && <span>{l.topic}</span>}
-              </div>}
-              <div className="card-footer">
-                <button
-                  className={manage ? "text-button" : "student-lesson-open"}
-                  onClick={() => {
-                    navigate(`/lessons/${l.id}`);
-                  }}
-                >
-                  {manage ? "Mở bài học" : "Vào bài học"} <ArrowUpRight size={16} />
-                </button>
-                {manage &&
-                  ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && (
-                    <button className="text-button" onClick={() => setEdit(l)}>
-                      Chỉnh sửa
-                    </button>
-                  )}
-                {manage && (
-                  <button className="text-button" onClick={() => setPreviewId(l.id)}>
-                    Xem trước
-                  </button>
-                )}
-                {manage && (
-                  <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>
-                    Tạo bản riêng
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-      </div>
+        {lessonMatches.map(renderLessonCard)}
+      </div> : <div className="student-chapter-list">
+        {q.isLoading && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
+        {chapterGroups.map((group) => <section className="lesson-chapter-group" key={`${group.grade}-${group.chapter}`}>
+          <header className="lesson-chapter-heading">
+            <div><span className="eyebrow">KHOA HỌC TỰ NHIÊN · LỚP {group.grade}</span><h2>{group.chapter}</h2></div>
+            <span className="lesson-chapter-count">{group.lessons.length} bài</span>
+          </header>
+          <div className="lesson-grid">{group.lessons.map(renderLessonCard)}</div>
+        </section>)}
+      </div>}
+      {!manage && <section className="student-subject-previews" aria-labelledby="subject-preview-title">
+        <div className="student-subject-previews-heading">
+          <div><span className="eyebrow">LỘ TRÌNH THCS</span><h2 id="subject-preview-title">Các môn học khác</h2></div>
+          <p>Bản xem trước · nội dung sẽ được bổ sung sau</p>
+        </div>
+        <div className="subject-preview-grid">
+          {subjectPreviews.map(({ name, icon: Icon, topics }) => <article className="subject-preview-card" key={name}>
+            <span className="subject-preview-icon"><Icon size={19} aria-hidden="true" /></span>
+            <div><div className="subject-preview-title"><h3>{name}</h3><span>Sắp có</span></div><p>{topics}</p></div>
+          </article>)}
+        </div>
+      </section>}
       {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
+      {!manage && q.data?.length > 0 && lessonMatches.length === 0 && <Empty>Không tìm thấy bài học phù hợp.</Empty>}
       {filtersActive && library.data && library.data.items.length === 0 && (
         <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
       )}
