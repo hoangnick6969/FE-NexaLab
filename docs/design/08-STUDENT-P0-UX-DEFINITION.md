@@ -18,6 +18,8 @@
 
 **Learning loop:** **Học → Quiz → Thực hành/Mô phỏng → Thử thách → Thử lại → Tiến độ**.
 
+The lesson library may show an optional subject-level external ebook/reference link configured by an admin. Label it as an external publisher/source link; opening it does not imply NexaLab hosts or has reproduction rights to the material.
+
 - No leaderboard, streak, badge economy, coins or gems in P0.
 - No Student AI Tutor/Hint in P0. It is P1 and must not appear in Student P0 navigation, CTA copy or dashboard cards.
 - No mascot implementation in P0. The referenced three-mascot idea remains an identity exploration, not a P0 requirement. Use a small line-art science illustration in the Continue card; it is decorative support, not a product character.

@@ -9,6 +9,7 @@ import {
   Users,
   Trash2,
   Save,
+  ExternalLink,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -99,6 +100,16 @@ export function Lessons() {
   const user = useAuth((s) => s.user)!;
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
   const q = useQuery({ queryKey: ["lessons"], queryFn: () => api("/lessons") });
+  const subjects = useQuery({ queryKey: ["subjects"], queryFn: () => api("/subjects") });
+  const safeEbookUrl = (value: unknown) => {
+    if (typeof value !== "string") return null;
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" ? url.href : null;
+    } catch {
+      return null;
+    }
+  };
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<any>(null);
@@ -145,6 +156,20 @@ export function Lessons() {
           ) : null
         }
       />
+      {subjects.data?.some((subject: any) => safeEbookUrl(subject.ebookUrl)) && (
+        <section className="subject-ebook-links" aria-label="Sách tham khảo theo môn">
+          <h2>Sách tham khảo</h2>
+          <p>Liên kết tới nguồn bên ngoài; nội dung và quyền sử dụng do đơn vị phát hành quản lý.</p>
+          <div>
+            {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl)).map((subject: any) => (
+              <a key={subject.id} href={safeEbookUrl(subject.ebookUrl)!} target="_blank" rel="noopener noreferrer">
+                <BookOpen size={18} /> {subject.name} <ExternalLink size={14} aria-hidden="true" />
+                <span className="sr-only"> (mở tab mới)</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="filter-bar">
         <div className="tabs">
           {[

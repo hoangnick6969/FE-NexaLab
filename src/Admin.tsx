@@ -644,18 +644,19 @@ function Taxonomy() {
   const act = useAction(({ path, method = "POST", body }: any) => api(path, method, body));
   const [dialog, setDialog] = useState<any>(null);
   const d = q.data;
-  const submit = (path: string) => (e: React.FormEvent<HTMLFormElement>) => {
+  const submit = (path: string, method = "POST") => (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const f = Object.fromEntries(new FormData(form)) as Record<string, string>;
     const body: any = { ...f };
+    if ("ebookUrl" in f) body.ebookUrl = f.ebookUrl.trim() || null;
     if (f.grade) body.grade = Number(f.grade);
     if ("outcomeCodes" in f)
       body.outcomeCodes = f.outcomeCodes
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-    act.mutate({ path, body }, { onSuccess: () => form.reset() });
+    act.mutate({ path, method, body }, { onSuccess: () => form.reset() });
   };
   const domains = Object.entries(d?.domains ?? {}) as Array<[string, string]>;
   return (
@@ -677,12 +678,18 @@ function Taxonomy() {
                     <span className="tiny muted">
                       ({s.lessons} bài, {s.labs} phòng)
                     </span>
+                    <form className="admin-inline" onSubmit={submit(`/admin/subjects/${encodeURIComponent(s.id)}`, "PUT")} aria-label={`Cập nhật sách tham khảo môn ${s.name}`}>
+                      <Field label="URL ebook HTTPS" name="ebookUrl" type="url" placeholder="https://…" defaultValue={s.ebookUrl ?? ""} />
+                      <input type="hidden" name="name" value={s.name} />
+                      <button className="text-button">Lưu liên kết</button>
+                    </form>
                   </li>
                 ))}
               </ul>
               <form className="admin-inline" onSubmit={submit("/admin/subjects")} aria-label="Thêm môn học">
                 <Field label="Mã môn" name="id" required />
                 <Field label="Tên môn" name="name" required />
+                <Field label="URL ebook HTTPS (tùy chọn)" name="ebookUrl" type="url" placeholder="https://…" />
                 <button className="secondary">Thêm</button>
               </form>
             </div>
