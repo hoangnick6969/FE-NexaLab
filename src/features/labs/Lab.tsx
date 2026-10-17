@@ -10,8 +10,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, useAuth } from "../api";
-import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../ui";
+import { api, useAuth } from "../../lib/api";
+import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
 import { Circuit, defaultCircuit } from "./circuit";
 import { Chemistry } from "./chemistry";
 const Eye = lazy(() => import("./eye"));

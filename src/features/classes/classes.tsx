@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, Copy, KeyRound, Archive } from "lucide-react";
-import { api, idempotencyKey, isApiError, mutate, useAuth } from "./api";
-import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal, verdictLabel } from "./ui";
-import { PageHeading } from "./App";
+import { api, idempotencyKey, isApiError, mutate, useAuth } from "../../lib/api";
+import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal, verdictLabel } from "../../components/ui";
+import { PageHeading } from "../../components/PageHeading";
 
 type ClassSummary = {
   id: string;

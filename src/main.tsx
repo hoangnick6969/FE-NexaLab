@@ -1,14 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import App from "./App";
+import { QueryClientProvider } from "@tanstack/react-query";
+import App from "./app/App";
+import { queryClient } from "./app/query-client";
 import "./styles.css";
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 15000, refetchOnWindowFocus: false },
-  },
-});
 class Boundary extends React.Component<
   { children: React.ReactNode },
   { error: boolean }
