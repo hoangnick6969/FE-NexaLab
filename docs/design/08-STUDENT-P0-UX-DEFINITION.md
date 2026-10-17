@@ -16,7 +16,7 @@
 
 **Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher, Parent, and Admin remain in the shared architecture but their complete UX is deferred to later increments.
 
-**Learning loop:** **Bài học (đọc → video → thẻ ghi nhớ) → Bài tập (kiểm tra nhỏ → thực hành/lab → thử thách) → Thử lại → Tiến độ**.
+**Open Curriculum loop:** **Chọn môn → Chọn khối → Mục lục chương/chủ đề → Bài học (nội dung → video → bài tập cơ bản) → Lab nền tảng nếu có → Tiến độ**. Class Space is a separate, membership-scoped destination for teacher-created resources, unscored study-card/study-quiz practice, explicitly assigned scored tests, and class-linked Labs.
 
 The lesson library may show an optional subject-level external ebook/reference link configured by an admin. Label it as an external publisher/source link; opening it does not imply NexaLab hosts or has reproduction rights to the material.
 
@@ -26,30 +26,27 @@ The lesson library may show an optional subject-level external ebook/reference l
 - Every percentage, score or count links to its underlying lesson, quiz or practical attempts. A number without a drill-down is not shown as an achievement metric.
 - No real-world safety implication: simulations are educational models, not real experiments.
 
-## 2b. Gated learning flow (critical ordering constraint)
+## 2b. Open Curriculum and Class Space access
 
-> This section corrects a gap in the P0 layout: **simulation and challenge are not the entry point — they are unlocked after the student completes the foundational reading/video/quiz sequence.**
-
-The canonical student experience separates learning materials from assigned practice. The server-owned order remains:
+Open Curriculum is not gated by assignment, enrollment, quiz, or completion. Its student flow is:
 
 ```
-[BÀI HỌC: Nội dung đọc] → [Video] → [Thẻ ghi nhớ]
-         ↓
-[BÀI TẬP: Bài kiểm tra nhỏ]
-         ↓ (only after quiz passed at 50% in Increment A)
-[Thực hành / Lab / Mô phỏng 3D]
-         ↓ (only after practical completed)
-[Thử thách]
+[Chọn môn] → [Chọn khối có nội dung, sắp xếp tăng dần]
+          → [Mục lục chương/chủ đề theo giáo trình]
+          → [Danh sách bài theo thứ tự]
+          → [Nội dung bài] → [Video] → [Bài tập cơ bản]
+          → [Lab nền tảng nếu môn/chủ đề có Lab đã phát hành]
 ```
 
-**Gating rules for UI:**
-- A locked step shows a greyed-out card with a lock icon (Lucide `Lock`) and a tooltip explaining the prerequisite. It is **never hidden**, only disabled — so the student can see what is coming.
-- The CTA on the Dashboard Continue card always points to the **next unlocked step**, not the simulation, unless simulation is the next step.
-- The Bài học page owns reading, video, and study cards. The separate Bài tập area owns the quiz and assigned practical work; it shows a clear link back when required Bài học steps remain incomplete.
-- Quiz remains the first Bài tập step and the server-calculated 50% pass gate for lab. Renaming the student-facing areas does not change Assignment, LessonStep, or progress ownership in the API/database.
-- The Lab screen must not be reachable directly from the navigation rail unless the student has previously accessed it through a lesson that unlocked it.
+**Access rules:**
+- Released shared lessons, video, basic exercises, references, and foundational Labs open without assignment or course progress prerequisites. A Lab is optional and never gates other shared materials.
+- Quizlet/study-card decks and quizzes do not appear in the Open Curriculum lesson flow. Only a teacher creates them in Class Space; access requires active, approved class membership.
+- Class Space study quizzes are unscored practice. Scored tests, due dates, and target-scoped submissions exist only when a teacher explicitly assigns a test. Quiz/test completion is never a default prerequisite for either a foundational or custom Lab.
+- Foundational Labs appear in the global Lab catalog using official subject/grade/chapter/topic links. Teacher-created custom Labs appear only in their Class Space and link to the relevant class lesson and its subject/grade/chapter/topic context. Assignment targets govern scored submissions when assigned.
+- Class resource sharing is separate from assigning work. A student without a class still sees Open Curriculum; a student outside a class never sees that class's private resources.
+- Do not show an unavailable placeholder subject or grade as if it contains released lessons. Show corpus coverage separately from student progress.
 
-**Implication for Dashboard:** the "large Continue card" CTA text must reflect current step — e.g., *"Xem video 6 phút"*, *"Làm bài kiểm tra nhỏ"*, *"Bắt đầu thực hành"* — not a generic label like "Tiếp tục học".
+The Dashboard Continue card points to the next unfinished open-course activity when one exists, otherwise to the subject/lesson selector. It never sends a student to a quiz or locked Lab as a required next step.
 
 ## 3. Concept and tone
 
@@ -94,16 +91,16 @@ Cards use a 24px radius; nested cards use 16px. Buttons and chips are pills. Use
 
 | Area | Student content |
 | --- | --- |
-| Left navigation rail | Trang chủ, Bài học, Lab, Bài tập, Tiến độ, Tài khoản |
+| Left navigation rail | Trang chủ, Bài học, Lớp học, Lab, Bài tập, Tiến độ, Tài khoản |
 | Stat row | Tiến độ bài được giao, bài còn lại, lượt thử lab; neutral unless each metric belongs to a real subject |
-| Main column | Large Continue card, current lesson pathway (content, video, study cards, quiz), then related practical work and weekly activity |
+| Main column | Large Continue card, current open lesson (content, video, basic exercise), optional foundational Lab, then weekly activity |
 | Right column | Assignments and due dates, recent attempts |
 
 ### Tablet and mobile
 
 On tablet, move the right column below the main content. On mobile, show one vertical column in this order: stats, Continue card, assignments, recent attempts, remaining content.
 
-The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lab, Bài tập, Tiến độ**. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
+The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lớp học, Bài tập, Tiến độ**. The global foundational Lab catalog is reachable from Bài học subject/chapter context and keeps search/filter access; a Lab is never hidden behind a quiz gate. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
 
 ## 6. Screen definitions
 
@@ -118,11 +115,11 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 - Decorative line-art science illustration (right side, desktop only). Not a mascot, not interactive.
 - **Edge case — no active lesson:** Show a neutral card with CTA *"Chọn bài học để bắt đầu"* linking to Lesson list. No illustration placeholder needed.
 
-**Lesson pathway strip (directly below Continue card):**
+**Open-course progress (directly below Continue card):**
 - Horizontal scroll on mobile; inline row on desktop.
-- Each step = icon + label + completion badge (check or lock). Locked steps use `text-muted` and Lucide `Lock` icon at 1.75px stroke.
-- Steps: Nội dung · Video · Thẻ ghi nhớ · Kiểm tra nhỏ · (Lab if unlocked) · (Thử thách if unlocked).
-- Tapping a completed step navigates to it; tapping a locked step shows an inline tooltip explaining the prerequisite — it does not navigate.
+- Each step = icon + label + completion badge. No lock state is used for shared curriculum progress.
+- Steps: Nội dung bài · Video · Bài tập cơ bản · (Lab nền tảng nếu có).
+- Completion states are informational; no step is locked by quiz or assignment. Tapping a step opens that released resource.
 
 **Stat row (3 cards):**
 - Each card: label, numeric value (use `NumberFlow` for animated digit transitions), and a chevron-right affordance that links to the evidence drill-down.
@@ -142,16 +139,24 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ---
 
-### 6.2 Lesson list
+### 6.2 Open Curriculum catalog (`/lessons`)
 
-**Filters:** Subject chip row (horizontal scroll) + Chapter dropdown + Topic dropdown. Chips use `action` token when selected, neutral when not. Selecting a chip does not navigate; it filters inline.
+Use a guided curriculum hierarchy instead of showing all chapter groups together:
+
+1. **Subject selection:** show subjects that have released curriculum content; do not render “coming soon” placeholders as available catalog entries.
+2. **Grade selection:** after choosing a subject, show only grades with released content, in ascending order. Show availability/coverage separately where a grade has no released material.
+3. **Chapter/topic table of contents:** choosing a grade opens an ordered, scannable table of contents using stable curriculum taxonomy IDs. Each chapter/topic shows its lesson count and progress where available.
+4. **Lesson list:** selecting a chapter/topic shows its lessons in official curriculum order, with breadcrumbs back to subject, grade, and table of contents.
+5. **Lesson detail:** opening a lesson keeps the selected subject/grade/chapter context for return navigation and surfaces any matching foundational Lab.
+
+Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
 
 **Lesson card:**
 - Title (max 2 lines) · Subject chip · Type badge (Đọc / Video / Lab) · Progress ring or bar · One next-action button.
 - Progress ring: `state-success` when 100%, `state-progress` when partial, empty ring when 0%. Never show a numeric score inside the ring — that is the drill-down's job.
-- **State: Locked lesson** — show lock icon, muted text. Card is still rendered but not clickable; tooltip on hover explains prerequisite.
+- Released shared lessons are never locked by quiz, assignment, enrollment, or prior completion.
 - **State: No results from filter** — Empty state with Lucide `SearchX` icon, copy *"Không tìm thấy bài học phù hợp."* and a reset-filters button.
-- **State: No lessons assigned at all** — Friendly empty state pointing to the teacher or back to Dashboard.
+- **State: No released lessons in this subject/grade** — Clear availability empty state; do not imply the student needs an assignment.
 
 **Pagination / virtualization:** If lesson count exceeds 30, use `Virtuoso` for the list to avoid layout thrash.
 
@@ -161,19 +166,14 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 **Bài học page structure:**
 1. Compact lesson title and breadcrumb, followed by one horizontal tab row.
-2. Default tab is **Bài đọc** with the learning objective and reading content. Students choose when to open **Video bài giảng**, **Thẻ ôn tập**, or **Tài liệu**; video is never placed ahead of the reading by default.
-3. Keep one clear transition to Bài tập after the required lesson steps are complete. Ebook access belongs in Tài liệu, not as a competing CTA in the lesson header.
+2. Default tab is **Nội dung bài** with the learning objective and reading content. Other available tabs are **Video bài giảng** and **Tài liệu**; study cards are not a public lesson tab.
+3. Show lesson-level basic exercises in the open learning context when present. Surface a matching foundational Lab as optional. Ebook access belongs in Tài liệu, not as a competing CTA in the lesson header.
 
 The lesson title is the page H1. Main textbook sections use H2 and their subsections use H3, with readable paragraph and list spacing. Preserve Unicode science notation (for example subscripts, superscripts, Greek letters, degree signs, and arrows); do not guess at OCR corrections or silently rewrite equations.
 
-The page uses distinct tabs for reading, video, study cards, and materials when available. Reading/video/card completion is persisted by the server. Students can revisit completed content.
+The page uses distinct tabs for lesson content, video, and materials when available. Lesson/video/basic-exercise progress is persisted by the server. Students can revisit completed content. A study-card deck is available only from its Class Space.
 
-**Bài tập page content order (fixed, top-to-bottom, per section 2b):**
-1. Quiz (visible while locked; available after required Bài học steps)
-2. Lab / Practical (locked until quiz passed — see 2b)
-3. Challenge (locked until lab completed — see 2b)
-
-The Bài tập list shows due dates and assigned lessons. Opening an item shows its quiz/practical steps and their server-owned lock states. If the Bài học steps are incomplete, the page links directly back to that lesson and explains what remains.
+The Assignment area lists explicitly assigned/due-dated/scored work only. Class Space lists teacher-posted resources for active, approved members; decks and study quizzes are unscored practice, while tests appear in Assignments only when explicitly assigned. Class Labs link to their class lesson and subject/grade/chapter/topic; they are distinct from foundational Labs in the public catalog.
 
 **Video player:**
 - Show the player only after the student opens the Video bài giảng tab. Do not autoplay.
@@ -182,21 +182,17 @@ The Bài tập list shows due dates and assigned lessons. Opening an item shows 
 - Do not autoplay. Respect `prefers-reduced-motion` by pausing auto-advance.
 - Official completion occurs at 90% watched or the media `ended` event. Seeking cannot reduce the recorded high-water mark. If video is unavailable, show the approved transcript/equivalent content and an explicit completion action; do not silently skip the step.
 
-**Study cards:**
-- One card at a time. Previous/Next buttons with keyboard support (arrow keys). Card count: "3 / 8".
-- No streak counter, no coin reward, no progress bar that implies a score.
-- **Edge case — only 1 card:** Hide Previous/Next, show a completion check instead.
-- Flip animation on `transform: rotateY` only; respect `prefers-reduced-motion` by skipping flip.
+**Class Space study-card decks:**
+- Decks are created by a teacher and appear only inside the relevant Class Space for active, approved members.
+- One card at a time. Previous/Next buttons support keyboard arrows; show card count (for example, “3 / 8”).
+- No streak counter, coin reward, or score-like progress bar. Respect `prefers-reduced-motion` by skipping flip animation.
 
-**Quiz:**
-- Increment A uses multiple choice only, rendered question-by-question. Short-answer/manual grading is deferred.
-- Show question number and total: *"Câu 3 / 5"*.
-- Submit button disabled until an answer is selected. No partial saves shown to the student.
-- **Outcome state:** Score ≥50% → the server unlocks Lab (animate lock → unlock, 220ms opacity/transform after confirmation). Not passed → show coach copy and a *"Thử lại"* button. Never show a score percentage as an achievement or unlock from client state alone.
+**Class Space study and tests:**
+- Only teachers create decks and study quizzes. Students may review cards or answer study quizzes for practice; these do not receive a score or grade.
+- A scored test is a separate teacher-created activity and appears in Assignments only when explicitly assigned. Follow server-owned scoring, answer-key privacy, retry, and target rules. Test state never unlocks a shared resource or Lab.
+- Teachers may author content directly, enter or import source data, or request AI-generated advanced extensions grounded in the linked lesson. AI content stays a draft until the teacher reviews and publishes it.
 
-**Locked-step card (Lab or Challenge):**
-- Greyed surface, lock icon, label *"Hoàn thành [previous step] để mở khoá."*
-- When unlocked: animate card border from muted to `primary` (160ms), then present CTA.
+**Lab presentation:** foundational Labs are open when released; teacher-created Labs appear within their Class Space context. Do not render either as locked behind a quiz by default.
 
 ---
 
@@ -250,7 +246,8 @@ The Bài tập list shows due dates and assigned lessons. Opening an item shows 
 **Stat summary row:** Same 3-card pattern as Dashboard stat row. Selecting a card scrolls to the relevant section below, it does not navigate away.
 
 **Completion table:**
-- Columns: Bài học · Nội dung · Quiz · Lab · Thử thách.
+- Show foundational progress by Môn/khối with evidence columns: Nội dung bài · Video · Bài tập cơ bản · Lab nền tảng (nếu applicable). Show assigned-work status separately, including teacher-assigned exercise/test/Lab and whether it is achieved. The subject summary may show “Đạt mức cơ bản” when foundational requirements are complete, but stays “Chưa đạt” while any assignment for the student linked to that subject is actionable and unsubmitted, in progress, or not yet accepted by its evaluator. Preserve closed/archived assignments in history; remove them from the unmet rollup only when no longer actionable. Do not hide completed foundational activity or merge assignment evidence into its denominator.
+- Class decks/study quizzes are unscored practice in Class Space. Test and custom-Lab evidence appears in assignment/class-assessment views when explicitly assigned.
 - Each cell: check (complete), progress ring (partial), dash (not started).
 - Sortable by subject or chapter. Use `@tanstack/react-table` if the table has more than 20 rows.
 - **Edge case — no lessons started:** Show a full-width empty state with copy *"Em chưa bắt đầu bài học nào."* and a CTA to Dashboard.
@@ -292,7 +289,7 @@ Use `transform` and `opacity` only for motion. Animate at most one or two meanin
 
 ## 9. P0 validation checklist
 
-- [ ] The Dashboard shows content, video, study cards and quiz before related practical work; lab is a differentiator within a complete learning platform.
+- [ ] The Dashboard shows open lesson content, video, and basic exercises, with optional foundational Labs; Class Space decks and quizzes are separate and never appear as public pathway steps.
 - [ ] One primary learning action per screen.
 - [ ] All metrics link to evidence.
 - [ ] The layout works at 390px, 768px, 1024px and 1440px without horizontal overflow.
@@ -305,7 +302,7 @@ Use `transform` and `opacity` only for motion. Animate at most one or two meanin
 
 Review the static dashboard mockup at [student-dashboard-p0-mockup.html](student-dashboard-p0-mockup.html). It demonstrates the desktop/mobile hierarchy and visual direction; it is not production UI or an implementation specification for data fetching.
 
-> **Note on the current mockup:** The layout shown in the mockup is an early reference. It does not yet reflect the gated learning flow defined in §2b — notably, the Lab/Simulation entry is shown at the same visual level as reading content, which is incorrect. Any new implementation must follow the ordered sequence in §2b and §6.3.
+> **Note on the current mockup:** The layout shown in the mockup is an early reference and may not reflect the current open-curriculum flow. Any implementation must follow §2b and §6.3: released shared learning content is not gated by assignment, progress, quiz, or Lab completion; foundational Labs are optional where available.
 
 ---
 
