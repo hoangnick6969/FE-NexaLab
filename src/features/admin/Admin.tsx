@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Archive, Ban, CheckCircle2, CircleSlash, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
-import { api, isApiError } from "./api";
-import { Badge, ErrorBox, Field, Modal, useAction } from "./ui";
-import { PageHeading } from "./App";
+import { api, isApiError } from "../../lib/api";
+import { Badge, ErrorBox, Field, Modal, useAction } from "../../components/ui";
+import { PageHeading } from "../../components/PageHeading";
 
 /**
  * Epic C2 admin console. Every screen reads the real `/admin/*` API; every

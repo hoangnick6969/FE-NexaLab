@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "./api";
-import { Badge, ErrorBox, Modal, useAction, InlineLoader } from "./ui";
+import { api } from "../../lib/api";
+import { Badge, ErrorBox, Modal, useAction, InlineLoader } from "../../components/ui";
 
 /** B1-T4 library contract (GET /teacher/content). */
 export type LibraryFilters = { grade: string; domain: string; outcome: string; scope: string };

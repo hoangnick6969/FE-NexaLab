@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, type StudentLearningStep, type StudentPathway } from "./api";
+import { api, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 
 export function StudyCardsStep({
   lessonId,

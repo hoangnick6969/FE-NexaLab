@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { api, inlineMaterial, type StudentLearningStep, type StudentPathway } from "./api";
+import { api, inlineMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 
 type VideoObservation = {
   positionSeconds: number;

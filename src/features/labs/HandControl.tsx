@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff } from "lucide-react";
-import { ErrorBox } from "../ui";
+import { ErrorBox } from "../../components/ui";
 export function HandControl({
   onGesture,
 }: {
