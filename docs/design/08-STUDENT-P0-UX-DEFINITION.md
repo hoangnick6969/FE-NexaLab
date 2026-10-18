@@ -173,7 +173,7 @@ The lesson title is the page H1. Main textbook sections use H2 and their subsect
 
 The page uses distinct tabs for lesson content, video, and materials when available. Lesson/video/basic-exercise progress is persisted by the server. Students can revisit completed content. A study-card deck is available only from its Class Space.
 
-The Assignment area lists explicitly assigned/due-dated/scored work only. Class Space lists teacher-posted resources for active, approved members; decks and study quizzes are unscored practice, while tests appear in Assignments only when explicitly assigned. Class Labs link to their class lesson and subject/grade/chapter/topic; they are distinct from foundational Labs in the public catalog.
+The Assignment area lists explicitly assigned/due-dated/scored work only. Class Space lists teacher-posted resources for active, approved members; decks and study quizzes are unscored practice, while tests appear in Assignments only when explicitly assigned. Class Labs link to their class lesson and subject/grade/chapter/topic; only active, approved members of that class may discover and run them. Outsiders cannot open or run them by direct link. They are distinct from foundational Labs in the public catalog.
 
 **Video player:**
 - Show the player only after the student opens the Video bài giảng tab. Do not autoplay.
@@ -188,9 +188,9 @@ The Assignment area lists explicitly assigned/due-dated/scored work only. Class 
 - No streak counter, coin reward, or score-like progress bar. Respect `prefers-reduced-motion` by skipping flip animation.
 
 **Class Space study and tests:**
-- Only teachers create decks and study quizzes. Students may review cards or answer study quizzes for practice; these do not receive a score or grade.
-- A scored test is a separate teacher-created activity and appears in Assignments only when explicitly assigned. Follow server-owned scoring, answer-key privacy, retry, and target rules. Test state never unlocks a shared resource or Lab.
-- Teachers may author content directly, enter or import source data, or request AI-generated advanced extensions grounded in the linked lesson. AI content stays a draft until the teacher reviews and publishes it.
+- Only teachers create decks and study quizzes directly or import them from a supported file. Students may review cards or answer study quizzes for practice; these do not receive a score or grade. AI generation is not in the current flow.
+- A scored test is a separate teacher-created activity and appears in Assignments only when explicitly assigned. Show its due date and server-owned score/attempt history. A late submission requires a reason and offers “Gửi lý do nộp trễ”; after sending, show “Chờ giáo viên xử lý”. Rejection shows the zero score. If the teacher resets the assignment for the class, show the new round/deadline to its original eligible targets. Test state never unlocks a shared resource or foundational Lab.
+- Teachers create Class Space study content directly or import a supported file; imported content remains a draft until published. AI generation is deferred to a later sprint.
 
 **Lab presentation:** foundational Labs are open when released; teacher-created Labs appear within their Class Space context. Do not render either as locked behind a quiz by default.
 
@@ -247,7 +247,7 @@ The Assignment area lists explicitly assigned/due-dated/scored work only. Class 
 
 **Completion table:**
 - Show foundational progress by Môn/khối with evidence columns: Nội dung bài · Video · Bài tập cơ bản · Lab nền tảng (nếu applicable). Show assigned-work status separately, including teacher-assigned exercise/test/Lab and whether it is achieved. The subject summary may show “Đạt mức cơ bản” when foundational requirements are complete, but stays “Chưa đạt” while any assignment for the student linked to that subject is actionable and unsubmitted, in progress, or not yet accepted by its evaluator. Preserve closed/archived assignments in history; remove them from the unmet rollup only when no longer actionable. Do not hide completed foundational activity or merge assignment evidence into its denominator.
-- Class decks/study quizzes are unscored practice in Class Space. Test and custom-Lab evidence appears in assignment/class-assessment views when explicitly assigned.
+- Class decks/study quizzes are unscored practice in Class Space. Test and custom-Lab evidence appears in assignment/class-assessment views when explicitly assigned. A pending late-test decision remains incomplete; a rejected late test shows zero.
 - Each cell: check (complete), progress ring (partial), dash (not started).
 - Sortable by subject or chapter. Use `@tanstack/react-table` if the table has more than 20 rows.
 - **Edge case — no lessons started:** Show a full-width empty state with copy *"Em chưa bắt đầu bài học nào."* and a CTA to Dashboard.
