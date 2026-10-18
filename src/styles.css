@@ -835,6 +835,26 @@ small {
   margin-left: auto;
 }
 
+.class-resource-create { border-top: 1px solid var(--line); padding-top: 16px; margin: 8px 0 20px; }
+.class-resource-create form { display: grid; gap: 12px; }
+.class-resource-create textarea { width: 100%; resize: vertical; font: 0.85rem/1.5 ui-monospace, Consolas, monospace; }
+.class-resource-import { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+.class-resource-import summary { cursor: pointer; font-weight: 600; }
+.class-resource-edit { flex-basis: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.class-resource-edit summary { cursor: pointer; font-weight: 600; }
+.class-resource-edit .field { display: block; margin: 10px 0; }
+.class-resource-edit textarea { width: 100%; font: 0.85rem/1.5 ui-monospace, Consolas, monospace; }
+.class-resource-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); padding: 15px 0; }
+.class-resource-row>div:first-child { flex: 1 1 220px; }
+.class-resource-row small { display: block; margin-top: 4px; color: var(--muted); }
+.class-resource-list { margin-top: 18px; }
+.resource-practice-items { flex: 1 1 100%; display: grid; gap: 10px; }
+.resource-practice-items fieldset { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.resource-practice-items legend { font-weight: 600; }
+.resource-practice-items .study-card { min-height: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.student-resource { align-items: flex-start; }
+.student-resource .notice { flex-basis: 100%; }
+
 .assignment-icon {
   display: grid;
   place-items: center;
