@@ -100,7 +100,7 @@ Cards use a 24px radius; nested cards use 16px. Buttons and chips are pills. Use
 
 On tablet, move the right column below the main content. On mobile, show one vertical column in this order: stats, Continue card, assignments, recent attempts, remaining content.
 
-The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lớp học, Bài tập, Tiến độ**. The global foundational Lab catalog is reachable from Bài học subject/chapter context and keeps search/filter access; a Lab is never hidden behind a quiz gate. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
+The bottom navigation has at most five destinations: **Trang chủ, Bài học, Class Space (Lớp học), Bài tập, Tiến độ**. The global foundational Lab catalog is reachable from Bài học subject/chapter context and keeps search/filter access; a Lab is never hidden behind a quiz gate. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
 
 ## 6. Screen definitions
 
@@ -141,15 +141,19 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ### 6.2 Open Curriculum catalog (`/lessons`)
 
+The student sidebar keeps **Class Space** as a separate destination at the existing `/classes` route. The `/lessons` hub also makes every registered subject and configured external book link discoverable, including subjects with no released lessons; state clearly when no lesson content is available instead of implying a placeholder curriculum exists.
+
+Show applicable assigned lesson content in a prominent **Bài học được giao** section with an **Được giao** filter. Fetch it from the existing student assignment APIs and open it through the authorized `/assignments/:id` route so assignment-specific progress and evidence remain intact. A lesson present in both released shared content and assignments appears once, in the assigned section. The **Bài học chung** filter contains only unassigned I1-released lessons. Scored tests and their due/status/submission controls stay in Assignments.
+
 Use a guided curriculum hierarchy instead of showing all chapter groups together:
 
-1. **Subject selection:** show subjects that have released curriculum content; do not render “coming soon” placeholders as available catalog entries.
-2. **Grade selection:** after choosing a subject, show only grades with released content, in ascending order. Show availability/coverage separately where a grade has no released material.
+1. **Subject selection:** show every registered subject and its configured external book link; lesson availability is shown separately and never implies placeholder curriculum exists.
+2. **Grade selection:** after choosing a subject, show grades present in released shared lessons or eligible assigned lessons, in ascending order. Show availability/coverage separately where a grade has no lesson material.
 3. **Chapter/topic table of contents:** choosing a grade opens an ordered, scannable table of contents using stable curriculum taxonomy IDs. Each chapter/topic shows its lesson count and progress where available.
 4. **Lesson list:** selecting a chapter/topic shows its lessons in official curriculum order, with breadcrumbs back to subject, grade, and table of contents.
 5. **Lesson detail:** opening a lesson keeps the selected subject/grade/chapter context for return navigation and surfaces any matching foundational Lab.
 
-Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
+Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; shared chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
 
 **Lesson card:**
 - Title (max 2 lines) · Subject chip · Type badge (Đọc / Video / Lab) · Progress ring or bar · One next-action button.
@@ -173,7 +177,7 @@ The lesson title is the page H1. Main textbook sections use H2 and their subsect
 
 The page uses distinct tabs for lesson content, video, and materials when available. Lesson/video/basic-exercise progress is persisted by the server. Students can revisit completed content. A study-card deck is available only from its Class Space.
 
-The Assignment area lists explicitly assigned/due-dated/scored work only. Class Space lists teacher-posted resources for active, approved members; decks and study quizzes are unscored practice, while tests appear in Assignments only when explicitly assigned. Class Labs link to their class lesson and subject/grade/chapter/topic; they are distinct from foundational Labs in the public catalog.
+The Assignment area lists explicitly assigned/due-dated/scored work only. Class Space lists teacher-posted resources for active, approved members; decks and study quizzes are unscored practice, while tests appear in Assignments only when explicitly assigned. Class Labs link to their class lesson and subject/grade/chapter/topic; only active, approved members of that class may discover and run them. Outsiders cannot open or run them by direct link. They are distinct from foundational Labs in the public catalog.
 
 **Video player:**
 - Show the player only after the student opens the Video bài giảng tab. Do not autoplay.
@@ -188,9 +192,10 @@ The Assignment area lists explicitly assigned/due-dated/scored work only. Class 
 - No streak counter, coin reward, or score-like progress bar. Respect `prefers-reduced-motion` by skipping flip animation.
 
 **Class Space study and tests:**
-- Only teachers create decks and study quizzes. Students may review cards or answer study quizzes for practice; these do not receive a score or grade.
-- A scored test is a separate teacher-created activity and appears in Assignments only when explicitly assigned. Follow server-owned scoring, answer-key privacy, retry, and target rules. Test state never unlocks a shared resource or Lab.
-- Teachers may author content directly, enter or import source data, or request AI-generated advanced extensions grounded in the linked lesson. AI content stays a draft until the teacher reviews and publishes it.
+- Only teachers create decks and study quizzes directly or import them from a supported file. Students may review cards or answer study quizzes for practice; these do not receive a score or grade. AI generation is not in the current flow.
+- A scored test is a separate teacher-created activity and appears in Assignments only when explicitly assigned. Show its due date and server-owned score/attempt history. Provide a due-soon reminder and, after expiry without submission, show overdue/unsubmitted without assigning zero automatically. A late submission requires a reason and offers “Gửi lý do nộp trễ”; after sending, show “Chờ giáo viên xử lý”. Rejection shows the zero score. If the teacher approves a resubmission, show the revised deadline on the same assignment for all of its assigned recipients in that Class Space; every recipient may submit again, including students who already submitted. Keep earlier attempts in history and show the latest submitted file/attempt as current; a late submission awaiting review remains pending. Test state never unlocks a shared resource or foundational Lab.
+- Teachers create decks, unscored study quizzes, and tests directly or import a supported structured file; imported content remains a draft until published. Generic import does not create 3D Labs. Both the curriculum Lab builder and teacher-custom Lab builder are separate future work; the current sprint preserves integration and access constraints only. AI generation is deferred to a later sprint.
+- Assignment status is server-derived and consistent across roles: the Student sees due-soon/overdue/late-review states, the Teacher sees upcoming/overdue assignments and pending late reasons for the owned class, and a linked/approved Parent sees an overdue notice for the child. Parent surfaces are read-only and reveal no answer keys or teacher-only actions. This scope covers only these assignment-related surfaces, not the complete Teacher/Parent UX.
 
 **Lab presentation:** foundational Labs are open when released; teacher-created Labs appear within their Class Space context. Do not render either as locked behind a quiz by default.
 
@@ -247,7 +252,7 @@ The Assignment area lists explicitly assigned/due-dated/scored work only. Class 
 
 **Completion table:**
 - Show foundational progress by Môn/khối with evidence columns: Nội dung bài · Video · Bài tập cơ bản · Lab nền tảng (nếu applicable). Show assigned-work status separately, including teacher-assigned exercise/test/Lab and whether it is achieved. The subject summary may show “Đạt mức cơ bản” when foundational requirements are complete, but stays “Chưa đạt” while any assignment for the student linked to that subject is actionable and unsubmitted, in progress, or not yet accepted by its evaluator. Preserve closed/archived assignments in history; remove them from the unmet rollup only when no longer actionable. Do not hide completed foundational activity or merge assignment evidence into its denominator.
-- Class decks/study quizzes are unscored practice in Class Space. Test and custom-Lab evidence appears in assignment/class-assessment views when explicitly assigned.
+- Class decks/study quizzes are unscored practice in Class Space. Test and custom-Lab evidence appears in assignment/class-assessment views when explicitly assigned. A pending late-test decision remains incomplete; a rejected late test shows zero.
 - Each cell: check (complete), progress ring (partial), dash (not started).
 - Sortable by subject or chapter. Use `@tanstack/react-table` if the table has more than 20 rows.
 - **Edge case — no lessons started:** Show a full-width empty state with copy *"Em chưa bắt đầu bài học nào."* and a CTA to Dashboard.

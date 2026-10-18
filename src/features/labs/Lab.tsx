@@ -90,6 +90,8 @@ export default function Lab() {
   };
   if (!["circuit", "eye", "chemistry"].includes(id))
     return <p>Không tìm thấy phòng lab.</p>;
+  if (user.role === "STUDENT" && labs.isSuccess && !lab)
+    return <section className="panel"><h1>Phòng thực hành chưa được phát hành</h1><p>Nội dung này chưa có trong chương trình nền tảng đã duyệt.</p><Link className="primary" to="/labs">Quay lại danh sách</Link></section>;
   return (
     <>
       <Link className="back-link" to="/labs">

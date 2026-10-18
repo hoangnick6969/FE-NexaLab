@@ -46,6 +46,7 @@ type SheetView =
 
 export function StudentProgress() {
   const progress = useQuery<MyProgressResponse>({ queryKey: ["me-progress"], queryFn: () => api("/me/progress") });
+  const foundational = useQuery<any>({ queryKey: ["me-foundational-progress"], queryFn: () => api("/me/foundational-progress") });
   const activity = useInfiniteQuery<ActivityPage>({
     queryKey: ["me-activity"],
     queryFn: ({ pageParam }) => api("/me/activity?limit=20" + (pageParam ? "&cursor=" + encodeURIComponent(String(pageParam)) : "")),
@@ -116,6 +117,18 @@ export function StudentProgress() {
                 <AssignmentProgress key={assignment.assignmentId} assignment={assignment} onOpen={open} />
               ))
             )}
+          </section>
+          <section className="panel progress-section" aria-labelledby="foundational-progress-title">
+            <h2 id="foundational-progress-title">Chương trình nền tảng</h2>
+            <p className="muted">Tiến độ theo phiên bản chương trình chính thức, độc lập với bài tập được giao.</p>
+            <ErrorBox error={foundational.error} />
+            {foundational.isPending ? <Empty>Đang tải tiến độ chương trình…</Empty> : foundational.data?.courses?.length ? foundational.data.courses.map((course: any) => (
+              <article className="progress-course" key={course.id}>
+                <div className="lesson-chapter-heading"><div><span className="eyebrow">LỚP {course.grade} · PHIÊN BẢN {course.version}</span><h3>{course.subject.name}</h3></div><Badge>{course.summary.completedEvidenceItems}/{course.summary.totalEvidenceItems} bước</Badge></div>
+                <div className="progress-track"><i style={{ width: `${course.summary.percent ?? 0}%` }} /></div>
+                <ol>{course.lessons.map((lesson: any) => <li key={lesson.id}><Link to={`/lessons/${lesson.id}`}>{lesson.title}</Link><span>{lesson.evidence.map((item: any) => `${item.kind}: ${item.state === "COMPLETED" ? "hoàn thành" : item.state === "IN_PROGRESS" ? "đang học" : "chưa bắt đầu"}${item.kind === "basicExercise" && item.score !== null ? ` (${item.score}% / ${item.passThreshold}%)` : ""}`).join(" · ")}</span>{lesson.evidence.filter((item: any) => item.updatedAt).map((item: any) => <small key={item.stepId}>Nguồn {item.sourceId} · cập nhật {time(item.updatedAt)}</small>)}</li>)}</ol>
+              </article>
+            )) : <Empty>Chương trình chính thức chưa được cấu hình; tiến độ nền tảng chưa được tính.</Empty>}
           </section>
         </>
       ) : null}

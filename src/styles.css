@@ -4699,6 +4699,10 @@ td small {
     white-space: nowrap;
   }
 
+  .app-shell-student .sidebar nav a[href="/labs"] {
+    display: none;
+  }
+
   .app-shell-student .sidebar nav a svg {
     width: 19px !important;
     height: 19px !important;
@@ -5644,6 +5648,8 @@ td small {
 .app-shell-student .student-lessons-page .subject-ebook-links p { flex: 1 1 260px; margin: 0; font-size: 12px; line-height: 1.45; }
 .app-shell-student .student-lessons-page .subject-ebook-links > div { gap: 7px; }
 .app-shell-student .student-lessons-page .subject-ebook-links a { min-height: 36px; padding: 6px 10px; font-size: 12px; }
+.app-shell-student .student-lab-catalog-link { margin: 16px 0; }
+.app-shell-student .student-lab-catalog-link a { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 12px; background: #e7f1f3; color: #1f6f78; }
 .app-shell-student .student-lessons-page .filter-bar {
   gap: 10px;
   margin-bottom: 14px;
@@ -5730,7 +5736,7 @@ td small {
   min-height: 40px;
   padding-top: 7px;
 }
-.app-shell-student .student-lessons-page .student-lesson-open { min-height: 36px; padding: 0 12px; font-size: 12px; }
+.app-shell-student .student-lessons-page .student-lesson-open { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .app-shell-student .lesson-detail-page .page-heading h1 { font-size: clamp(21px, 1.9vw, 25px); }
 .app-shell-student .lesson-detail-page .page-heading p.muted { font-size: 12px; }
 .app-shell-student .lesson-detail-reading .lesson-content { font-size: 16px; line-height: 1.7; }

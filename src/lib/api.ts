@@ -39,7 +39,7 @@ export type StudentQuizAttemptHistory = Omit<QuizAttemptSummary, "results"> & {
 export type QuizAttemptHistoryResponse = { attempts: StudentQuizAttemptHistory[] };
 export type StudentLearningStep = {
   id: string;
-  type: "READING" | "VIDEO" | "STUDY_CARDS" | "QUIZ" | "LAB" | "CHALLENGE";
+  type: "READING" | "VIDEO" | "STUDY_CARDS" | "QUIZ" | "BASIC_EXERCISE" | "LAB" | "CHALLENGE";
   position: number;
   required: boolean;
   state: "COMPLETED" | "IN_PROGRESS" | "LOCKED";
@@ -56,6 +56,7 @@ export type StudentLearningStep = {
     transcript?: string;
     cards?: Array<{ id: string; front: string; back: string }>;
     questions?: StudentQuiz["questions"];
+    passThreshold?: number;
     labId?: string;
     challengeId?: string;
     sameAsLab?: boolean;
