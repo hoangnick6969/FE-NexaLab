@@ -100,7 +100,7 @@ Cards use a 24px radius; nested cards use 16px. Buttons and chips are pills. Use
 
 On tablet, move the right column below the main content. On mobile, show one vertical column in this order: stats, Continue card, assignments, recent attempts, remaining content.
 
-The bottom navigation has at most five destinations: **Trang chủ, Bài học, Lớp học, Bài tập, Tiến độ**. The global foundational Lab catalog is reachable from Bài học subject/chapter context and keeps search/filter access; a Lab is never hidden behind a quiz gate. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
+The bottom navigation has at most five destinations: **Trang chủ, Bài học, Class Space (Lớp học), Bài tập, Tiến độ**. The global foundational Lab catalog is reachable from Bài học subject/chapter context and keeps search/filter access; a Lab is never hidden behind a quiz gate. Tài khoản is available from the top-right profile menu; it is not a sixth tab. Reserve bottom padding so the tab bar never covers scrollable content.
 
 ## 6. Screen definitions
 
@@ -141,15 +141,19 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ### 6.2 Open Curriculum catalog (`/lessons`)
 
+The student sidebar keeps **Class Space** as a separate destination at the existing `/classes` route. The `/lessons` hub also makes every registered subject and configured external book link discoverable, including subjects with no released lessons; state clearly when no lesson content is available instead of implying a placeholder curriculum exists.
+
+Show applicable assigned lesson content in a prominent **Bài học được giao** section with an **Được giao** filter. Fetch it from the existing student assignment APIs and open it through the authorized `/assignments/:id` route so assignment-specific progress and evidence remain intact. A lesson present in both released shared content and assignments appears once, in the assigned section. The **Bài học chung** filter contains only unassigned I1-released lessons. Scored tests and their due/status/submission controls stay in Assignments.
+
 Use a guided curriculum hierarchy instead of showing all chapter groups together:
 
-1. **Subject selection:** show subjects that have released curriculum content; do not render “coming soon” placeholders as available catalog entries.
-2. **Grade selection:** after choosing a subject, show only grades with released content, in ascending order. Show availability/coverage separately where a grade has no released material.
+1. **Subject selection:** show every registered subject and its configured external book link; lesson availability is shown separately and never implies placeholder curriculum exists.
+2. **Grade selection:** after choosing a subject, show grades present in released shared lessons or eligible assigned lessons, in ascending order. Show availability/coverage separately where a grade has no lesson material.
 3. **Chapter/topic table of contents:** choosing a grade opens an ordered, scannable table of contents using stable curriculum taxonomy IDs. Each chapter/topic shows its lesson count and progress where available.
 4. **Lesson list:** selecting a chapter/topic shows its lessons in official curriculum order, with breadcrumbs back to subject, grade, and table of contents.
 5. **Lesson detail:** opening a lesson keeps the selected subject/grade/chapter context for return navigation and surfaces any matching foundational Lab.
 
-Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
+Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; shared chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
 
 **Lesson card:**
 - Title (max 2 lines) · Subject chip · Type badge (Đọc / Video / Lab) · Progress ring or bar · One next-action button.

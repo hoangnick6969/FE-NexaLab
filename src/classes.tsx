@@ -866,9 +866,9 @@ function StudentClasses() {
   return (
     <>
       <PageHeading
-        eyebrow="CÙNG NHAU KHÁM PHÁ"
-        title="Lớp học của tôi"
-        description="Các lớp em đang tham gia và bài thầy cô đã giao."
+        eyebrow="CLASS SPACE"
+        title="Class Space của em"
+        description="Xem các lớp em tham gia, trạng thái thành viên và bài được giao."
         action={
           <button
             className="primary"

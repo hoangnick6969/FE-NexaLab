@@ -180,7 +180,7 @@ function TopbarBreadcrumb({
     if (pathname === "/classes") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Lớp học của tôi", isCurrent: true },
+        { label: isStudent ? "Class Space" : "Lớp học của tôi", isCurrent: true },
       ];
     }
     if (pathname === "/progress") {
@@ -301,6 +301,7 @@ export default function App() {
             <>
               <NavLink end to="/" aria-label="Trang chủ"><LayoutDashboard />Trang chủ</NavLink>
               <NavLink to="/lessons" aria-label="Bài học"><BookOpen />Bài học</NavLink>
+              <NavLink to="/classes" aria-label="Class Space"><Users />Lớp học</NavLink>
               <NavLink to="/labs" aria-label="Phòng thí nghiệm"><FlaskConical />Lab</NavLink>
               <NavLink to="/assignments" aria-label="Bài tập"><ClipboardList />Bài tập</NavLink>
               <NavLink to="/progress" aria-label="Tiến độ"><ChartNoAxesCombined />Tiến độ</NavLink>
