@@ -5,6 +5,7 @@ import { Users, Copy, KeyRound, Archive } from "lucide-react";
 import { api, idempotencyKey, isApiError, mutate, useAuth } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal, verdictLabel } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
+import { StudentClassResources, TeacherClassResources } from "./ClassSpaceResources";
 
 type ClassSummary = {
   id: string;
@@ -330,6 +331,7 @@ function ClassDetail({ classroom }: { classroom: ClassSummary }) {
         <ErrorBox error={!modal ? act.error : null} />
       </section>
       <Roster classroom={classroom} />
+      <TeacherClassResources classId={classroom.id} disabled={archived} />
       <Assignments classroom={classroom} />
       {!archived && <PracticeAnalytics classId={classroom.id} />}
       {modal === "edit" && (
@@ -913,6 +915,7 @@ function StudentClasses() {
               <Link to={"/assignments/" + a.id}>Mở bài →</Link>
             </div>
           ))}
+          {c.enrollmentStatus === "approved" && c.status === "ACTIVE" && <StudentClassResources classId={c.id} />}
         </section>
       ))}
       {joining && (
