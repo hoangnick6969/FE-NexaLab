@@ -1,8 +1,8 @@
 import { lazy, Suspense, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Play, RotateCcw } from "lucide-react";
-import { api } from "../api";
-import { Badge, ErrorBox, InlineLoader, verdictLabel } from "../ui";
+import { api } from "../../lib/api";
+import { Badge, ErrorBox, InlineLoader, verdictLabel } from "../../components/ui";
 import { CircuitPathwayStep } from "./CircuitPathwayStep";
 import { Chemistry } from "./chemistry";
 

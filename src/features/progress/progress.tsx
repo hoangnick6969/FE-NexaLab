@@ -11,8 +11,8 @@ import {
   type MyProgressResponse,
   type MyProgressStep,
   type MyQuizAttemptDetail,
-} from "./api";
-import { Badge, Empty, ErrorBox, verdictLabel } from "./ui";
+} from "../../lib/api";
+import { Badge, Empty, ErrorBox, verdictLabel } from "../../components/ui";
 
 const stepNames: Record<string, string> = {
   READING: "Đọc",

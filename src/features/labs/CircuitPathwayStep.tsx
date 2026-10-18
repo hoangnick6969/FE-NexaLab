@@ -11,8 +11,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { Circuit, defaultCircuit } from "./circuit";
-import { api } from "../api";
-import { Badge, ErrorBox } from "../ui";
+import { api } from "../../lib/api";
+import { Badge, ErrorBox } from "../../components/ui";
 
 export interface CircuitPathwayStepProps {
   lessonId: string;

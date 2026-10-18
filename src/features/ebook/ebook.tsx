@@ -5,12 +5,12 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Check, Columns2, ExternalLink, FileText, Highlighter, Layers3, LoaderCircle, Maximize2, Minimize2, Minus, Play, Plus, StickyNote, Underline, X } from "lucide-react";
-import { api, idempotencyKey, isApiError, openMaterial, useAuth, type StudentPathway } from "./api";
-import { ErrorBox, PageLoader } from "./ui";
-import { PageHeading } from "./App";
-import { AttributionNote, libraryQuery } from "./library";
-import { VideoLearningStep } from "./VideoLearningStep";
-import { StudyCardsStep } from "./StudyCardsStep";
+import { api, idempotencyKey, isApiError, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
+import { ErrorBox, PageLoader } from "../../components/ui";
+import { PageHeading } from "../../components/PageHeading";
+import { AttributionNote, libraryQuery } from "../lessons/library";
+import { VideoLearningStep } from "../learning/VideoLearningStep";
+import { StudyCardsStep } from "../learning/StudyCardsStep";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -722,4 +722,3 @@ function rangeForOffsets(container: HTMLElement, startOffset: number, endOffset:
   }
   return null;
 }
-

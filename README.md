@@ -107,17 +107,19 @@ Chuột, bàn phím và thanh trượt vẫn dùng được khi không có camer
 
 ```text
 src/
-├── App.tsx             Layout, đăng nhập và dashboard
-├── pages.tsx           Bài học, lớp, tiến độ và tài khoản
-├── Admin.tsx           Giao diện quản trị
-├── api.ts              API client và phiên đăng nhập
-├── labs/               Mạch điện, hóa học, mắt 3D và cử chỉ
-├── ui.tsx              Thành phần giao diện dùng chung
+├── main.tsx            Điểm vào: error boundary, React Query, router
+├── app/                Định tuyến, khung giao diện theo vai trò, QueryClient
+├── lib/api.ts          API client và phiên đăng nhập
+├── components/         Thành phần giao diện dùng chung
+├── features/<domain>/  Trang theo nghiệp vụ: auth, dashboard, lessons, learning,
+│                       ebook, labs, progress, classes, admin, landing, saved, settings
 └── styles.css          Giao diện responsive
 public/vision/          Model và WASM MediaPipe
 vendor/                Tarball engine mô phỏng version hóa
 tests/                 Các kịch bản Playwright
 ```
+
+Chi tiết và quy ước: [docs/architecture/project-structure.md](docs/architecture/project-structure.md).
 
 ## Kiểm thử & build
 
