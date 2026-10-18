@@ -1127,9 +1127,14 @@ function StudentStat({
 }
 function LabCards({ guided = false }: { guided?: boolean } = {}) {
   const role = useAuth((s) => s.user!.role);
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs") });
+  const cards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
+    const visual = labInfo.find((item) => item.id === lab.id);
+    return visual ? [{ ...visual, title: lab.title, description: lab.learningObjective, subject: lab.subject?.name ?? visual.subject }] : [];
+  }) : labInfo;
   return (
     <div className="lab-grid">
-      {labInfo.map((l) => (
+      {cards.map((l) => (
         <Link
           to={guided && role === "STUDENT" ? "/lessons" : ["STUDENT", "TEACHER"].includes(role) ? "/labs/" + l.id : "/lessons"}
           className="lab-card"
@@ -1159,6 +1164,7 @@ function LabCards({ guided = false }: { guided?: boolean } = {}) {
           </div>
         </Link>
       ))}
+      {role === "STUDENT" && labs.isSuccess && cards.length === 0 && <p className="notice">Chưa có phòng thực hành nền tảng nào được phát hành.</p>}
     </div>
   );
 }

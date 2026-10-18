@@ -5,7 +5,7 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Check, Columns2, ExternalLink, FileText, Highlighter, Layers3, LoaderCircle, Maximize2, Minimize2, Minus, Play, Plus, StickyNote, Underline, X } from "lucide-react";
-import { api, isApiError, openMaterial, useAuth, type StudentPathway } from "./api";
+import { api, idempotencyKey, isApiError, openMaterial, useAuth, type StudentPathway } from "./api";
 import { ErrorBox, PageLoader } from "./ui";
 import { PageHeading } from "./App";
 import { AttributionNote, libraryQuery } from "./library";
@@ -80,10 +80,14 @@ const httpsUrl = (value: unknown) => {
 export function LessonDetail() {
   const { id = "" } = useParams();
   const user = useAuth((state) => state.user)!;
-  const [activeTab, setActiveTab] = useState<"reading" | "video" | "cards" | "materials">("reading");
+  const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "cards" | "materials">("reading");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const queryClient = useQueryClient();
-  const lessons = useQuery({ queryKey: ["lessons"], queryFn: () => api<any[]>("/lessons") });
+  const lessons = useQuery({
+    queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
+    queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
+    enabled: Boolean(id),
+  });
   const canViewAttribution = ["TEACHER", "ADMIN"].includes(user.role);
   const library = useQuery({
     queryKey: ["teacher-content", "lesson-detail-attribution"],
@@ -91,28 +95,33 @@ export function LessonDetail() {
     enabled: canViewAttribution,
   });
   const materialOpen = useMutation({ mutationFn: openMaterial });
-  const lesson = lessons.data?.find((item) => item.id === id);
+  const lesson = user.role === "STUDENT" ? lessons.data : lessons.data?.find((item: any) => item.id === id);
   const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
   const videoPathway = useQuery<StudentPathway>({
     queryKey: ["lesson-pathway", id],
     queryFn: () => api(`/lessons/${encodeURIComponent(id)}/pathway`),
     enabled: user.role === "STUDENT" && Boolean(id),
   });
-  const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING");
-  const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO");
+  const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING") ?? lesson?.steps?.find((step: any) => step.type === "READING");
+  const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
+  const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
   const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type)) ?? [];
   const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
   const assignmentMissing = isApiError(videoPathway.error, "ASSIGNMENT_NOT_FOUND");
   const completeReading = useMutation({
-    mutationFn: () => api(`/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, "PUT", { action: "complete" }),
-    onSuccess: (response: { pathway: StudentPathway }) => queryClient.setQueryData(["lesson-pathway", id], response.pathway),
+    mutationFn: () => api(assignmentMissing ? `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress` : `/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, "PUT", { action: "complete" }),
+    onSuccess: (response: any) => {
+      if (response.pathway) queryClient.setQueryData(["lesson-pathway", id], response.pathway);
+      else queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === response.step.id ? { ...step, state: "COMPLETED", progressValue: 100 } : step) }));
+    },
   });
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
+  const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url));
 
   if (lessons.isLoading) return <PageLoader message="Đang mở bài học…" />;
   if (lessons.error) return <><ErrorBox error={lessons.error} /><Link className="text-button" to="/lessons">Quay lại thư viện</Link></>;
-  if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học không tồn tại hoặc chưa được giao cho tài khoản này.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
+  if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học chưa được phát hành hoặc không tồn tại.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
 
   const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
   const hasCards = user.role === "STUDENT" && Boolean(studyCardsStep);
@@ -122,6 +131,7 @@ export function LessonDetail() {
   const tabs = [
     { id: "reading" as const, label: "Bài đọc", icon: BookOpen },
     ...(hasVideo ? [{ id: "video" as const, label: "Video bài giảng", icon: Play }] : []),
+    ...(basicExerciseStep ? [{ id: "exercise" as const, label: "Bài tập luyện tập", icon: Check }] : []),
     ...(hasCards ? [{ id: "cards" as const, label: "Thẻ ôn tập", icon: Layers3 }] : []),
     ...(hasMaterials ? [{ id: "materials" as const, label: "Tài liệu", icon: FileText }] : []),
   ];
@@ -137,7 +147,7 @@ export function LessonDetail() {
   return <div className="lesson-detail-page">
     <PageHeading eyebrow={`${lesson.subject.name} · LỚP ${lesson.grade}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">Dữ liệu mẫu</span> : undefined} />
     <div className="lesson-detail-tabs" role="tablist" aria-label="Nội dung bài học">
-      {tabs.map((tab, index) => {
+        {tabs.map((tab, index) => {
         const Icon = tab.icon;
         return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label="Đã hoàn thành" />}</button>;
       })}
@@ -146,7 +156,7 @@ export function LessonDetail() {
       <div className="lesson-reading-scroll" role="region" aria-label="Nội dung bài đọc có thể cuộn" tabIndex={0}>
         {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">MỤC TIÊU BÀI HỌC</span><p>{learningObjective}</p></>}{prerequisites && <small>Kiến thức nền · {prerequisites}</small>}</div>}
         {user.role === "STUDENT" && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
-        {user.role === "STUDENT" && assignmentMissing && <p className="notice">Em có thể xem nội dung này. Tiến độ và bài tập sẽ được lưu khi giáo viên giao bài cho lớp.</p>}
+      {user.role === "STUDENT" && assignmentMissing && <p className="notice">Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.</p>}
       </div>
       {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
         {completeReading.error && <ErrorBox error={completeReading.error} />}
@@ -156,11 +166,15 @@ export function LessonDetail() {
     </section>}
     {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
       <h2 className="lesson-tab-title">Video bài giảng</h2>
-      {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id], updatedPathway)} />
+      {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentMissing ? `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress` : undefined} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway ? queryClient.setQueryData(["lesson-pathway", id], updated.pathway) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
         : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label="Video bài giảng" />
           : videoPathway.isLoading ? <p className="video-placeholder" role="status">Đang tải video bài giảng…</p>
             : videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} />
               : <p className="notice">Video bài giảng hiện chưa khả dụng.</p>}
+    </section>}
+    {activeTab === "exercise" && basicExerciseStep && <section id="lesson-panel-exercise" role="tabpanel" aria-labelledby="lesson-tab-exercise" className="panel lesson-tab-panel">
+      <h2 className="lesson-tab-title">Bài tập luyện tập</h2>
+      <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
     </section>}
     {activeTab === "cards" && studyCardsStep && <section id="lesson-panel-cards" role="tabpanel" aria-labelledby="lesson-tab-cards" className="panel lesson-tab-panel lesson-study-cards">
       <h2 className="lesson-tab-title">Thẻ ôn tập</h2>
@@ -168,7 +182,7 @@ export function LessonDetail() {
     </section>}
     {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
       <h2>Tài liệu bài học</h2>
-      {ebookUrl && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id }}><BookOpen size={20} /><span><b>Sách giáo khoa · {lesson.subject.name}</b><small>Mở trình đọc ebook để lật trang, ghi chú và đánh dấu nội dung.</small></span><ArrowRight size={18} /></Link>}
+      {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>Sách giáo khoa · {lesson.subject.name}</b><small>Tài liệu tham khảo bên ngoài · trang in và trang PDF có thể khác nhau.</small></span><ArrowRight size={18} /></Link>}
       {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => material.url?.startsWith("asset:") ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></a>)}
       <ErrorBox error={materialOpen.error} />
       {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
@@ -176,6 +190,27 @@ export function LessonDetail() {
     {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">Sau khi hoàn thành bài đọc, tiếp tục với tab Video bài giảng và thẻ ôn tập.</p>}
     {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p><Link className="primary" to={videoPathway.data?.assignment.id ? `/assignments/${videoPathway.data.assignment.id}` : "/assignments"}>Chuyển sang Bài tập <ArrowRight size={16} /></Link></div>}
   </div>;
+}
+
+function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const attempt = useMutation({
+    mutationFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/exercises/${encodeURIComponent(step.id)}/attempts`, "POST", {
+      answers: step.resource.questions.map((question: any) => ({ questionId: question.id, optionId: answers[question.id] })),
+      idempotencyKey: idempotencyKey(),
+    }),
+    onSuccess: (result) => onSubmitted(result),
+  });
+  const exercise = step.resource;
+  return <form onSubmit={(event) => { event.preventDefault(); attempt.mutate(); }}>
+    {exercise.questions.map((question: any, index: number) => <fieldset className="exercise-question" key={question.id}>
+      <legend>{index + 1}. {question.prompt}</legend>
+      {question.options.map((option: any) => <label className="check" key={option.id}><input type="radio" name={question.id} value={option.id} checked={answers[question.id] === option.id} onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))} required />{option.text}</label>)}
+    </fieldset>)}
+    <ErrorBox error={attempt.error} />
+    {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? "Đã đạt" : "Lần trước chưa đạt"}: {step.exercise.score}% · cần {step.exercise.passThreshold}%</p>}
+    <button className="primary" type="submit" disabled={attempt.isPending || Object.keys(answers).length !== exercise.questions.length}>{attempt.isPending ? "Đang chấm…" : "Nộp bài luyện tập"}</button>
+  </form>;
 }
 
 function LessonBody({ content, title, chapter }: { content: string; title: string; chapter: string }) {
@@ -311,9 +346,10 @@ export function EbookReader() {
   const location = useLocation();
   const user = useAuth((state) => state.user)!;
   const queryClient = useQueryClient();
+  const routeState = location.state as { fromLessonId?: string; initialPhysicalPage?: number; ebookUrl?: string } | null;
   const subjectQuery = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
-  const url = httpsUrl(subject?.ebookUrl);
+  const url = httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
   const [document, setDocument] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
@@ -345,7 +381,6 @@ export function EbookReader() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [hostSize, setHostSize] = useState({ width: 760, height: 640 });
   const useSpread = bookView && hostSize.width >= 760 && pageNumber > 1;
-  const routeState = location.state as { fromLessonId?: string } | null;
   const backPath = routeState?.fromLessonId ? `/lessons/${routeState.fromLessonId}` : "/lessons";
   const annotationsQuery = useInfiniteQuery({
     queryKey: ["ebook-annotations", user.id, subjectId, fingerprint],
@@ -417,7 +452,9 @@ export function EbookReader() {
         task ??= pdfjs.getDocument({ url, withCredentials: false });
         const loaded = await task.promise;
         if (!active) return;
-        setDocument(loaded); setPageCount(loaded.numPages);
+        const initial = Number.isInteger(routeState?.initialPhysicalPage) ? routeState!.initialPhysicalPage! : 1;
+        const startPage = Math.min(loaded.numPages, Math.max(1, initial));
+        setDocument(loaded); setPageCount(loaded.numPages); setPageNumber(startPage); setPageInput(String(startPage));
         setFingerprint(loaded.fingerprints.find((value): value is string => Boolean(value)) ?? "");
       } catch (error) {
         if (active) setLoadError(error instanceof Error ? error.message : "Không tải được ebook");
@@ -425,7 +462,7 @@ export function EbookReader() {
     };
     void load();
     return () => { active = false; loadController.abort(); rangeTransport?.abort(); void task?.destroy(); };
-  }, [url, reloadKey]);
+  }, [url, reloadKey, routeState?.initialPhysicalPage]);
 
   useEffect(() => {
     const updateFullscreen = () => setIsFullscreen(window.document.fullscreenElement === readerRef.current);

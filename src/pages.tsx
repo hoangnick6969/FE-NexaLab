@@ -128,8 +128,26 @@ const lessonNumber = (title: string) => Number(title.match(/^\s*Bài\s+(\d+)/i)?
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
-  const q = useQuery({ queryKey: ["lessons"], queryFn: () => api("/lessons") });
-  const subjects = useQuery({ queryKey: ["subjects"], queryFn: () => api("/subjects") });
+  const q = useQuery({
+    queryKey: [manage ? "lessons" : "open-curriculum"],
+    queryFn: async () => {
+      if (manage) return api<any[]>("/lessons");
+      const catalog = await api<any>("/open-curriculum");
+      return (catalog.subjects ?? []).flatMap((subject: any) =>
+        subject.grades.flatMap((grade: any) =>
+          grade.chapters.flatMap((chapter: any) => [
+            ...chapter.lessons,
+            ...chapter.topics.flatMap((topic: any) => topic.lessons),
+          ].map((lesson: any) => ({
+            ...lesson,
+            chapterOrder: chapter.officialOrder,
+            subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl },
+          }))),
+        ),
+      );
+    },
+  });
+  const subjects = useQuery({ queryKey: [manage ? "subjects" : "open-curriculum-subjects"], queryFn: async () => manage ? api("/subjects") : (await api<any>("/open-curriculum")).subjects });
   const safeEbookUrl = (value: unknown) => {
     if (typeof value !== "string") return null;
     try {
@@ -140,6 +158,8 @@ export function Lessons() {
     }
   };
   const [filter, setFilter] = useState("all");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const [edit, setEdit] = useState<any>(null);
@@ -168,6 +188,8 @@ export function Lessons() {
     });
   const lessonMatches = (q.data ?? []).filter((l: any) =>
     (filter === "all" || (filter === "khtn" && khtnSubjectIds.has(l.subjectId))) &&
+    (manage || selectedSubjectId === "all" || l.subjectId === selectedSubjectId) &&
+    (manage || selectedGrade === "all" || String(l.grade) === selectedGrade) &&
     l.title.toLowerCase().includes(search.toLowerCase()) &&
     (!filtersActive || meta.has(l.id)),
   );
@@ -177,11 +199,11 @@ export function Lessons() {
     const key = `${khtnSubjectIds.has(lesson.subjectId) ? "khtn" : lesson.subjectId}:${lesson.grade}:${chapter.toLocaleLowerCase("vi")}`;
     const group: { chapter: string; grade: number; lessons: any[]; order: number } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER };
     group.lessons.push(lesson);
-    group.order = Math.min(group.order, lessonNumber(lesson.title));
+    group.order = Math.min(group.order, manage ? lessonNumber(lesson.title) : lesson.chapterOrder ?? Number.MAX_SAFE_INTEGER);
     groups.set(key, group);
   }
   const chapterGroups = [...groups.values()]
-    .map((group) => ({ ...group, lessons: group.lessons.sort((a, b) => lessonNumber(a.title) - lessonNumber(b.title) || a.title.localeCompare(b.title, "vi")) }))
+    .map((group) => ({ ...group, lessons: group.lessons.sort((a, b) => manage ? lessonNumber(a.title) - lessonNumber(b.title) || a.title.localeCompare(b.title, "vi") : (a.curriculumOrder ?? Number.MAX_SAFE_INTEGER) - (b.curriculumOrder ?? Number.MAX_SAFE_INTEGER) || a.id.localeCompare(b.id)) }))
     .sort((a, b) => a.grade - b.grade || a.order - b.order || a.chapter.localeCompare(b.chapter, "vi"));
   const renderLessonCard = (l: any) => (
     <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
@@ -239,6 +261,20 @@ export function Lessons() {
         </section>
       )}
       <div className="filter-bar">
+        {!manage && <>
+          <label className="sr-only" htmlFor="open-curriculum-subject">Môn học</label>
+          <select id="open-curriculum-subject" aria-label="Chọn môn học" value={selectedSubjectId} onChange={(event) => { setSelectedSubjectId(event.target.value); setSelectedGrade("all"); }}>
+            <option value="all">Tất cả môn học</option>
+            {subjects.data?.map((subject: any) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+          </select>
+          {selectedSubjectId !== "all" && <>
+            <label className="sr-only" htmlFor="open-curriculum-grade">Khối lớp</label>
+            <select id="open-curriculum-grade" aria-label="Chọn khối lớp" value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value)}>
+              <option value="all">Tất cả khối</option>
+              {subjects.data?.find((subject: any) => subject.id === selectedSubjectId)?.grades.map((grade: any) => <option key={grade.grade} value={grade.grade}>Lớp {grade.grade}</option>)}
+            </select>
+          </>}
+        </>}
         <div className="tabs">
           {[
             ["all", "Tất cả"],
@@ -305,8 +341,8 @@ export function Lessons() {
           </article>)}
         </div>
       </section>}
-      {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
-      {!manage && q.data?.length > 0 && lessonMatches.length === 0 && <Empty>Không tìm thấy bài học phù hợp.</Empty>}
+      {q.data && q.data.length === 0 && <Empty>Chương trình chưa có nội dung được phát hành.</Empty>}
+      {!manage && q.data?.length > 0 && lessonMatches.length === 0 && <Empty>Chương trình ở môn hoặc khối này chưa có nội dung được phát hành.</Empty>}
       {filtersActive && library.data && library.data.items.length === 0 && (
         <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
       )}

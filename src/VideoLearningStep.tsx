@@ -13,11 +13,13 @@ export function VideoLearningStep({
   step,
   hideTranscript = false,
   onReconciled,
+  progressPath,
 }: {
   lessonId: string;
   step: StudentLearningStep;
   hideTranscript?: boolean;
   onReconciled: (pathway: StudentPathway) => void;
+  progressPath?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const confirmedPositionRef = useRef(step.lastPosition ?? 0);
@@ -80,7 +82,7 @@ export function VideoLearningStep({
     setSaveError("");
     try {
       const updated = await api<any>(
-        `/lessons/${lessonId}/steps/${step.id}/progress`,
+        progressPath ?? `/lessons/${lessonId}/steps/${step.id}/progress`,
         "PUT",
         {
           action: observation.ended ? "ended" : "heartbeat",
@@ -97,7 +99,7 @@ export function VideoLearningStep({
       ) unsentRef.current = null;
       failedActionRef.current = null;
       setSaveState("saved");
-      onReconciled(updated.pathway);
+      onReconciled(updated.pathway ?? updated);
       succeeded = true;
     } catch (error) {
       setSaveState("error");
@@ -136,7 +138,7 @@ export function VideoLearningStep({
     setSaveError("");
     try {
       const updated = await api<any>(
-        `/lessons/${lessonId}/steps/${step.id}/progress`,
+        progressPath ?? `/lessons/${lessonId}/steps/${step.id}/progress`,
         "PUT",
         { action: "complete-fallback" },
       );
@@ -146,7 +148,7 @@ export function VideoLearningStep({
       setLocalPosition(updated.step.lastPosition ?? 0);
       failedActionRef.current = null;
       setSaveState("saved");
-      onReconciled(updated.pathway);
+      onReconciled(updated.pathway ?? updated);
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof Error ? error.message : "Chưa lưu được tiến độ");
