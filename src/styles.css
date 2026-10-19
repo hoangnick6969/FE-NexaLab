@@ -836,7 +836,8 @@ small {
 }
 
 .class-resource-create { border-top: 1px solid var(--line); padding-top: 16px; margin: 8px 0 20px; }
-.class-resource-create form { display: grid; gap: 12px; }
+.class-resource-create form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.class-resource-create select { max-width: 100%; }
 .class-resource-create textarea { width: 100%; resize: vertical; font: 0.85rem/1.5 ui-monospace, Consolas, monospace; }
 .class-resource-import { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
 .class-resource-import summary { cursor: pointer; font-weight: 600; }

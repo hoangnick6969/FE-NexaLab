@@ -73,7 +73,7 @@ test("Epic A5: progress summary, completion, paginated history and evidence dril
   await mockApi(page, { failSecondPageOnce: true });
   await page.goto("/progress");
 
-  await expect(page.getByRole("button", { name: /Bài được giao đã hoàn thành/ })).toContainText("0/2");
+  await expect(page.getByRole("button", { name: /Bài tập đã hoàn thành/ })).toContainText("0/2");
   await expect(page.getByRole("button", { name: /Bước bắt buộc còn lại/ })).toContainText("1");
   const first = page.locator("article.assignment-progress").first();
   await expect(first.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "67");

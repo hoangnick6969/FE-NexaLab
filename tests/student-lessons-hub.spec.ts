@@ -62,5 +62,5 @@ test("student lesson hub combines released and assigned lessons and keeps Class 
   await page.getByRole("link", { name: "Class Space" }).click();
   await expect(page).toHaveURL(/\/classes$/);
   await expect(page.getByRole("heading", { name: "Class Space của em" })).toBeVisible();
-  await expect(page.getByText("Chờ giáo viên duyệt")).toBeVisible();
+  await expect(page.getByText("Chờ giáo viên duyệt", { exact: true })).toBeVisible();
 });

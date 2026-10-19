@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard, type StudentLessonAssignment } from "../src/lesson-catalog";
+import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard, type StudentLessonAssignment } from "../src/features/lessons/lesson-catalog";
 
 const sharedLesson: StudentLessonCard = {
   id: "lesson-shared",

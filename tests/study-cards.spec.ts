@@ -66,7 +66,9 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
   });
 
   await login(page);
-  await page.goto("/assignments/pilot-a-lesson-assignment");
+  // I1 moved study cards from the assignment page to the lesson page tabs.
+  await page.goto("/lessons/lesson-circuit");
+  await page.getByRole("tab", { name: /Thẻ ôn tập/ }).click();
   const cards = page.getByRole("region", { name: "Thẻ ghi nhớ" });
   await expect(cards).toBeVisible();
   await expect(cards.getByText("Thẻ 1 / 2")).toBeVisible();
@@ -80,14 +82,14 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
   await cards.getByRole("button", { name: /Hoàn thành ôn thẻ/ }).click();
   await expect(cards.getByRole("alert")).toContainText("Lỗi lưu tạm thời");
   await cards.getByRole("button", { name: "Thử lại" }).click();
-  const cardStep = page.locator(".pathway-step").filter({ has: cards });
-  await expect(cardStep.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
+  // With every lesson step complete, the lesson page hands over to the assignment (Quiz boundary).
+  await expect(page.getByText("Em đã hoàn thành nội dung bài học.")).toBeVisible();
   expect(writes).toEqual([
     { action: "visit", cardIndex: 0 },
     { action: "visit", cardIndex: 1 },
     { action: "complete", cardIndex: 1 },
     { action: "complete", cardIndex: 1 },
   ]);
-  await expect(page.getByText("Kiểm tra kiến thức", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Chuyển sang Bài tập/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
