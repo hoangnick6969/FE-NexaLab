@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, Field, useAction, verdictLabel, InlineLoader } from "../../components/ui";
-import { StudentProgress } from "./progress";
+import { StudentProgress } from "./StudentProgress";
+import { dateTime } from "../../lib/test-status";
 
 export function ProgressPage() {
   const user = useAuth((s) => s.user)!;
@@ -20,6 +21,11 @@ export function ProgressPage() {
     queryKey: ["progress", student],
     queryFn: () => api(user.role === "PARENT" ? "/children/" + student + "/progress" : "/progress/" + student),
     enabled: !!student && user.role !== "STUDENT",
+  });
+  const notices = useQuery<Array<{ id: string; assignmentId: string; title: string; className: string; dueAt: string; extended: boolean }>>({
+    queryKey: ["assignment-notices", student],
+    queryFn: () => api("/children/" + student + "/assignment-notices"),
+    enabled: !!student && user.role === "PARENT",
   });
   const link = useAction((code: string) =>
     api("/children/link", "POST", { code }),
@@ -84,6 +90,31 @@ export function ProgressPage() {
       ) : (
         <>
           <ErrorBox error={q.error} />
+          {user.role === "PARENT" && student && (
+            <section className="panel" aria-labelledby="parent-notices-title">
+              <h2 id="parent-notices-title">Thông báo bài quá hạn</h2>
+              <ErrorBox error={notices.error} />
+              {notices.data?.length ? (
+                notices.data.map((notice) => (
+                  <div className="assignment-row" key={notice.id}>
+                    <div>
+                      <b>{notice.title}</b>
+                      <small>
+                        {notice.className} · Đã quá hạn {dateTime(notice.dueAt)}
+                        {notice.extended ? " (hạn đã được dời)" : ""} · Con chưa nộp bài
+                      </small>
+                    </div>
+                    <Badge tone="not_passed">Quá hạn</Badge>
+                  </div>
+                ))
+              ) : notices.isLoading ? (
+                <InlineLoader message="Đang tải thông báo…" />
+              ) : (
+                <Empty>Không có bài kiểm tra nào quá hạn.</Empty>
+              )}
+              <p className="tiny muted">Thông báo chỉ để phụ huynh nắm tình hình; quá hạn không tự bị chấm 0 điểm. Việc nộp bài và quyết định về bài trễ thuộc về học sinh và giáo viên.</p>
+            </section>
+          )}
           {q.data ? (
             <>
               <div className="progress-cards">
@@ -122,7 +153,7 @@ export function ProgressPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {q.data.attempts.map((a: any) => (
+                      {(q.data.attempts ?? []).map((a: any) => (
                         <tr key={a.id}>
                           <td>
                             {new Date(a.createdAt).toLocaleString("vi-VN")}
@@ -139,7 +170,7 @@ export function ProgressPage() {
                     </tbody>
                   </table>
                 </div>
-                {q.data.attempts.length === 0 && (
+                {!q.data.attempts?.length && (
                   <Empty>Chưa có lượt thực hành.</Empty>
                 )}
               </section>

@@ -26,12 +26,14 @@ test("assigned reading completion retries and resumes from server evidence", asy
   await expect(
     page.getByRole("complementary").getByText("Không gian học tập"),
   ).toBeVisible();
-  await page.goto("/assignments/pilot-a-lesson-assignment");
+  // I1 moved reading, video and study cards from the assignment page to the lesson page.
+  await page.goto("/lessons/lesson-circuit");
 
-  const reading = page.getByRole("region", { name: "Nội dung đọc" });
-  const complete = page.getByRole("button", { name: "Đánh dấu đã đọc" });
+  const reading = page.getByRole("region", { name: "Nội dung bài đọc có thể cuộn" });
+  const complete = page.getByRole("button", { name: "Hoàn thành phần đọc" });
+  const done = page.getByRole("status").filter({ hasText: "Đã hoàn thành phần đọc" });
   await expect(reading).toBeVisible();
-  await expect(page.locator(".pathway-continue")).toHaveCount(1);
+  await expect(complete.or(done)).toBeVisible();
   if (await complete.count()) {
     await complete.focus();
     await complete.press("Enter");
@@ -39,9 +41,10 @@ test("assigned reading completion retries and resumes from server evidence", asy
     await expect(page.getByRole("button", { name: "Thử lưu lại" })).toBeEnabled();
     await page.getByRole("button", { name: "Thử lưu lại" }).click();
   }
-  await expect(page.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
+  await expect(done).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Bài đọc/ }).getByLabel("Đã hoàn thành")).toBeVisible();
 
   await page.reload();
-  await expect(page.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Đánh dấu đã đọc" })).toHaveCount(0);
+  await expect(done).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hoàn thành phần đọc" })).toHaveCount(0);
 });

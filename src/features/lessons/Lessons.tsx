@@ -1,58 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { Plus, ArrowUpRight, BookOpen, Save, Calculator, PenLine, Languages, Landmark, Compass, Monitor, Wrench, Palette, Dumbbell, Telescope } from "lucide-react";
+import { Plus, ArrowUpRight, BookOpen, Save } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, idempotencyKey, isApiError, mutate, useAuth, uploadFile } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton } from "../../components/ui";
+import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard } from "./lesson-catalog";
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
+import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
 
-function RichEditor({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: value,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-  });
-  return (
-    <div className="rich-editor">
-      <div className="editor-toolbar">
-        <button type="button" aria-label="Tiêu đề cấp 2" aria-pressed={Boolean(editor?.isActive("heading", { level: 2 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-        <button type="button" aria-label="Tiêu đề cấp 3" aria-pressed={Boolean(editor?.isActive("heading", { level: 3 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-        >
-          <b>B</b>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-        >
-          <i>I</i>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-        >
-          Danh sách
-        </button>
-        <span className="editor-toolbar-divider" aria-hidden="true" />
-        {["₂", "₃", "⁺", "⁻", "→", "Δ", "°", "±", "×", "μ"].map((symbol) => (
-          <button type="button" key={symbol} aria-label={`Chèn ký hiệu ${symbol}`} title={`Chèn ${symbol}`} onClick={() => editor?.chain().focus().insertContent(symbol).run()}>{symbol}</button>
-        ))}
-      </div>
-      <EditorContent editor={editor} />
-    </div>
-  );
-}
 const blankLesson = {
   title: "",
   subjectId: "physics",
@@ -71,25 +27,51 @@ const blankLesson = {
   outcomeCodes: [],
   challengeParams: null,
 };
+
 const khtnSubjectIds = new Set(["khtn", "physics", "biology", "chemistry"]);
-const subjectPreviews = [
-  { name: "Toán", icon: Calculator, topics: "Đại số · Hình học · Thống kê" },
-  { name: "Ngữ văn", icon: PenLine, topics: "Đọc · Viết · Nói và nghe" },
-  { name: "Ngoại ngữ 1", icon: Languages, topics: "Từ vựng · Ngữ pháp · Giao tiếp" },
-  { name: "Lịch sử và Địa lí", icon: Landmark, topics: "Lịch sử · Địa lí" },
-  { name: "Giáo dục công dân", icon: Compass, topics: "Công dân · Pháp luật · Đạo đức" },
-  { name: "Tin học", icon: Monitor, topics: "Máy tính · Dữ liệu · Lập trình" },
-  { name: "Công nghệ", icon: Wrench, topics: "Thiết kế · Kỹ thuật · Đời sống" },
-  { name: "Nghệ thuật", icon: Palette, topics: "Âm nhạc · Mĩ thuật" },
-  { name: "Giáo dục thể chất", icon: Dumbbell, topics: "Vận động · Thể thao" },
-  { name: "Hoạt động trải nghiệm", icon: Telescope, topics: "Trải nghiệm · Hướng nghiệp" },
-];
+
 const lessonNumber = (title: string) => Number(title.match(/^\s*Bài\s+(\d+)/i)?.[1] ?? Number.MAX_SAFE_INTEGER);
+
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
-  const q = useQuery({ queryKey: ["lessons"], queryFn: () => api("/lessons") });
-  const subjects = useQuery({ queryKey: ["subjects"], queryFn: () => api("/subjects") });
+  const q = useQuery({
+    queryKey: [manage ? "lessons" : "open-curriculum"],
+    queryFn: async () => {
+      if (manage) return api<any[]>("/lessons");
+      const catalog = await api<any>("/open-curriculum");
+      return (catalog.subjects ?? []).flatMap((subject: any) =>
+        subject.grades.flatMap((grade: any) =>
+          grade.chapters.flatMap((chapter: any) => [
+            ...chapter.lessons,
+            ...chapter.topics.flatMap((topic: any) => topic.lessons),
+          ].map((lesson: any) => ({
+            ...lesson,
+            chapterOrder: chapter.officialOrder,
+            subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl },
+          }))),
+        ),
+      );
+    },
+  });
+  const subjects = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
+  const assignedLessonDetails = useQuery({
+    queryKey: ["lesson-hub-assigned", user.id],
+    enabled: !manage,
+    queryFn: async () => {
+      const [assignments, lessons] = await Promise.all([api<any[]>("/assignments"), api<any[]>("/lessons")]);
+      const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]));
+      const eligibleAssignments = assignments.filter((assignment) => assignment.contentType === "lesson" && assignment.canOpen !== false);
+      const missingLessons = await Promise.all(eligibleAssignments
+        .filter((assignment) => !lessonsById.has(assignment.contentId))
+        .map(async (assignment) => ({ assignment, lesson: (await api<any>(`/assignments/${encodeURIComponent(assignment.id)}`)).content })));
+      for (const { assignment, lesson } of missingLessons) lessonsById.set(assignment.contentId, lesson);
+      return eligibleAssignments.flatMap((assignment) => {
+        const lesson = lessonsById.get(assignment.contentId);
+        return lesson ? [{ assignment, lesson }] : [];
+      });
+    },
+  });
   const safeEbookUrl = (value: unknown) => {
     if (typeof value !== "string") return null;
     try {
@@ -100,6 +82,8 @@ export function Lessons() {
     }
   };
   const [filter, setFilter] = useState("all");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const [edit, setEdit] = useState<any>(null);
@@ -126,28 +110,31 @@ export function Lessons() {
     clone.mutate(id, {
       onSuccess: (copy: any) => setEdit({ ...copy, review: copy.review ?? null }),
     });
-  const lessonMatches = (q.data ?? []).filter((l: any) =>
-    (filter === "all" || (filter === "khtn" && khtnSubjectIds.has(l.subjectId))) &&
-    l.title.toLowerCase().includes(search.toLowerCase()) &&
-    (!filtersActive || meta.has(l.id)),
-  );
-  const groups = new Map<string, { chapter: string; grade: number; lessons: any[]; order: number }>();
+  const studentCatalog = buildStudentLessonCatalog((q.data ?? []) as StudentLessonCard[], assignedLessonDetails.data ?? []);
+  const lessonMatches = manage
+    ? (q.data ?? []).filter((l: any) =>
+      (filter === "all" || (filter === "khtn" && khtnSubjectIds.has(l.subjectId))) &&
+      l.title.toLowerCase().includes(search.toLowerCase()) &&
+      (!filtersActive || meta.has(l.id)),
+    )
+    : filterStudentLessonCatalog(studentCatalog, filter as "all" | "assigned" | "shared", selectedSubjectId, selectedGrade, search);
+  const groups = new Map<string, { chapter: string; grade: number; lessons: any[]; order: number; subjectId: string; subjectName: string }>();
   for (const lesson of lessonMatches) {
     const chapter = lesson.chapter?.trim() || "Chưa phân chương";
-    const key = `${khtnSubjectIds.has(lesson.subjectId) ? "khtn" : lesson.subjectId}:${lesson.grade}:${chapter.toLocaleLowerCase("vi")}`;
-    const group: { chapter: string; grade: number; lessons: any[]; order: number } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER };
+    const key = `${lesson.subjectId}:${lesson.grade}:${chapter.toLocaleLowerCase("vi")}`;
+    const group: { chapter: string; grade: number; lessons: any[]; order: number; subjectId: string; subjectName: string } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER, subjectId: lesson.subjectId, subjectName: lesson.subject?.name ?? "Môn học" };
     group.lessons.push(lesson);
-    group.order = Math.min(group.order, lessonNumber(lesson.title));
+    group.order = Math.min(group.order, manage ? lessonNumber(lesson.title) : lesson.chapterOrder ?? Number.MAX_SAFE_INTEGER);
     groups.set(key, group);
   }
   const chapterGroups = [...groups.values()]
-    .map((group) => ({ ...group, lessons: group.lessons.sort((a, b) => lessonNumber(a.title) - lessonNumber(b.title) || a.title.localeCompare(b.title, "vi")) }))
+    .map((group) => ({ ...group, lessons: group.lessons.sort((a, b) => manage ? lessonNumber(a.title) - lessonNumber(b.title) || a.title.localeCompare(b.title, "vi") : (a.curriculumOrder ?? Number.MAX_SAFE_INTEGER) - (b.curriculumOrder ?? Number.MAX_SAFE_INTEGER) || a.id.localeCompare(b.id)) }))
     .sort((a, b) => a.grade - b.grade || a.order - b.order || a.chapter.localeCompare(b.chapter, "vi"));
   const renderLessonCard = (l: any) => (
     <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
       <div className="lesson-card-top">
         <span className={`subject-icon ${khtnSubjectIds.has(l.subjectId) ? "khtn" : l.subjectId}`}><BookOpen /></span>
-        {manage ? <Badge>{l.status === "published" ? "Đã xuất bản" : l.status === "draft" ? "Bản nháp" : "Lưu trữ"}</Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học</span>}
+        {manage ? <Badge>{l.status === "published" ? "Đã xuất bản" : l.status === "draft" ? "Bản nháp" : "Lưu trữ"}</Badge> : l.assignments?.length ? <Badge>Được giao</Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học chung</span>}
       </div>
       {manage && <div className="badge-row">
         <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
@@ -160,7 +147,7 @@ export function Lessons() {
       {l.learningObjective && (manage || !/dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(l.learningObjective)) && <p>{l.learningObjective}</p>}
       {!manage && <div className="student-lesson-context"><span>{l.chapter || "Chưa phân chương"}</span>{l.topic && <span>{l.topic}</span>}</div>}
       <div className="card-footer">
-        <button className={manage ? "text-button" : "student-lesson-open"} onClick={() => navigate(`/lessons/${l.id}`)}>{manage ? "Mở bài học" : "Vào bài học"} <ArrowUpRight size={16} /></button>
+        {manage ? <button className="text-button" onClick={() => navigate(`/lessons/${l.id}`)}>Mở bài học <ArrowUpRight size={16} /></button> : l.assignments?.length ? l.assignments.map((assignment: any) => <Link className="student-lesson-open" key={assignment.id} to={`/assignments/${assignment.id}`}>{assignment.title} · {assignment.classroom.name}{assignment.dueDate ? ` · Hạn ${new Date(assignment.dueDate).toLocaleDateString("vi-VN")}` : ""} <ArrowUpRight size={16} /></Link>) : <button className="student-lesson-open" onClick={() => navigate(`/lessons/${l.id}`)}>Vào bài học <ArrowUpRight size={16} /></button>}
         {manage && ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && <button className="text-button" onClick={() => setEdit(l)}>Chỉnh sửa</button>}
         {manage && <button className="text-button" onClick={() => setPreviewId(l.id)}>Xem trước</button>}
         {manage && <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>Tạo bản riêng</button>}
@@ -172,7 +159,7 @@ export function Lessons() {
       <PageHeading
         eyebrow="THƯ VIỆN KIẾN THỨC"
         title="Bài học"
-        description="Chọn bài học để tiếp tục."
+        description={manage ? "Chọn bài học để tiếp tục." : "Khám phá các môn học, bài học chung đã phát hành và bài được giao."}
         action={
           manage ? (
             <button
@@ -199,11 +186,22 @@ export function Lessons() {
         </section>
       )}
       <div className="filter-bar">
+        {!manage && <>
+          <label className="sr-only" htmlFor="open-curriculum-subject">Môn học</label>
+          <select id="open-curriculum-subject" aria-label="Chọn môn học" value={selectedSubjectId} onChange={(event) => { setSelectedSubjectId(event.target.value); setSelectedGrade("all"); }}>
+            <option value="all">Tất cả môn học</option>
+            {subjects.data?.map((subject: any) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+          </select>
+          {selectedSubjectId !== "all" && <>
+            <label className="sr-only" htmlFor="open-curriculum-grade">Khối lớp</label>
+            <select id="open-curriculum-grade" aria-label="Chọn khối lớp" value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value)}>
+              <option value="all">Tất cả khối</option>
+              {[...new Set(studentCatalog.filter((lesson) => lesson.subjectId === selectedSubjectId).map((lesson) => lesson.grade))].sort((a, b) => a - b).map((grade) => <option key={grade} value={grade}>Lớp {grade}</option>)}
+            </select>
+          </>}
+        </>}
         <div className="tabs">
-          {[
-            ["all", "Tất cả"],
-            ["khtn", "Khoa học tự nhiên"],
-          ].map(([id, name]) => (
+          {(manage ? [["all", "Tất cả"], ["khtn", "Khoa học tự nhiên"]] : [["all", "Tất cả"], ["assigned", "Được giao"], ["shared", "Bài học chung"]]).map(([id, name]) => (
             <button
               key={id}
               className={filter === id ? "active" : ""}
@@ -220,7 +218,8 @@ export function Lessons() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <ErrorBox error={q.error || clone.error} />
+      <ErrorBox error={q.error || assignedLessonDetails.error || subjects.error || clone.error} />
+      {!manage && (q.error || assignedLessonDetails.error || subjects.error) && <button type="button" className="text-button" onClick={() => { void q.refetch(); void assignedLessonDetails.refetch(); void subjects.refetch(); }}>Thử tải lại</button>}
       {manage && (
         <LibraryFiltersBar
           filters={libraryFilters}
@@ -243,30 +242,26 @@ export function Lessons() {
       {manage ? <div className="lesson-grid">
         {q.isLoading && <CardSkeleton count={6} />}
         {lessonMatches.map(renderLessonCard)}
-      </div> : <div className="student-chapter-list">
-        {q.isLoading && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
-        {chapterGroups.map((group) => <section className="lesson-chapter-group" key={`${group.grade}-${group.chapter}`}>
-          <header className="lesson-chapter-heading">
-            <div><span className="eyebrow">KHOA HỌC TỰ NHIÊN · LỚP {group.grade}</span><h2>{group.chapter}</h2></div>
-            <span className="lesson-chapter-count">{group.lessons.length} bài</span>
-          </header>
-          <div className="lesson-grid">{group.lessons.map(renderLessonCard)}</div>
-        </section>)}
+      </div> : <div className="student-lesson-sections">
+        {(q.isLoading || assignedLessonDetails.isLoading) && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
+        {filter !== "shared" && <section className="student-lesson-section" aria-labelledby="assigned-lessons-title">
+          <header className="lesson-chapter-heading"><div><span className="eyebrow">BÀI TẬP CỦA EM</span><h2 id="assigned-lessons-title">Bài học được giao</h2></div><span className="lesson-chapter-count">{lessonMatches.filter((lesson: any) => lesson.assignments.length).length} bài</span></header>
+          {lessonMatches.filter((lesson: any) => lesson.assignments.length).length ? <div className="lesson-grid">{lessonMatches.filter((lesson: any) => lesson.assignments.length).map(renderLessonCard)}</div> : filter === "assigned" && !assignedLessonDetails.isLoading && !assignedLessonDetails.error && <Empty>Chưa có bài học nào được giao. Bài học chung vẫn mở cho em.</Empty>}
+        </section>}
+        {filter !== "assigned" && <section className="student-lesson-section" aria-labelledby="shared-lessons-title">
+          <header className="lesson-chapter-heading"><div><span className="eyebrow">OPEN CURRICULUM</span><h2 id="shared-lessons-title">Bài học chung</h2></div></header>
+          {chapterGroups.map((group) => {
+            const lessons = lessonMatches.filter((lesson: any) => !lesson.assignments.length && lesson.subjectId === group.subjectId && lesson.grade === group.grade && lesson.chapter === group.chapter);
+            return lessons.length ? <section className="lesson-chapter-group" key={`${group.subjectId}-${group.grade}-${group.chapter}`}><header className="lesson-chapter-heading"><div><span className="eyebrow">{group.subjectName} · LỚP {group.grade}</span><h3>{group.chapter}</h3></div><span className="lesson-chapter-count">{lessons.length} bài</span></header><div className="lesson-grid">{lessons.map(renderLessonCard)}</div></section> : null;
+          })}
+          {lessonMatches.filter((lesson: any) => !lesson.assignments.length).length === 0 && !q.isLoading && !q.error && <Empty>{studentCatalog.some((lesson: any) => !lesson.assignments.length) ? "Không tìm thấy bài học chung phù hợp." : "Chưa có bài học chung được phát hành cho lựa chọn này."}</Empty>}
+        </section>}
       </div>}
       {!manage && <section className="student-subject-previews" aria-labelledby="subject-preview-title">
-        <div className="student-subject-previews-heading">
-          <div><span className="eyebrow">LỘ TRÌNH THCS</span><h2 id="subject-preview-title">Các môn học khác</h2></div>
-          <p>Bản xem trước · nội dung sẽ được bổ sung sau</p>
-        </div>
-        <div className="subject-preview-grid">
-          {subjectPreviews.map(({ name, icon: Icon, topics }) => <article className="subject-preview-card" key={name}>
-            <span className="subject-preview-icon"><Icon size={19} aria-hidden="true" /></span>
-            <div><div className="subject-preview-title"><h3>{name}</h3><span>Sắp có</span></div><p>{topics}</p></div>
-          </article>)}
-        </div>
+        <div className="student-subject-previews-heading"><div><span className="eyebrow">THƯ VIỆN MÔN HỌC</span><h2 id="subject-preview-title">Các môn học</h2></div><p>Môn học và tài liệu tham khảo đã cấu hình</p></div>
+        <div className="subject-preview-grid">{subjects.data?.map((subject: any) => <article className="subject-preview-card" key={subject.id}><div className="subject-preview-title"><h3>{subject.name}</h3></div><p>{studentCatalog.some((lesson: any) => lesson.subjectId === subject.id) ? "Có bài học trong danh sách phía trên." : "Chưa có bài học được phát hành hoặc giao cho môn này."}</p></article>)}</div>
       </section>}
-      {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
-      {!manage && q.data?.length > 0 && lessonMatches.length === 0 && <Empty>Không tìm thấy bài học phù hợp.</Empty>}
+      {!manage && <p className="student-lab-catalog-link"><Link to="/labs">Khám phá phòng Lab nền tảng <ArrowUpRight size={16} /></Link></p>}
       {filtersActive && library.data && library.data.items.length === 0 && (
         <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
       )}
@@ -603,58 +598,5 @@ export function Lessons() {
         </Modal>
       )}
     </div>
-  );
-}
-const licenseOptions: Array<[string, string]> = [
-  ["ORIGINAL", "Tự biên soạn"],
-  ["CC0", "CC0"],
-  ["CC_BY", "CC BY"],
-  ["CC_BY_SA", "CC BY-SA"],
-  ["SCHOOL_OWNED", "Tài liệu thuộc nhà trường"],
-];
-/** D1 self-review checklist required to publish teacher-private content. */
-function ReviewChecklist({ value, onChange }: { value: any; onChange: (value: any) => void }) {
-  const review = value ?? {
-    sources: "",
-    license: "ORIGINAL",
-    outcome: "",
-    answerKeyChecked: false,
-    safetyChecked: false,
-    accessibilityChecked: false,
-  };
-  const set = (patch: any) => onChange({ ...review, ...patch });
-  return (
-    <fieldset className="review-checklist">
-      <legend>Phiếu tự kiểm duyệt (bắt buộc để xuất bản)</legend>
-      <label className="field">
-        <span>Nguồn căn cứ cho các nội dung khoa học</span>
-        <textarea rows={2} value={review.sources} onChange={(e) => set({ sources: e.target.value })} />
-      </label>
-      <div className="form-grid">
-        <label className="field">
-          <span>Giấy phép sử dụng</span>
-          <select value={review.license} onChange={(e) => set({ license: e.target.value })}>
-            {licenseOptions.map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Field label="Yêu cầu cần đạt liên quan" value={review.outcome} onChange={(e) => set({ outcome: e.target.value })} />
-      </div>
-      <label className="check">
-        <input type="checkbox" checked={review.answerKeyChecked} onChange={(e) => set({ answerKeyChecked: e.target.checked })} />
-        Tôi đã kiểm tra đáp án của mọi câu hỏi
-      </label>
-      <label className="check">
-        <input type="checkbox" checked={review.safetyChecked} onChange={(e) => set({ safetyChecked: e.target.checked })} />
-        Nội dung không hướng dẫn thao tác nguy hiểm
-      </label>
-      <label className="check">
-        <input type="checkbox" checked={review.accessibilityChecked} onChange={(e) => set({ accessibilityChecked: e.target.checked })} />
-        Học liệu có văn bản thay thế hoặc bản chép lời
-      </label>
-    </fieldset>
   );
 }

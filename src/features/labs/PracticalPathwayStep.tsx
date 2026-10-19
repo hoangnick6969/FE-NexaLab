@@ -4,9 +4,9 @@ import { Play, RotateCcw } from "lucide-react";
 import { api } from "../../lib/api";
 import { Badge, ErrorBox, InlineLoader, verdictLabel } from "../../components/ui";
 import { CircuitPathwayStep } from "./CircuitPathwayStep";
-import { Chemistry } from "./chemistry";
+import { Chemistry } from "./Chemistry";
 
-const Eye = lazy(() => import("./eye"));
+const Eye = lazy(() => import("./Eye"));
 
 type Props = { lessonId: string; step: any; onReconciled?: (pathway: any) => void };
 

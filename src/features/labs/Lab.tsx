@@ -12,9 +12,9 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
-import { Circuit, defaultCircuit } from "./circuit";
-import { Chemistry } from "./chemistry";
-const Eye = lazy(() => import("./eye"));
+import { Circuit, defaultCircuit } from "./Circuit";
+import { Chemistry } from "./Chemistry";
+const Eye = lazy(() => import("./Eye"));
 export default function Lab() {
   const { id = "circuit" } = useParams();
   const location = useLocation();

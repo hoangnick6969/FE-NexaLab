@@ -28,7 +28,7 @@ test("assignment quiz preserves retry keys, retains history, passes at 50%, and 
   const lesson = { id: "lesson-circuit", title: "Mạch điện", topic: "Định luật Ôm", learningObjective: "Tìm hiểu mạch điện", prerequisites: "", grade: 8, subject: { name: "Vật lý" } };
 
   await page.route("**/api/assignments/pilot-a-lesson-assignment", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ contentType: "lesson", content: lesson, classroom: { name: "Lớp 8A" }, overdue: false }) }));
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const steps = ["READING", "VIDEO", "STUDY_CARDS", "QUIZ", "LAB"].map((type, index) => ({
       id: `step-${type.toLowerCase()}`,
       type,

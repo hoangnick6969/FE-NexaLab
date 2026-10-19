@@ -44,10 +44,10 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
   let failOnce = true;
   const writes: any[] = [];
   const resource = {
-    title: "Video kiểm thử",
+    title: "Video mạch điện",
     url: "https://media.example.test/video.mp4",
-    transcript: "Bản chép lời kiểm thử",
-    equivalentText: "<p>Nội dung thay thế kiểm thử</p>",
+    transcript: "Bản chép lời về mạch điện kín",
+    equivalentText: "<p>Nội dung thay thế về mạch điện</p>",
   };
 
   await page.route("https://media.example.test/video.mp4", (route) => route.abort());
@@ -88,7 +88,9 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
   });
 
   await login(page);
-  await page.goto("/assignments/pilot-a-lesson-assignment");
+  // I1 moved video from the assignment page to the lesson page tabs.
+  await page.goto("/lessons/lesson-circuit");
+  await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   const video = page.getByRole("region", { name: "Nội dung video" }).locator("video");
   await expect(video).toHaveCount(1);
   await expect(video).not.toHaveAttribute("autoplay");
@@ -122,11 +124,11 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
     element.dispatchEvent(new Event("timeupdate", { bubbles: true }));
     element.dispatchEvent(new Event("pause", { bubbles: true }));
   });
+  const retried = page.waitForResponse((response) => response.url().includes("/steps/") && response.request().method() === "PUT" && response.ok());
   await page.getByRole("button", { name: "Thử lưu lại" }).click();
-  const videoStep = page.locator(".pathway-step").filter({
-    has: page.getByRole("heading", { name: "Xem video hoặc nội dung thay thế" }),
-  });
-  await expect(videoStep.getByText("Đang học", { exact: true })).toBeVisible();
+  await retried;
+  const videoDone = page.getByRole("tab", { name: /Video bài giảng/ }).getByLabel("Đã hoàn thành");
+  await expect(videoDone).toHaveCount(0);
   expect(writes).toHaveLength(2);
   expect(writes[1]).toMatchObject({ action: "heartbeat", positionSeconds: 20, durationSeconds: 30 });
 
@@ -136,11 +138,12 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
   });
   await expect.poll(() => writes.length).toBe(3);
   expect(writes[2]).toMatchObject({ action: "ended", positionSeconds: 5, durationSeconds: 30 });
-  await expect(videoStep.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
+  await expect(videoDone).toBeVisible();
   await expect(page.getByText("Đã lưu 100%", { exact: true })).toBeVisible();
 
   await page.reload();
-  await expect(videoStep.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: /Video bài giảng/ }).click();
+  await expect(videoDone).toBeVisible();
   await expect(page.getByText(/tiếp tục từ 20 giây/)).toBeVisible();
   await video.evaluate((element) => {
     Object.defineProperty(element, "duration", { configurable: true, value: 30 });
@@ -185,7 +188,9 @@ test("keyboard completion uses only a published equivalent and remains usable at
   });
 
   await login(page);
-  await page.goto("/assignments/pilot-a-lesson-assignment");
+  // I1 moved video from the assignment page to the lesson page tabs.
+  await page.goto("/lessons/lesson-circuit");
+  await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   const video = page.getByRole("region", { name: "Nội dung video" }).locator("video");
   await video.evaluate((element) => {
     Object.defineProperty(element, "duration", { configurable: true, value: 30 });
@@ -202,10 +207,7 @@ test("keyboard completion uses only a published equivalent and remains usable at
   const complete = page.getByRole("button", { name: "Hoàn thành bằng nội dung thay thế" });
   await complete.focus();
   await complete.press("Enter");
-  const videoStep = page.locator(".pathway-step").filter({
-    has: page.getByRole("heading", { name: "Xem video hoặc nội dung thay thế" }),
-  });
-  await expect(videoStep.getByText("Đã hoàn thành", { exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Video bài giảng/ }).getByLabel("Đã hoàn thành")).toBeVisible();
   expect(receivedBody).toEqual({ action: "complete-fallback" });
   await expect(page.getByText(/Chưa lưu:/)).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
@@ -252,7 +254,9 @@ test("asset video refreshes authentication, creates a blob URL, and revokes it o
   });
 
   await login(page);
-  await page.goto("/assignments/pilot-a-lesson-assignment");
+  // I1 moved video from the assignment page to the lesson page tabs.
+  await page.goto("/lessons/lesson-circuit");
+  await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   await expect.poll(() => fileRequests).toBe(2);
   expect(authorizationHeaders.every((value) => value?.startsWith("Bearer "))).toBe(true);
   const video = page.getByRole("region", { name: "Nội dung video" }).locator("video");
@@ -260,6 +264,6 @@ test("asset video refreshes authentication, creates a blob URL, and revokes it o
   const created = await page.evaluate(() => (window as any).__objectUrlCalls.created[0]);
   expect(created).toMatch(/^blob:/);
 
-  await page.getByRole("link", { name: /Thư viện bài học/ }).click();
+  await page.getByRole("complementary").getByRole("link", { name: "Bài học", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__objectUrlCalls.revoked)).toContain(created);
 });

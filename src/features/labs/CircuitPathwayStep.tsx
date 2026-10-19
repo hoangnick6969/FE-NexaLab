@@ -10,7 +10,7 @@ import {
   HelpCircle,
   Loader2,
 } from "lucide-react";
-import { Circuit, defaultCircuit } from "./circuit";
+import { Circuit, defaultCircuit } from "./Circuit";
 import { api } from "../../lib/api";
 import { Badge, ErrorBox } from "../../components/ui";
 
