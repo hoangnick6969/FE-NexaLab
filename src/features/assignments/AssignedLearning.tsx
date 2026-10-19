@@ -119,6 +119,7 @@ export function AssignedLearning() {
                   {step.type === "QUIZ" && ["IN_PROGRESS", "COMPLETED"].includes(step.state) && (
                     <QuizLearningStep
                       lessonId={String(lessonId)}
+                      assignmentId={String(id)}
                       step={step}
                       onReconciled={(updatedPathway) =>
                         queryClient.setQueryData(["lesson-pathway", lessonId, id], updatedPathway)
@@ -128,6 +129,7 @@ export function AssignedLearning() {
                   {(step.type === "LAB" || step.type === "CHALLENGE") && step.state !== "LOCKED" && (
                     <PracticalPathwayStep
                       lessonId={String(lessonId)}
+                      assignmentId={String(id)}
                       step={step}
                       onReconciled={(updatedPathway) =>
                         queryClient.setQueryData(["lesson-pathway", lessonId, id], updatedPathway)

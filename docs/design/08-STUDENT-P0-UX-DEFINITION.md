@@ -16,7 +16,7 @@
 
 **Scope:** Vietnamese THCS Natural Science, Grades 8–9, detailed Student UX for Release 1 Increment A. Teacher, Parent, and Admin remain in the shared architecture but their complete UX is deferred to later increments.
 
-**Open Curriculum loop:** **Chọn môn → Chọn khối → Mục lục chương/chủ đề → Bài học (nội dung → video → bài tập cơ bản) → Lab nền tảng nếu có → Tiến độ**. Class Space is a separate, membership-scoped destination for teacher-created resources, unscored study-card/study-quiz practice, explicitly assigned scored tests, and class-linked Labs.
+**Open Curriculum loop:** **Chọn khối → Chọn môn → Mục lục chương/chủ đề → Bài học (nội dung → video → bài tập cơ bản) → Lab nền tảng nếu có → Tiến độ**. Class Space is a separate, membership-scoped destination for teacher-created resources, unscored study-card/study-quiz practice, explicitly assigned scored tests, and class-linked Labs.
 
 The lesson library may show an optional subject-level external ebook/reference link configured by an admin. Label it as an external publisher/source link; opening it does not imply NexaLab hosts or has reproduction rights to the material.
 
@@ -31,7 +31,7 @@ The lesson library may show an optional subject-level external ebook/reference l
 Open Curriculum is not gated by assignment, enrollment, quiz, or completion. Its student flow is:
 
 ```
-[Chọn môn] → [Chọn khối có nội dung, sắp xếp tăng dần]
+[Chọn khối, sắp xếp tăng dần] → [Chọn môn có nội dung]
           → [Mục lục chương/chủ đề theo giáo trình]
           → [Danh sách bài theo thứ tự]
           → [Nội dung bài] → [Video] → [Bài tập cơ bản]
@@ -141,14 +141,14 @@ The bottom navigation has at most five destinations: **Trang chủ, Bài học, 
 
 ### 6.2 Open Curriculum catalog (`/lessons`)
 
-The student sidebar keeps **Class Space** as a separate destination at the existing `/classes` route. The `/lessons` hub also makes every registered subject and configured external book link discoverable, including subjects with no released lessons; state clearly when no lesson content is available instead of implying a placeholder curriculum exists.
+The student sidebar keeps **Class Space** as a separate destination at the existing `/classes` route. `/lessons` shows subjects and grades only when released shared content or eligible assigned lessons exist; do not render empty subject cards as mock curriculum. Configured external book links are available from eligible lesson materials, not from zero-content placeholder cards.
 
-Show applicable assigned lesson content in a prominent **Bài học được giao** section with an **Được giao** filter. Fetch it from the existing student assignment APIs and open it through the authorized `/assignments/:id` route so assignment-specific progress and evidence remain intact. A lesson present in both released shared content and assignments appears once, in the assigned section. The **Bài học chung** filter contains only unassigned I1-released lessons. Scored tests and their due/status/submission controls stay in Assignments.
+Show applicable assigned lesson content in a prominent **Bài học được giao** section with an **Được giao** filter. Fetch it from the existing student assignment APIs. Every assigned lesson offers a primary **Học nội dung** action opening `/lessons/:id?assignmentId=:assignmentId` so the authorized reading/video pathway retains assignment-specific progress, plus a separate **Làm bài tập** action opening `/assignments/:id`. A lesson present in both released shared content and assignments appears once, in the assigned section. The **Bài học chung** filter contains only unassigned I1-released lessons. Scored tests and their due/status/submission controls stay in Assignments.
 
 Use a guided curriculum hierarchy instead of showing all chapter groups together:
 
-1. **Subject selection:** show every registered subject and its configured external book link; lesson availability is shown separately and never implies placeholder curriculum exists.
-2. **Grade selection:** after choosing a subject, show grades present in released shared lessons or eligible assigned lessons, in ascending order. Show availability/coverage separately where a grade has no lesson material.
+1. **Grade selection:** group eligible content under ascending grade headings; do not create empty grade cards.
+2. **Subject selection:** within a grade, show only subjects with released shared lessons or eligible assigned lessons. Configured external book links appear from eligible lesson materials.
 3. **Chapter/topic table of contents:** choosing a grade opens an ordered, scannable table of contents using stable curriculum taxonomy IDs. Each chapter/topic shows its lesson count and progress where available.
 4. **Lesson list:** selecting a chapter/topic shows its lessons in official curriculum order, with breadcrumbs back to subject, grade, and table of contents.
 5. **Lesson detail:** opening a lesson keeps the selected subject/grade/chapter context for return navigation and surfaces any matching foundational Lab.
@@ -156,7 +156,7 @@ Use a guided curriculum hierarchy instead of showing all chapter groups together
 Search and filters are secondary to this hierarchy. Grade ordering is deterministic ascending; shared chapter/topic/lesson ordering follows official curriculum order, not title sorting. Empty and unreleased states distinguish “not published yet” from “student has not completed it.”
 
 **Lesson card:**
-- Title (max 2 lines) · Subject chip · Type badge (Đọc / Video / Lab) · Progress ring or bar · One next-action button.
+- Title (max 2 lines) · Subject chip · Type badge (Đọc / Video / Lab) · Progress ring or bar · A content-first action and, for assigned work, a separate assignment-taking action.
 - Progress ring: `state-success` when 100%, `state-progress` when partial, empty ring when 0%. Never show a numeric score inside the ring — that is the drill-down's job.
 - Released shared lessons are never locked by quiz, assignment, enrollment, or prior completion.
 - **State: No results from filter** — Empty state with Lucide `SearchX` icon, copy *"Không tìm thấy bài học phù hợp."* and a reset-filters button.

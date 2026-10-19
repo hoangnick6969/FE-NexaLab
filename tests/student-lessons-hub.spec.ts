@@ -35,8 +35,10 @@ async function mockStudentApi(page: Page) {
     }],
   }] })));
   await page.route("**/api/assignments", (route) => route.fulfill(json([
-    { id: "assignment-1", title: "Ôn tập lớp 8A", contentId: assigned.id, contentType: "lesson", dueDate: "2026-10-20T00:00:00.000Z", overdue: false, canOpen: true, classroom: { id: "class-1", name: "Lớp 8A" } },
-    { id: "assignment-2", title: "Ôn tập lớp 8B", contentId: assigned.id, contentType: "lesson", dueDate: null, overdue: false, canOpen: true, classroom: { id: "class-2", name: "Lớp 8B" } },
+    { id: "assignment-1", title: "Ôn tập lớp 8A", contentId: assigned.id, contentTitle: assigned.title, contentType: "lesson", subject: assigned.subject, grade: 8, chapter: assigned.chapter, chapterOrder: 1, curriculumOrder: 2, dueDate: "2026-10-20T00:00:00.000Z", overdue: false, canOpen: true, classroom: { id: "class-1", name: "Lớp 8A" } },
+    { id: "assignment-2", title: "Ôn tập lớp 8B", contentId: assigned.id, contentTitle: assigned.title, contentType: "lesson", subject: assigned.subject, grade: 8, chapter: assigned.chapter, chapterOrder: 1, curriculumOrder: 2, dueDate: null, overdue: false, canOpen: true, classroom: { id: "class-2", name: "Lớp 8B" } },
+    { id: "test-assignment", title: "Kiểm tra cuối chương", contentId: "test-1", contentType: "test", subject: assigned.subject, grade: 8, chapter: assigned.chapter, chapterOrder: 1, curriculumOrder: 2, dueDate: "2026-10-19T18:00:00.000Z", overdue: false, canOpen: true, classroom: { id: "class-1", name: "Lớp 8A" }, testStatus: { status: "DUE_SOON", revision: 1, dueSoon: true, extended: false } },
+    { id: "legacy-test", title: "Bài kiểm tra chưa phân môn", contentId: "legacy-test-1", contentType: "test", dueDate: "2026-10-22T00:00:00.000Z", overdue: false, canOpen: true, classroom: { id: "class-1", name: "Lớp 8A" }, testStatus: { status: "UPCOMING", revision: 1, dueSoon: false, extended: false } },
   ])));
   await page.route("**/api/lessons", (route) => route.fulfill(json([assigned])));
   await page.route("**/api/classes", (route) => route.fulfill(json([
@@ -48,19 +50,131 @@ test("student lesson hub combines released and assigned lessons and keeps Class 
   await mockStudentApi(page);
   await page.goto("/lessons");
 
-  await expect(page.getByRole("heading", { name: "Bài học được giao" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Bài 2. Thực hành" })).toHaveCount(1);
-  await expect(page.getByRole("link", { name: /Ôn tập lớp 8A · Lớp 8A/ })).toHaveAttribute("href", "/assignments/assignment-1");
-  await expect(page.getByRole("link", { name: /Ôn tập lớp 8B · Lớp 8B/ })).toHaveAttribute("href", "/assignments/assignment-2");
-  await expect(page.getByRole("link", { name: /Khoa học tự nhiên/ })).toHaveAttribute("href", "/ebooks/science");
+  await expect(page.getByRole("heading", { name: "Học theo môn và khối" })).toBeVisible();
+  await expect(page.getByText("Lịch sử", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Khoa học tự nhiên/ })).toHaveCount(1);
+
+  await page.getByRole("link", { name: /Khoa học tự nhiên/ }).click();
+  await expect(page).toHaveURL(/\/lessons\/catalog\/grades\/8\/subjects\/science$/);
+  await expect(page.getByRole("heading", { name: "Khoa học tự nhiên" })).toBeVisible();
+  await page.getByRole("link", { name: /Chương 1/ }).click();
+  await expect(page).toHaveURL(/\/chapters\/Ch%C6%B0%C6%A1ng%201$/);
+  await expect(page.getByRole("heading", { name: "Chương 1" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bài 1. Năng lượng" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bài 2. Thực hành" })).toHaveCount(1);
+  const assignedCard = page.locator(".student-lesson-card").filter({ has: page.getByRole("heading", { name: "Bài 2. Thực hành" }) });
+  await expect(assignedCard.getByRole("link", { name: /Học nội dung/ }).first()).toHaveAttribute("href", "/lessons/lesson-assigned?assignmentId=assignment-1");
+  await expect(assignedCard.getByRole("link", { name: /Làm bài tập/ }).first()).toHaveAttribute("href", "/assignments/assignment-1");
+  await expect(page.getByText("Ôn tập lớp 8A · Lớp 8A")).toBeVisible();
+  await page.goto("/lessons");
 
   await page.getByRole("button", { name: "Bài học chung" }).click();
   await expect(page.getByRole("heading", { name: "Bài 2. Thực hành" })).toHaveCount(0);
+  await page.getByRole("link", { name: /Khoa học tự nhiên/ }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Đang lọc: Bài học chung" })).toBeVisible();
+  await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
+  await page.getByRole("link", { name: /Chương 1/ }).click();
   await expect(page.getByRole("heading", { name: "Bài 1. Năng lượng" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bài 2. Thực hành" })).toHaveCount(1);
 
   await page.getByRole("link", { name: "Class Space" }).click();
   await expect(page).toHaveURL(/\/classes$/);
   await expect(page.getByRole("heading", { name: "Class Space của em" })).toBeVisible();
   await expect(page.getByText("Chờ giáo viên duyệt", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Lớp đang chờ duyệt" }).click();
+  await expect(page).toHaveURL(/\/classes\/class-pending\/catalog$/);
+  await expect(page.getByText("Yêu cầu của em đang chờ giáo viên duyệt.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nội dung theo môn học" })).toHaveCount(0);
+});
+
+test("assigned lesson navigation keeps the selected assignment on its pathway request", async ({ page }) => {
+  await mockStudentApi(page);
+  let assignmentDetailRequested = false;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/assignments/assignment-1")) assignmentDetailRequested = true;
+  });
+  await page.route("**/api/lessons/lesson-assigned/pathway?assignmentId=assignment-1", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      lesson: { id: assigned.id, title: assigned.title, subject: assigned.subject, grade: 8, chapter: assigned.chapter, topic: assigned.topic, learningObjective: "Ôn tập", prerequisites: "", content: "Nội dung dự phòng", materials: [] },
+      assignment: { id: "assignment-1", dueDate: null, overdue: false },
+      contentArchived: false,
+      steps: [
+        { id: "reading-1", type: "READING", state: "NOT_STARTED", progressValue: 0, resource: { html: "<p>Nội dung đọc thuộc bài được giao.</p>" } },
+        { id: "video-1", type: "VIDEO", state: "NOT_STARTED", progressValue: 0, resource: { url: "https://video.example.test/lesson.mp4", title: "Video bài giảng" } },
+      ],
+    }),
+  }));
+
+  await page.goto("/lessons");
+  await page.getByRole("link", { name: /Khoa học tự nhiên/ }).click();
+  await page.getByRole("link", { name: /Chương 1/ }).click();
+  const pathwayRequest = page.waitForRequest((request) => request.url().includes("/api/lessons/lesson-assigned/pathway"));
+  const assignedCard = page.locator(".student-lesson-card").filter({ has: page.getByRole("heading", { name: assigned.title }) });
+  await assignedCard.getByRole("link", { name: /Học nội dung/ }).first().click();
+  const request = await pathwayRequest;
+
+  expect(new URL(request.url()).searchParams.get("assignmentId")).toBe("assignment-1");
+  await expect(page.getByRole("heading", { name: assigned.title })).toBeVisible();
+  await expect(page.getByText("Nội dung đọc thuộc bài được giao.")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Video bài giảng" })).toBeVisible();
+  expect(assignmentDetailRequested).toBe(false);
+});
+
+test("shared lesson details use foundational progress without requesting an assignment pathway", async ({ page }) => {
+  await mockStudentApi(page);
+  let assignmentPathwayRequested = false;
+  let progressSaved = false;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/lessons/lesson-shared/pathway")) assignmentPathwayRequested = true;
+  });
+  await page.route("**/api/open-curriculum/lessons/lesson-shared", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      ...released,
+      curriculum: "Khoa học tự nhiên THCS",
+      content: "<p>Nội dung bài học chung.</p>",
+      materials: [],
+      steps: [{ id: "reading-1", type: "READING", state: "NOT_STARTED", progressValue: 0, resource: { html: "<p>Nội dung đọc.</p>" } }],
+      ebookEditions: [],
+    }),
+  }));
+  await page.route("**/api/open-curriculum/lessons/lesson-shared/steps/reading-1/progress", (route) => {
+    progressSaved = true;
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ step: { id: "reading-1", state: "COMPLETED", progressValue: 100 } }) });
+  });
+
+  await page.goto("/lessons");
+  await page.getByRole("link", { name: /Khoa học tự nhiên/ }).click();
+  await page.getByRole("link", { name: /Chương 1/ }).click();
+  const sharedCard = page.locator(".student-lesson-card").filter({ has: page.getByRole("heading", { name: released.title }) });
+  await sharedCard.getByRole("link", { name: /Học nội dung/ }).click();
+  await expect(page.getByText("Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.")).toBeVisible();
+  await page.getByRole("button", { name: "Hoàn thành phần đọc" }).click();
+  await expect.poll(() => progressSaved).toBe(true);
+  expect(assignmentPathwayRequested).toBe(false);
+});
+
+test("assignment catalog uses the enriched list and opens route-based chapter screens without detail fan-out", async ({ page }) => {
+  await mockStudentApi(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  let detailRequests = 0;
+  page.on("request", (request) => {
+    if (/\/api\/assignments\/[^/?]+$/.test(new URL(request.url()).pathname)) detailRequests += 1;
+  });
+  await page.goto("/assignments");
+  await expect(page.getByRole("link", { name: /Khoa học tự nhiên/ })).toBeVisible();
+  await page.getByRole("link", { name: /Khoa học tự nhiên/ }).click();
+  await expect(page).toHaveURL(/\/assignments\/catalog\/grades\/8\/subjects\/science$/);
+  await page.getByRole("link", { name: /Chương 1/ }).click();
+  await expect(page.getByRole("link", { name: /Ôn tập lớp 8A/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Kiểm tra cuối chương/ })).toHaveAttribute("href", "/assignments/test-assignment");
+  await expect(page.getByRole("link", { name: /Kiểm tra cuối chương/ }).getByText("Bài kiểm tra", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sắp đến hạn", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Có 1 bài kiểm tra sắp đến hạn" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bài kiểm tra chưa xếp theo môn" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Bài kiểm tra chưa phân môn/ })).toHaveAttribute("href", "/assignments/legacy-test");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  expect(detailRequests).toBe(0);
 });

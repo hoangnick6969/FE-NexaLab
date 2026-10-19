@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import * as pdfjs from "pdfjs-dist";
+import type { PDFDataRangeTransport, PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -7,8 +7,6 @@ import { ArrowLeft, ArrowRight, BookOpen, Columns2, ExternalLink, Highlighter, L
 import { api, useAuth } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { httpsUrl } from "../../lib/urls";
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 type Annotation = {
   id: string;
@@ -24,7 +22,7 @@ type Annotation = {
 
 type FallbackMark = { id: string; kind: Annotation["kind"]; left: number; top: number; width: number; height: number };
 
-function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { document: pdfjs.PDFDocumentProxy; pageNumber: number; zoom: number; onActivate: () => void }) {
+function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { document: PDFDocumentProxy; pageNumber: number; zoom: number; onActivate: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -32,7 +30,7 @@ function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { docume
     const canvas = canvasRef.current;
     if (!canvas) return;
     let active = true;
-    let renderTask: pdfjs.RenderTask | undefined;
+    let renderTask: RenderTask | undefined;
     setReady(false);
     void document.getPage(pageNumber).then((page) => {
       if (!active) return;
@@ -70,10 +68,11 @@ export function EbookReader() {
   const user = useAuth((state) => state.user)!;
   const queryClient = useQueryClient();
   const routeState = location.state as { fromLessonId?: string; initialPhysicalPage?: number; ebookUrl?: string } | null;
+  const [pdfjs, setPdfjs] = useState<typeof import("pdfjs-dist") | null>(null);
   const subjectQuery = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
   const url = httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
-  const [document, setDocument] = useState<pdfjs.PDFDocumentProxy | null>(null);
+  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [fingerprint, setFingerprint] = useState("");
@@ -126,10 +125,21 @@ export function EbookReader() {
   });
 
   useEffect(() => {
-    if (!url) return;
     let active = true;
-    let task: ReturnType<typeof pdfjs.getDocument> | undefined;
-    let rangeTransport: pdfjs.PDFDataRangeTransport | undefined;
+    void import("pdfjs-dist").then((module) => {
+      module.GlobalWorkerOptions.workerSrc = workerUrl;
+      if (active) setPdfjs(module);
+    }).catch((error: unknown) => {
+      if (active) setLoadError(error instanceof Error ? error.message : "Không tải được bộ đọc ebook");
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!url || !pdfjs) return;
+    let active = true;
+    let task: PDFDocumentLoadingTask | undefined;
+    let rangeTransport: PDFDataRangeTransport | undefined;
     const rangeControllers = new Set<AbortController>();
     const loadController = new AbortController();
     setLoadError(""); setDocument(null); setFingerprint(""); setPageNumber(1); setPageCount(0);
@@ -185,7 +195,7 @@ export function EbookReader() {
     };
     void load();
     return () => { active = false; loadController.abort(); rangeTransport?.abort(); void task?.destroy(); };
-  }, [url, reloadKey, routeState?.initialPhysicalPage]);
+  }, [pdfjs, url, reloadKey, routeState?.initialPhysicalPage]);
 
   useEffect(() => {
     const updateFullscreen = () => setIsFullscreen(window.document.fullscreenElement === readerRef.current);
@@ -212,10 +222,10 @@ export function EbookReader() {
   });
 
   useEffect(() => {
-    if (!document || !canvasRef.current || !textLayerRef.current) return;
+    if (!pdfjs || !document || !canvasRef.current || !textLayerRef.current) return;
     let active = true;
-    let renderTask: pdfjs.RenderTask | undefined;
-    let textLayer: pdfjs.TextLayer | undefined;
+    let renderTask: RenderTask | undefined;
+    let textLayer: PdfTextLayer | undefined;
     const canvas = canvasRef.current;
     const textContainer = textLayerRef.current;
     setRenderError("");
@@ -253,7 +263,7 @@ export function EbookReader() {
     })();
     setPageInput(String(pageNumber)); setSelection(null);
     return () => { active = false; renderTask?.cancel(); textLayer?.cancel(); };
-  }, [document, pageNumber, hostSize, zoom, renderRetry, useSpread, isFullscreen]);
+  }, [pdfjs, document, pageNumber, hostSize, zoom, renderRetry, useSpread, isFullscreen]);
 
   useEffect(() => {
     const container = textLayerRef.current;

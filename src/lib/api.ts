@@ -66,12 +66,15 @@ export type StudentPathway = {
   lesson: {
     id: string;
     title: string;
-    subject: { id: string; name: string };
+    subject: { id: string; name: string; ebookUrl?: string | null };
     grade: number;
     chapter: string;
     topic: string;
     learningObjective: string;
     prerequisites: string;
+    curriculum?: string;
+    content?: string;
+    materials?: Array<{ type: string; url?: string; title?: string }>;
   };
   assignment: { id: string; dueDate: string | null; overdue: boolean };
   /** Sources/license of the lesson (B1-T4); synthetic fixtures carry a note instead. */

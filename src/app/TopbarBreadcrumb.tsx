@@ -23,6 +23,13 @@ export function TopbarBreadcrumb({
         { label: isStudent ? "Bài học" : "Thư viện bài học", isCurrent: true },
       ];
     }
+    if (pathname.startsWith("/lessons/catalog")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: "Bài học", to: "/lessons" },
+        { label: "Mục lục môn học", isCurrent: true },
+      ];
+    }
     if (pathname.startsWith("/lessons/")) {
       return [
         { label: homeLabel, to: "/" },
@@ -52,7 +59,7 @@ export function TopbarBreadcrumb({
         { label: lab ? lab.title : "Thực hành", isCurrent: true },
       ];
     }
-    if (pathname.startsWith("/assignments/")) {
+    if (pathname.startsWith("/assignments/") && !pathname.startsWith("/assignments/catalog")) {
       return [
         { label: homeLabel, to: "/" },
         {
@@ -60,6 +67,13 @@ export function TopbarBreadcrumb({
           to: isStudent ? "/assignments" : "/classes",
         },
         { label: isStudent ? "Chi tiết bài tập" : "Chi tiết bài học", isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/assignments/catalog")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: "Bài tập", to: "/assignments" },
+        { label: "Mục lục bài tập", isCurrent: true },
       ];
     }
     if (pathname === "/assignments") {
@@ -72,6 +86,13 @@ export function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         { label: isStudent ? "Class Space" : "Lớp học của tôi", isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/classes/")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: isStudent ? "Class Space" : "Lớp học của tôi", to: "/classes" },
+        { label: "Không gian môn học", isCurrent: true },
       ];
     }
     if (pathname === "/progress") {

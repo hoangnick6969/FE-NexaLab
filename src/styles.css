@@ -5725,39 +5725,51 @@ td small {
 .app-shell-student .lesson-chapter-heading .eyebrow { display: block; margin-bottom: 4px; }
 .app-shell-student .lesson-chapter-heading h2 { margin: 0; color: #14202b; font-size: 19px; font-weight: 700; line-height: 1.35; }
 .app-shell-student .lesson-chapter-count { flex: 0 0 auto; color: #60717c; font-size: 12px; }
-.app-shell-student .student-subject-previews {
-  margin: 34px 0 18px;
-  padding: 18px;
-  border: 1px solid #e0e9ed;
-  border-radius: 18px;
-  background: #f8fbfc;
-}
-.app-shell-student .student-subject-previews-heading { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 13px; }
-.app-shell-student .student-subject-previews-heading .eyebrow { display: block; margin-bottom: 3px; }
-.app-shell-student .student-subject-previews-heading h2 { margin: 0; color: #14202b; font-size: 17px; line-height: 1.35; }
-.app-shell-student .student-subject-previews-heading > p { margin: 0; color: #60717c; font-size: 12px; }
-.app-shell-student .subject-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 9px; }
-.app-shell-student .subject-preview-card {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #e4ecef;
-  border-radius: 13px;
-  background: #fff;
-}
-.app-shell-student .subject-preview-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: #e6f1f3; color: #1f6f78; }
-.app-shell-student .subject-preview-title { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
-.app-shell-student .subject-preview-title h3 { overflow: hidden; margin: 0; color: #243540; font-size: 13px; font-weight: 650; line-height: 1.35; text-overflow: ellipsis; }
-.app-shell-student .subject-preview-title span { flex: 0 0 auto; color: #60717c; font-size: 10px; }
-.app-shell-student .subject-preview-card p { margin: 5px 0 0; color: #60717c; font-size: 11px; line-height: 1.45; }
 .app-shell-student .student-lessons-page .student-lesson-card .card-footer {
   min-height: 40px;
   padding-top: 7px;
 }
 .app-shell-student .student-lessons-page .student-lesson-open { min-height: 44px; padding: 0 12px; font-size: 12px; }
+.app-shell-student .student-lesson-section { margin-top: 24px; }
+.app-shell-student .student-catalog-filter-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid #dfe9ed; border-radius: 12px; color: #40545c; font-size: 13px; }
+.app-shell-student .student-catalog-filter-state button { min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #176d72; font: inherit; font-weight: 700; cursor: pointer; }
+.app-shell-student .student-catalog-filter-state button:focus-visible { outline: 3px solid #24777a; outline-offset: 2px; }
+.app-shell-student .student-assignment-links { display: grid; gap: 7px; margin-top: auto; padding-top: 12px; }
+.app-shell-student .student-assignment-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  padding-top: 8px;
+  border-top: 1px solid #edf1f2;
+}
+.app-shell-student .student-assignment-label { display: grid; gap: 3px; min-width: 0; color: #40545c; font-size: 11px; font-weight: 650; }
+.app-shell-student .student-assignment-label small { color: #728188; font-size: 10px; font-weight: 500; }
+.app-shell-student .student-assignment-links a {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #d5e3e6;
+  border-radius: 11px;
+  background: #f3f8f8;
+  color: #145961;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.app-shell-student .student-assignment-links .student-lesson-open,
+.app-shell-student .student-assignment-links .student-assignment-open {
+  min-height: 40px;
+  justify-content: center;
+  white-space: nowrap;
+}
+.app-shell-student .student-assignment-links .student-lesson-open { padding-inline: 11px; background: #f6c945; color: #14202b; }
+.app-shell-student .student-assignment-links .student-lesson-open:hover { background: #f8d76e; }
+.app-shell-student .student-assignment-links .student-assignment-open { padding-inline: 10px; }
+.app-shell-student .student-assignment-links .student-assignment-open svg { flex: 0 0 auto; }
+.app-shell-student .student-assignment-links a:hover { border-color: #8fb8bd; background: #eaf4f4; }
 .app-shell-student .lesson-detail-page .page-heading h1 { font-size: clamp(21px, 1.9vw, 25px); }
 .app-shell-student .lesson-detail-page .page-heading p.muted { font-size: 12px; }
 .app-shell-student .lesson-detail-reading .lesson-content { font-size: 16px; line-height: 1.7; }
@@ -5837,4 +5849,62 @@ td small {
   .app-shell-student .student-lessons-page .filter-bar { padding: 7px; }
   .app-shell-student .student-lessons-page .student-lesson-card { min-height: 205px; }
   .app-shell-student .lesson-detail-page .page-heading h1 { font-size: 21px; }
+}
+.hierarchy-browser { display: grid; gap: 14px; min-width: 0; }
+.hierarchy-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: #77848b; font-size: 13px; }
+.hierarchy-breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 2px; color: #176d72; font: inherit; font-weight: 700; text-decoration: none; }
+.hierarchy-breadcrumb a:hover { text-decoration: underline; }
+.hierarchy-breadcrumb [aria-current="page"] { color: #25343a; font-weight: 700; }
+.hierarchy-grade-sections { display: grid; gap: 20px; }
+.hierarchy-grade-section { display: grid; gap: 10px; }
+.hierarchy-grade-section > h3 { margin: 0; color: #59696f; font-size: 14px; }
+.hierarchy-grade-section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+.hierarchy-choice, .hierarchy-chapter { display: flex; align-items: center; gap: 13px; min-width: 0; min-height: 78px; padding: 15px; border: 1px solid #e3eaec; border-radius: 15px; background: #fff; color: #24333b; text-align: left; text-decoration: none; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.hierarchy-choice:hover, .hierarchy-chapter:hover { border-color: #8eb9bc; background: #f4f9f8; transform: translateY(-1px); }
+.hierarchy-choice:focus-visible, .hierarchy-chapter:focus-visible, .hierarchy-breadcrumb a:focus-visible { outline: 3px solid #24777a; outline-offset: 3px; }
+.hierarchy-choice > svg, .hierarchy-chapter > svg { flex: 0 0 auto; color: #357b7e; }
+.hierarchy-choice .subject-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; padding: 9px; border-radius: 12px; background: #e8f3f2; color: #287578; }
+.hierarchy-choice .subject-icon svg { width: 22px; height: 22px; }
+.hierarchy-choice-copy, .hierarchy-chapter > span { display: grid; flex: 1; gap: 5px; min-width: 0; }
+.hierarchy-choice-copy b, .hierarchy-chapter b { overflow-wrap: anywhere; font-size: 15px; }
+.hierarchy-choice-copy small, .hierarchy-chapter small { color: #65747b; font-size: 12px; }
+.hierarchy-chapter-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.hierarchy-chapter { min-height: 72px; }
+.hierarchy-chapter-number { display: grid; flex: 0 0 38px; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #e8f3f2; color: #287578; font-weight: 800; }
+.hierarchy-screen-heading { display: grid; gap: 4px; }
+.hierarchy-screen-heading h2, .hierarchy-screen-heading p { margin: 0; }
+.hierarchy-screen-heading h2 { color: #25343a; font-size: clamp(22px, 4vw, 30px); }
+.hierarchy-screen-heading p { color: #68777f; font-size: 14px; }
+.hierarchy-content-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; min-width: 0; }
+.hierarchy-content-list > div { display: flex; min-width: 0; }
+.hierarchy-content-list .student-lesson-card, .hierarchy-content-list .student-assignment-row { width: 100%; }
+.hierarchy-empty { margin: 0; padding: 18px; border: 1px dashed #ccd8dc; border-radius: 13px; color: #68777f; }
+.student-lesson-section > .hierarchy-browser { margin-top: 12px; }
+.hierarchy-back-link { display: inline-flex; align-items: center; min-height: 44px; margin: 2px 0 14px; padding: 4px 10px; border-radius: 9px; color: #246f72; font-size: 14px; font-weight: 700; text-decoration: none; }
+.hierarchy-back-link:hover { background: #eef5f4; }
+.hierarchy-back-link:focus-visible { outline: 3px solid #24777a; outline-offset: 2px; }
+.class-space-detail-panel { display: grid; gap: 14px; }
+.class-space-detail-panel > h2 { margin: 0; font-size: 19px; }
+.student-class-card h2 a { color: inherit; text-decoration: none; }
+.student-class-card h2 a:hover { color: #24777a; text-decoration: underline; }
+.student-closed-assignments { display: grid; gap: 9px; margin-top: 24px; }
+.student-closed-assignments h2 { margin: 0 0 2px; font-size: 17px; }
+
+@media (max-width: 600px) {
+  .app-shell-student .student-catalog-filter-state { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .app-shell-student .student-catalog-filter-state button { align-self: flex-end; }
+  .app-shell-student .student-assignment-actions { grid-template-columns: 1fr 1fr; }
+  .app-shell-student .student-assignment-label { grid-column: 1 / -1; }
+  .app-shell-student .student-assignment-links .student-lesson-open,
+  .app-shell-student .student-assignment-links .student-assignment-open { width: 100%; }
+  .hierarchy-grade-section-grid { grid-template-columns: 1fr; gap: 8px; }
+  .hierarchy-choice, .hierarchy-chapter { min-height: 68px; padding: 12px; border-radius: 12px; }
+  .hierarchy-choice .subject-icon { width: 38px; height: 38px; }
+  .hierarchy-content-list { grid-template-columns: 1fr; gap: 9px; }
+  .hierarchy-breadcrumb { gap: 5px; font-size: 12px; }
+  .student-closed-assignments .student-assignment-row { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hierarchy-choice, .hierarchy-chapter { transition: none; }
+  .hierarchy-choice:hover, .hierarchy-chapter:hover { transform: none; }
 }

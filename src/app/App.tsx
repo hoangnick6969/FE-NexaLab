@@ -124,7 +124,7 @@ export default function App() {
               <NavLink to="/lessons" aria-label="Bài học"><BookOpen />Bài học</NavLink>
               <NavLink to="/labs" aria-label="Phòng thí nghiệm"><FlaskConical />Lab</NavLink>
               <NavLink to="/assignments" aria-label="Bài tập"><ClipboardList />Bài tập</NavLink>
-              <NavLink to="/classes" aria-label="Class Space"><Users />Lớp học</NavLink>
+              <NavLink to="/classes" aria-label="Class Space"><Users />Class Space</NavLink>
               <NavLink to="/progress" aria-label="Tiến độ"><ChartNoAxesCombined />Tiến độ</NavLink>
             </>
           ) : (
@@ -199,11 +199,14 @@ export default function App() {
                 }
               />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/lessons/catalog/*" element={<Lessons />} />
               <Route path="/lessons/:id" element={<LessonDetail />} />
               <Route path="/ebooks/:subjectId" element={<EbookReader />} />
               <Route path="/assignments" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
+              <Route path="/assignments/catalog/*" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/:id" element={<AssignedLearning />} />
               <Route path="/classes" element={<Classes />} />
+              <Route path="/classes/:classId/catalog/*" element={user.role === "STUDENT" ? <Classes /> : <Navigate to="/classes" />} />
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/saved" element={<Saved />} />
               <Route path="/settings" element={<SettingsPage />} />

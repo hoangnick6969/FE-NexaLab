@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, useAuth, type QuizAttemptHistoryResponse, type QuizAttemptRequest, type QuizAttemptResponse, type QuizAttemptSummary, type StudentQuiz } from "../../lib/api";
 import { ErrorBox, InlineLoader } from "../../components/ui";
+import { withAssignmentContext } from "../lessons/lesson-catalog";
 
 type QuizDraft = {
   answers: Record<string, string>;
@@ -10,16 +11,18 @@ type QuizDraft = {
 
 export function QuizLearningStep({
   lessonId,
+  assignmentId,
   step,
   onReconciled,
 }: {
   lessonId: string;
+  assignmentId: string;
   step: any;
   onReconciled: (pathway: any) => void;
 }) {
   const userId = useAuth((state) => state.user?.id ?? "student");
   const queryClient = useQueryClient();
-  const storageKey = `quiz-draft:${userId}:${lessonId}:${step.id}`;
+  const storageKey = `quiz-draft:${userId}:${lessonId}:${assignmentId}:${step.id}`;
   const [draft, setDraft] = useState<QuizDraft>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
@@ -33,12 +36,12 @@ export function QuizLearningStep({
   const [submitError, setSubmitError] = useState("");
   const [confirmed, setConfirmed] = useState<QuizAttemptSummary | null>(null);
   const quizQuery = useQuery<StudentQuiz>({
-    queryKey: ["student-quiz", lessonId],
-    queryFn: () => api(`/lessons/${lessonId}/quiz`),
+    queryKey: ["student-quiz", lessonId, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${lessonId}/quiz`, assignmentId)),
   });
   const historyQuery = useQuery<QuizAttemptHistoryResponse>({
-    queryKey: ["student-quiz-attempts", lessonId],
-    queryFn: () => api(`/lessons/${lessonId}/quiz-attempts`),
+    queryKey: ["student-quiz-attempts", lessonId, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${lessonId}/quiz-attempts`, assignmentId)),
   });
   const questions = quizQuery.data?.questions ?? [];
   const question = questions[index];
@@ -59,7 +62,7 @@ export function QuizLearningStep({
     setSubmitting(true);
     setSubmitError("");
     try {
-      const response = await api<QuizAttemptResponse>(`/lessons/${lessonId}/quiz-attempts`, "POST", payload);
+      const response = await api<QuizAttemptResponse>(withAssignmentContext(`/lessons/${lessonId}/quiz-attempts`, assignmentId), "POST", payload);
       setConfirmed(response.attempt);
       onReconciled(response.pathway);
       const cleared = { answers: {}, pending: null };
@@ -78,8 +81,8 @@ export function QuizLearningStep({
     const saved = historyQuery.data.attempts.find((attempt) => attempt.idempotencyKey === draft.pending?.idempotencyKey);
     if (!saved) return;
     persist({ answers: {}, pending: null });
-    queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId] });
-  }, [draft.pending, historyQuery.data, lessonId, queryClient]);
+    queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId, assignmentId] });
+  }, [assignmentId, draft.pending, historyQuery.data, lessonId, queryClient]);
 
   if (quizQuery.isLoading) return <section className="quiz-learning" aria-label="Bài kiểm tra"><InlineLoader message="Đang nạp bài kiểm tra trắc nghiệm…" /></section>;
   if (quizQuery.error || !quizQuery.data) return (

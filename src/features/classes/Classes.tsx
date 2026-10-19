@@ -3,6 +3,6 @@ import { StudentClasses } from "./StudentClasses";
 import { TeacherClasses } from "./TeacherClasses";
 
 export function Classes() {
-  const user = useAuth((s) => s.user)!;
+  const user = useAuth((state) => state.user)!;
   return user.role === "STUDENT" ? <StudentClasses /> : <TeacherClasses />;
 }

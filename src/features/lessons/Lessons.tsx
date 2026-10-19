@@ -8,6 +8,7 @@ import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton } from ".
 import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard } from "./lesson-catalog";
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
 import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
+import { StudentLessonsHub } from "./StudentLessonsHub";
 
 const blankLesson = {
   title: "",
@@ -34,6 +35,11 @@ const lessonNumber = (title: string) => Number(title.match(/^\s*Bài\s+(\d+)/i)?
 
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
+  if (user.role === "STUDENT") return <StudentLessonsHub />;
+  return <LessonsLibrary user={user} />;
+}
+
+function LessonsLibrary({ user }: { user: any }) {
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
   const q = useQuery({
     queryKey: [manage ? "lessons" : "open-curriculum"],
@@ -110,7 +116,7 @@ export function Lessons() {
     clone.mutate(id, {
       onSuccess: (copy: any) => setEdit({ ...copy, review: copy.review ?? null }),
     });
-  const studentCatalog = buildStudentLessonCatalog((q.data ?? []) as StudentLessonCard[], assignedLessonDetails.data ?? []);
+  const studentCatalog = buildStudentLessonCatalog((q.data ?? []) as StudentLessonCard[], assignedLessonDetails.data ?? [], []);
   const lessonMatches = manage
     ? (q.data ?? []).filter((l: any) =>
       (filter === "all" || (filter === "khtn" && khtnSubjectIds.has(l.subjectId))) &&

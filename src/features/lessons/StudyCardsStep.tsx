@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { api, type StudentLearningStep, type StudentPathway } from "../../lib/api";
+import { withAssignmentContext } from "./lesson-catalog";
 
 export function StudyCardsStep({
   lessonId,
+  assignmentId,
   step,
   onReconciled,
 }: {
   lessonId: string;
+  assignmentId: string;
   step: StudentLearningStep;
   onReconciled: (pathway: StudentPathway) => void;
 }) {
@@ -22,7 +25,7 @@ export function StudyCardsStep({
     setSaveState("saving");
     setError("");
     try {
-      const updated = await api<{ pathway: StudentPathway }>(`/lessons/${lessonId}/steps/${step.id}/progress`, "PUT", {
+      const updated = await api<{ pathway: StudentPathway }>(withAssignmentContext(`/lessons/${lessonId}/steps/${step.id}/progress`, assignmentId), "PUT", {
         action: complete ? "complete" : "visit",
         cardIndex: index,
       });
