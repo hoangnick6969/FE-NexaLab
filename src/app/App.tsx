@@ -67,6 +67,13 @@ function TopbarBreadcrumb({
         { label: isStudent ? "Bài học" : "Thư viện bài học", isCurrent: true },
       ];
     }
+    if (pathname.startsWith("/lessons/catalog")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: isStudent ? "Bài học" : "Thư viện bài học", to: "/lessons" },
+        { label: "Mục lục môn học", isCurrent: true },
+      ];
+    }
     if (pathname.startsWith("/lessons/")) {
       return [
         { label: homeLabel, to: "/" },
@@ -103,7 +110,7 @@ function TopbarBreadcrumb({
           label: isStudent ? "Bài tập" : "Lớp học",
           to: isStudent ? "/assignments" : "/classes",
         },
-        { label: isStudent ? "Chi tiết bài tập" : "Chi tiết bài học", isCurrent: true },
+        { label: isStudent && pathname.startsWith("/assignments/catalog") ? "Mục lục bài tập" : isStudent ? "Chi tiết bài tập" : "Chi tiết bài học", isCurrent: true },
       ];
     }
     if (pathname === "/assignments") {
@@ -115,7 +122,14 @@ function TopbarBreadcrumb({
     if (pathname === "/classes") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Lớp học của tôi", isCurrent: true },
+        { label: isStudent ? "Class Space của em" : "Lớp học của tôi", isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/classes/")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: isStudent ? "Class Space của em" : "Lớp học của tôi", to: "/classes" },
+        { label: "Nội dung lớp", isCurrent: true },
       ];
     }
     if (pathname === "/progress") {
@@ -235,6 +249,7 @@ export default function App() {
             <>
               <NavLink end to="/" aria-label="Trang chủ"><LayoutDashboard />Trang chủ</NavLink>
               <NavLink to="/lessons" aria-label="Bài học"><BookOpen />Bài học</NavLink>
+              <NavLink to="/classes" aria-label="Class Space"><Users />Class Space</NavLink>
               <NavLink to="/labs" aria-label="Phòng thí nghiệm"><FlaskConical />Lab</NavLink>
               <NavLink to="/assignments" aria-label="Bài tập"><ClipboardList />Bài tập</NavLink>
               <NavLink to="/progress" aria-label="Tiến độ"><ChartNoAxesCombined />Tiến độ</NavLink>
@@ -311,11 +326,14 @@ export default function App() {
                 }
               />
               <Route path="/lessons" element={<Lessons />} />
+              <Route path="/lessons/catalog/*" element={<Lessons />} />
               <Route path="/lessons/:id" element={<LessonDetail />} />
               <Route path="/ebooks/:subjectId" element={<EbookReader />} />
               <Route path="/assignments" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
+              <Route path="/assignments/catalog/*" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/:id" element={<AssignedLearning />} />
               <Route path="/classes" element={<Classes />} />
+              <Route path="/classes/:classId/catalog/*" element={user.role === "STUDENT" ? <Classes /> : <Navigate to="/classes" />} />
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/saved" element={<Saved />} />
               <Route path="/settings" element={<SettingsPage />} />

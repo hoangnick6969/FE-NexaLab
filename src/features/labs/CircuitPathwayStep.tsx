@@ -16,12 +16,14 @@ import { Badge, ErrorBox } from "../../components/ui";
 
 export interface CircuitPathwayStepProps {
   lessonId: string;
+  assignmentId: string;
   step: any;
   onReconciled?: (pathway: any) => void;
 }
 
 export function CircuitPathwayStep({
   lessonId,
+  assignmentId,
   step,
   onReconciled,
 }: CircuitPathwayStepProps) {
@@ -38,8 +40,8 @@ export function CircuitPathwayStep({
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
   // A teacher challenge variant carries its own objective (B1-T4); the lab step uses the model default.
   const workspace = useQuery({
-    queryKey: ["step-lab", lessonId, step.id],
-    queryFn: () => api(`/lessons/${lessonId}/steps/${step.id}/lab`),
+    queryKey: ["step-lab", lessonId, step.id, assignmentId],
+    queryFn: () => api(`/lessons/${lessonId}/steps/${step.id}/lab?assignmentId=${encodeURIComponent(assignmentId)}`),
     enabled: step.type === "CHALLENGE",
   });
 
@@ -68,6 +70,7 @@ export function CircuitPathwayStep({
 
     const payload = {
       lessonStepId: step.id,
+      assignmentId,
       challengeId: step.resource?.challengeId ?? "circuit_001",
       labState,
       durationMs,

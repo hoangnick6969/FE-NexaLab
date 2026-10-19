@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, Copy, KeyRound, Archive } from "lucide-react";
+import { Users, Copy, KeyRound, Archive, BookOpen, ArrowUpRight } from "lucide-react";
 import { api, idempotencyKey, isApiError, mutate, useAuth } from "../../lib/api";
-import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal, verdictLabel } from "../../components/ui";
+import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal, PageLoader, verdictLabel } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
+import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 
 type ClassSummary = {
   id: string;
@@ -850,11 +851,44 @@ type StudentClass = {
   assignments: Array<{ id: string; title: string; contentType: string; dueDate: string | null; overdue: boolean }>;
 };
 
+type StudentClassWork = HierarchyItem & {
+  classId: string;
+  classroom: { id: string; name: string };
+  dueDate: string | null;
+  overdue: boolean;
+  contentType: string;
+};
+
+async function readStudentClassWork(): Promise<StudentClassWork[]> {
+  const assignments = await api<any[]>("/assignments");
+  return assignments.filter((assignment) => assignment.canOpen).flatMap((assignment) => {
+    const subject = assignment.subject;
+    if (!subject || !assignment.grade) return [];
+    return [{
+      id: assignment.id,
+      title: assignment.title,
+      classId: assignment.classroom.id,
+      classroom: assignment.classroom,
+      subjectId: subject?.id ?? "unknown",
+      subjectName: subject?.name ?? "Môn học",
+      grade: assignment.grade,
+      chapter: assignment.chapter || "Chưa phân chương",
+      chapterOrder: assignment.chapterOrder,
+      itemOrder: assignment.curriculumOrder ?? assignment.topicOrder,
+      dueDate: assignment.dueDate,
+      overdue: assignment.overdue,
+      contentType: assignment.contentType,
+    }];
+  });
+}
+
 function StudentClasses() {
+  const { classId } = useParams();
   const [joining, setJoining] = useState(false);
   const [result, setResult] = useState<{ message: string; pending: boolean } | null>(null);
   const key = useRef(idempotencyKey());
   const list = useQuery<StudentClass[]>({ queryKey: ["classes"], queryFn: () => api("/classes") });
+  const classWork = useQuery({ queryKey: ["student-class-space-content"], queryFn: readStudentClassWork, enabled: Boolean(classId) });
   const join = useMutate<{ enrollmentStatus: string; message: string; class: { name: string } }>();
   const joinError = join.error
     ? isApiError(join.error, "JOIN_RATE_LIMITED")
@@ -863,6 +897,32 @@ function StudentClasses() {
         ? "Mã lớp không hợp lệ. Hãy kiểm tra lại với giáo viên."
         : join.error
     : null;
+  const selectedClass = classId ? list.data?.find((item) => item.id === classId) : undefined;
+  if (classId && list.isLoading) return <PageLoader message="Đang mở Class Space…" />;
+  if (classId && list.isError) return <><PageHeading eyebrow="CLASS SPACE" title="Không tải được lớp" description="Hãy thử tải lại danh sách lớp của em." /><LoadError query={list} what="Class Space" /><Link to="/classes">Quay lại danh sách lớp</Link></>;
+  if (classId && list.data && !selectedClass) return <><PageHeading eyebrow="CLASS SPACE" title="Không tìm thấy lớp" description="Lớp này không nằm trong danh sách lớp em tham gia." /><Link className="student-lesson-open" to="/classes">Quay lại Class Space</Link></>;
+  if (classId && selectedClass) return (
+    <>
+      <PageHeading eyebrow={`CLASS SPACE · KHỐI ${selectedClass.grade}`} title={selectedClass.name} description="Bài được giao trong lớp, sắp xếp theo môn học và chương." />
+      <Link className="hierarchy-back-link" to="/classes">← Danh sách lớp</Link>
+      <div className="panel class-space-detail-panel">
+        <Badge tone={selectedClass.enrollmentStatus === "approved" ? "" : "outline"}>{selectedClass.enrollmentStatus === "approved" ? "Đã vào lớp" : "Chờ giáo viên duyệt"}</Badge>
+        {selectedClass.enrollmentStatus !== "approved" ? <p className="muted">Yêu cầu của em đang chờ giáo viên duyệt. Nội dung lớp sẽ mở sau khi được duyệt.</p> : <>
+          <h2>Nội dung theo môn học</h2>
+          <LoadError query={classWork} what="nội dung Class Space" />
+          {classWork.isLoading ? <CardSkeleton count={2} /> : <SubjectGradeChapterBrowser
+            items={classWork.data?.filter((item) => item.classId === selectedClass.id) ?? []}
+            basePath={`/classes/${encodeURIComponent(selectedClass.id)}/catalog`}
+            rootPath={`/classes/${encodeURIComponent(selectedClass.id)}/catalog`}
+            emptyCopy="Lớp này hiện chưa có nội dung được giao."
+            renderItem={(item) => <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+              <BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {dueLabel(item.dueDate)}</small>{item.overdue && <small className="student-overdue">Đã quá hạn · vẫn có thể học</small>}</span><ArrowUpRight size={17} />
+            </Link>}
+          />}
+        </>}
+      </div>
+    </>
+  );
   return (
     <>
       <PageHeading
@@ -892,27 +952,15 @@ function StudentClasses() {
       {list.isLoading && <CardSkeleton count={2} />}
       {list.data && list.data.length === 0 && <Empty>Em chưa tham gia lớp nào. Hãy nhập mã lớp thầy cô gửi.</Empty>}
       {list.data?.map((c) => (
-        <section className="panel" key={c.id}>
+        <section className="panel student-class-card" key={c.id}>
           <div className="section-heading">
-            <h2>{c.name}</h2>
+            <h2><Link to={`/classes/${encodeURIComponent(c.id)}/catalog`}>{c.name}</Link></h2>
             <Badge tone={c.enrollmentStatus === "approved" ? "" : "outline"}>
               {c.status === "ARCHIVED" ? "Lớp đã lưu trữ" : c.enrollmentStatus === "approved" ? "Đã vào lớp" : "Chờ giáo viên duyệt"}
             </Badge>
           </div>
           {c.enrollmentStatus === "pending" && <p className="muted">Yêu cầu của em đang chờ giáo viên duyệt.</p>}
-          {c.enrollmentStatus === "approved" && c.assignments.length === 0 && <p className="muted">Hiện chưa có bài được giao.</p>}
-          {c.assignments.map((a) => (
-            <div className="assignment-row" key={a.id}>
-              <div>
-                <b>{a.title}</b>
-                <small>
-                  {dueLabel(a.dueDate)}
-                  {a.overdue && " · Đã quá hạn, vẫn có thể học"}
-                </small>
-              </div>
-              <Link to={"/assignments/" + a.id}>Mở bài →</Link>
-            </div>
-          ))}
+          {c.enrollmentStatus === "approved" && <p className="muted">{c.assignments.length} bài được giao · <Link to={`/classes/${encodeURIComponent(c.id)}/catalog`}>Mở Class Space <ArrowUpRight size={14} /></Link></p>}
         </section>
       ))}
       {joining && (

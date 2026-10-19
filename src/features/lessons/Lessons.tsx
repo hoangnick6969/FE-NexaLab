@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Plus, ArrowUpRight, BookOpen, Save, Calculator, PenLine, Languages, Landmark, Compass, Monitor, Wrench, Palette, Dumbbell, Telescope } from "lucide-react";
+import { Plus, ArrowUpRight, BookOpen, Save } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, idempotencyKey, isApiError, mutate, useAuth, uploadFile } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton } from "../../components/ui";
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
+import { StudentLessonsHub } from "./StudentLessonsHub";
+import { safeEbookUrl } from "../../lesson-catalog";
 
 function RichEditor({
   value,
@@ -72,33 +74,17 @@ const blankLesson = {
   challengeParams: null,
 };
 const khtnSubjectIds = new Set(["khtn", "physics", "biology", "chemistry"]);
-const subjectPreviews = [
-  { name: "Toán", icon: Calculator, topics: "Đại số · Hình học · Thống kê" },
-  { name: "Ngữ văn", icon: PenLine, topics: "Đọc · Viết · Nói và nghe" },
-  { name: "Ngoại ngữ 1", icon: Languages, topics: "Từ vựng · Ngữ pháp · Giao tiếp" },
-  { name: "Lịch sử và Địa lí", icon: Landmark, topics: "Lịch sử · Địa lí" },
-  { name: "Giáo dục công dân", icon: Compass, topics: "Công dân · Pháp luật · Đạo đức" },
-  { name: "Tin học", icon: Monitor, topics: "Máy tính · Dữ liệu · Lập trình" },
-  { name: "Công nghệ", icon: Wrench, topics: "Thiết kế · Kỹ thuật · Đời sống" },
-  { name: "Nghệ thuật", icon: Palette, topics: "Âm nhạc · Mĩ thuật" },
-  { name: "Giáo dục thể chất", icon: Dumbbell, topics: "Vận động · Thể thao" },
-  { name: "Hoạt động trải nghiệm", icon: Telescope, topics: "Trải nghiệm · Hướng nghiệp" },
-];
 const lessonNumber = (title: string) => Number(title.match(/^\s*Bài\s+(\d+)/i)?.[1] ?? Number.MAX_SAFE_INTEGER);
 export function Lessons() {
   const user = useAuth((s) => s.user)!;
+  if (user.role === "STUDENT") return <StudentLessonsHub />;
+  return <LessonsLibrary user={user} />;
+}
+
+function LessonsLibrary({ user }: { user: any }) {
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
   const q = useQuery({ queryKey: ["lessons"], queryFn: () => api("/lessons") });
   const subjects = useQuery({ queryKey: ["subjects"], queryFn: () => api("/subjects") });
-  const safeEbookUrl = (value: unknown) => {
-    if (typeof value !== "string") return null;
-    try {
-      const url = new URL(value);
-      return url.protocol === "https:" ? url.href : null;
-    } catch {
-      return null;
-    }
-  };
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -253,18 +239,6 @@ export function Lessons() {
           <div className="lesson-grid">{group.lessons.map(renderLessonCard)}</div>
         </section>)}
       </div>}
-      {!manage && <section className="student-subject-previews" aria-labelledby="subject-preview-title">
-        <div className="student-subject-previews-heading">
-          <div><span className="eyebrow">LỘ TRÌNH THCS</span><h2 id="subject-preview-title">Các môn học khác</h2></div>
-          <p>Bản xem trước · nội dung sẽ được bổ sung sau</p>
-        </div>
-        <div className="subject-preview-grid">
-          {subjectPreviews.map(({ name, icon: Icon, topics }) => <article className="subject-preview-card" key={name}>
-            <span className="subject-preview-icon"><Icon size={19} aria-hidden="true" /></span>
-            <div><div className="subject-preview-title"><h3>{name}</h3><span>Sắp có</span></div><p>{topics}</p></div>
-          </article>)}
-        </div>
-      </section>}
       {q.data && q.data.length === 0 && <Empty>Chưa có bài học.</Empty>}
       {!manage && q.data?.length > 0 && lessonMatches.length === 0 && <Empty>Không tìm thấy bài học phù hợp.</Empty>}
       {filtersActive && library.data && library.data.items.length === 0 && (

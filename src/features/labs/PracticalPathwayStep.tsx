@@ -8,7 +8,7 @@ import { Chemistry } from "./chemistry";
 
 const Eye = lazy(() => import("./eye"));
 
-type Props = { lessonId: string; step: any; onReconciled?: (pathway: any) => void };
+type Props = { lessonId: string; assignmentId: string; step: any; onReconciled?: (pathway: any) => void };
 
 const initialState = (labId: string) => (labId === "chemistry" ? { samples: {} } : { answers: {} });
 
@@ -16,17 +16,17 @@ const initialState = (labId: string) => (labId === "chemistry" ? { samples: {} }
  * LAB/CHALLENGE step of an assigned lesson. The server names the model and the
  * challenge (including a teacher variant), so each lab gets its own workspace.
  */
-export function PracticalPathwayStep({ lessonId, step, onReconciled }: Props) {
+export function PracticalPathwayStep({ lessonId, assignmentId, step, onReconciled }: Props) {
   // The step resource names the model: LAB carries labId, CHALLENGE a `${labId}_…` challenge ID.
   const labId: string = step.resource?.labId ?? String(step.resource?.challengeId ?? "circuit").split("_")[0];
-  if (labId === "circuit") return <CircuitPathwayStep lessonId={lessonId} step={step} onReconciled={onReconciled} />;
-  return <ModelWorkspace lessonId={lessonId} step={step} onReconciled={onReconciled} labId={labId} />;
+  if (labId === "circuit") return <CircuitPathwayStep lessonId={lessonId} assignmentId={assignmentId} step={step} onReconciled={onReconciled} />;
+  return <ModelWorkspace lessonId={lessonId} assignmentId={assignmentId} step={step} onReconciled={onReconciled} labId={labId} />;
 }
 
-function ModelWorkspace({ lessonId, step, onReconciled, labId }: Props & { labId: string }) {
+function ModelWorkspace({ lessonId, assignmentId, step, onReconciled, labId }: Props & { labId: string }) {
   const workspace = useQuery({
-    queryKey: ["step-lab", lessonId, step.id],
-    queryFn: () => api(`/lessons/${lessonId}/steps/${step.id}/lab`),
+    queryKey: ["step-lab", lessonId, step.id, assignmentId],
+    queryFn: () => api(`/lessons/${lessonId}/steps/${step.id}/lab?assignmentId=${encodeURIComponent(assignmentId)}`),
   });
   if (workspace.isLoading) return <InlineLoader message="Đang mở phòng thực hành…" />;
   if (workspace.error || !workspace.data)
@@ -38,10 +38,10 @@ function ModelWorkspace({ lessonId, step, onReconciled, labId }: Props & { labId
         </button>
       </div>
     );
-  return <ModelPracticalStep lessonId={lessonId} step={step} onReconciled={onReconciled} labId={labId} workspace={workspace.data} />;
+  return <ModelPracticalStep lessonId={lessonId} assignmentId={assignmentId} step={step} onReconciled={onReconciled} labId={labId} workspace={workspace.data} />;
 }
 
-function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: Props & { labId: string; workspace: any }) {
+function ModelPracticalStep({ lessonId, assignmentId, step, onReconciled, labId, workspace }: Props & { labId: string; workspace: any }) {
   const [labState, setLabState] = useState<any>(() => initialState(labId));
   const [attempt, setAttempt] = useState<any>(null);
   const [error, setError] = useState<unknown>(null);
@@ -67,6 +67,7 @@ function ModelPracticalStep({ lessonId, step, onReconciled, labId, workspace }: 
       const response = await api("/attempts", "POST", {
         challengeId: workspace.challengeId,
         lessonStepId: step.id,
+        assignmentId,
         labState,
         durationMs: Math.max(1000, Date.now() - started.current),
         idempotencyKey: idempotencyKey.current,

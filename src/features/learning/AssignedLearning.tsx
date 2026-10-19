@@ -7,6 +7,7 @@ import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, PageLoader, InlineLoader } from "../../components/ui";
 import { PracticalPathwayStep } from "../labs/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
+import { withAssignmentContext } from "../../lesson-catalog";
 
 type QuizDraft = {
   answers: Record<string, string>;
@@ -14,16 +15,18 @@ type QuizDraft = {
 };
 function QuizLearningStep({
   lessonId,
+  assignmentId,
   step,
   onReconciled,
 }: {
   lessonId: string;
+  assignmentId: string;
   step: any;
   onReconciled: (pathway: any) => void;
 }) {
   const userId = useAuth((state) => state.user?.id ?? "student");
   const queryClient = useQueryClient();
-  const storageKey = `quiz-draft:${userId}:${lessonId}:${step.id}`;
+  const storageKey = `quiz-draft:${userId}:${lessonId}:${assignmentId}:${step.id}`;
   const [draft, setDraft] = useState<QuizDraft>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
@@ -37,12 +40,12 @@ function QuizLearningStep({
   const [submitError, setSubmitError] = useState("");
   const [confirmed, setConfirmed] = useState<QuizAttemptSummary | null>(null);
   const quizQuery = useQuery<StudentQuiz>({
-    queryKey: ["student-quiz", lessonId],
-    queryFn: () => api(`/lessons/${lessonId}/quiz`),
+    queryKey: ["student-quiz", lessonId, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${lessonId}/quiz`, assignmentId)),
   });
   const historyQuery = useQuery<QuizAttemptHistoryResponse>({
-    queryKey: ["student-quiz-attempts", lessonId],
-    queryFn: () => api(`/lessons/${lessonId}/quiz-attempts`),
+    queryKey: ["student-quiz-attempts", lessonId, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${lessonId}/quiz-attempts`, assignmentId)),
   });
   const questions = quizQuery.data?.questions ?? [];
   const question = questions[index];
@@ -63,7 +66,7 @@ function QuizLearningStep({
     setSubmitting(true);
     setSubmitError("");
     try {
-      const response = await api<QuizAttemptResponse>(`/lessons/${lessonId}/quiz-attempts`, "POST", payload);
+      const response = await api<QuizAttemptResponse>(withAssignmentContext(`/lessons/${lessonId}/quiz-attempts`, assignmentId), "POST", payload);
       setConfirmed(response.attempt);
       onReconciled(response.pathway);
       const cleared = { answers: {}, pending: null };
@@ -82,8 +85,8 @@ function QuizLearningStep({
     const saved = historyQuery.data.attempts.find((attempt) => attempt.idempotencyKey === draft.pending?.idempotencyKey);
     if (!saved) return;
     persist({ answers: {}, pending: null });
-    queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId] });
-  }, [draft.pending, historyQuery.data, lessonId, queryClient]);
+    queryClient.invalidateQueries({ queryKey: ["lesson-pathway", lessonId, assignmentId] });
+  }, [assignmentId, draft.pending, historyQuery.data, lessonId, queryClient]);
 
   if (quizQuery.isLoading) return <section className="quiz-learning" aria-label="Bài kiểm tra"><InlineLoader message="Đang nạp bài kiểm tra trắc nghiệm…" /></section>;
   if (quizQuery.error || !quizQuery.data) return (
@@ -185,9 +188,10 @@ export function AssignedLearning() {
     enabled: Boolean(id),
   });
   const lessonId = query.data?.contentType === "lesson" ? query.data.content.id : null;
+  const assignmentId = id ?? "";
   const pathwayQuery = useQuery<StudentPathway>({
-    queryKey: ["lesson-pathway", lessonId],
-    queryFn: () => api("/lessons/" + lessonId + "/pathway"),
+    queryKey: ["lesson-pathway", lessonId, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${lessonId}/pathway`, assignmentId)),
     enabled: Boolean(lessonId),
   });
   useEffect(() => {
@@ -257,7 +261,7 @@ export function AssignedLearning() {
         {assignment.contentType === "lesson" && pathway ? (
           <>
           {pathway.steps.some((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) && step.state !== "COMPLETED") && (
-            <div className="notice"><b>Bài học chưa hoàn tất</b><p>Hãy đọc nội dung và xem video trong mục Bài học trước. Bài kiểm tra và phần thực hành sẽ mở theo tiến độ đã được lưu.</p><Link className="primary" to={`/lessons/${lesson.id}`}>Quay lại Bài học <ArrowUpRight size={15} /></Link></div>
+            <div className="notice"><b>Bài học chưa hoàn tất</b><p>Hãy đọc nội dung và xem video trong mục Bài học trước. Bài kiểm tra và phần thực hành sẽ mở theo tiến độ đã được lưu.</p><Link className="primary" to={withAssignmentContext(`/lessons/${lesson.id}`, assignmentId)}>Quay lại Bài học <ArrowUpRight size={15} /></Link></div>
           )}
           {!pathway.steps.some((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)) && <Empty>Bài tập này chưa có bài kiểm tra hoặc hoạt động thực hành.</Empty>}
           <div className="lesson-pathway" aria-label="Bài tập và thực hành">
@@ -283,18 +287,20 @@ export function AssignedLearning() {
                   {step.type === "QUIZ" && ["IN_PROGRESS", "COMPLETED"].includes(step.state) && (
                     <QuizLearningStep
                       lessonId={String(lessonId)}
+                      assignmentId={assignmentId}
                       step={step}
                       onReconciled={(updatedPathway) =>
-                        queryClient.setQueryData(["lesson-pathway", lessonId], updatedPathway)
+                        queryClient.setQueryData(["lesson-pathway", lessonId, assignmentId], updatedPathway)
                       }
                     />
                   )}
                   {(step.type === "LAB" || step.type === "CHALLENGE") && step.state !== "LOCKED" && (
                     <PracticalPathwayStep
                       lessonId={String(lessonId)}
+                      assignmentId={assignmentId}
                       step={step}
                       onReconciled={(updatedPathway) =>
-                        queryClient.setQueryData(["lesson-pathway", lessonId], updatedPathway)
+                        queryClient.setQueryData(["lesson-pathway", lessonId, assignmentId], updatedPathway)
                       }
                     />
                   )}

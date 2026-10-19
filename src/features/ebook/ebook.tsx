@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import * as pdfjs from "pdfjs-dist";
+import type { PDFDataRangeTransport, PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Check, Columns2, ExternalLink, FileText, Highlighter, Layers3, LoaderCircle, Maximize2, Minimize2, Minus, Play, Plus, StickyNote, Underline, X } from "lucide-react";
-import { api, idempotencyKey, isApiError, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
+import { api, idempotencyKey, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
 import { AttributionNote, libraryQuery } from "../lessons/library";
 import { VideoLearningStep } from "../learning/VideoLearningStep";
 import { StudyCardsStep } from "../learning/StudyCardsStep";
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+import { withAssignmentContext } from "../../lesson-catalog";
 
 type Annotation = {
   id: string;
@@ -27,7 +26,7 @@ type Annotation = {
 };
 type FallbackMark = { id: string; kind: Annotation["kind"]; left: number; top: number; width: number; height: number };
 
-function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { document: pdfjs.PDFDocumentProxy; pageNumber: number; zoom: number; onActivate: () => void }) {
+function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { document: PDFDocumentProxy; pageNumber: number; zoom: number; onActivate: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
@@ -35,7 +34,7 @@ function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { docume
     const canvas = canvasRef.current;
     if (!canvas) return;
     let active = true;
-    let renderTask: pdfjs.RenderTask | undefined;
+    let renderTask: RenderTask | undefined;
     setReady(false);
     void document.getPage(pageNumber).then((page) => {
       if (!active) return;
@@ -79,14 +78,18 @@ const httpsUrl = (value: unknown) => {
 
 export function LessonDetail() {
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((state) => state.user)!;
   const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "cards" | "materials">("reading");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const queryClient = useQueryClient();
   const lessons = useQuery({
-    queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
-    queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
-    enabled: Boolean(id),
+    queryKey: [user.role === "STUDENT" ? (assignmentId ? "assignment-lesson" : "open-curriculum-lesson") : "lessons", id, assignmentId],
+    queryFn: () => user.role === "STUDENT"
+      ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`)
+      : api<any[]>("/lessons"),
+    enabled: Boolean(id) && !(user.role === "STUDENT" && Boolean(assignmentId)),
   });
   const canViewAttribution = ["TEACHER", "ADMIN"].includes(user.role);
   const library = useQuery({
@@ -95,32 +98,35 @@ export function LessonDetail() {
     enabled: canViewAttribution,
   });
   const materialOpen = useMutation({ mutationFn: openMaterial });
-  const lesson = user.role === "STUDENT" ? lessons.data : lessons.data?.find((item: any) => item.id === id);
-  const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
   const videoPathway = useQuery<StudentPathway>({
-    queryKey: ["lesson-pathway", id],
-    queryFn: () => api(`/lessons/${encodeURIComponent(id)}/pathway`),
-    enabled: user.role === "STUDENT" && Boolean(id),
+    queryKey: ["lesson-pathway", id, assignmentId],
+    queryFn: () => api(withAssignmentContext(`/lessons/${encodeURIComponent(id)}/pathway`, assignmentId)),
+    enabled: user.role === "STUDENT" && Boolean(id) && Boolean(assignmentId),
   });
+  const lesson = user.role === "STUDENT" ? (assignmentId ? videoPathway.data?.lesson : lessons.data) : lessons.data?.find((item: any) => item.id === id);
+  const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
   const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING") ?? lesson?.steps?.find((step: any) => step.type === "READING");
   const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
-  const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type)) ?? [];
-  const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
-  const assignmentMissing = isApiError(videoPathway.error, "ASSIGNMENT_NOT_FOUND");
+  const lessonSteps = (assignmentId ? videoPathway.data?.steps ?? [] : lesson?.steps ?? []).filter((step: any) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type));
+  const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step: any) => step.state === "COMPLETED");
   const completeReading = useMutation({
-    mutationFn: () => api(assignmentMissing ? `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress` : `/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, "PUT", { action: "complete" }),
+    mutationFn: () => api(assignmentId
+      ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, assignmentId)
+      : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, "PUT", { action: "complete" }),
     onSuccess: (response: any) => {
-      if (response.pathway) queryClient.setQueryData(["lesson-pathway", id], response.pathway);
+      if (response.pathway) queryClient.setQueryData(["lesson-pathway", id, assignmentId], response.pathway);
       else queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === response.step.id ? { ...step, state: "COMPLETED", progressValue: 100 } : step) }));
     },
   });
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
   const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url));
 
-  if (lessons.isLoading) return <PageLoader message="Đang mở bài học…" />;
-  if (lessons.error) return <><ErrorBox error={lessons.error} /><Link className="text-button" to="/lessons">Quay lại thư viện</Link></>;
+  const detailLoading = user.role === "STUDENT" && assignmentId ? videoPathway.isLoading : lessons.isLoading;
+  const detailError = user.role === "STUDENT" && assignmentId ? videoPathway.error : lessons.error;
+  if (detailLoading) return <PageLoader message={assignmentId ? "Đang tải nội dung và tiến độ bài học…" : "Đang mở bài học…"} />;
+  if (detailError) return <><ErrorBox error={detailError} /><Link className="text-button" to="/lessons">Quay lại thư viện</Link></>;
   if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học chưa được phát hành hoặc không tồn tại.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
 
   const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
@@ -145,6 +151,7 @@ export function LessonDetail() {
   const materialsTab = tabs.some((tab) => tab.id === "materials");
 
   return <div className="lesson-detail-page">
+    {user.role === "STUDENT" && <Link className="hierarchy-back-link" to={`/lessons/catalog/grades/${encodeURIComponent(String(lesson.grade))}/subjects/${encodeURIComponent(lesson.subject.id)}/chapters/${encodeURIComponent(lesson.chapter)}`}><ArrowLeft size={16} /> Quay lại mục lục chương</Link>}
     <PageHeading eyebrow={`${lesson.subject.name} · LỚP ${lesson.grade}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">Dữ liệu mẫu</span> : undefined} />
     <div className="lesson-detail-tabs" role="tablist" aria-label="Nội dung bài học">
         {tabs.map((tab, index) => {
@@ -155,8 +162,8 @@ export function LessonDetail() {
     {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
       <div className="lesson-reading-scroll" role="region" aria-label="Nội dung bài đọc có thể cuộn" tabIndex={0}>
         {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">MỤC TIÊU BÀI HỌC</span><p>{learningObjective}</p></>}{prerequisites && <small>Kiến thức nền · {prerequisites}</small>}</div>}
-        {user.role === "STUDENT" && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
-      {user.role === "STUDENT" && assignmentMissing && <p className="notice">Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.</p>}
+        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+      {user.role === "STUDENT" && !assignmentId && <p className="notice">Đây là nội dung chương trình mở; tiến độ được lưu riêng với bài tập và lớp học.</p>}
       </div>
       {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
         {completeReading.error && <ErrorBox error={completeReading.error} />}
@@ -166,19 +173,19 @@ export function LessonDetail() {
     </section>}
     {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
       <h2 className="lesson-tab-title">Video bài giảng</h2>
-      {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentMissing ? `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress` : undefined} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway ? queryClient.setQueryData(["lesson-pathway", id], updated.pathway) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
+      {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
         : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label="Video bài giảng" />
           : videoPathway.isLoading ? <p className="video-placeholder" role="status">Đang tải video bài giảng…</p>
-            : videoPathway.error && !assignmentMissing ? <ErrorBox error={videoPathway.error} />
+            : videoPathway.error ? <ErrorBox error={videoPathway.error} />
               : <p className="notice">Video bài giảng hiện chưa khả dụng.</p>}
     </section>}
     {activeTab === "exercise" && basicExerciseStep && <section id="lesson-panel-exercise" role="tabpanel" aria-labelledby="lesson-tab-exercise" className="panel lesson-tab-panel">
       <h2 className="lesson-tab-title">Bài tập luyện tập</h2>
       <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
     </section>}
-    {activeTab === "cards" && studyCardsStep && <section id="lesson-panel-cards" role="tabpanel" aria-labelledby="lesson-tab-cards" className="panel lesson-tab-panel lesson-study-cards">
+      {activeTab === "cards" && studyCardsStep && <section id="lesson-panel-cards" role="tabpanel" aria-labelledby="lesson-tab-cards" className="panel lesson-tab-panel lesson-study-cards">
       <h2 className="lesson-tab-title">Thẻ ôn tập</h2>
-      {studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.</p> : <StudyCardsStep lessonId={id} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id], updatedPathway)} />}
+      {studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.</p> : <StudyCardsStep lessonId={id} assignmentId={assignmentId ?? ""} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id, assignmentId], updatedPathway)} />}
     </section>}
     {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
       <h2>Tài liệu bài học</h2>
@@ -188,7 +195,7 @@ export function LessonDetail() {
       {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
     </section>}
     {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">Sau khi hoàn thành bài đọc, tiếp tục với tab Video bài giảng và thẻ ôn tập.</p>}
-    {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p><Link className="primary" to={videoPathway.data?.assignment.id ? `/assignments/${videoPathway.data.assignment.id}` : "/assignments"}>Chuyển sang Bài tập <ArrowRight size={16} /></Link></div>}
+    {user.role === "STUDENT" && assignmentId && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p><Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>Tiếp tục làm bài tập được giao <ArrowRight size={16} /></Link></div>}
   </div>;
 }
 
@@ -350,7 +357,7 @@ export function EbookReader() {
   const subjectQuery = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
   const url = httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
-  const [document, setDocument] = useState<pdfjs.PDFDocumentProxy | null>(null);
+  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [fingerprint, setFingerprint] = useState("");
@@ -405,13 +412,15 @@ export function EbookReader() {
   useEffect(() => {
     if (!url) return;
     let active = true;
-    let task: ReturnType<typeof pdfjs.getDocument> | undefined;
-    let rangeTransport: pdfjs.PDFDataRangeTransport | undefined;
+    let task: PDFDocumentLoadingTask | undefined;
+    let rangeTransport: PDFDataRangeTransport | undefined;
     const rangeControllers = new Set<AbortController>();
     const loadController = new AbortController();
     setLoadError(""); setDocument(null); setFingerprint(""); setPageNumber(1); setPageCount(0);
     const load = async () => {
       try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
         let length = 0;
         let firstRange: Response | null = null;
         try {
@@ -491,13 +500,14 @@ export function EbookReader() {
   useEffect(() => {
     if (!document || !canvasRef.current || !textLayerRef.current) return;
     let active = true;
-    let renderTask: pdfjs.RenderTask | undefined;
-    let textLayer: pdfjs.TextLayer | undefined;
+    let renderTask: RenderTask | undefined;
+    let textLayer: PdfTextLayer | undefined;
     const canvas = canvasRef.current;
     const textContainer = textLayerRef.current;
     setRenderError("");
     void (async () => {
       try {
+        const pdfjs = await import("pdfjs-dist");
         const page = await document.getPage(pageNumber);
         if (!active) return;
         const base = page.getViewport({ scale: 1 });
