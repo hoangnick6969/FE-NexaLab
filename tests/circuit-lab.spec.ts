@@ -59,7 +59,7 @@ test("Epic A4: Circuit Lab workspace renders, verifies server verdicts, preserve
     }),
   );
 
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const steps = [
       { id: "step-reading", type: "READING", position: 10, required: true, state: "COMPLETED", progressValue: 100 },
       { id: "step-video", type: "VIDEO", position: 20, required: true, state: "COMPLETED", progressValue: 100 },

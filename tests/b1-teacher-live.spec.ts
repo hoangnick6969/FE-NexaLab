@@ -69,6 +69,7 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
   test.describe.configure({ timeout: 180000 });
   let classId = "";
   let className = "";
+  let sideClassId = "";
 
   test("owner creates a class, provisions, approves a join request and assigns work", async ({ page, browser }) => {
     expect(teacherPassword, "TEST_TEACHER_PASSWORD or SEED_FIXTURE_PASSWORD must be set").toBeTruthy();
@@ -104,6 +105,7 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     const classes = await call("/classes?status=ACTIVE", "GET", undefined, token);
     classId = classes.data.find((c: any) => c.name === className).id;
     const other = await call("/classes", "POST", { name: `${prefix} Lớp phụ`, grade: 8 }, token);
+    sideClassId = other.data.class.id;
     const made = await call(`/classes/${other.data.class.id}/students`, "POST", { username: `${prefix}-b`, fullName: "Học sinh Playwright B", grade: 8, consent: true }, token);
     const studentB = await studentLogin(browser, `${prefix}-b`, made.data.credentials.temporaryPassword, true);
     await studentB.goto("/classes");
@@ -137,7 +139,7 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     await expect(row).toBeVisible();
     await row.getByRole("link", { name: "Mở bài →" }).click();
     await expect(studentB).toHaveURL(/\/assignments\//);
-    await expect(studentB.getByLabel("Lộ trình bài học")).toBeVisible();
+    await expect(studentB.getByLabel("Bài tập và thực hành")).toBeVisible();
     const studentA = await studentLogin(browser, `${prefix}-a`, tempA, true);
     await studentA.goto("/classes");
     await expect(studentA.locator(".assignment-row", { hasText: `${prefix} Mạch điện` })).toBeVisible();
@@ -380,7 +382,8 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
       review,
       questions: [],
     };
-    const chem = await call("/lessons", "POST", { ...base, title: `${prefix} Trung hòa`, labId: "chemistry", challengeParams: { reactionId: "naoh-hcl" } }, token);
+    // PR #14 replaced the reaction workspace with the litmus pH lab; a reaction challenge has no UI to answer it.
+    const chem = await call("/lessons", "POST", { ...base, title: `${prefix} Đo pH`, labId: "chemistry" }, token);
     const eye = await call(
       "/lessons",
       "POST",
@@ -404,30 +407,25 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     const student = await studentLogin(browser, `${prefix}-a`, studentPassword);
     await student.setViewportSize({ width: 1024, height: 900 });
     await student.goto(`/assignments/${chemAssign.data.assignment.id}`);
-    const chemistry = student.getByRole("region", { name: "Khu vực thực hành phản ứng hóa học" });
-    const lab = chemistry.first();
-    await expect(lab.getByLabel("Phản ứng trong thư viện")).toBeVisible(graded);
-    await lab.getByLabel("Lượng Mg (mol)").fill("0.2");
-    await lab.getByLabel("Lượng HCl (mol)").fill("0.2");
-    await lab.getByRole("button", { name: "Chạy thí nghiệm" }).click();
-    await expect(lab.getByRole("status")).toContainText("Đạt một phần", graded);
-    await expect(lab.getByRole("status")).toContainText("dư", graded);
-    await expect(lab.getByRole("status")).not.toContainText("LED", graded);
+    const lab = student.getByRole("region", { name: "Khu vực thực hành đo pH" }).first();
+    for (const jar of [1, 2, 3]) await lab.getByRole("button", { name: `Nhúng giấy quỳ tím vào lọ ${jar}` }).click(graded);
+    await expect(lab.getByText("Giấy quỳ chuyển màu đỏ.")).toBeVisible();
+    await expect(lab.getByText("Giấy quỳ chuyển màu xanh.")).toBeVisible();
+    // A wrong classification is graded on the server and can be retried.
+    await lab.getByLabel("Lọ 1 thuộc loại nào?").selectOption("base");
+    await lab.getByLabel("Lọ 2 thuộc loại nào?").selectOption("neutral");
+    await lab.getByLabel("Lọ 3 thuộc loại nào?").selectOption("acid");
+    await lab.getByRole("button", { name: "Kiểm tra kết quả" }).click();
+    const outcome = lab.locator(".practical-result");
+    await expect(outcome).toBeVisible(graded);
+    await expect(outcome).not.toContainText(/^Đạt/);
+    await expect(lab.getByText("Đã đạt", { exact: true })).toHaveCount(0);
     await lab.getByRole("button", { name: "Thử lại" }).click();
-    await lab.getByLabel("Lượng Mg (mol)").fill("0.1");
-    await lab.getByRole("button", { name: "Chạy thí nghiệm" }).click();
-    await expect(lab.getByRole("status")).toContainText("Đạt", graded);
-
-    // The teacher's challenge appears after the lab and names the required reaction.
-    const challenge = chemistry.nth(1);
-    await expect(challenge.getByText("Yêu cầu của thử thách:")).toBeVisible(graded);
-    await expect(challenge).toContainText("NaOH");
-    await challenge.getByLabel("Phản ứng trong thư viện").selectOption("naoh-hcl");
-    await challenge.getByLabel("Lượng NaOH (mol)").fill("0.1");
-    await challenge.getByLabel("Lượng HCl (mol)").fill("0.1");
-    await challenge.getByRole("button", { name: "Chạy thí nghiệm" }).click();
-    await expect(challenge.getByRole("status")).toContainText("Đạt", graded);
-    await expect(challenge.getByText("Đã đạt", { exact: true })).toBeVisible(graded);
+    await lab.getByLabel("Lọ 1 thuộc loại nào?").selectOption("acid");
+    await lab.getByLabel("Lọ 3 thuộc loại nào?").selectOption("base");
+    await lab.getByRole("button", { name: "Kiểm tra kết quả" }).click();
+    await expect(outcome.locator(".badge")).toHaveText("Đạt", graded);
+    await expect(lab.getByText("Đã đạt", { exact: true })).toBeVisible(graded);
     await noHorizontalOverflow(student);
 
     // Eye: name all eight parts in the 3D model's check mode.
@@ -454,8 +452,9 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
   });
 
   test.afterAll(async () => {
-    if (!classId) return;
+    if (!classId && !sideClassId) return;
     const login = await call("/auth/login", "POST", { email: teacherEmail, password: teacherPassword });
-    await call(`/classes/${classId}/archive`, "POST", { confirm: true }, login.data.accessToken);
+    // Archiving twice is a no-op, so this also covers a run that failed before its own cleanup.
+    for (const id of [classId, sideClassId].filter(Boolean)) await call(`/classes/${id}/archive`, "POST", { confirm: true }, login.data.accessToken);
   });
 });

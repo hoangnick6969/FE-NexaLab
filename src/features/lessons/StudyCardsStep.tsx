@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type StudentLearningStep, type StudentPathway } from "../../lib/api";
-import { withAssignmentContext } from "../../lesson-catalog";
+import { withAssignmentContext } from "./lesson-catalog";
 
 export function StudyCardsStep({
   lessonId,

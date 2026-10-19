@@ -7,7 +7,7 @@ import {
   withAssignmentContext,
   type StudentLessonAssignment,
   type StudentLessonCard,
-} from "../src/lesson-catalog";
+} from "../src/features/lessons/lesson-catalog";
 
 const sharedLesson: StudentLessonCard = {
   id: "lesson-shared",

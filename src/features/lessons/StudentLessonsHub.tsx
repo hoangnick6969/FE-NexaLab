@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { CardSkeleton, ErrorBox } from "../../components/ui";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
-import { buildStudentLessonCatalog, filterStudentLessonCatalog, flattenReleasedCurriculum, type StudentLessonAssignment, type StudentLessonCard } from "../../lesson-catalog";
+import { buildStudentLessonCatalog, filterStudentLessonCatalog, flattenReleasedCurriculum, type StudentLessonAssignment, type StudentLessonCard } from "./lesson-catalog";
 
 type AssignmentRead = { lessons: any[]; assignments: StudentLessonAssignment[] };
 type Filter = "all" | "assigned" | "shared";
