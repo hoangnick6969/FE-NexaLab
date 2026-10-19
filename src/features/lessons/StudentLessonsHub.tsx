@@ -106,6 +106,12 @@ export function StudentLessonsHub() {
         </div>
         <input aria-label="Tìm bài học" placeholder="Tìm tên bài, môn học hoặc chương…" value={search} onChange={(event) => setSearch(event.target.value)} />
       </div>}
+      {catalogRoute && (filter !== "all" || search.trim()) && (
+        <div className="student-catalog-filter-state" role="status">
+          <span>Đang lọc: {filter === "assigned" ? "Bài học được giao" : filter === "shared" ? "Bài học chung" : "Tất cả"}{search.trim() ? ` · ${search.trim()}` : ""}</span>
+          <button type="button" onClick={() => { setFilter("all"); setSearch(""); }}>Xóa bộ lọc</button>
+        </div>
+      )}
 
       {hasError && <div className="load-error student-hub-error">
         <ErrorBox error={curriculum.error || assigned.error} />
@@ -116,7 +122,7 @@ export function StudentLessonsHub() {
         <>
           <section aria-labelledby="catalog-lessons-title" className="student-lesson-section">
             <header className="lesson-chapter-heading"><div><span className="eyebrow">{catalogRoute ? "MỤC LỤC MÔN HỌC" : "CHƯƠNG TRÌNH MỞ VÀ BÀI ĐƯỢC GIAO"}</span><h2 id="catalog-lessons-title">{catalogRoute ? "Mục lục bài học" : "Học theo môn và khối"}</h2></div><span className="lesson-chapter-count">{orderedMatching.length} bài</span></header>
-            <LessonGroups lessons={catalogRoute ? catalog : orderedMatching} emptyCopy={assigned.isError || curriculum.isError ? "Không tải được nội dung; hãy thử tải lại." : filter === "assigned" ? "Hiện chưa có bài học nào được giao có thể mở." : filter === "shared" ? "Chưa có bài học chung được phát hành phù hợp với tìm kiếm này." : "Chưa có nội dung phù hợp. Hãy thử lại sau."} />
+            <LessonGroups lessons={catalogRoute ? matching : orderedMatching} emptyCopy={assigned.isError || curriculum.isError ? "Không tải được nội dung; hãy thử tải lại." : filter === "assigned" ? "Hiện chưa có bài học nào được giao có thể mở." : filter === "shared" ? "Chưa có bài học chung được phát hành phù hợp với tìm kiếm này." : "Chưa có nội dung phù hợp. Hãy thử lại sau."} />
           </section>
         </>
       )}

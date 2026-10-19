@@ -5731,6 +5731,9 @@ td small {
 }
 .app-shell-student .student-lessons-page .student-lesson-open { min-height: 44px; padding: 0 12px; font-size: 12px; }
 .app-shell-student .student-lesson-section { margin-top: 24px; }
+.app-shell-student .student-catalog-filter-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid #dfe9ed; border-radius: 12px; color: #40545c; font-size: 13px; }
+.app-shell-student .student-catalog-filter-state button { min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #176d72; font: inherit; font-weight: 700; cursor: pointer; }
+.app-shell-student .student-catalog-filter-state button:focus-visible { outline: 3px solid #24777a; outline-offset: 2px; }
 .app-shell-student .student-assignment-links { display: grid; gap: 7px; margin-top: auto; padding-top: 12px; }
 .app-shell-student .student-assignment-actions {
   display: grid;
@@ -5888,6 +5891,8 @@ td small {
 .student-closed-assignments h2 { margin: 0 0 2px; font-size: 17px; }
 
 @media (max-width: 600px) {
+  .app-shell-student .student-catalog-filter-state { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .app-shell-student .student-catalog-filter-state button { align-self: flex-end; }
   .app-shell-student .student-assignment-actions { grid-template-columns: 1fr 1fr; }
   .app-shell-student .student-assignment-label { grid-column: 1 / -1; }
   .app-shell-student .student-assignment-links .student-lesson-open,

@@ -20,6 +20,7 @@ type SubjectGradeChapterBrowserProps<T extends HierarchyItem> = {
   basePath: string;
   rootPath?: string;
   className?: string;
+  itemLabel?: string;
 };
 
 const compareOrder = (left?: number | null, right?: number | null) =>
@@ -34,6 +35,7 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
   basePath,
   rootPath,
   className = "",
+  itemLabel = "bài học",
 }: SubjectGradeChapterBrowserProps<T>) {
   const { pathname } = useLocation();
   const path = pathname.replace(/\/$/, "");
@@ -99,14 +101,14 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
         </Link>)}</div>
       </section>)}
     </div> : !selectedChapter ? <>
-      <header className="hierarchy-screen-heading"><span className="eyebrow">KHỐI {selected.grade}</span><h2>{selected.subjectName}</h2><p>Mục lục chương · {scopedItems.length} bài học</p></header>
+      <header className="hierarchy-screen-heading"><span className="eyebrow">KHỐI {selected.grade}</span><h2>{selected.subjectName}</h2><p>Mục lục chương · {scopedItems.length} {itemLabel}</p></header>
       {chapters.length ? <ol className="hierarchy-chapter-list" aria-label="Mục lục chương">
         {chapters.map(([key, chapter], index) => <li key={key}><Link className="hierarchy-chapter" to={`${selectionPath}/chapters/${chapterPath(chapter.title)}`}>
-          <span className="hierarchy-chapter-number">{index + 1}</span><span><b>{chapter.title}</b><small>{chapter.count} bài / nội dung</small></span><ArrowRight size={18} aria-hidden="true" />
+          <span className="hierarchy-chapter-number">{index + 1}</span><span><b>{chapter.title}</b><small>{chapter.count} {itemLabel}</small></span><ArrowRight size={18} aria-hidden="true" />
         </Link></li>)}
       </ol> : <p className="hierarchy-empty">{emptyCopy}</p>}
     </> : <>
-      <header className="hierarchy-screen-heading"><span className="eyebrow">{selected.subjectName} · KHỐI {selected.grade}</span><h2>{selectedChapter[1].title}</h2><p>{chapterItems.length} bài học</p></header>
+      <header className="hierarchy-screen-heading"><span className="eyebrow">{selected.subjectName} · KHỐI {selected.grade}</span><h2>{selectedChapter[1].title}</h2><p>{chapterItems.length} {itemLabel}</p></header>
       {chapterItems.length ? <div className="hierarchy-content-list">{chapterItems.map((item) => <div key={item.id}>{renderItem(item)}</div>)}</div> : <p className="hierarchy-empty">Chương này chưa có nội dung.</p>}
     </>}
   </div>;
