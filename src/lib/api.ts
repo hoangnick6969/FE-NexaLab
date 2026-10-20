@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { apiErrorMessage } from "../i18n/errors";
 export type User = {
   id: string;
   username?: string | null;
@@ -91,7 +92,7 @@ export type ApiErrorEnvelope = {
   message: string;
   details?: unknown;
 };
-/** Thrown for every non-2xx API response; branch on `code`, show `message`. */
+/** Thrown for every non-2xx API response; branch on `code`, show `message` (already in the UI language). */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -113,12 +114,9 @@ async function readError(r: Response): Promise<ApiError> {
   } catch {
     // Non-JSON gateway errors still produce a typed error.
   }
-  return new ApiError(
-    data.statusCode ?? r.status,
-    typeof data.code === "string" ? data.code : "HTTP_" + r.status,
-    data.message ?? "Không thể kết nối máy chủ",
-    data.details,
-  );
+  const status = data.statusCode ?? r.status;
+  const code = typeof data.code === "string" ? data.code : "HTTP_" + r.status;
+  return new ApiError(status, code, apiErrorMessage(status, code, data.message), data.details);
 }
 export type QuizAttemptResponse = {
   attempt: QuizAttemptSummary;

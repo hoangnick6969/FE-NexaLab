@@ -5,11 +5,7 @@ import { useSyncExternalStore } from "react";
  * (see the inline script in index.html), and on the profile so it follows the user across devices.
  */
 export type ThemePreference = "system" | "light" | "dark";
-export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "system", label: "Theo hệ thống" },
-  { value: "light", label: "Sáng" },
-  { value: "dark", label: "Tối" },
-];
+export const THEME_OPTIONS: ThemePreference[] = ["system", "light", "dark"];
 
 const STORAGE_KEY = "nexalab.theme";
 const META_COLOR = { light: "#173f39", dark: "#111816" };

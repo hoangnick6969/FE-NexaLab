@@ -2,6 +2,66 @@ import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { type User } from "../lib/api";
 import { labInfo } from "../features/labs/lab-info";
+import { defineText } from "../i18n";
+
+const text = defineText({
+  vi: {
+    home: "Trang chủ",
+    overview: "Tổng quan",
+    lessons: "Bài học",
+    lessonLibrary: "Thư viện bài học",
+    subjectIndex: "Mục lục môn học",
+    lessonDetail: "Chi tiết bài học",
+    teachingDetail: "Chi tiết bài giảng",
+    ebookReader: "Trình đọc ebook",
+    labs: "Phòng thí nghiệm",
+    practice: "Thực hành",
+    assignments: "Bài tập",
+    classes: "Lớp học",
+    assignmentDetail: "Chi tiết bài tập",
+    assignmentIndex: "Mục lục bài tập",
+    classSpace: "Class Space",
+    myClasses: "Lớp học của tôi",
+    subjectSpace: "Không gian môn học",
+    childProgress: "Tiến độ của con",
+    learningProgress: "Tiến độ học tập",
+    savedLabs: "Thí nghiệm đã lưu",
+    settings: "Cài đặt tài khoản",
+    notifications: "Thông báo",
+    admin: "Quản trị hệ thống",
+    explore: "Khám phá",
+    pagePath: "Đường dẫn trang",
+    workspace: "Không gian học tập",
+  },
+  en: {
+    home: "Home",
+    overview: "Overview",
+    lessons: "Lessons",
+    lessonLibrary: "Lesson library",
+    subjectIndex: "Subject index",
+    lessonDetail: "Lesson details",
+    teachingDetail: "Lesson details",
+    ebookReader: "Ebook reader",
+    labs: "Labs",
+    practice: "Practice",
+    assignments: "Assignments",
+    classes: "Classes",
+    assignmentDetail: "Assignment details",
+    assignmentIndex: "Assignment index",
+    classSpace: "Class Space",
+    myClasses: "My classes",
+    subjectSpace: "Subject space",
+    childProgress: "My child's progress",
+    learningProgress: "Learning progress",
+    savedLabs: "Saved experiments",
+    settings: "Account settings",
+    notifications: "Notifications",
+    admin: "System administration",
+    explore: "Explore",
+    pagePath: "Page path",
+    workspace: "Learning space",
+  },
+});
 
 export function TopbarBreadcrumb({
   pathname,
@@ -11,7 +71,8 @@ export function TopbarBreadcrumb({
   user: User;
 }) {
   const isStudent = user.role === "STUDENT";
-  const homeLabel = isStudent ? "Trang chủ" : "Tổng quan";
+  const t = text();
+  const homeLabel = isStudent ? t.home : t.overview;
 
   const getBreadcrumbs = () => {
     if (pathname === "/") {
@@ -20,34 +81,34 @@ export function TopbarBreadcrumb({
     if (pathname === "/lessons") {
       return [
         { label: homeLabel, to: "/" },
-        { label: isStudent ? "Bài học" : "Thư viện bài học", isCurrent: true },
+        { label: isStudent ? t.lessons : t.lessonLibrary, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/lessons/catalog")) {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Bài học", to: "/lessons" },
-        { label: "Mục lục môn học", isCurrent: true },
+        { label: t.lessons, to: "/lessons" },
+        { label: t.subjectIndex, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/lessons/")) {
       return [
         { label: homeLabel, to: "/" },
-        { label: isStudent ? "Bài học" : "Thư viện bài học", to: "/lessons" },
-        { label: isStudent ? "Chi tiết bài học" : "Chi tiết bài giảng", isCurrent: true },
+        { label: isStudent ? t.lessons : t.lessonLibrary, to: "/lessons" },
+        { label: isStudent ? t.lessonDetail : t.teachingDetail, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/ebooks/")) {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Bài học", to: "/lessons" },
-        { label: "Trình đọc ebook", isCurrent: true },
+        { label: t.lessons, to: "/lessons" },
+        { label: t.ebookReader, isCurrent: true },
       ];
     }
     if (pathname === "/labs") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Phòng thí nghiệm", isCurrent: true },
+        { label: t.labs, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/labs/")) {
@@ -55,51 +116,51 @@ export function TopbarBreadcrumb({
       const lab = labInfo.find((l) => l.id === labId);
       return [
         { label: homeLabel, to: "/" },
-        { label: "Phòng thí nghiệm", to: "/labs" },
-        { label: lab ? lab.title : "Thực hành", isCurrent: true },
+        { label: t.labs, to: "/labs" },
+        { label: lab ? lab.title : t.practice, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/assignments/") && !pathname.startsWith("/assignments/catalog")) {
       return [
         { label: homeLabel, to: "/" },
         {
-          label: isStudent ? "Bài tập" : "Lớp học",
+          label: isStudent ? t.assignments : t.classes,
           to: isStudent ? "/assignments" : "/classes",
         },
-        { label: isStudent ? "Chi tiết bài tập" : "Chi tiết bài học", isCurrent: true },
+        { label: isStudent ? t.assignmentDetail : t.lessonDetail, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/assignments/catalog")) {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Bài tập", to: "/assignments" },
-        { label: "Mục lục bài tập", isCurrent: true },
+        { label: t.assignments, to: "/assignments" },
+        { label: t.assignmentIndex, isCurrent: true },
       ];
     }
     if (pathname === "/assignments") {
       return [
         { label: homeLabel, to: "/" },
-        { label: isStudent ? "Bài tập" : "Lớp học", isCurrent: true },
+        { label: isStudent ? t.assignments : t.classes, isCurrent: true },
       ];
     }
     if (pathname === "/classes") {
       return [
         { label: homeLabel, to: "/" },
-        { label: isStudent ? "Class Space" : "Lớp học của tôi", isCurrent: true },
+        { label: isStudent ? t.classSpace : t.myClasses, isCurrent: true },
       ];
     }
     if (pathname.startsWith("/classes/")) {
       return [
         { label: homeLabel, to: "/" },
-        { label: isStudent ? "Class Space" : "Lớp học của tôi", to: "/classes" },
-        { label: "Không gian môn học", isCurrent: true },
+        { label: isStudent ? t.classSpace : t.myClasses, to: "/classes" },
+        { label: t.subjectSpace, isCurrent: true },
       ];
     }
     if (pathname === "/progress") {
       return [
         { label: homeLabel, to: "/" },
         {
-          label: user.role === "PARENT" ? "Tiến độ của con" : "Tiến độ học tập",
+          label: user.role === "PARENT" ? t.childProgress : t.learningProgress,
           isCurrent: true,
         },
       ];
@@ -107,39 +168,39 @@ export function TopbarBreadcrumb({
     if (pathname === "/saved") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Thí nghiệm đã lưu", isCurrent: true },
+        { label: t.savedLabs, isCurrent: true },
       ];
     }
     if (pathname === "/settings") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Cài đặt tài khoản", isCurrent: true },
+        { label: t.settings, isCurrent: true },
       ];
     }
     if (pathname === "/notifications") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Thông báo", isCurrent: true },
+        { label: t.notifications, isCurrent: true },
       ];
     }
     if (pathname === "/admin") {
       return [
         { label: homeLabel, to: "/" },
-        { label: "Quản trị hệ thống", isCurrent: true },
+        { label: t.admin, isCurrent: true },
       ];
     }
     return [
       { label: homeLabel, to: "/" },
-      { label: "Khám phá", isCurrent: true },
+      { label: t.explore, isCurrent: true },
     ];
   };
 
   const crumbs = getBreadcrumbs();
 
   return (
-    <nav aria-label="Đường dẫn trang" className="topbar-breadcrumb">
+    <nav aria-label={t.pagePath} className="topbar-breadcrumb">
       <Link to="/" className="breadcrumb-root">
-        Không gian học tập
+        {t.workspace}
       </Link>
       {crumbs.map((crumb, idx) => (
         <span

@@ -35,7 +35,7 @@ test("a student picks dark, keeps it on reload and on another browser, then retu
     await page.reload();
     await expect(page.getByRole("region", { name: "Giao diện" }).getByLabel("Tối")).toBeChecked();
     expect(await theme(page)).toBe("dark");
-    expect((await call("/me/profile", "GET", undefined, token)).data.preferences).toEqual({ theme: "dark" });
+    expect((await call("/me/profile", "GET", undefined, token)).data.preferences.theme).toBe("dark");
 
     // A fresh browser has no local copy; the profile brings the choice along after sign-in.
     const other = await studentLogin(browser);
