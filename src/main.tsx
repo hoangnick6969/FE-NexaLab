@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./app/App";
 import { queryClient } from "./app/query-client";
+import "./tokens.css";
 import "./styles.css";
 class Boundary extends React.Component<
   { children: React.ReactNode },

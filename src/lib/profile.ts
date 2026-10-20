@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, useAuth } from "./api";
+import type { ThemePreference } from "./theme";
 
 export type Profile = {
   id: string;
@@ -13,6 +14,7 @@ export type Profile = {
   avatarUpdatedAt: string | null;
   avatarUrl: string | null;
   canEditName: boolean;
+  preferences: { theme: ThemePreference };
 };
 
 export const PROFILE_KEY = ["me-profile"] as const;

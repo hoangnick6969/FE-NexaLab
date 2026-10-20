@@ -9,6 +9,7 @@ import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
 import { Avatar } from "../components/Avatar";
 import { useProfile } from "../lib/profile";
+import { setThemePreference } from "../lib/theme";
 import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
@@ -71,6 +72,11 @@ export default function App() {
   const { user } = useAuth();
   const profile = useProfile();
   const location = useLocation();
+  // The saved profile preference wins over this device's copy once the profile loads.
+  const savedTheme = profile.data?.preferences?.theme;
+  useEffect(() => {
+    if (savedTheme) setThemePreference(savedTheme);
+  }, [savedTheme]);
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });

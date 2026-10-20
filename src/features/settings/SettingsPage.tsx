@@ -5,6 +5,7 @@ import { PROFILE_KEY, uploadAvatar, useProfile, type Profile } from "../../lib/p
 import { Avatar } from "../../components/Avatar";
 import { PageHeading } from "../../components/PageHeading";
 import { ErrorBox, Field, InlineLoader, useAction } from "../../components/ui";
+import { setThemePreference, THEME_OPTIONS, useThemePreference, type ThemePreference } from "../../lib/theme";
 
 const roleLabel: Record<Profile["role"], string> = { STUDENT: "Học sinh", TEACHER: "Giáo viên", PARENT: "Phụ huynh", ADMIN: "Quản trị viên" };
 
@@ -29,6 +30,12 @@ export function SettingsPage() {
       applyProfile(next);
       setNameSaved(true);
     },
+  });
+  const theme = useThemePreference();
+  // Applied at once on this device; the profile copy follows the user to other devices.
+  const saveTheme = useMutation({
+    mutationFn: (next: ThemePreference) => api<{ preferences: Profile["preferences"] }>("/me/preferences", "PATCH", { theme: next }),
+    onSuccess: ({ preferences }) => queryClient.setQueryData<Profile>(PROFILE_KEY, (old) => (old ? { ...old, preferences } : old)),
   });
   const data = profile.data;
 
@@ -112,6 +119,29 @@ export function SettingsPage() {
             )}
           </>
         )}
+      </section>
+      <section className="panel narrow" aria-labelledby="appearance-title">
+        <h2 id="appearance-title">Giao diện</h2>
+        <fieldset className="theme-choice">
+          <legend>Chế độ màu</legend>
+          {THEME_OPTIONS.map((option) => (
+            <label key={option.value}>
+              <input
+                type="radio"
+                name="theme"
+                value={option.value}
+                checked={theme === option.value}
+                onChange={() => {
+                  setThemePreference(option.value);
+                  saveTheme.mutate(option.value);
+                }}
+              />
+              {option.label}
+            </label>
+          ))}
+        </fieldset>
+        <p className="tiny muted">"Theo hệ thống" dùng chế độ sáng hoặc tối của thiết bị.</p>
+        <ErrorBox error={saveTheme.error} />
       </section>
       <section className="panel narrow" aria-labelledby="password-title">
         <h2 id="password-title">Đổi mật khẩu</h2>
