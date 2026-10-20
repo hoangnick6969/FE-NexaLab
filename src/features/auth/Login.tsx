@@ -36,7 +36,7 @@ export function Login() {
             ? "register"
             : "login"),
       "POST",
-      mode === "register" ? { ...b, role: "PARENT", consent: true } : b,
+      mode === "register" ? { ...b, role: "PARENT", consent: true } : { ...b, remember: b.remember === "on" },
     );
     useAuth.getState().set(r.user, r.accessToken);
   });
@@ -131,6 +131,13 @@ export function Login() {
                 }
               />
             )}{" "}
+            {(mode === "login" || mode === "student-login" || mode === "admin-login") && (
+              <label className="check login-remember">
+                <input type="checkbox" name="remember" />
+                Ghi nhớ đăng nhập trên thiết bị này
+                <small className="muted">Chỉ bật trên máy riêng. Khi tắt, phiên kết thúc lúc đóng trình duyệt.</small>
+              </label>
+            )}
             {mode === "register" && (
               <label className="check">
                 <input type="checkbox" required />

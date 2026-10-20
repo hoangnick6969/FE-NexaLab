@@ -996,6 +996,9 @@ small {
   margin: 12px 0 20px;
 }
 
+.login-remember { flex-wrap: wrap; }
+.login-remember small { flex-basis: 100%; }
+
 .check input {
   margin-top: 5px;
 }
