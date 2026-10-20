@@ -8,7 +8,7 @@ import { defineText } from "../../i18n";
 const text = defineText({
   vi: {
     title: "Phòng thực hành và cấu hình mô phỏng",
-    note: "Cấu hình là bất biến: mỗi thay đổi tạo một phiên bản mới, chỉ áp dụng cho lần thực hành sau khi kích hoạt. Lần thực hành cũ giữ nguyên phiên bản đã dùng. Khoảng tham số vẫn chờ duyệt khoa học (Q-C2-04).",
+    note: "Cấu hình là bất biến: mỗi thay đổi tạo một phiên bản mới, chỉ áp dụng cho lần thực hành sau khi kích hoạt. Lần thực hành cũ giữ nguyên phiên bản đã dùng. Khoảng tham số cần được duyệt về chuyên môn trước khi sử dụng.",
     lab: "Phòng",
     status: "Trạng thái",
     model: "Mô hình",
@@ -43,7 +43,7 @@ const text = defineText({
   },
   en: {
     title: "Labs and simulation configuration",
-    note: "Configuration is immutable: each change creates a new version, used only for practice after activation. Earlier attempts keep the version they used. Parameter ranges still await scientific review (Q-C2-04).",
+    note: "Configuration is immutable: each change creates a new version, used only for practice after activation. Earlier attempts keep the version they used. Parameter ranges need subject review before use.",
     lab: "Lab",
     status: "Status",
     model: "Model",

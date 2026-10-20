@@ -54,6 +54,7 @@ const text = defineText({
     allLabs: "All labs",
   },
 });
+import { TeacherDashboard } from "./TeacherDashboard";
 
 export function Dashboard() {
   const user = useAuth((s) => s.user)!;
@@ -72,6 +73,7 @@ export function Dashboard() {
   if (isStudent) {
     return <StudentDashboard user={user} stats={stats} assignments={assignments} />;
   }
+  if (user.role === "TEACHER") return <TeacherDashboard />;
   return (
     <>
       <PageHeading
@@ -101,7 +103,7 @@ export function Dashboard() {
           </p>
           <Link
             className="cream-button"
-            to={user.role === "TEACHER" ? "/labs/circuit" : "/progress"}
+            to="/progress"
           >
             {t.openSpace} <ArrowUpRight size={19} />
           </Link>
@@ -184,11 +186,9 @@ export function Dashboard() {
       <div className="role-note">
         <GraduationCap />
         <p>
-          {user.role === "TEACHER"
-            ? t.teacherNote
-            : t.parentNote}
+          {t.parentNote}
         </p>
-        <Link to={user.role === "TEACHER" ? "/classes" : "/progress"}>
+        <Link to="/progress">
           {t.openManagement} →
         </Link>
       </div>

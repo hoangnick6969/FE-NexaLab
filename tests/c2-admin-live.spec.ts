@@ -4,7 +4,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 // C2_ADMIN_PASSWORD) and TEST_API pointing at the same API the web app uses.
 // Each run creates a uniquely named teacher; disabled accounts keep their audit
 // history by design, so this spec is meant for local/development databases.
-const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
 const adminEmail = process.env.C2_ADMIN_EMAIL ?? "admin@nexalab.local";
 const adminPassword = process.env.C2_ADMIN_PASSWORD ?? process.env.SEED_PASSWORD ?? "";
 const tag = "c2ui" + Date.now().toString(36);

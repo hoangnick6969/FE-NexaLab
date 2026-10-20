@@ -68,7 +68,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
       <section className="panel" aria-labelledby="class-detail-title">
         <div className="section-heading">
           <div>
-            <h2 id="class-detail-title">{classroom.name}</h2>
+            <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
             <p className="tiny muted">
               {t.grade(classroom.grade)} · {classroom.requiresApproval ? t.codeNeedsApproval : t.codeApprovesAtOnce}
             </p>

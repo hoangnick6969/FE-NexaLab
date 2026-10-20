@@ -111,6 +111,8 @@ export function Status({ value }: { value: string }) {
     active: [t.active, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
     disabled: [t.disabled, "not_passed", <Ban size={13} aria-hidden key="i" />],
     READY: [t.ready, "passed", <ShieldCheck size={13} aria-hidden key="i" />],
+    ACTIVE: [t.active, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    ARCHIVED: [t.archived, "outline", <Archive size={13} aria-hidden key="i" />],
     QUARANTINED: [t.quarantined, "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     quarantined: [t.quarantined, "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     published: [t.published, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],

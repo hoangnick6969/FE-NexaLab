@@ -169,8 +169,8 @@ export function StudentDashboard({
     ? assignmentDetail.data.content.id
     : null;
   const pathwayQuery = useQuery<StudentPathway>({
-    queryKey: ["lesson-pathway", lessonId],
-    queryFn: () => api("/lessons/" + lessonId + "/pathway"),
+    queryKey: ["lesson-pathway", lessonId, assignment?.id],
+    queryFn: () => api("/lessons/" + lessonId + "/pathway?assignmentId=" + encodeURIComponent(assignment.id)),
     enabled: Boolean(lessonId),
   });
   const progress = stats.data?.progress ?? [];
@@ -284,7 +284,7 @@ export function StudentDashboard({
               {pathway && !nextStep && <p className="student-step-position">{t.allSeen}</p>}
               <Link
                 className="student-continue-action"
-                to={assignment ? (nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${lessonId}` : "/assignments/" + assignment.id) : "/lessons"}
+                to={assignment ? (nextStep?.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : "/assignments/" + assignment.id) : "/lessons"}
               >
                 {assignment
                   ? nextStep
@@ -319,7 +319,7 @@ export function StudentDashboard({
                 <div><span className="eyebrow">{t.lessonsAndAssignments}</span><h3>{pathway.lesson.title}</h3></div>
                 <span>{t.stepsDone(pathway.steps.filter((step) => step.state === "COMPLETED").length, pathway.steps.length)}</span>
               </div>
-              {([[t.lessonGroup, ["READING", "VIDEO", "STUDY_CARDS"]], [t.assignmentGroup, ["QUIZ", "LAB", "CHALLENGE"]]] as const).map(([groupName, types]) => <div className="student-pathway-group" key={groupName}>
+              {([[t.lessonGroup, ["READING", "VIDEO"]], ["Class Space", ["STUDY_CARDS"]], [t.assignmentGroup, ["QUIZ", "LAB", "CHALLENGE"]]] as const).map(([groupName, types]) => <div className="student-pathway-group" key={groupName}>
               <h4>{groupName}</h4>
               <ol className="student-pathway-steps">
                 {pathway.steps.filter((step) => (types as readonly string[]).includes(step.type)).map((step) => {
@@ -331,7 +331,7 @@ export function StudentDashboard({
                           <Lock size={15} strokeWidth={1.75} /><span>{stepNames[step.type]}</span>
                         </button>
                       ) : (
-                        <Link to={lessonId && ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) ? `/lessons/${lessonId}` : `/assignments/${assignment.id}#step-${step.id}`}>
+                        <Link to={step.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : lessonId && ["READING", "VIDEO"].includes(step.type) ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : `/assignments/${assignment.id}#step-${step.id}`}>
                           {step.state === "COMPLETED" ? <Check size={15} strokeWidth={2} /> : <Clock3 size={15} strokeWidth={1.75} />}
                           <span>{stepNames[step.type]}</span>
                         </Link>

@@ -5938,3 +5938,13 @@ td small {
 .roster-student { display: flex; align-items: center; gap: 10px; }
 .roster-student > span { display: flex; flex-direction: column; }
 .admin-user-identity { display: flex; align-items: center; gap: 10px; }
+
+/* Shared controls remain reachable by touch and keyboard in every role. */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+.text-button, .danger-text {
+  min-height: 44px;
+  min-width: 44px;
+}

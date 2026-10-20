@@ -25,6 +25,7 @@ const text = defineText({
     grade: (g: number) => `Khối ${g}`,
     json: "Nội dung JSON",
     jsonHint: "Test thêm correctOption (bắt đầu từ 0). Test chưa được giao và chưa chấm điểm.",
+    draftHint: "Lưu bản nháp để rà soát trước khi xuất bản. Bài kiểm tra chỉ được chấm điểm sau khi giao cho học sinh.",
     saving: "Đang lưu…",
     saveDraft: "Lưu bản nháp",
     importCsv: "Nhập CSV có cấu trúc",
@@ -75,6 +76,7 @@ const text = defineText({
     grade: (g: number) => `Grade ${g}`,
     json: "JSON content",
     jsonHint: "Tests also take correctOption (from 0). A test is not assigned or scored yet.",
+    draftHint: "Save a draft to review it before publishing. A test is scored only after it is assigned to students.",
     saving: "Saving…",
     saveDraft: "Save draft",
     importCsv: "Import a structured CSV",
@@ -107,14 +109,15 @@ const text = defineText({
   },
 });
 const t = text();
+import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
 
 type Kind = "DECK" | "STUDY_QUIZ" | "TEST";
 type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
 const names: Record<Kind, string> = t.names;
 const sample: Record<Kind, object> = {
-  DECK: { cards: [{ front: t.sampleFront, back: t.sampleBack }] },
-  STUDY_QUIZ: { questions: [{ prompt: t.sampleQuestion, options: [t.sampleOption("A"), t.sampleOption("B")] }] },
-  TEST: { questions: [{ prompt: t.sampleQuestion, options: [t.sampleOption("A"), t.sampleOption("B")], correctOption: 0 }] },
+  DECK: { cards: [{ front: "", back: "" }] },
+  STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""] }] },
+  TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
 };
 
 export function TeacherClassResources({ classId, disabled }: { classId: string; disabled: boolean }) {
@@ -124,15 +127,15 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
   const [kind, setKind] = useState<Kind>("DECK");
   const [title, setTitle] = useState("");
   const [lessonId, setLessonId] = useState("");
-  const [source, setSource] = useState(JSON.stringify(sample.DECK, null, 2));
+  const [source, setSource] = useState<ResourceContent>(sample.DECK);
   const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
   const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<unknown>(null);
   const action = useMutation({ mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
-  const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: JSON.parse(source) });
+  const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: resourceInput(kind, source) });
   const create = async (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
-    try { const body = resourceBody(); await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() }); setTitle(""); setSource(JSON.stringify(sample[kind], null, 2)); }
+    try { const body = resourceBody(); await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() }); setTitle(""); setSource(sample[kind]); }
     catch (e) { setError(e); }
   };
   const previewImport = async () => {
@@ -152,11 +155,11 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
     {!disabled && <div className="class-resource-create">
       <h3>{t.createDirect}</h3>
       <form onSubmit={create}>
-        <label className="field"><span>{t.contentType}</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(JSON.stringify(sample[next], null, 2)); setPreview(null); }}><option value="DECK">{t.deck}</option><option value="STUDY_QUIZ">{t.practiceQuiz}</option><option value="TEST">{t.testUnassigned}</option></select></label>
+        <label className="field"><span>{t.contentType}</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); setPreview(null); }}><option value="DECK">{t.deck}</option><option value="STUDY_QUIZ">{t.practiceQuiz}</option><option value="TEST">{t.testUnassigned}</option></select></label>
         <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
         <label className="field"><span>{t.linkedLesson}</span><select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}><option value="">{t.chooseLesson}</option>{lessons.data?.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}</option>)}</select></label>
-        <label className="field"><span>{t.json}</span><textarea rows={9} value={source} onChange={(e) => setSource(e.target.value)} spellCheck={false} aria-label={t.json} /></label>
-        <p className="tiny muted">Deck: cards[{`{front, back}`}]. Quiz: questions[{`{prompt, options}`}]. {t.jsonHint}</p>
+        <ResourceEditor kind={kind} value={source} onChange={setSource} />
+        <p className="tiny muted">{t.draftHint}</p>
         <ErrorBox error={error} /><button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
       </form>
       <details className="class-resource-import"><summary>{t.importCsv}</summary>
@@ -176,12 +179,12 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
 function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {
   const qc = useQueryClient();
   const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
-  const [contentDraft, setContentDraft] = useState(JSON.stringify(resource.content, null, 2));
+  const [contentDraft, setContentDraft] = useState<ResourceContent>(resource.content);
   const [titleDraft, setTitleDraft] = useState(resource.title);
-  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: JSON.parse(contentDraft) }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
   return <article className="class-resource-row"><div><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)} · {t.items(count ?? 0)}</small></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
-    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><label className="field"><span>{t.resourceName}</span><input value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><label className="field"><span>{t.json}</span><textarea rows={8} value={contentDraft} onChange={(event) => setContentDraft(event.target.value)} /></label><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending} onClick={() => update.mutate()}>{t.saveDraft}</button></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button></>}
+    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button></>}
     {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>{t.newVersion}</button><button className="danger-text" disabled={action.isPending} onClick={() => action.mutate("archive")}>{t.archive}</button></>}
     <ErrorBox error={action.error} />
   </article>;

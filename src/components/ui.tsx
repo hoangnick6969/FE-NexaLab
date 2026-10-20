@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commonText } from "../i18n/common";
 export const verdictLabel = (v: string) => commonText().verdicts[v] ?? v;
@@ -48,9 +48,31 @@ export function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const dialog = useRef<HTMLElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const node = dialog.current;
+    const focusable = () => Array.from(node?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]') ?? []).filter((item) => item.getClientRects().length > 0);
+    (focusable()[0] ?? node)?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) { event.preventDefault(); node?.focus(); return; }
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !node?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !node?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    node?.addEventListener("keydown", keydown);
+    return () => { node?.removeEventListener("keydown", keydown); if (previous?.isConnected) previous.focus(); };
+  }, []);
   return (
-    <div className="modal-wrap" onClick={onClose}>
+    <div className="modal-wrap">
       <section
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}

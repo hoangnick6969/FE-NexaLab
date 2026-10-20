@@ -30,8 +30,9 @@ const text = defineText({
     none: "Không yêu cầu",
     overdue: "Đã quá hạn nhưng vẫn có thể học",
     archivedNotice: "Nội dung này không còn được cập nhật. Em vẫn có thể học tiếp phần đã bắt đầu.",
-    lessonUnfinished: "Bài học chưa hoàn tất",
-    lessonUnfinishedBody: "Hãy đọc nội dung và xem video trong mục Bài học trước. Bài kiểm tra và phần thực hành sẽ mở theo tiến độ đã được lưu.",
+    lessonSteps: "Các bước học tập",
+    lessonUnfinishedBody: "Hãy đọc nội dung và xem video trong mục Bài học trước. Tiến độ được lưu theo từng bước. Thẻ ôn tập nằm trong Class Space.",
+    reviewCards: "Ôn thẻ trong Class Space",
     backToLesson: "Quay lại Bài học",
     noActivities: "Bài tập này chưa có bài kiểm tra hoặc hoạt động thực hành.",
     pathwayLabel: "Bài tập và thực hành",
@@ -56,8 +57,9 @@ const text = defineText({
     none: "None",
     overdue: "Overdue but still open",
     archivedNotice: "This content is no longer updated. You can still continue what you started.",
-    lessonUnfinished: "The lesson is not finished",
-    lessonUnfinishedBody: "Read the content and watch the video under Lessons first. The quiz and practice open as your saved progress allows.",
+    lessonSteps: "Learning steps",
+    lessonUnfinishedBody: "Read the content and watch the video under Lessons first. Progress is saved step by step. Study cards are in Class Space.",
+    reviewCards: "Review cards in Class Space",
     backToLesson: "Back to the lesson",
     noActivities: "This assignment has no quiz or practice yet.",
     pathwayLabel: "Assignments and practice",
@@ -135,7 +137,7 @@ export function AssignedLearning() {
         {assignment.contentType === "lesson" && pathway ? (
           <>
           {pathway.steps.some((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) && step.state !== "COMPLETED") && (
-            <div className="notice"><b>{t.lessonUnfinished}</b><p>{t.lessonUnfinishedBody}</p><Link className="primary" to={`/lessons/${lesson.id}`}>{t.backToLesson} <ArrowUpRight size={15} /></Link></div>
+            <div className="notice"><b>{t.lessonSteps}</b><p>{t.lessonUnfinishedBody}</p><Link className="primary" to={`/lessons/${encodeURIComponent(lesson.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>{t.backToLesson} <ArrowUpRight size={15} /></Link>{pathway.steps.some((step) => step.type === "STUDY_CARDS" && step.state !== "COMPLETED") && <Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}`}>{t.reviewCards}</Link>}</div>
           )}
           {!pathway.steps.some((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)) && <Empty>{t.noActivities}</Empty>}
           <div className="lesson-pathway" aria-label={t.pathwayLabel}>

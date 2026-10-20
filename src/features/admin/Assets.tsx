@@ -10,12 +10,14 @@ const text = defineText({
     labels: { quarantine: "Cách ly", release: "Gỡ cách ly", reassign: "Chuyển chủ sở hữu", share: "Đưa vào thư viện chung", delete: "Xóa" } as Record<string, string>,
     effects: { quarantine: "Không ai ngoài quản trị viên mở được tệp, kể cả trong bài đã xuất bản, cho tới khi gỡ cách ly.", release: "Tệp được phục vụ lại như trước.", reassign: "Quyền quản lý tệp chuyển cho người nhận; các bài đang tham chiếu không đổi.", share: "Mọi giáo viên dùng được tệp. Phải ghi rõ giấy phép và nguồn; đây không phải duyệt chuyên môn.", delete: "Tệp bị xóa vĩnh viễn. Máy chủ từ chối nếu còn bài học hay phòng thực hành tham chiếu." } as Record<string, string>,
     title: "Tệp và nguồn",
-    note: "Kiểm tra theo cấu hình: chữ ký tệp, đuôi, MIME, kích thước và SHA-256. Hạn mức production chờ Q-DATA-01/Q-C2-03. Lưu trữ R2 và danh mục nguồn (SourceRegistry) chờ Content Foundation.",
+    note: "Quản lý tệp, nguồn và quyền sử dụng. Dung lượng và mã kiểm tra toàn vẹn được lấy từ phiên bản sẵn sàng mới nhất.",
     filter: "Lọc tệp",
     status: "Trạng thái",
     all: "Tất cả",
     ready: "Sẵn sàng",
     quarantined: "Đang cách ly",
+    active: "Đang hoạt động",
+    archived: "Đã lưu trữ",
     scope: "Phạm vi",
     teacherPrivate: "Riêng của giáo viên",
     shared: "Thư viện chung",
@@ -24,7 +26,10 @@ const text = defineText({
     scopeLicence: "Phạm vi / giấy phép",
     references: "Tham chiếu",
     actions: "Thao tác",
-    noChecksum: "chưa có checksum",
+    noChecksum: "Chưa có mã kiểm tra toàn vẹn",
+    noMime: "Chưa có loại tệp",
+    noSize: "Chưa có dung lượng",
+    noReadyVersion: "Chưa có phiên bản sẵn sàng",
     refCounts: (lessons: number, labs: number) => `${lessons} bài, ${labs} phòng`,
     none: "Không",
     inUse: "Đang được tham chiếu; không thể xóa",
@@ -38,12 +43,14 @@ const text = defineText({
     labels: { quarantine: "Quarantine", release: "Release", reassign: "Change owner", share: "Add to the shared library", delete: "Delete" },
     effects: { quarantine: "Only administrators can open the file, even in published lessons, until it is released.", release: "The file is served again as before.", reassign: "Management of the file moves to the recipient; lessons that use it do not change.", share: "Every teacher can use the file. A licence and source are required; this is not a subject review.", delete: "The file is deleted permanently. The server refuses if a lesson or lab still uses it." },
     title: "Files and sources",
-    note: "Checked against the configuration: file signature, extension, MIME type, size and SHA-256. Production limits await Q-DATA-01/Q-C2-03. R2 storage and the source registry await Content Foundation.",
+    note: "Manage files, sources and usage rights. Size and integrity checksum come from the latest ready version.",
     filter: "Filter files",
     status: "Status",
     all: "All",
     ready: "Ready",
     quarantined: "Quarantined",
+    active: "Active",
+    archived: "Archived",
     scope: "Scope",
     teacherPrivate: "Teacher's private",
     shared: "Shared library",
@@ -52,7 +59,10 @@ const text = defineText({
     scopeLicence: "Scope / licence",
     references: "References",
     actions: "Actions",
-    noChecksum: "no checksum yet",
+    noChecksum: "No integrity checksum yet",
+    noMime: "No file type yet",
+    noSize: "No size yet",
+    noReadyVersion: "No ready version yet",
     refCounts: (lessons: number, labs: number) => `${lessons} lessons, ${labs} labs`,
     none: "None",
     inUse: "In use; cannot be deleted",
@@ -95,8 +105,9 @@ export function Assets() {
           <span>{t.status}</span>
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
             <option value="">{t.all}</option>
-            <option value="READY">{t.ready}</option>
+            <option value="ACTIVE">{t.active}</option>
             <option value="QUARANTINED">{t.quarantined}</option>
+            <option value="ARCHIVED">{t.archived}</option>
           </select>
         </label>
         <label className="field">
@@ -121,13 +132,16 @@ export function Assets() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((a: any) => (
+            {rows.map((a: any) => {
+              const ready = [...(a.versions ?? [])].sort((left: any, right: any) => right.version - left.version).find((v: any) => v.status === "READY");
+              return (
               <tr key={a.id}>
                 <td>
-                  {a.name}
+                  {a.title}
                   <p className="tiny muted">
-                    {a.mime} · {Math.ceil(a.size / 1024)} KB · {a.sha256 ? `SHA-256 ${a.sha256.slice(0, 12)}…` : t.noChecksum}
+                    {ready ? `${ready.mime ?? t.noMime} · ${ready.bytes == null ? t.noSize : `${Math.ceil(ready.bytes / 1024)} KB`} · ${ready.sha256 ? `SHA-256 ${ready.sha256.slice(0, 12)}…` : t.noChecksum}` : t.noReadyVersion}
                   </p>
+                  <details><summary>Phiên bản ({a.versions?.length ?? 0})</summary>{a.versions?.map((version: any) => <p key={version.id} className="tiny">Bản {version.version} · {version.status === "READY" ? "Sẵn sàng" : version.status === "FAILED" ? "Không thành công" : "Đang xử lý"}{version.failureReason ? ` · ${version.failureReason}` : ""}</p>)}</details>
                 </td>
                 <td>{a.owner?.fullName ?? a.ownerId}</td>
                 <td>
@@ -145,7 +159,7 @@ export function Assets() {
                 <td className="admin-row-actions">
                   {(a.status === "QUARANTINED"
                     ? ["release", "reassign"]
-                    : ["quarantine", "reassign", ...(a.scope === "SHARED_LIBRARY" ? [] : ["share"])]
+                    : a.status === "ACTIVE" ? ["quarantine", "reassign", ...(a.scope === "SHARED_LIBRARY" ? [] : ["share"])] : []
                   ).map((action) => (
                     <button
                       key={action}
@@ -174,14 +188,14 @@ export function Assets() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ); })}
           </tbody>
         </table>
         <LoadMore query={q} />
       </QueryState>
       {op && (
         <ReasonDialog
-          title={`${labels[op.action]}: ${op.asset.name}`}
+          title={`${labels[op.action]}: ${op.asset.title}`}
           effect={effects[op.action]}
           confirmLabel={labels[op.action]}
           danger={op.action === "quarantine" || op.action === "delete"}

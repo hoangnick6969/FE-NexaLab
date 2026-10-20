@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { ArrowUpRight, BookOpen } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, idempotencyKey, isApiError } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
+import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
 import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
@@ -56,6 +57,7 @@ const text = defineText({
     sending: "Đang gửi…",
     join: "Tham gia",
     joinResult: (r: { message: string; pending: boolean }) => r.message,
+    reviewCards: (title: string) => `Ôn thẻ · ${title}`,
   },
   en: {
     tooMany: "Too many attempts. Try again in 15 minutes.",
@@ -99,12 +101,14 @@ const text = defineText({
     sending: "Sending…",
     join: "Join",
     joinResult: (r: { message: string; pending: boolean }) => (r.pending ? "Request sent. The teacher will approve it." : "You have joined the class."),
+    reviewCards: (title: string) => `Review cards · ${title}`,
   },
 });
 const t = text();
 
 type ClassWork = HierarchyItem & {
   classId: string;
+  contentType: string;
   classroom: { id: string; name: string };
   dueDate: string | null;
   overdue: boolean;
@@ -121,6 +125,7 @@ async function readStudentClassWork() {
         id: assignment.id,
         title: assignment.title,
         classId: assignment.classroom.id,
+        contentType: assignment.contentType,
         classroom: assignment.classroom,
         subjectId: subject.id,
         subjectName: subject.name,
@@ -141,7 +146,10 @@ type SpaceTab = "lessons" | "tests" | "resources";
 export function StudentClasses() {
   const { classId } = useParams();
   const [joining, setJoining] = useState(false);
-  const [activeTab, setActiveTab] = useState<SpaceTab>("lessons");
+  const [params, setParams] = useSearchParams();
+  const activeTab: SpaceTab = params.get("tab") === "resources" ? "resources" : params.get("tab") === "tests" ? "tests" : "lessons";
+  const setActiveTab = (tab: SpaceTab) => setParams((previous) => { previous.set("tab", tab); return previous; });
+  const reviewId = params.get("assignmentId");
   const [result, setResult] = useState<{ message: string; pending: boolean } | null>(null);
   const key = useRef(idempotencyKey());
   const list = useQuery<StudentClass[]>({ queryKey: ["classes"], queryFn: () => api("/classes") });
@@ -175,7 +183,7 @@ export function StudentClasses() {
           {classWork.data?.tests.filter((item) => item.classroom.id === selectedClass.id).map((item: any) => <Link key={item.id} className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}><BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{dueLabel(item.dueDate)}</small>{item.testStatus && <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>{testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}</Badge>}</span><ArrowUpRight size={17} /></Link>)}
           {classWork.data && classWork.data.tests.filter((item) => item.classroom.id === selectedClass.id).length === 0 && <Empty>{t.noTests}</Empty>}
         </section>}
-        {activeTab === "resources" && <section role="tabpanel" aria-label={t.tabResources}><StudentClassResources classId={selectedClass.id} /></section>}
+        {activeTab === "resources" && <section role="tabpanel" aria-label={t.tabResources}><StudentClassResources classId={selectedClass.id} />{classWork.data?.items.filter((item) => item.classId === selectedClass.id && item.contentType === "lesson").map((item) => <p key={item.id}><Link className="secondary" to={`?tab=resources&assignmentId=${encodeURIComponent(item.id)}`}>{t.reviewCards(item.title)}</Link></p>)}{reviewId && <ClassLessonCards key={reviewId} assignmentId={reviewId} />}</section>}
       </>}
     </section>
   </>;
@@ -219,6 +227,7 @@ export function StudentClasses() {
           {c.enrollmentStatus === "approved" && <p className="muted">{t.assignedCount(c.assignments.length)} · <Link to={`/classes/${encodeURIComponent(c.id)}/catalog`}>{t.openClassSpace} <ArrowUpRight size={14} /></Link></p>}
         </section>
       ))}
+      {reviewId && <ClassLessonCards assignmentId={reviewId} />}
       {joining && (
         <Modal title={t.joinTitle} onClose={() => setJoining(false)}>
           <form
