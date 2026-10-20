@@ -116,6 +116,12 @@ export function TopbarBreadcrumb({
         { label: "Cài đặt tài khoản", isCurrent: true },
       ];
     }
+    if (pathname === "/notifications") {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: "Thông báo", isCurrent: true },
+      ];
+    }
     if (pathname === "/admin") {
       return [
         { label: homeLabel, to: "/" },

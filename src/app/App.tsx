@@ -9,6 +9,7 @@ import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
 import { Avatar } from "../components/Avatar";
 import { useProfile } from "../lib/profile";
+import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
@@ -48,6 +49,9 @@ const Saved = lazy(() =>
   import("../features/saved/Saved").then((m) => ({ default: m.Saved }))
 );
 
+const NotificationsPage = lazy(() =>
+  import("../features/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage }))
+);
 const SettingsPage = lazy(() =>
   import("../features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage }))
 );
@@ -172,6 +176,7 @@ export default function App() {
           <TopbarBreadcrumb pathname={location.pathname} user={user} />
           <div>
             <span className="online-dot" /> Sẵn sàng khám phá{" "}
+            <NotificationBell />
             <Link
               to="/settings"
               aria-label="Tài khoản"
@@ -211,6 +216,7 @@ export default function App() {
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/saved" element={<Saved />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route
                 path="/admin"
                 element={
