@@ -1,6 +1,59 @@
 import { useState } from "react";
 import { Field } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    title: "Nhật ký kiểm toán",
+    note: "Mỗi lần xem nhật ký cũng được ghi lại. Mật khẩu, mã, đáp án và nội dung gợi ý không bao giờ được lưu hay hiển thị.",
+    filter: "Lọc nhật ký",
+    action: "Hành động (tiền tố)",
+    targetType: "Loại đối tượng",
+    targetId: "Mã đối tượng",
+    actorId: "Mã người thực hiện",
+    result: "Kết quả",
+    all: "Tất cả",
+    success: "Thành công",
+    denied: "Bị từ chối",
+    failure: "Thất bại",
+    from: "Từ",
+    to: "Đến",
+    apply: "Lọc",
+    time: "Thời điểm",
+    actor: "Người thực hiện",
+    actionHead: "Hành động",
+    target: "Đối tượng",
+    reason: "Lý do",
+    changes: "Thay đổi",
+    system: "Hệ thống",
+  },
+  en: {
+    title: "Audit log",
+    note: "Every view of the log is recorded too. Passwords, codes, answers and hint content are never stored or shown.",
+    filter: "Filter the log",
+    action: "Action (prefix)",
+    targetType: "Target type",
+    targetId: "Target id",
+    actorId: "Actor id",
+    result: "Result",
+    all: "All",
+    success: "Succeeded",
+    denied: "Denied",
+    failure: "Failed",
+    from: "From",
+    to: "To",
+    apply: "Filter",
+    time: "Time",
+    actor: "Actor",
+    actionHead: "Action",
+    target: "Target",
+    reason: "Reason",
+    changes: "Changes",
+    system: "System",
+  },
+});
+const t = text();
 
 // ───────────────────────── audit ─────────────────────────
 export function AuditExplorer() {
@@ -18,63 +71,63 @@ export function AuditExplorer() {
     );
   return (
     <section className="panel table-wrap">
-      <h2>Nhật ký kiểm toán</h2>
+      <h2>{t.title}</h2>
       <p className="tiny muted">
-        Mỗi lần xem nhật ký cũng được ghi lại. Mật khẩu, mã, đáp án và nội dung gợi ý không bao giờ được lưu hay hiển thị.
+        {t.note}
       </p>
       <form
         className="admin-filters"
-        aria-label="Lọc nhật ký"
+        aria-label={t.filter}
         onSubmit={(e) => {
           e.preventDefault();
           setFilters(draft);
         }}
       >
         <Field
-          label="Hành động (tiền tố)"
+          label={t.action}
           placeholder="user."
           value={draft.action}
           onChange={(e) => setDraft({ ...draft, action: e.target.value })}
         />
         <Field
-          label="Loại đối tượng"
+          label={t.targetType}
           placeholder="User"
           value={draft.targetType}
           onChange={(e) => setDraft({ ...draft, targetType: e.target.value })}
         />
-        <Field label="Mã đối tượng" value={draft.targetId} onChange={(e) => setDraft({ ...draft, targetId: e.target.value })} />
-        <Field label="Mã người thực hiện" value={draft.actorId} onChange={(e) => setDraft({ ...draft, actorId: e.target.value })} />
+        <Field label={t.targetId} value={draft.targetId} onChange={(e) => setDraft({ ...draft, targetId: e.target.value })} />
+        <Field label={t.actorId} value={draft.actorId} onChange={(e) => setDraft({ ...draft, actorId: e.target.value })} />
         <label className="field">
-          <span>Kết quả</span>
+          <span>{t.result}</span>
           <select value={draft.outcome} onChange={(e) => setDraft({ ...draft, outcome: e.target.value })}>
-            <option value="">Tất cả</option>
-            <option value="success">Thành công</option>
-            <option value="denied">Bị từ chối</option>
-            <option value="failure">Thất bại</option>
+            <option value="">{t.all}</option>
+            <option value="success">{t.success}</option>
+            <option value="denied">{t.denied}</option>
+            <option value="failure">{t.failure}</option>
           </select>
         </label>
-        <Field label="Từ" type="datetime-local" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
-        <Field label="Đến" type="datetime-local" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
-        <button className="secondary">Lọc</button>
+        <Field label={t.from} type="datetime-local" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} />
+        <Field label={t.to} type="datetime-local" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} />
+        <button className="secondary">{t.apply}</button>
       </form>
       <QueryState query={q} empty={!q.isLoading && rows.length === 0}>
         <table>
           <thead>
             <tr>
-              <th>Thời điểm</th>
-              <th>Người thực hiện</th>
-              <th>Hành động</th>
-              <th>Đối tượng</th>
-              <th>Kết quả</th>
-              <th>Lý do</th>
-              <th>Thay đổi</th>
+              <th>{t.time}</th>
+              <th>{t.actor}</th>
+              <th>{t.actionHead}</th>
+              <th>{t.target}</th>
+              <th>{t.result}</th>
+              <th>{t.reason}</th>
+              <th>{t.changes}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r: any) => (
               <tr key={r.id}>
                 <td className="tiny">{when(r.createdAt)}</td>
-                <td>{r.actor ? `${r.actor.fullName} (${ROLE_LABEL[r.actor.role] ?? r.actor.role})` : (r.actorRole ?? "Hệ thống")}</td>
+                <td>{r.actor ? `${r.actor.fullName} (${ROLE_LABEL[r.actor.role] ?? r.actor.role})` : (r.actorRole ?? t.system)}</td>
                 <td>
                   <code>{r.action}</code>
                 </td>

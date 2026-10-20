@@ -25,9 +25,35 @@ function stored(): Locale {
 }
 
 const current: Locale = stored();
-document.documentElement.lang = current;
+// Guarded so Node-side tests can import modules that use defineText.
+if (typeof document !== "undefined") document.documentElement.lang = current;
 
 export const getLocale = () => current;
+
+const CHOSEN_KEY = "nexalab.locale-chosen";
+
+/**
+ * A language picked before sign-in is the user's latest explicit choice, so after sign-in it is
+ * saved to the profile instead of being replaced by the profile's older value (see App.tsx).
+ */
+export function chooseLocaleBeforeSignIn(next: Locale) {
+  try {
+    sessionStorage.setItem(CHOSEN_KEY, "1");
+  } catch {
+    /* Without session storage the profile value simply wins after sign-in. */
+  }
+  setLocale(next);
+}
+
+export function takeLocaleChosenBeforeSignIn() {
+  try {
+    const chosen = sessionStorage.getItem(CHOSEN_KEY) === "1";
+    sessionStorage.removeItem(CHOSEN_KEY);
+    return chosen;
+  } catch {
+    return false;
+  }
+}
 
 export function setLocale(next: Locale) {
   if (!isLocale(next) || next === current) return;

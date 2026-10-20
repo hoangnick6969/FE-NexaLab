@@ -3,6 +3,135 @@ import { useQuery } from "@tanstack/react-query";
 import { api, isApiError } from "../../lib/api";
 import { ErrorBox, Field, Modal, useAction } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, ReasonDialog, SCOPE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    users: "Người dùng",
+    createAccount: "Tạo tài khoản",
+    filter: "Lọc người dùng",
+    search: "Tìm theo tên, email, tên đăng nhập",
+    role: "Vai trò",
+    all: "Tất cả",
+    status: "Trạng thái",
+    active: "Đang hoạt động",
+    disabled: "Đã vô hiệu hóa",
+    fullName: "Họ tên",
+    signIn: "Đăng nhập",
+    actionsHead: "Thao tác",
+    manage: "Quản lý",
+    createTitle: "Tạo tài khoản",
+    created: "Đã tạo tài khoản",
+    linkSent: "Liên kết thiết lập mật khẩu (dùng một lần, 60 phút) đã được gửi qua email.",
+    linkNotSent: "Chưa gửi được email thiết lập; hãy dùng “Gửi liên kết đặt lại mật khẩu” sau.",
+    teacher: "Giáo viên",
+    parent: "Phụ huynh",
+    admin: "Quản trị viên",
+    noPasswords: "Quản trị viên không đặt mật khẩu. Người dùng nhận liên kết một lần qua email. Học sinh do giáo viên cấp tài khoản trong lớp.",
+    cancel: "Hủy",
+    creating: "Đang tạo…",
+    createSend: "Tạo và gửi liên kết",
+    updated: "Đã cập nhật.",
+    manageTitle: "Quản lý tài khoản",
+    createdAt: (at: string) => `Tạo lúc ${at}`,
+    disabledAt: (at: string) => `Vô hiệu hóa lúc ${at}`,
+    owns: "Đang sở hữu",
+    owned: (classes: number, lessons: number, files: number) => `${classes} lớp đang hoạt động · ${lessons} bài học · ${files} tệp`,
+    deleteRules: "Điều kiện xóa vĩnh viễn",
+    canDelete: "Không còn dữ liệu tham chiếu; có thể xóa vĩnh viễn.",
+    whyNot: "Lý do không thể xóa",
+    editInfo: "Sửa thông tin",
+    resetSent: "Đã gửi liên kết đặt lại mật khẩu (một lần, 60 phút).",
+    sendReset: "Gửi liên kết đặt lại mật khẩu",
+    disable: "Vô hiệu hóa",
+    reactivate: "Kích hoạt lại",
+    hasData: "Tài khoản còn dữ liệu; hãy vô hiệu hóa",
+    deleteForever: "Xóa vĩnh viễn",
+    grade: "Khối",
+    save: "Lưu",
+    disabledDone: "Đã vô hiệu hóa và thu hồi mọi phiên đăng nhập.",
+    reactivateTitle: "Kích hoạt lại tài khoản",
+    reactivateEffect: "Người dùng đăng nhập lại được. Lớp, bài học và tệp đã chuyển cho người khác không tự quay về.",
+    deleteTitle: "Xóa vĩnh viễn tài khoản",
+    deleteEffect: "Tài khoản và mọi phiên đăng nhập bị xóa vĩnh viễn, không thể khôi phục. Máy chủ kiểm tra lại: nếu có bất kỳ dữ liệu học tập, liên kết hay nhật ký nào, thao tác bị từ chối.",
+    deleted: "Đã xóa.",
+    classItem: (name: string) => `Lớp ${name}`,
+    lessonItem: (title: string, scope: string) => `Bài học “${title}” (${scope})`,
+    fileItem: (name: string) => `Tệp ${name}`,
+    actions: { reassign: "Chuyển cho người khác", archive: "Lưu trữ", quarantine: "Cách ly" } as Record<string, string>,
+    disableTitle: "Vô hiệu hóa tài khoản",
+    disableEffect: "bị đăng xuất khỏi mọi thiết bị ngay lập tức và không đăng nhập được nữa. Kết quả học tập, liên kết và nhật ký được giữ nguyên; có thể kích hoạt lại sau.",
+    unresolved: "Còn mục sở hữu chưa được xử lý hợp lệ.",
+    chooseHandling: "Chọn cách xử lý mọi thứ tài khoản này đang sở hữu",
+    howTo: (label: string) => `Cách xử lý ${label}`,
+    choose: "— Chọn —",
+    recipientFor: (label: string) => `Người nhận ${label}`,
+    recipient: "— Người nhận —",
+  },
+  en: {
+    users: "Users",
+    createAccount: "Create account",
+    filter: "Filter users",
+    search: "Search by name, email or username",
+    role: "Role",
+    all: "All",
+    status: "Status",
+    active: "Active",
+    disabled: "Disabled",
+    fullName: "Full name",
+    signIn: "Sign-in",
+    actionsHead: "Actions",
+    manage: "Manage",
+    createTitle: "Create account",
+    created: "Account created for",
+    linkSent: "A one-time password set-up link (60 minutes) was emailed.",
+    linkNotSent: "The set-up email could not be sent; use “Send a password reset link” later.",
+    teacher: "Teacher",
+    parent: "Parent",
+    admin: "Administrator",
+    noPasswords: "Administrators never set passwords. Users get a one-time link by email. Teachers issue student accounts in their class.",
+    cancel: "Cancel",
+    creating: "Creating…",
+    createSend: "Create and send link",
+    updated: "Updated.",
+    manageTitle: "Manage account",
+    createdAt: (at: string) => `Created ${at}`,
+    disabledAt: (at: string) => `Disabled ${at}`,
+    owns: "Owns",
+    owned: (classes: number, lessons: number, files: number) => `${classes} active classes · ${lessons} lessons · ${files} files`,
+    deleteRules: "Permanent deletion",
+    canDelete: "Nothing refers to it any more; it can be deleted permanently.",
+    whyNot: "Why it cannot be deleted",
+    editInfo: "Edit details",
+    resetSent: "Password reset link sent (one-time, 60 minutes).",
+    sendReset: "Send a password reset link",
+    disable: "Disable",
+    reactivate: "Reactivate",
+    hasData: "The account still has data; disable it instead",
+    deleteForever: "Delete permanently",
+    grade: "Grade",
+    save: "Save",
+    disabledDone: "Disabled and every session signed out.",
+    reactivateTitle: "Reactivate account",
+    reactivateEffect: "The user can sign in again. Classes, lessons and files moved to someone else do not come back automatically.",
+    deleteTitle: "Delete account permanently",
+    deleteEffect: "The account and every session are deleted permanently and cannot be restored. The server checks again: if any learning data, links or logs exist, it refuses.",
+    deleted: "Deleted.",
+    classItem: (name: string) => `Class ${name}`,
+    lessonItem: (title: string, scope: string) => `Lesson “${title}” (${scope})`,
+    fileItem: (name: string) => `File ${name}`,
+    actions: { reassign: "Give to someone else", archive: "Archive", quarantine: "Quarantine" },
+    disableTitle: "Disable account",
+    disableEffect: "is signed out on every device at once and can no longer sign in. Results, links and logs are kept; the account can be reactivated later.",
+    unresolved: "Some owned items are not resolved yet.",
+    chooseHandling: "Choose what happens to everything this account owns",
+    howTo: (label: string) => `How to handle ${label}`,
+    choose: "— Choose —",
+    recipientFor: (label: string) => `Recipient for ${label}`,
+    recipient: "— Recipient —",
+  },
+});
+const t = text();
 
 // ───────────────────────── users ─────────────────────────
 export function Users() {
@@ -14,21 +143,21 @@ export function Users() {
   return (
     <section className="panel table-wrap">
       <div className="admin-head">
-        <h2>Người dùng</h2>
+        <h2>{t.users}</h2>
         <button type="button" className="primary" onClick={() => setCreating(true)}>
-          + Tạo tài khoản
+          + {t.createAccount}
         </button>
       </div>
-      <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label="Lọc người dùng">
+      <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label={t.filter}>
         <Field
-          label="Tìm theo tên, email, tên đăng nhập"
+          label={t.search}
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
         />
         <label className="field">
-          <span>Vai trò</span>
+          <span>{t.role}</span>
           <select value={filters.role} onChange={(e) => setFilters({ ...filters, role: e.target.value })}>
-            <option value="">Tất cả</option>
+            <option value="">{t.all}</option>
             {Object.entries(ROLE_LABEL).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
@@ -37,11 +166,11 @@ export function Users() {
           </select>
         </label>
         <label className="field">
-          <span>Trạng thái</span>
+          <span>{t.status}</span>
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-            <option value="">Tất cả</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="disabled">Đã vô hiệu hóa</option>
+            <option value="">{t.all}</option>
+            <option value="active">{t.active}</option>
+            <option value="disabled">{t.disabled}</option>
           </select>
         </label>
       </form>
@@ -49,11 +178,11 @@ export function Users() {
         <table>
           <thead>
             <tr>
-              <th>Họ tên</th>
-              <th>Đăng nhập</th>
-              <th>Vai trò</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
+              <th>{t.fullName}</th>
+              <th>{t.signIn}</th>
+              <th>{t.role}</th>
+              <th>{t.status}</th>
+              <th>{t.actionsHead}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +196,7 @@ export function Users() {
                 </td>
                 <td>
                   <button type="button" className="text-button" onClick={() => setSelected(u.id)}>
-                    Quản lý
+                    {t.manage}
                   </button>
                 </td>
               </tr>
@@ -86,14 +215,14 @@ function CreateUser({ onClose }: { onClose: () => void }) {
   const [done, setDone] = useState<any>(null);
   const create = useAction((data: any) => api("/admin/users", "POST", data));
   return (
-    <Modal title="Tạo tài khoản" onClose={onClose}>
+    <Modal title={t.createTitle} onClose={onClose}>
       {done ? (
         <div className="notice" role="status">
           <p>
-            Đã tạo tài khoản <b>{done.email}</b>.{" "}
+            {t.created} <b>{done.email}</b>.{" "}
             {done.setupLinkSent
-              ? "Liên kết thiết lập mật khẩu (dùng một lần, 60 phút) đã được gửi qua email."
-              : "Chưa gửi được email thiết lập; hãy dùng “Gửi liên kết đặt lại mật khẩu” sau."}
+              ? t.linkSent
+              : t.linkNotSent}
           </p>
           <button type="button" className="primary" onClick={onClose}>
             Xong
@@ -108,25 +237,25 @@ function CreateUser({ onClose }: { onClose: () => void }) {
           }}
         >
           <label className="field">
-            <span>Vai trò</span>
+            <span>{t.role}</span>
             <select name="role" defaultValue="TEACHER">
-              <option value="TEACHER">Giáo viên</option>
-              <option value="PARENT">Phụ huynh</option>
-              <option value="ADMIN">Quản trị viên</option>
+              <option value="TEACHER">{t.teacher}</option>
+              <option value="PARENT">{t.parent}</option>
+              <option value="ADMIN">{t.admin}</option>
             </select>
           </label>
           <Field label="Email" name="email" type="email" required />
-          <Field label="Họ tên" name="fullName" required maxLength={200} />
+          <Field label={t.fullName} name="fullName" required maxLength={200} />
           <p className="tiny muted">
-            Quản trị viên không đặt mật khẩu. Người dùng nhận liên kết một lần qua email. Học sinh do giáo viên cấp tài khoản trong lớp.
+            {t.noPasswords}
           </p>
           <ErrorBox error={create.error} />
           <div className="button-row">
             <button type="button" className="secondary" onClick={onClose}>
-              Hủy
+              {t.cancel}
             </button>
             <button className="primary" disabled={create.isPending}>
-              {create.isPending ? "Đang tạo…" : "Tạo và gửi liên kết"}
+              {create.isPending ? t.creating : t.createSend}
             </button>
           </div>
         </form>
@@ -141,7 +270,7 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const [notice, setNotice] = useState("");
   const act = useAction(({ path, method = "POST", body }: any) => api(path, method, body));
   const user = q.data?.user;
-  const run = (path: string, body: any, method = "POST", message = "Đã cập nhật.") =>
+  const run = (path: string, body: any, method = "POST", message = t.updated) =>
     act.mutate(
       { path, method, body },
       {
@@ -153,7 +282,7 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
       },
     );
   return (
-    <Modal title="Quản lý tài khoản" onClose={onClose}>
+    <Modal title={t.manageTitle} onClose={onClose}>
       <QueryState query={q}>
         {user && (
           <div className="admin-detail">
@@ -161,24 +290,23 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
               <b>{user.fullName}</b> · {user.email ?? user.username} · {ROLE_LABEL[user.role]} <Status value={user.status} />
             </p>
             <p className="tiny muted">
-              Tạo lúc {when(user.createdAt)}
-              {user.disabledAt ? ` · Vô hiệu hóa lúc ${when(user.disabledAt)}` : ""}
+              {t.createdAt(when(user.createdAt))}
+              {user.disabledAt ? ` · ${t.disabledAt(when(user.disabledAt))}` : ""}
             </p>
             {notice && (
               <p className="notice" role="status">
                 {notice}
               </p>
             )}
-            <h3>Đang sở hữu</h3>
+            <h3>{t.owns}</h3>
             <p className="tiny">
-              {q.data.ownership.classes.length} lớp đang hoạt động · {q.data.ownership.lessons.length} bài học ·{" "}
-              {q.data.ownership.assets.length} tệp
+              {t.owned(q.data.ownership.classes.length, q.data.ownership.lessons.length, q.data.ownership.assets.length)}
             </p>
-            <h3>Điều kiện xóa vĩnh viễn</h3>
+            <h3>{t.deleteRules}</h3>
             {q.data.deletion.eligible ? (
-              <p className="tiny">Không còn dữ liệu tham chiếu; có thể xóa vĩnh viễn.</p>
+              <p className="tiny">{t.canDelete}</p>
             ) : (
-              <ul className="tiny admin-blockers" aria-label="Lý do không thể xóa">
+              <ul className="tiny admin-blockers" aria-label={t.whyNot}>
                 {q.data.deletion.blocking.map((b: any) => (
                   <li key={b.key}>
                     {b.count} {b.label}
@@ -189,7 +317,7 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <ErrorBox error={!dialog ? act.error : null} />
             <div className="button-row admin-actions">
               <button type="button" className="secondary" onClick={() => setDialog("edit")}>
-                Sửa thông tin
+                {t.editInfo}
               </button>
               {user.role !== "STUDENT" && user.status === "active" && (
                 <button
@@ -197,36 +325,36 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   className="secondary"
                   disabled={act.isPending}
                   onClick={() =>
-                    run(`/admin/users/${id}/reset-link`, undefined, "POST", "Đã gửi liên kết đặt lại mật khẩu (một lần, 60 phút).")
+                    run(`/admin/users/${id}/reset-link`, undefined, "POST", t.resetSent)
                   }
                 >
-                  Gửi liên kết đặt lại mật khẩu
+                  {t.sendReset}
                 </button>
               )}
               {user.status === "active" ? (
                 <button type="button" className="danger-text" onClick={() => setDialog("disable")}>
-                  Vô hiệu hóa
+                  {t.disable}
                 </button>
               ) : (
                 <button type="button" className="secondary" onClick={() => setDialog("reactivate")}>
-                  Kích hoạt lại
+                  {t.reactivate}
                 </button>
               )}
               <button
                 type="button"
                 className="danger-text"
                 disabled={!q.data.deletion.eligible}
-                title={q.data.deletion.eligible ? "" : "Tài khoản còn dữ liệu; hãy vô hiệu hóa"}
+                title={q.data.deletion.eligible ? "" : t.hasData}
                 onClick={() => setDialog("delete")}
               >
-                Xóa vĩnh viễn
+                {t.deleteForever}
               </button>
             </div>
           </div>
         )}
       </QueryState>
       {dialog === "edit" && user && (
-        <Modal title="Sửa thông tin" onClose={() => setDialog(null)}>
+        <Modal title={t.editInfo} onClose={() => setDialog(null)}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -234,15 +362,15 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
               run(`/admin/users/${id}`, { fullName: f.fullName, grade: Number(f.grade) }, "PUT");
             }}
           >
-            <Field label="Họ tên" name="fullName" defaultValue={user.fullName} required />
-            <Field label="Khối" name="grade" type="number" min={6} max={9} defaultValue={user.grade} required />
+            <Field label={t.fullName} name="fullName" defaultValue={user.fullName} required />
+            <Field label={t.grade} name="grade" type="number" min={6} max={9} defaultValue={user.grade} required />
             <ErrorBox error={act.error} />
             <div className="button-row">
               <button type="button" className="secondary" onClick={() => setDialog(null)}>
-                Hủy
+                {t.cancel}
               </button>
               <button className="primary" disabled={act.isPending}>
-                Lưu
+                {t.save}
               </button>
             </div>
           </form>
@@ -255,14 +383,14 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
           pending={act.isPending}
           error={act.error}
           onClose={() => setDialog(null)}
-          onSubmit={(body) => run(`/admin/users/${id}/disable`, body, "POST", "Đã vô hiệu hóa và thu hồi mọi phiên đăng nhập.")}
+          onSubmit={(body) => run(`/admin/users/${id}/disable`, body, "POST", t.disabledDone)}
         />
       )}
       {dialog === "reactivate" && (
         <ReasonDialog
-          title="Kích hoạt lại tài khoản"
-          effect="Người dùng đăng nhập lại được. Lớp, bài học và tệp đã chuyển cho người khác không tự quay về."
-          confirmLabel="Kích hoạt lại"
+          title={t.reactivateTitle}
+          effect={t.reactivateEffect}
+          confirmLabel={t.reactivate}
           danger={false}
           pending={act.isPending}
           error={act.error}
@@ -272,13 +400,13 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
       )}
       {dialog === "delete" && (
         <ReasonDialog
-          title="Xóa vĩnh viễn tài khoản"
-          effect="Tài khoản và mọi phiên đăng nhập bị xóa vĩnh viễn, không thể khôi phục. Máy chủ kiểm tra lại: nếu có bất kỳ dữ liệu học tập, liên kết hay nhật ký nào, thao tác bị từ chối."
-          confirmLabel="Xóa vĩnh viễn"
+          title={t.deleteTitle}
+          effect={t.deleteEffect}
+          confirmLabel={t.deleteForever}
           pending={act.isPending}
           error={act.error}
           onClose={() => setDialog(null)}
-          onSubmit={(reason) => run(`/admin/users/${id}`, { reason, confirm: true }, "DELETE", "Đã xóa.")}
+          onSubmit={(reason) => run(`/admin/users/${id}`, { reason, confirm: true }, "DELETE", t.deleted)}
         />
       )}
     </Modal>
@@ -315,26 +443,26 @@ function DisableDialog({
     ...ownership.classes.map((c: any) => ({
       kind: "classes",
       id: c.id,
-      label: `Lớp ${c.name}`,
+      label: t.classItem(c.name),
       actions: ["reassign", "archive"],
       shared: false,
     })),
     ...ownership.lessons.map((l: any) => ({
       kind: "lessons",
       id: l.id,
-      label: `Bài học “${l.title}” (${SCOPE_LABEL[l.scope] ?? l.scope})`,
+      label: t.lessonItem(l.title, SCOPE_LABEL[l.scope] ?? l.scope),
       actions: l.scope === "SHARED_LIBRARY" ? ["reassign", "quarantine"] : ["reassign", "archive"],
       shared: l.scope === "SHARED_LIBRARY",
     })),
     ...ownership.assets.map((a: any) => ({
       kind: "assets",
       id: a.id,
-      label: `Tệp ${a.name}`,
+      label: t.fileItem(a.name),
       actions: ["reassign", "quarantine"],
       shared: a.scope === "SHARED_LIBRARY",
     })),
   ];
-  const actionLabel: Record<string, string> = { reassign: "Chuyển cho người khác", archive: "Lưu trữ", quarantine: "Cách ly" };
+  const actionLabel: Record<string, string> = t.actions;
   const ready = items.every((item) => choice[item.id]?.action && (choice[item.id].action !== "reassign" || choice[item.id].newOwnerId));
   const body = (reason: string) => {
     const resolutions: any = { classes: [], lessons: [], assets: [] };
@@ -344,31 +472,30 @@ function DisableDialog({
   const problems = isApiError(error, "OWNERSHIP_RESOLUTION_REQUIRED") ? ((error.details as any)?.problems ?? []) : [];
   return (
     <ReasonDialog
-      title="Vô hiệu hóa tài khoản"
+      title={t.disableTitle}
       effect={
         <>
-          <b>{user.fullName}</b> bị đăng xuất khỏi mọi thiết bị ngay lập tức và không đăng nhập được nữa. Kết quả học tập, liên kết và nhật
-          ký được giữ nguyên; có thể kích hoạt lại sau.
+          <b>{user.fullName}</b> {t.disableEffect}
         </>
       }
-      confirmLabel="Vô hiệu hóa"
+      confirmLabel={t.disable}
       pending={pending || !ready}
-      error={problems.length ? "Còn mục sở hữu chưa được xử lý hợp lệ." : error}
+      error={problems.length ? t.unresolved : error}
       onClose={onClose}
       onSubmit={(reason) => onSubmit(body(reason))}
     >
       {items.length > 0 && (
         <fieldset className="admin-resolutions">
-          <legend>Chọn cách xử lý mọi thứ tài khoản này đang sở hữu</legend>
+          <legend>{t.chooseHandling}</legend>
           {items.map((item) => (
             <div key={item.id} className="admin-resolution">
               <span>{item.label}</span>
               <select
-                aria-label={`Cách xử lý ${item.label}`}
+                aria-label={t.howTo(item.label)}
                 value={choice[item.id]?.action ?? ""}
                 onChange={(e) => setChoice({ ...choice, [item.id]: { action: e.target.value } })}
               >
-                <option value="">— Chọn —</option>
+                <option value="">{t.choose}</option>
                 {item.actions.map((a: string) => (
                   <option key={a} value={a}>
                     {actionLabel[a]}
@@ -377,11 +504,11 @@ function DisableDialog({
               </select>
               {choice[item.id]?.action === "reassign" && (
                 <select
-                  aria-label={`Người nhận ${item.label}`}
+                  aria-label={t.recipientFor(item.label)}
                   value={choice[item.id]?.newOwnerId ?? ""}
                   onChange={(e) => setChoice({ ...choice, [item.id]: { action: "reassign", newOwnerId: e.target.value } })}
                 >
-                  <option value="">— Người nhận —</option>
+                  <option value="">{t.recipient}</option>
                   {(staff.data ?? [])
                     .filter((u: any) => u.role === "TEACHER" || (item.shared && u.role === "ADMIN"))
                     .map((u: any) => (

@@ -8,9 +8,9 @@ import { Dashboard } from "../features/dashboard/Dashboard";
 import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
 import { Avatar } from "../components/Avatar";
-import { useProfile } from "../lib/profile";
+import { PROFILE_KEY, useProfile, type Profile } from "../lib/profile";
 import { setThemePreference } from "../lib/theme";
-import { defineText, setLocale } from "../i18n";
+import { defineText, getLocale, setLocale, takeLocaleChosenBeforeSignIn } from "../i18n";
 import { commonText } from "../i18n/common";
 import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
@@ -134,9 +134,18 @@ export default function App() {
   useEffect(() => {
     if (savedTheme) setThemePreference(savedTheme);
   }, [savedTheme]);
+  const profileLoaded = Boolean(profile.data);
   useEffect(() => {
+    if (!profileLoaded) return;
+    if (takeLocaleChosenBeforeSignIn() && savedLocale !== getLocale()) {
+      // Picked on the sign-in page: newer than the profile's value, so save it rather than adopt.
+      void api<{ preferences: Profile["preferences"] }>("/me/preferences", "PATCH", { locale: getLocale() }).then(({ preferences }) =>
+        queryClient.setQueryData<Profile>(PROFILE_KEY, (old) => (old ? { ...old, preferences } : old)),
+      );
+      return;
+    }
     if (savedLocale) setLocale(savedLocale);
-  }, [savedLocale]);
+  }, [profileLoaded, savedLocale]);
   const t = text();
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {

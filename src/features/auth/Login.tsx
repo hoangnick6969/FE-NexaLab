@@ -2,7 +2,7 @@ import { Atom, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, Field, useAction } from "../../components/ui";
-import { defineText, getLocale, LOCALE_OPTIONS, setLocale } from "../../i18n";
+import { chooseLocaleBeforeSignIn, defineText, getLocale, LOCALE_OPTIONS } from "../../i18n";
 
 const text = defineText({
   vi: {
@@ -152,7 +152,7 @@ export function Login() {
         <div>
           <div className="login-language" role="group" aria-label="Ngôn ngữ / Language">
             {LOCALE_OPTIONS.map((option) => (
-              <button type="button" key={option.value} lang={option.value} aria-pressed={getLocale() === option.value} onClick={() => setLocale(option.value)}>
+              <button type="button" key={option.value} lang={option.value} aria-pressed={getLocale() === option.value} onClick={() => chooseLocaleBeforeSignIn(option.value)}>
                 {option.label}
               </button>
             ))}

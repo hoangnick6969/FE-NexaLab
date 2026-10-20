@@ -7,6 +7,35 @@ import { Content } from "./Content";
 import { Simulations } from "./Simulations";
 import { Assets } from "./Assets";
 import { AuditExplorer } from "./AuditExplorer";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    overview: "Tổng quan",
+    users: "Người dùng",
+    taxonomy: "Phân loại",
+    content: "Nội dung",
+    simulations: "Mô phỏng",
+    assets: "Tệp",
+    audit: "Nhật ký",
+    eyebrow: "VẬN HÀNH NEXALAB",
+    title: "Quản trị hệ thống",
+    areas: "Khu vực quản trị",
+  },
+  en: {
+    overview: "Overview",
+    users: "Users",
+    taxonomy: "Taxonomy",
+    content: "Content",
+    simulations: "Simulations",
+    assets: "Files",
+    audit: "Audit log",
+    eyebrow: "NEXALAB OPERATIONS",
+    title: "System administration",
+    areas: "Administration areas",
+  },
+});
+const t = text();
 
 /**
  * Epic C2 admin console. Every screen reads the real `/admin/*` API; every
@@ -16,21 +45,21 @@ import { AuditExplorer } from "./AuditExplorer";
 type Tab = "overview" | "users" | "taxonomy" | "content" | "simulations" | "assets" | "audit";
 
 const TABS: Array<[Tab, string]> = [
-  ["overview", "Tổng quan"],
-  ["users", "Người dùng"],
-  ["taxonomy", "Phân loại"],
-  ["content", "Nội dung"],
-  ["simulations", "Mô phỏng"],
-  ["assets", "Tệp"],
-  ["audit", "Nhật ký"],
+  ["overview", t.overview],
+  ["users", t.users],
+  ["taxonomy", t.taxonomy],
+  ["content", t.content],
+  ["simulations", t.simulations],
+  ["assets", t.assets],
+  ["audit", t.audit],
 ];
 
 export default function Admin() {
   const [tab, setTab] = useState<Tab>("overview");
   return (
     <>
-      <PageHeading eyebrow="VẬN HÀNH NEXALAB" title="Quản trị hệ thống" />
-      <div className="tabs admin-tabs" role="tablist" aria-label="Khu vực quản trị">
+      <PageHeading eyebrow={t.eyebrow} title={t.title} />
+      <div className="tabs admin-tabs" role="tablist" aria-label={t.areas}>
         {TABS.map(([id, name]) => (
           <button
             key={id}

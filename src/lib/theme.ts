@@ -10,7 +10,7 @@ export const THEME_OPTIONS: ThemePreference[] = ["system", "light", "dark"];
 const STORAGE_KEY = "nexalab.theme";
 const META_COLOR = { light: "#173f39", dark: "#111816" };
 const isPreference = (value: unknown): value is ThemePreference => value === "system" || value === "light" || value === "dark";
-const darkQuery = () => (typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null);
+const darkQuery = () => (typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null);
 
 function stored(): ThemePreference {
   try {
@@ -22,6 +22,7 @@ function stored(): ThemePreference {
 }
 
 function apply(preference: ThemePreference) {
+  if (typeof document === "undefined") return;
   const resolved = preference === "dark" || (preference === "system" && darkQuery()?.matches) ? "dark" : "light";
   document.documentElement.dataset.theme = resolved;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", META_COLOR[resolved]);

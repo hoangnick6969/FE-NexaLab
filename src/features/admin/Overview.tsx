@@ -1,6 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { QueryState } from "./admin-ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    activeAccounts: "Tài khoản đang hoạt động",
+    disabledAccounts: "Tài khoản bị vô hiệu hóa",
+    quarantinedLessons: "Bài học đang cách ly",
+    quarantinedFiles: "Tệp đang cách ly",
+    activeSims: "Cấu hình mô phỏng đang dùng",
+    audit24: "Sự kiện kiểm toán 24 giờ",
+    denied24: "Bị từ chối 24 giờ",
+    title: "Tổng quan",
+    note: "Quyền quản trị không thay thế duyệt chuyên môn, bản quyền hay khoa học.",
+  },
+  en: {
+    activeAccounts: "Active accounts",
+    disabledAccounts: "Disabled accounts",
+    quarantinedLessons: "Quarantined lessons",
+    quarantinedFiles: "Quarantined files",
+    activeSims: "Active simulation configurations",
+    audit24: "Audit events, 24 h",
+    denied24: "Denied, 24 h",
+    title: "Overview",
+    note: "Admin rights do not replace subject, rights or scientific review.",
+  },
+});
+const t = text();
 
 // ───────────────────────── overview ─────────────────────────
 export function Overview() {
@@ -9,18 +36,18 @@ export function Overview() {
   const d = q.data;
   const cards = d
     ? [
-        ["Tài khoản đang hoạt động", sum(d.users, (r) => r.status === "active")],
-        ["Tài khoản bị vô hiệu hóa", sum(d.users, (r) => r.status === "disabled")],
-        ["Bài học đang cách ly", sum(d.lessons, (r) => r.status === "quarantined")],
-        ["Tệp đang cách ly", sum(d.assets, (r) => r.status === "QUARANTINED")],
-        ["Cấu hình mô phỏng đang dùng", sum(d.simulationVersions, (r) => r.status === "active")],
-        ["Sự kiện kiểm toán 24 giờ", d.audit.last24h],
-        ["Bị từ chối 24 giờ", d.audit.denied24h],
+        [t.activeAccounts, sum(d.users, (r) => r.status === "active")],
+        [t.disabledAccounts, sum(d.users, (r) => r.status === "disabled")],
+        [t.quarantinedLessons, sum(d.lessons, (r) => r.status === "quarantined")],
+        [t.quarantinedFiles, sum(d.assets, (r) => r.status === "QUARANTINED")],
+        [t.activeSims, sum(d.simulationVersions, (r) => r.status === "active")],
+        [t.audit24, d.audit.last24h],
+        [t.denied24, d.audit.denied24h],
       ]
     : [];
   return (
     <section className="panel">
-      <h2>Tổng quan</h2>
+      <h2>{t.title}</h2>
       <QueryState query={q}>
         <div className="admin-cards">
           {cards.map(([label, value]) => (
@@ -30,7 +57,7 @@ export function Overview() {
             </div>
           ))}
         </div>
-        <p className="tiny muted">Quyền quản trị không thay thế duyệt chuyên môn, bản quyền hay khoa học.</p>
+        <p className="tiny muted">{t.note}</p>
       </QueryState>
     </section>
   );

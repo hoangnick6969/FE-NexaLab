@@ -30,17 +30,19 @@ test("English from the sign-in page through the app, saved on the profile, then 
     await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
     await expect(page.getByText("Ready to explore")).toBeVisible();
     await expect(page.getByRole("link", { name: /^Notifications/ })).toBeVisible();
+    // The language picked before sign-in is newer than the profile's, so it is saved there.
+    await expect.poll(async () => (await call("/me/profile", "GET", undefined, token)).data.preferences.locale).toBe("en");
 
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Profile and settings" })).toBeVisible();
     await expect(page.getByRole("radio", { name: "English" })).toBeChecked();
     const toVi = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().endsWith("/api/me/preferences"));
-    await page.getByRole("radio", { name: "Tiếng Việt" }).check();
+    await page.getByRole("radio", { name: "Tiếng Việt" }).click(); // the page reloads, so no check() verification
     expect((await toVi).status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Hồ sơ và cài đặt" })).toBeVisible();
     expect(await lang(page)).toBe("vi");
     const toEn = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().endsWith("/api/me/preferences"));
-    await page.getByRole("radio", { name: "English" }).check();
+    await page.getByRole("radio", { name: "English" }).click();
     expect((await toEn).status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Profile and settings" })).toBeVisible();
     expect((await call("/me/profile", "GET", undefined, token)).data.preferences.locale).toBe("en");
