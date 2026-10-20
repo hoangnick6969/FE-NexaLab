@@ -1,16 +1,10 @@
-import { useState } from "react";
 import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { ErrorBox, Field, useAction } from "../../components/ui";
 
 export function SettingsPage() {
   const user = useAuth((s) => s.user)!;
-  const [code, setCode] = useState("");
   const change = useAction((b: any) => api("/auth/password", "POST", b));
-  const link = useAction(async () => {
-    const r = await api("/parent-code", "POST");
-    setCode(r.code);
-  });
   return (
     <>
       <PageHeading title="Cài đặt tài khoản" />
@@ -51,13 +45,8 @@ export function SettingsPage() {
         <section className="panel narrow">
           <h3>Liên kết phụ huynh</h3>
           <p>
-            Tạo mã và gửi riêng cho phụ huynh của em. Mã chỉ dùng được một lần.
+            Mã liên kết do giáo viên của em cấp sau khi nhà trường xác minh phụ huynh. Nếu phụ huynh cần theo dõi tiến độ, em hãy báo giáo viên.
           </p>
-          <button className="secondary" onClick={() => link.mutate(null)}>
-            Tạo mã liên kết
-          </button>
-          {code && <code className="link-code">{code}</code>}
-          <ErrorBox error={link.error} />
         </section>
       )}
     </>

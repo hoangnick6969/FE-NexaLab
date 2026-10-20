@@ -13,7 +13,7 @@ export function Simulations() {
       <h2>Phòng thực hành và cấu hình mô phỏng</h2>
       <p className="tiny muted">
         Cấu hình là bất biến: mỗi thay đổi tạo một phiên bản mới, chỉ áp dụng cho lần thực hành sau khi kích hoạt. Lần thực hành cũ giữ
-        nguyên phiên bản đã dùng. Khoảng tham số vẫn chờ duyệt khoa học (Q-C2-04).
+        nguyên phiên bản đã dùng. Khoảng tham số cần được duyệt về chuyên môn trước khi sử dụng.
       </p>
       <QueryState query={labs} empty={labs.data?.length === 0}>
         <table>

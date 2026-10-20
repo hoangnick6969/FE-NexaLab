@@ -39,16 +39,16 @@ export function Assets() {
     <section className="panel table-wrap">
       <h2>Tệp và nguồn</h2>
       <p className="tiny muted">
-        Kiểm tra theo cấu hình: chữ ký tệp, đuôi, MIME, kích thước và SHA-256. Hạn mức production chờ Q-DATA-01/Q-C2-03. Lưu trữ R2 và danh
-        mục nguồn (SourceRegistry) chờ Content Foundation.
+        Quản lý tệp, nguồn và quyền sử dụng. Dung lượng và mã kiểm tra toàn vẹn được lấy từ phiên bản sẵn sàng mới nhất.
       </p>
       <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label="Lọc tệp">
         <label className="field">
           <span>Trạng thái</span>
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
             <option value="">Tất cả</option>
-            <option value="READY">Sẵn sàng</option>
+            <option value="ACTIVE">Đang hoạt động</option>
             <option value="QUARANTINED">Đang cách ly</option>
+            <option value="ARCHIVED">Đã lưu trữ</option>
           </select>
         </label>
         <label className="field">
@@ -73,13 +73,16 @@ export function Assets() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((a: any) => (
+            {rows.map((a: any) => {
+              const ready = [...(a.versions ?? [])].sort((left: any, right: any) => right.version - left.version).find((v: any) => v.status === "READY");
+              return (
               <tr key={a.id}>
                 <td>
-                  {a.name}
+                  {a.title}
                   <p className="tiny muted">
-                    {a.mime} · {Math.ceil(a.size / 1024)} KB · {a.sha256 ? `SHA-256 ${a.sha256.slice(0, 12)}…` : "chưa có checksum"}
+                    {ready ? `${ready.mime ?? "Chưa có loại tệp"} · ${ready.bytes == null ? "Chưa có dung lượng" : `${Math.ceil(ready.bytes / 1024)} KB`} · ${ready.sha256 ? `SHA-256 ${ready.sha256.slice(0, 12)}…` : "Chưa có mã kiểm tra toàn vẹn"}` : "Chưa có phiên bản sẵn sàng"}
                   </p>
+                  <details><summary>Phiên bản ({a.versions?.length ?? 0})</summary>{a.versions?.map((version: any) => <p key={version.id} className="tiny">Bản {version.version} · {version.status === "READY" ? "Sẵn sàng" : version.status === "FAILED" ? "Không thành công" : "Đang xử lý"}{version.failureReason ? ` · ${version.failureReason}` : ""}</p>)}</details>
                 </td>
                 <td>{a.owner?.fullName ?? a.ownerId}</td>
                 <td>
@@ -97,7 +100,7 @@ export function Assets() {
                 <td className="admin-row-actions">
                   {(a.status === "QUARANTINED"
                     ? ["release", "reassign"]
-                    : ["quarantine", "reassign", ...(a.scope === "SHARED_LIBRARY" ? [] : ["share"])]
+                    : a.status === "ACTIVE" ? ["quarantine", "reassign", ...(a.scope === "SHARED_LIBRARY" ? [] : ["share"])] : []
                   ).map((action) => (
                     <button
                       key={action}
@@ -126,14 +129,14 @@ export function Assets() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ); })}
           </tbody>
         </table>
         <LoadMore query={q} />
       </QueryState>
       {op && (
         <ReasonDialog
-          title={`${labels[op.action]}: ${op.asset.name}`}
+          title={`${labels[op.action]}: ${op.asset.title}`}
           effect={effects[op.action]}
           confirmLabel={labels[op.action]}
           danger={op.action === "quarantine" || op.action === "delete"}

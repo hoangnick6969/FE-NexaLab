@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
-const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
 const teacherEmail = process.env.TEST_TEACHER_EMAIL ?? "teacher.owner@nexalab.local";
 const teacherPassword = process.env.TEST_TEACHER_PASSWORD ?? process.env.SEED_FIXTURE_PASSWORD;
 const studentUsername = process.env.TEST_STUDENT_USERNAME ?? "student.active";

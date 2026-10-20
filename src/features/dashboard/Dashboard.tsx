@@ -6,6 +6,7 @@ import { PageHeading } from "../../components/PageHeading";
 import { Badge } from "../../components/ui";
 import { LabCards } from "../labs/LabLibrary";
 import { StudentDashboard } from "./StudentDashboard";
+import { TeacherDashboard } from "./TeacherDashboard";
 
 export function Dashboard() {
   const user = useAuth((s) => s.user)!;
@@ -23,6 +24,7 @@ export function Dashboard() {
   if (isStudent) {
     return <StudentDashboard user={user} stats={stats} assignments={assignments} />;
   }
+  if (user.role === "TEACHER") return <TeacherDashboard />;
   return (
     <>
       <PageHeading
@@ -52,7 +54,7 @@ export function Dashboard() {
           </p>
           <Link
             className="cream-button"
-            to={user.role === "TEACHER" ? "/labs/circuit" : "/progress"}
+            to="/progress"
           >
             Mở không gian khám phá <ArrowUpRight size={19} />
           </Link>
@@ -135,11 +137,9 @@ export function Dashboard() {
       <div className="role-note">
         <GraduationCap />
         <p>
-          {user.role === "TEACHER"
-            ? "Quản lý lớp, giao thử thách và theo dõi cách học sinh tiến bộ qua mỗi lần thử."
-            : "Đồng hành cùng con qua tiến độ học tập và mức độ cần trợ giúp."}
+          Đồng hành cùng con qua tiến độ học tập và mức độ cần trợ giúp.
         </p>
-        <Link to={user.role === "TEACHER" ? "/classes" : "/progress"}>
+        <Link to="/progress">
           Mở không gian quản lý →
         </Link>
       </div>

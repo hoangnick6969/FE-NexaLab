@@ -132,8 +132,8 @@ export default function App() {
               <NavLink end to="/"><LayoutDashboard />Tổng quan</NavLink>
               {user.role === "TEACHER" && <NavLink to="/labs"><FlaskConical />Phòng thí nghiệm</NavLink>}
               <NavLink to="/lessons"><BookOpen />Thư viện bài học</NavLink>
-              {["TEACHER", "ADMIN"].includes(user.role) && <NavLink to="/classes"><Users />Lớp học của tôi</NavLink>}
-              <NavLink to="/progress"><ChartNoAxesCombined />{user.role === "PARENT" ? "Tiến độ của con" : "Tiến độ học tập"}</NavLink>
+              {user.role === "TEACHER" && <NavLink to="/classes"><Users />Lớp học của tôi</NavLink>}
+              {user.role === "PARENT" && <NavLink to="/progress"><ChartNoAxesCombined />Tiến độ của con</NavLink>}
               {user.role === "ADMIN" && <NavLink to="/admin"><Settings />Quản trị</NavLink>}
             </>
           )}
@@ -204,10 +204,11 @@ export default function App() {
               <Route path="/ebooks/:subjectId" element={<EbookReader />} />
               <Route path="/assignments" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/catalog/*" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
-              <Route path="/assignments/:id" element={<AssignedLearning />} />
-              <Route path="/classes" element={<Classes />} />
+              <Route path="/assignments/:id" element={user.role === "STUDENT" ? <AssignedLearning /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />
+              <Route path="/classes" element={["STUDENT", "TEACHER"].includes(user.role) ? <Classes /> : <Navigate to="/" replace />} />
+              <Route path="/classes/:classId" element={["STUDENT", "TEACHER"].includes(user.role) ? <Classes /> : <Navigate to="/" replace />} />
               <Route path="/classes/:classId/catalog/*" element={user.role === "STUDENT" ? <Classes /> : <Navigate to="/classes" />} />
-              <Route path="/progress" element={<ProgressPage />} />
+              <Route path="/progress" element={["STUDENT", "PARENT"].includes(user.role) ? <ProgressPage /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />
               <Route path="/saved" element={<Saved />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route

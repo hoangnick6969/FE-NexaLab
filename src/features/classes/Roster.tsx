@@ -8,8 +8,10 @@ import { Confirm, LoadError, statusLabel, useMutate } from "./class-ui";
 export function Roster({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
   const [tab, setTab] = useState<"approved" | "pending" | "removed">(classroom.members.pending ? "pending" : "approved");
-  const [modal, setModal] = useState<"" | "provision" | "enroll" | "credentials">("");
+  const [modal, setModal] = useState<"" | "provision" | "enroll" | "credentials" | "parent-code">("");
   const [credentials, setCredentials] = useState<any>(null);
+  const [parentTarget, setParentTarget] = useState<Enrollment | null>(null);
+  const [parentCode, setParentCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const [confirm, setConfirm] = useState<Enrollment | null>(null);
   const formKey = useRef(idempotencyKey());
   const roster = useQuery<Enrollment[]>({
@@ -101,6 +103,19 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                             }}
                           >
                             Cấp lại mật khẩu
+                          </button>
+                        )}
+                        {e.status === "approved" && (
+                          <button
+                            className="text-button"
+                            onClick={() => {
+                              act.reset();
+                              setParentCode(null);
+                              setParentTarget(e);
+                              setModal("parent-code");
+                            }}
+                          >
+                            Mã liên kết phụ huynh
                           </button>
                         )}
                         <button className="danger-text" onClick={() => setConfirm(e)}>
@@ -196,6 +211,43 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
               Ghi danh
             </button>
           </form>
+        </Modal>
+      )}
+      {modal === "parent-code" && parentTarget && (
+        <Modal title="Mã liên kết phụ huynh" onClose={() => setModal("")}>
+          {parentCode ? (
+            <div className="notice" role="status">
+              <b>Mã cho phụ huynh của {parentTarget.student.fullName}</b>
+              <p>
+                <code className="link-code">{parentCode.code}</code>
+              </p>
+              <p>Hạn dùng: {new Date(parentCode.expiresAt).toLocaleString("vi-VN")}</p>
+              <p className="tiny">Mã chỉ hiển thị một lần và chỉ dùng được một lần. Hãy gửi riêng cho phụ huynh.</p>
+              <button type="button" className="secondary" onClick={() => setModal("")}>
+                Đã lưu mã
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={(ev) => {
+                ev.preventDefault();
+                act.mutate(
+                  { path: `/classes/${classroom.id}/students/${parentTarget.studentId}/parent-link-codes`, body: { guardianVerified: true } },
+                  { onSuccess: (data: any) => setParentCode(data) },
+                );
+              }}
+            >
+              <p>Học sinh: {parentTarget.student.fullName}</p>
+              <label className="check">
+                <input type="checkbox" required />
+                Tôi đã xác minh người nhận là phụ huynh hoặc người giám hộ theo hồ sơ của nhà trường.
+              </label>
+              <ErrorBox error={act.error} />
+              <button className="primary wide" disabled={act.isPending}>
+                Tạo mã liên kết
+              </button>
+            </form>
+          )}
         </Modal>
       )}
       {modal === "credentials" && (

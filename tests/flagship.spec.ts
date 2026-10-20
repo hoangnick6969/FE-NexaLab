@@ -5,7 +5,7 @@ if (!testPassword) throw new Error("Set SEED_PASSWORD to the password configured
 // lab journeys below run once the content release (CF-T5) publishes that lab.
 let releasedLabs: string[] = [];
 test.beforeAll(async () => {
-  const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+  const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
   const login = await fetch(api + "/auth/student/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "nguyenan.8a", password: testPassword }) });
   const token = (await login.json()).accessToken;
   const labs = await fetch(api + "/labs", { headers: { authorization: "Bearer " + token } });

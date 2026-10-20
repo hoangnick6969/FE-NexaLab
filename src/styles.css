@@ -5908,3 +5908,12 @@ td small {
   .hierarchy-choice, .hierarchy-chapter { transition: none; }
   .hierarchy-choice:hover, .hierarchy-chapter:hover { transform: none; }
 }
+/* Shared controls remain reachable by touch and keyboard in every role. */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid #28735b;
+  outline-offset: 3px;
+}
+.text-button, .danger-text {
+  min-height: 44px;
+  min-width: 44px;
+}

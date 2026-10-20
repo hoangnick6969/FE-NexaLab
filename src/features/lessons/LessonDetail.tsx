@@ -2,13 +2,12 @@ import { useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowRight, BookOpen, Check, ExternalLink, FileText, Layers3, Play } from "lucide-react";
-import { api, idempotencyKey, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
+import { ArrowRight, BookOpen, Check, ExternalLink, FileText, Play } from "lucide-react";
+import { api, idempotencyKey, isAssetUrl, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
 import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
-import { StudyCardsStep } from "./StudyCardsStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 
@@ -17,7 +16,7 @@ export function LessonDetail() {
   const [searchParams] = useSearchParams();
   const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((state) => state.user)!;
-  const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "cards" | "materials">("reading");
+  const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "materials">("reading");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const queryClient = useQueryClient();
   const lessons = useQuery({
@@ -43,7 +42,7 @@ export function LessonDetail() {
   const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
-  const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type)) ?? [];
+  const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO"].includes(step.type)) ?? [];
   const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
   const completeReading = useMutation({
     mutationFn: () => api(assignmentId
@@ -62,15 +61,13 @@ export function LessonDetail() {
   if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học chưa được phát hành hoặc không tồn tại.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
 
   const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
-  const hasCards = user.role === "STUDENT" && Boolean(studyCardsStep);
   const hasMaterials = Boolean(ebookUrl || lesson.materials?.length || canViewAttribution);
   const learningObjective = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.learningObjective ?? "") ? "" : lesson.learningObjective;
   const prerequisites = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.prerequisites ?? "") ? "" : lesson.prerequisites;
   const tabs = [
-    { id: "reading" as const, label: "Bài đọc", icon: BookOpen },
+    { id: "reading" as const, label: "Nội dung bài", icon: BookOpen },
     ...(hasVideo ? [{ id: "video" as const, label: "Video bài giảng", icon: Play }] : []),
     ...(basicExerciseStep ? [{ id: "exercise" as const, label: "Bài tập luyện tập", icon: Check }] : []),
-    ...(hasCards ? [{ id: "cards" as const, label: "Thẻ ôn tập", icon: Layers3 }] : []),
     ...(hasMaterials ? [{ id: "materials" as const, label: "Tài liệu", icon: FileText }] : []),
   ];
   const changeTabByKeyboard = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -114,18 +111,15 @@ export function LessonDetail() {
       <h2 className="lesson-tab-title">Bài tập luyện tập</h2>
       <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
     </section>}
-    {activeTab === "cards" && studyCardsStep && <section id="lesson-panel-cards" role="tabpanel" aria-labelledby="lesson-tab-cards" className="panel lesson-tab-panel lesson-study-cards">
-      <h2 className="lesson-tab-title">Thẻ ôn tập</h2>
-      {studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.</p> : assignmentId && <StudyCardsStep lessonId={id} assignmentId={assignmentId} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id, assignmentId], updatedPathway)} />}
-    </section>}
     {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
       <h2>Tài liệu bài học</h2>
       {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>Sách giáo khoa · {lesson.subject.name}</b><small>Tài liệu tham khảo bên ngoài · trang in và trang PDF có thể khác nhau.</small></span><ArrowRight size={18} /></Link>}
-      {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => material.url?.startsWith("asset:") ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></a>)}
+      {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => isAssetUrl(material.url) ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></a>)}
       <ErrorBox error={materialOpen.error} />
       {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
     </section>}
-    {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">Sau khi hoàn thành bài đọc, tiếp tục với tab Video bài giảng và thẻ ôn tập.</p>}
+    {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">Sau khi hoàn thành nội dung bài, tiếp tục với video bài giảng. Thẻ ôn tập nằm trong Class Space.</p>}
+    {user.role === "STUDENT" && studyCardsStep && assignmentId && <p><Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignmentId)}`}>Mở thẻ ôn tập trong Class Space</Link></p>}
     {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>Tiếp tục bài được giao <ArrowRight size={16} /></Link>}</div>}
   </div>;
 }

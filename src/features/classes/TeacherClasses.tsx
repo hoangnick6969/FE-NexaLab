@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import { api, idempotencyKey, useAuth } from "../../lib/api";
@@ -12,8 +13,11 @@ import { ClassDetail } from "./ClassDetail";
 
 export function TeacherClasses() {
   const user = useAuth((s) => s.user)!;
-  const [status, setStatus] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
-  const [selected, setSelected] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { classId: selected } = useParams();
+  const [searchParams] = useSearchParams();
+  const status = searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
+  const setSelected = (id: string) => navigate(`/classes/${encodeURIComponent(id)}${status === "ARCHIVED" ? "?status=ARCHIVED" : ""}`);
   const [creating, setCreating] = useState(false);
   const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const createKey = useRef(idempotencyKey());
@@ -23,6 +27,16 @@ export function TeacherClasses() {
   });
   const create = useMutate<{ class: ClassSummary; joinCode: string | null }>();
   const teacher = user.role === "TEACHER";
+  const focusedClass = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selected) { focusedClass.current = null; return; }
+    if (focusedClass.current === selected) return;
+    if (!selected || !list.data?.some((c) => c.id === selected)) return;
+    const title = document.getElementById("class-detail-title");
+    focusedClass.current = selected;
+    title?.focus();
+    title?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [selected, list.data]);
   return (
     <>
       <PageHeading
@@ -53,8 +67,7 @@ export function TeacherClasses() {
             aria-selected={status === value}
             className={status === value ? "active" : ""}
             onClick={() => {
-              setStatus(value);
-              setSelected(null);
+              navigate(value === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes");
             }}
           >
             {value === "ACTIVE" ? "Đang hoạt động" : "Đã lưu trữ"}
@@ -93,8 +106,9 @@ export function TeacherClasses() {
         <Empty>{status === "ACTIVE" ? "Chưa có lớp nào. Hãy tạo lớp đầu tiên." : "Chưa có lớp đã lưu trữ."}</Empty>
       )}
       {selected && teacher && list.data?.some((c) => c.id === selected) && (
-        <ClassDetail classroom={list.data.find((c) => c.id === selected)!} />
+        <ClassDetail key={selected} classroom={list.data.find((c) => c.id === selected)!} />
       )}
+      {selected && list.data && !list.data.some((c) => c.id === selected) && <Empty>Không tìm thấy lớp trong danh sách này. Hãy chọn trạng thái lớp phù hợp hoặc quay lại danh sách.</Empty>}
       {creating && (
         <Modal title="Tạo lớp mới" onClose={() => setCreating(false)}>
           {issuedCode ? (
@@ -116,8 +130,7 @@ export function TeacherClasses() {
                   },
                   {
                     onSuccess: (data) => {
-                      setSelected(data.class.id);
-                      setStatus("ACTIVE");
+                      navigate(`/classes/${encodeURIComponent(data.class.id)}`);
                       if (data.joinCode) setIssuedCode(data.joinCode);
                       else setCreating(false);
                     },

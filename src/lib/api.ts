@@ -343,17 +343,35 @@ export async function uploadFile(file: File) {
   if (!r.ok) throw await readError(r);
   return r.json();
 }
+// Uploaded files are referenced as `asset:<assetId>` or, for a pinned version, `assetv:<versionId>`.
+// The backend serves both from /files/:id.
+function assetFileId(url: string): string | null {
+  const match = /^assetv?:(.+)$/.exec(url);
+  return match ? match[1] : null;
+}
+
+export function isAssetUrl(url: string | null | undefined): boolean {
+  return Boolean(url && assetFileId(url));
+}
+
+// No credentials: version ids redirect to a signed object-storage URL on another origin.
+function fetchAssetFile(id: string) {
+  return fetch(base + "/files/" + encodeURIComponent(id), {
+    headers: { Authorization: "Bearer " + useAuth.getState().token },
+  });
+}
+
 export async function openMaterial(url: string) {
-  if (!url.startsWith("asset:")) {
+  const id = assetFileId(url);
+  if (!id) {
     window.open(url, "_blank", "noopener,noreferrer");
     return;
   }
   const win = window.open("about:blank", "_blank");
   if (win) win.opener = null;
   try {
-    const r = await fetch(base + "/files/" + url.slice(6), {
-      headers: { Authorization: "Bearer " + useAuth.getState().token },
-    });
+    let r = await fetchAssetFile(id);
+    if (r.status === 401 && await restore()) r = await fetchAssetFile(id);
     if (!r.ok) throw new Error("Không mở được học liệu");
     const blob = URL.createObjectURL(await r.blob());
     if (win) win.location.href = blob;
@@ -367,14 +385,11 @@ export async function openMaterial(url: string) {
 export type InlineMaterial = { src: string; revoke: () => void };
 
 export async function inlineMaterial(url: string): Promise<InlineMaterial> {
-  if (!url.startsWith("asset:")) return { src: url, revoke: () => undefined };
+  const id = assetFileId(url);
+  if (!id) return { src: url, revoke: () => undefined };
 
-  const request = () => fetch(base + "/files/" + url.slice(6), {
-    credentials: "include",
-    headers: { Authorization: "Bearer " + useAuth.getState().token },
-  });
-  let response = await request();
-  if (response.status === 401 && await restore()) response = await request();
+  let response = await fetchAssetFile(id);
+  if (response.status === 401 && await restore()) response = await fetchAssetFile(id);
   if (!response.ok) throw new Error("Không tải được video");
 
   const src = URL.createObjectURL(await response.blob());

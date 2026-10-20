@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { ArrowUpRight, BookOpen } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, idempotencyKey, isApiError } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
+import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
 import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
@@ -13,6 +14,7 @@ import { testStatusLabel, testStatusTone } from "../../lib/test-status";
 
 type ClassWork = HierarchyItem & {
   classId: string;
+  contentType: string;
   classroom: { id: string; name: string };
   dueDate: string | null;
   overdue: boolean;
@@ -29,6 +31,7 @@ async function readStudentClassWork() {
         id: assignment.id,
         title: assignment.title,
         classId: assignment.classroom.id,
+        contentType: assignment.contentType,
         classroom: assignment.classroom,
         subjectId: subject.id,
         subjectName: subject.name,
@@ -49,7 +52,10 @@ type SpaceTab = "lessons" | "tests" | "resources";
 export function StudentClasses() {
   const { classId } = useParams();
   const [joining, setJoining] = useState(false);
-  const [activeTab, setActiveTab] = useState<SpaceTab>("lessons");
+  const [params, setParams] = useSearchParams();
+  const activeTab: SpaceTab = params.get("tab") === "resources" ? "resources" : params.get("tab") === "tests" ? "tests" : "lessons";
+  const setActiveTab = (tab: SpaceTab) => setParams((previous) => { previous.set("tab", tab); return previous; });
+  const reviewId = params.get("assignmentId");
   const [result, setResult] = useState<{ message: string; pending: boolean } | null>(null);
   const key = useRef(idempotencyKey());
   const list = useQuery<StudentClass[]>({ queryKey: ["classes"], queryFn: () => api("/classes") });
@@ -83,7 +89,7 @@ export function StudentClasses() {
           {classWork.data?.tests.filter((item) => item.classroom.id === selectedClass.id).map((item: any) => <Link key={item.id} className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}><BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{dueLabel(item.dueDate)}</small>{item.testStatus && <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>{testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}</Badge>}</span><ArrowUpRight size={17} /></Link>)}
           {classWork.data && classWork.data.tests.filter((item) => item.classroom.id === selectedClass.id).length === 0 && <Empty>Chưa có bài kiểm tra được giao trong lớp này.</Empty>}
         </section>}
-        {activeTab === "resources" && <section role="tabpanel" aria-label="Tài nguyên lớp"><StudentClassResources classId={selectedClass.id} /></section>}
+        {activeTab === "resources" && <section role="tabpanel" aria-label="Tài nguyên lớp"><StudentClassResources classId={selectedClass.id} />{classWork.data?.items.filter((item) => item.classId === selectedClass.id && item.contentType === "lesson").map((item) => <p key={item.id}><Link className="secondary" to={`?tab=resources&assignmentId=${encodeURIComponent(item.id)}`}>Ôn thẻ · {item.title}</Link></p>)}{reviewId && <ClassLessonCards key={reviewId} assignmentId={reviewId} />}</section>}
       </>}
     </section>
   </>;
@@ -127,7 +133,8 @@ export function StudentClasses() {
           {c.enrollmentStatus === "approved" && <p className="muted">{c.assignments.length} bài được giao · <Link to={`/classes/${encodeURIComponent(c.id)}/catalog`}>Mở Class Space <ArrowUpRight size={14} /></Link></p>}
         </section>
       ))}
-      {joining && (
+      {reviewId && <ClassLessonCards assignmentId={reviewId} />}
+    {joining && (
         <Modal title="Tham gia lớp" onClose={() => setJoining(false)}>
           <form
             onSubmit={(e) => {
