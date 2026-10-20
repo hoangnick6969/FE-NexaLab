@@ -1,3 +1,39 @@
+import { defineText, formatDateTime } from "../i18n";
+
+const text = defineText({
+  vi: {
+    status: {
+      UPCOMING: "Chưa đến hạn",
+      DUE_SOON: "Sắp đến hạn",
+      OVERDUE_UNSUBMITTED: "Quá hạn, chưa nộp",
+      SUBMITTED: "Đã nộp",
+      LATE_REVIEW_PENDING: "Nộp trễ, chờ giáo viên duyệt",
+      REJECTED: "Bài trễ bị từ chối",
+    },
+    submission: {
+      SCORED: "Đúng hạn",
+      LATE_REVIEW_PENDING: "Trễ hạn · chờ duyệt",
+      REJECTED_ZERO: "Trễ hạn · bị từ chối (0 điểm)",
+      ACCEPTED_BY_EXTENSION: "Trễ hạn · được chấp nhận khi dời hạn",
+    },
+  },
+  en: {
+    status: {
+      UPCOMING: "Not due yet",
+      DUE_SOON: "Due soon",
+      OVERDUE_UNSUBMITTED: "Overdue, not submitted",
+      SUBMITTED: "Submitted",
+      LATE_REVIEW_PENDING: "Late, waiting for the teacher",
+      REJECTED: "Late submission rejected",
+    },
+    submission: {
+      SCORED: "On time",
+      LATE_REVIEW_PENDING: "Late · waiting for review",
+      REJECTED_ZERO: "Late · rejected (0 points)",
+      ACCEPTED_BY_EXTENSION: "Late · accepted after an extension",
+    },
+  },
+});
 /** Labels for the server-derived assigned-test status shared by student, teacher and parent views (I3). */
 export type StudentTestStatus = "UPCOMING" | "DUE_SOON" | "OVERDUE_UNSUBMITTED" | "SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED";
 export type SubmissionStatus = "SCORED" | "LATE_REVIEW_PENDING" | "REJECTED_ZERO" | "ACCEPTED_BY_EXTENSION";
@@ -26,14 +62,7 @@ export type TestState = {
   history: TestSubmission[];
 };
 
-export const testStatusLabel: Record<StudentTestStatus, string> = {
-  UPCOMING: "Chưa đến hạn",
-  DUE_SOON: "Sắp đến hạn",
-  OVERDUE_UNSUBMITTED: "Quá hạn, chưa nộp",
-  SUBMITTED: "Đã nộp",
-  LATE_REVIEW_PENDING: "Nộp trễ, chờ giáo viên duyệt",
-  REJECTED: "Bài trễ bị từ chối",
-};
+export const testStatusLabel: Record<StudentTestStatus, string> = text().status;
 
 export const testStatusTone: Record<StudentTestStatus, string> = {
   UPCOMING: "outline",
@@ -44,11 +73,6 @@ export const testStatusTone: Record<StudentTestStatus, string> = {
   REJECTED: "not_passed",
 };
 
-export const submissionStatusLabel: Record<SubmissionStatus, string> = {
-  SCORED: "Đúng hạn",
-  LATE_REVIEW_PENDING: "Trễ hạn · chờ duyệt",
-  REJECTED_ZERO: "Trễ hạn · bị từ chối (0 điểm)",
-  ACCEPTED_BY_EXTENSION: "Trễ hạn · được chấp nhận khi dời hạn",
-};
+export const submissionStatusLabel: Record<SubmissionStatus, string> = text().submission;
 
-export const dateTime = (iso: string) => new Date(iso).toLocaleString("vi-VN");
+export const dateTime = (iso: string) => formatDateTime(iso);

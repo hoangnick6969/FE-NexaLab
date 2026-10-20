@@ -107,7 +107,7 @@ export function SettingsPage() {
     onSuccess: ({ preferences }) => queryClient.setQueryData<Profile>(PROFILE_KEY, (old) => (old ? { ...old, preferences } : old)),
   });
   const [chosenLocale, setChosenLocale] = useState(getLocale());
-  // Switching language remounts the app, so the profile copy is saved first and the switch follows.
+  // Switching language reloads the page, so the profile copy is saved first and the switch follows.
   const saveLocale = useMutation({
     mutationFn: (next: Locale) => api<{ preferences: Profile["preferences"] }>("/me/preferences", "PATCH", { locale: next }),
     onSuccess: ({ preferences }) => queryClient.setQueryData<Profile>(PROFILE_KEY, (old) => (old ? { ...old, preferences } : old)),

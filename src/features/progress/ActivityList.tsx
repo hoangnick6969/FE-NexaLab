@@ -1,12 +1,43 @@
 import { type ActivityItem } from "../../lib/api";
 import { Badge, verdictLabel } from "../../components/ui";
 import { type SheetView, stepNames, time, verdictTone } from "./progress-format";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    today: "Hôm nay",
+    thisWeek: "Tuần này",
+    earlier: "Trước đó",
+    quiz: "Quiz",
+    practice: "Thực hành",
+    lab: "Phòng lab",
+    legacy: " · Bản ghi cũ, có thể thiếu liên kết bài học",
+    passed: "Đạt",
+    notPassed: "Chưa đạt",
+    unknown: "Không rõ",
+    details: "Xem chi tiết",
+  },
+  en: {
+    today: "Today",
+    thisWeek: "This week",
+    earlier: "Earlier",
+    quiz: "Quiz",
+    practice: "Practice",
+    lab: "Lab",
+    legacy: " · Older record, the lesson link may be missing",
+    passed: "Passed",
+    notPassed: "Not passed",
+    unknown: "Unknown",
+    details: "See details",
+  },
+});
+const t = text();
 
 function groupOf(value: string, now = new Date()) {
   const date = new Date(value);
-  if (date.toDateString() === now.toDateString()) return "Hôm nay";
-  if (now.getTime() - date.getTime() < 7 * 86400000) return "Tuần này";
-  return "Trước đó";
+  if (date.toDateString() === now.toDateString()) return t.today;
+  if (now.getTime() - date.getTime() < 7 * 86400000) return t.thisWeek;
+  return t.earlier;
 }
 
 export function ActivityGroups({
@@ -41,18 +72,18 @@ export function ActivityGroups({
 function ActivityRow({ item, onOpen }: { item: ActivityItem; onOpen: (view: SheetView, event: React.MouseEvent<HTMLElement>) => void }) {
   return (
     <li className="activity-row">
-      <Badge tone="outline">{item.kind === "QUIZ" ? "Quiz" : "Thực hành"}</Badge>
+      <Badge tone="outline">{item.kind === "QUIZ" ? t.quiz : t.practice}</Badge>
       <div className="activity-title">
         <b>{item.title}</b>
         <span className="tiny muted">
-          {item.stepType ? stepNames[item.stepType] : item.labTitle ?? "Phòng lab"}
-          {item.legacy && " · Bản ghi cũ, có thể thiếu liên kết bài học"}
+          {item.stepType ? stepNames[item.stepType] : item.labTitle ?? t.lab}
+          {item.legacy && t.legacy}
         </span>
       </div>
       {item.kind === "QUIZ" ? (
-        <Badge tone={item.passed ? "passed" : "practice"}>{item.passed ? "Đạt" : "Chưa đạt"}</Badge>
+        <Badge tone={item.passed ? "passed" : "practice"}>{item.passed ? t.passed : t.notPassed}</Badge>
       ) : (
-        <Badge tone={verdictTone(item.verdict)}>{item.verdict ? verdictLabel(item.verdict) : "Không rõ"}</Badge>
+        <Badge tone={verdictTone(item.verdict)}>{item.verdict ? verdictLabel(item.verdict) : t.unknown}</Badge>
       )}
       <time dateTime={item.occurredAt} className="tiny muted">{time(item.occurredAt)}</time>
       <button
@@ -60,7 +91,7 @@ function ActivityRow({ item, onOpen }: { item: ActivityItem; onOpen: (view: Shee
         className="link-button"
         onClick={(event) => onOpen(item.kind === "QUIZ" ? { kind: "quiz", id: item.id } : { kind: "practical", id: item.id }, event)}
       >
-        Xem chi tiết
+        {t.details}
       </button>
     </li>
   );

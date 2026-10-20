@@ -1,3 +1,4 @@
+import { commonText } from "../../i18n/common";
 export type StudentLessonAssignment = {
   id: string;
   title: string;
@@ -106,13 +107,13 @@ export function buildStudentLessonCatalog(
       existing.assignments = associations;
       return;
     }
-    const subject = lesson.subject ?? { id: lesson.subjectId, name: "Môn học" };
+    const subject = lesson.subject ?? { id: lesson.subjectId, name: commonText().subject };
     lessons.set(lesson.id, {
       ...lesson,
       subjectId: lesson.subjectId ?? subject.id,
       subject,
       grade: lesson.grade ?? 0,
-      chapter: lesson.chapter ?? "Chưa phân chương",
+      chapter: lesson.chapter ?? commonText().noChapter,
       topic: lesson.topic ?? "",
       shared: false,
       assignments: associations,
@@ -129,7 +130,7 @@ export function buildStudentLessonCatalog(
       subjectId: assignment.subject.id,
       subject: assignment.subject,
       grade: assignment.grade,
-      chapter: assignment.chapter ?? "Chưa phân chương",
+      chapter: assignment.chapter ?? commonText().noChapter,
       topic: assignment.topic ?? "",
       curriculumOrder: assignment.curriculumOrder ?? assignment.topicOrder,
       chapterOrder: assignment.chapterOrder,

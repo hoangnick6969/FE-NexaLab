@@ -6,9 +6,58 @@ import { PageHeading } from "../../components/PageHeading";
 import { Badge } from "../../components/ui";
 import { LabCards } from "../labs/LabLibrary";
 import { StudentDashboard } from "./StudentDashboard";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    eyebrow: "MỖI NGÀY, MỘT ĐIỀU MỚI",
+    hello: (name: string) => `Chào ${name}, cùng khám phá nhé!`,
+    description: "Một câu hỏi nhỏ hôm nay có thể mở ra cả một thế giới.",
+    scope: (grade: number) => `KHOA HỌC TỰ NHIÊN · LỚP ${grade}`,
+    kicker: "HỌC BẰNG CÁCH TỰ TAY LÀM",
+    heroLine: "Đừng chỉ đọc về khoa học.",
+    heroEmphasis: "Hãy chạm vào nó.",
+    heroBody1: "Lắp một mạch điện. Khám phá đôi mắt.",
+    heroBody2: "Nhìn thấy những phản ứng kỳ diệu.",
+    openSpace: "Mở không gian khám phá",
+    flow: "HỌC → QUAN SÁT → THỬ",
+    everyStep: "Mỗi bước đều đáng khám phá",
+    orbitArt: "Minh họa quỹ đạo nguyên tử",
+    mistakes: "Sai cũng là một cách học.",
+    teacherNote: "Quản lý lớp, giao thử thách và theo dõi cách học sinh tiến bộ qua mỗi lần thử.",
+    parentNote: "Đồng hành cùng con qua tiến độ học tập và mức độ cần trợ giúp.",
+    openManagement: "Mở không gian quản lý",
+    exploreToday: "Hôm nay, em muốn khám phá gì?",
+    threeSubjects: "Ba môn học. Vô vàn điều đáng tò mò.",
+    allLabs: "Tất cả phòng lab",
+  },
+  en: {
+    eyebrow: "SOMETHING NEW EVERY DAY",
+    hello: (name: string) => `Hi ${name}, let's explore!`,
+    description: "One small question today can open up a whole world.",
+    scope: (grade: number) => `NATURAL SCIENCE · GRADE ${grade}`,
+    kicker: "LEARN BY DOING",
+    heroLine: "Don't just read about science.",
+    heroEmphasis: "Touch it.",
+    heroBody1: "Build a circuit. Explore the eye.",
+    heroBody2: "See amazing reactions.",
+    openSpace: "Open the discovery space",
+    flow: "LEARN → OBSERVE → TRY",
+    everyStep: "Every step is worth exploring",
+    orbitArt: "Illustration of atomic orbits",
+    mistakes: "Mistakes are a way to learn too.",
+    teacherNote: "Manage classes, set challenges and follow how students improve with each attempt.",
+    parentNote: "Support your child through their learning progress and where they need help.",
+    openManagement: "Open the management space",
+    exploreToday: "What would you like to explore today?",
+    threeSubjects: "Three subjects. Endless things to be curious about.",
+    allLabs: "All labs",
+  },
+});
 
 export function Dashboard() {
   const user = useAuth((s) => s.user)!;
+  const t = text();
   const isStudent = user.role === "STUDENT";
   const stats = useQuery({
     queryKey: ["progress", user.id],
@@ -26,44 +75,44 @@ export function Dashboard() {
   return (
     <>
       <PageHeading
-        eyebrow="MỖI NGÀY, MỘT ĐIỀU MỚI"
+        eyebrow={t.eyebrow}
         title={
-          "Chào " + user.fullName.split(" ").at(-1) + ", cùng khám phá nhé!"
+          t.hello(user.fullName.split(" ").at(-1) ?? "")
         }
-        description="Một câu hỏi nhỏ hôm nay có thể mở ra cả một thế giới."
+        description={t.description}
         action={
-          <Badge tone="outline">KHOA HỌC TỰ NHIÊN · LỚP {user.grade}</Badge>
+          <Badge tone="outline">{t.scope(user.grade)}</Badge>
         }
       />
       <section className="hero">
         <div className="hero-copy">
           <span className="hero-kicker">
-            <span /> HỌC BẰNG CÁCH TỰ TAY LÀM
+            <span /> {t.kicker}
           </span>
           <h2>
-            Đừng chỉ đọc về khoa học.
+            {t.heroLine}
             <br />
-            <em>Hãy chạm vào nó.</em>
+            <em>{t.heroEmphasis}</em>
           </h2>
           <p>
-            Lắp một mạch điện. Khám phá đôi mắt.
+            {t.heroBody1}
             <br />
-            Nhìn thấy những phản ứng kỳ diệu.
+            {t.heroBody2}
           </p>
           <Link
             className="cream-button"
             to={user.role === "TEACHER" ? "/labs/circuit" : "/progress"}
           >
-            Mở không gian khám phá <ArrowUpRight size={19} />
+            {t.openSpace} <ArrowUpRight size={19} />
           </Link>
           <div className="hero-foot">
-            <span>HỌC → QUAN SÁT → THỬ</span>
+            <span>{t.flow}</span>
             <i />
-            <span>Mỗi bước đều đáng khám phá</span>
+            <span>{t.everyStep}</span>
           </div>
         </div>
         <div className="hero-graphic">
-          <svg viewBox="0 0 450 300" aria-label="Minh họa quỹ đạo nguyên tử">
+          <svg viewBox="0 0 450 300" aria-label={t.orbitArt}>
             <defs>
               <radialGradient id="glow">
                 <stop stopColor="#edbd71" />
@@ -128,7 +177,7 @@ export function Dashboard() {
             </text>
           </svg>
           <div className="floating-note">
-            <span>✧</span> Sai cũng là một cách học.
+            <span>✧</span> {t.mistakes}
           </div>
         </div>
       </section>
@@ -136,20 +185,20 @@ export function Dashboard() {
         <GraduationCap />
         <p>
           {user.role === "TEACHER"
-            ? "Quản lý lớp, giao thử thách và theo dõi cách học sinh tiến bộ qua mỗi lần thử."
-            : "Đồng hành cùng con qua tiến độ học tập và mức độ cần trợ giúp."}
+            ? t.teacherNote
+            : t.parentNote}
         </p>
         <Link to={user.role === "TEACHER" ? "/classes" : "/progress"}>
-          Mở không gian quản lý →
+          {t.openManagement} →
         </Link>
       </div>
       <div className="section-heading">
         <div>
-          <h2>Hôm nay, em muốn khám phá gì?</h2>
-          <p className="muted">Ba môn học. Vô vàn điều đáng tò mò.</p>
+          <h2>{t.exploreToday}</h2>
+          <p className="muted">{t.threeSubjects}</p>
         </div>
         <Link to="/labs">
-          Tất cả phòng lab <ArrowRight size={15} />
+          {t.allLabs} <ArrowRight size={15} />
         </Link>
       </div>
       <LabCards />

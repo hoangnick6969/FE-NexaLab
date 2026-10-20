@@ -1,6 +1,93 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { Badge, ErrorBox, Modal, useAction, InlineLoader } from "../../components/ui";
+import { defineText, formatDate } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    noMap: "Chưa có bản đồ",
+    filters: "Lọc thư viện nội dung",
+    gradeLabel: "Khối",
+    all: "Tất cả",
+    grade: (grade: number) => `Lớp ${grade}`,
+    strand: "Mạch nội dung",
+    outcome: "Yêu cầu cần đạt",
+    sourceLabel: "Nguồn",
+    sharedBase: "Bài nền dùng chung",
+    myPrivate: "Bản riêng của tôi",
+    coverage: "Độ bao phủ yêu cầu cần đạt lớp 8–9",
+    publishedBase: "Bài nền đã phát hành",
+    myLessons: "Bài riêng của tôi",
+    sampleMap: "Bản đồ mẫu (phát triển)",
+    missing: "Còn thiếu",
+    outcomes: (n: number) => `${n} yêu cầu`,
+    curriculumAndChallenge: "Chương trình và thử thách",
+    khtnStrand: "Mạch nội dung KHTN",
+    notChosen: "Chưa chọn",
+    noOutcomes: "Chưa có yêu cầu cần đạt cho khối và mạch nội dung này.",
+    sampleBadge: "Mẫu",
+    addChallenge: "Thêm thử thách tùy chỉnh sau phần thực hành",
+    rangePending: "Khoảng tham số đang chờ duyệt khoa học (Q-C2-04): dùng được cho bài riêng tự kiểm duyệt, chưa dùng được cho thư viện chung.",
+    attribution: "Nguồn và giấy phép",
+    source: "Nguồn:",
+    licence: "Giấy phép:",
+    releaseReview: "Duyệt phát hành thư viện chung",
+    reviewRule: "Mỗi lượt duyệt ghi tên người duyệt. Người duyệt chuyên môn và người duyệt bản quyền phải khác nhau.",
+    notReviewed: "chưa duyệt",
+    recordReview: "Ghi nhận tôi đã duyệt",
+    steps: { READING: "Bài đọc", VIDEO: "Video", STUDY_CARDS: "Thẻ ghi nhớ", QUIZ: "Kiểm tra", LAB: "Thực hành", CHALLENGE: "Thử thách" } as Record<string, string>,
+    previewOf: (title: string) => `Xem trước: ${title}`,
+    previewLesson: "Xem trước bài học",
+    buildingPreview: "Đang tạo bản xem trước…",
+    retry: "Thử lại",
+    ready: "Sẵn sàng xuất bản.",
+    blocked: "Chưa thể xuất bản. Còn thiếu:",
+    noTextAlternative: "Thiếu phương án văn bản cho bước này.",
+    noTranscript: "Có video chưa có bản chép lời.",
+  },
+  en: {
+    noMap: "No map yet",
+    filters: "Filter the content library",
+    gradeLabel: "Grade",
+    all: "All",
+    grade: (grade: number) => `Grade ${grade}`,
+    strand: "Content strand",
+    outcome: "Learning outcome",
+    sourceLabel: "Source",
+    sharedBase: "Shared base lessons",
+    myPrivate: "My private copies",
+    coverage: "Learning outcome coverage, grades 8–9",
+    publishedBase: "Published base lessons",
+    myLessons: "My private lessons",
+    sampleMap: "Sample map (development)",
+    missing: "Missing",
+    outcomes: (n: number) => `${n} ${n === 1 ? "outcome" : "outcomes"}`,
+    curriculumAndChallenge: "Curriculum and challenge",
+    khtnStrand: "Natural science strand",
+    notChosen: "Not chosen",
+    noOutcomes: "No learning outcomes for this grade and strand yet.",
+    sampleBadge: "Sample",
+    addChallenge: "Add a custom challenge after the practice",
+    rangePending: "Parameter ranges await scientific review (Q-C2-04): usable in self-reviewed private lessons, not yet in the shared library.",
+    attribution: "Sources and licence",
+    source: "Source:",
+    licence: "Licence:",
+    releaseReview: "Shared library release review",
+    reviewRule: "Each review records the reviewer's name. The subject reviewer and the rights reviewer must be different people.",
+    notReviewed: "not reviewed",
+    recordReview: "Record my review",
+    steps: { READING: "Reading", VIDEO: "Video", STUDY_CARDS: "Study cards", QUIZ: "Quiz", LAB: "Practice", CHALLENGE: "Challenge" },
+    previewOf: (title: string) => `Preview: ${title}`,
+    previewLesson: "Lesson preview",
+    buildingPreview: "Building the preview…",
+    retry: "Try again",
+    ready: "Ready to publish.",
+    blocked: "Cannot publish yet. Missing:",
+    noTextAlternative: "This step has no text alternative.",
+    noTranscript: "A video has no transcript.",
+  },
+});
+const t = text();
 
 /** B1-T4 library contract (GET /teacher/content). */
 export type LibraryFilters = { grade: string; domain: string; outcome: string; scope: string };
@@ -30,7 +117,7 @@ export const libraryQuery = (filters: LibraryFilters) => {
   return "/teacher/content" + (query ? "?" + query : "");
 };
 
-const metricText = (metric: Metric) => (metric ? `${metric.covered}/${metric.total}` : "Chưa có bản đồ");
+const metricText = (metric: Metric) => (metric ? `${metric.covered}/${metric.total}` : t.noMap);
 
 export function LibraryFiltersBar({
   filters,
@@ -48,19 +135,19 @@ export function LibraryFiltersBar({
     (o) => (!filters.grade || String(o.grade) === filters.grade) && (!filters.domain || o.domain === filters.domain),
   );
   return (
-    <div className="library-filters" role="group" aria-label="Lọc thư viện nội dung">
+    <div className="library-filters" role="group" aria-label={t.filters}>
       <label className="field">
-        <span>Khối</span>
+        <span>{t.gradeLabel}</span>
         <select value={filters.grade} onChange={(e) => set({ grade: e.target.value, outcome: "" })}>
-          <option value="">Tất cả</option>
-          <option value="8">Lớp 8</option>
-          <option value="9">Lớp 9</option>
+          <option value="">{t.all}</option>
+          <option value="8">{t.grade(8)}</option>
+          <option value="9">{t.grade(9)}</option>
         </select>
       </label>
       <label className="field">
-        <span>Mạch nội dung</span>
+        <span>{t.strand}</span>
         <select value={filters.domain} onChange={(e) => set({ domain: e.target.value, outcome: "" })}>
-          <option value="">Tất cả</option>
+          <option value="">{t.all}</option>
           {taxonomy?.domains.map((d) => (
             <option key={d.id} value={d.id}>
               {d.label}
@@ -69,9 +156,9 @@ export function LibraryFiltersBar({
         </select>
       </label>
       <label className="field">
-        <span>Yêu cầu cần đạt</span>
+        <span>{t.outcome}</span>
         <select value={filters.outcome} onChange={(e) => set({ outcome: e.target.value })}>
-          <option value="">Tất cả</option>
+          <option value="">{t.all}</option>
           {visibleOutcomes.map((o) => (
             <option key={o.code} value={o.code}>
               {o.code} — {o.statement}
@@ -80,11 +167,11 @@ export function LibraryFiltersBar({
         </select>
       </label>
       <label className="field">
-        <span>Nguồn</span>
+        <span>{t.sourceLabel}</span>
         <select value={filters.scope} onChange={(e) => set({ scope: e.target.value })}>
-          <option value="ALL">Tất cả</option>
-          <option value="SHARED_LIBRARY">Bài nền dùng chung</option>
-          <option value="TEACHER_PRIVATE">Bản riêng của tôi</option>
+          <option value="ALL">{t.all}</option>
+          <option value="SHARED_LIBRARY">{t.sharedBase}</option>
+          <option value="TEACHER_PRIVATE">{t.myPrivate}</option>
         </select>
       </label>
     </div>
@@ -96,17 +183,17 @@ export function CoverageTable({ rows, note, outcomes }: { rows: CoverageRow[]; n
   const statement = (code: string) => outcomes.find((o) => o.code === code)?.statement ?? code;
   return (
     <section className="panel coverage-panel" aria-labelledby="coverage-title">
-      <h2 id="coverage-title">Độ bao phủ yêu cầu cần đạt lớp 8–9</h2>
+      <h2 id="coverage-title">{t.coverage}</h2>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Khối</th>
-              <th>Mạch nội dung</th>
-              <th>Bài nền đã phát hành</th>
-              <th>Bài riêng của tôi</th>
-              <th>Bản đồ mẫu (phát triển)</th>
-              <th>Còn thiếu</th>
+              <th>{t.gradeLabel}</th>
+              <th>{t.strand}</th>
+              <th>{t.publishedBase}</th>
+              <th>{t.myLessons}</th>
+              <th>{t.sampleMap}</th>
+              <th>{t.missing}</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +201,7 @@ export function CoverageTable({ rows, note, outcomes }: { rows: CoverageRow[]; n
               const gaps = row.releasedBaseline?.gaps ?? row.fixture?.gaps ?? [];
               return (
                 <tr key={row.grade + row.domain}>
-                  <td>Lớp {row.grade}</td>
+                  <td>{t.grade(row.grade)}</td>
                   <td>{row.domainLabel}</td>
                   <td>{metricText(row.releasedBaseline)}</td>
                   <td>{metricText(row.ownPublished)}</td>
@@ -122,7 +209,7 @@ export function CoverageTable({ rows, note, outcomes }: { rows: CoverageRow[]; n
                   <td>
                     {gaps.length ? (
                       <details>
-                        <summary>{gaps.length} yêu cầu</summary>
+                        <summary>{t.outcomes(gaps.length)}</summary>
                         <ul className="gap-list">
                           {gaps.map((code) => (
                             <li key={code}>
@@ -165,14 +252,14 @@ export function TaxonomyFields({
   const defaults = () => Object.fromEntries(Object.entries(spec?.params ?? {}).map(([name, p]) => [name, p.default]));
   return (
     <fieldset className="review-checklist">
-      <legend>Chương trình và thử thách</legend>
+      <legend>{t.curriculumAndChallenge}</legend>
       <label className="field">
-        <span>Mạch nội dung KHTN</span>
+        <span>{t.khtnStrand}</span>
         <select
           value={edit.domain ?? ""}
           onChange={(e) => setEdit((s: any) => ({ ...s, domain: e.target.value || null, outcomeCodes: [] }))}
         >
-          <option value="">Chưa chọn</option>
+          <option value="">{t.notChosen}</option>
           {taxonomy?.domains.map((d) => (
             <option key={d.id} value={d.id}>
               {d.label}
@@ -180,8 +267,8 @@ export function TaxonomyFields({
           ))}
         </select>
       </label>
-      <div className="outcome-picks" role="group" aria-label="Yêu cầu cần đạt">
-        {candidates.length === 0 && <p className="tiny muted">Chưa có yêu cầu cần đạt cho khối và mạch nội dung này.</p>}
+      <div className="outcome-picks" role="group" aria-label={t.outcome}>
+        {candidates.length === 0 && <p className="tiny muted">{t.noOutcomes}</p>}
         {candidates.map((o) => (
           <label className="check" key={o.code}>
             <input
@@ -195,7 +282,7 @@ export function TaxonomyFields({
               }
             />
             <span>
-              <b>{o.code}</b> {o.statement} {o.synthetic && <Badge tone="outline">Mẫu</Badge>}
+              <b>{o.code}</b> {o.statement} {o.synthetic && <Badge tone="outline">{t.sampleBadge}</Badge>}
             </span>
           </label>
         ))}
@@ -208,7 +295,7 @@ export function TaxonomyFields({
               checked={params !== null}
               onChange={(e) => setEdit((s: any) => ({ ...s, challengeParams: e.target.checked ? defaults() : null }))}
             />
-            Thêm thử thách tùy chỉnh sau phần thực hành
+            {t.addChallenge}
           </label>
           {params && (
             <div className="form-grid">
@@ -245,7 +332,7 @@ export function TaxonomyFields({
           )}
           {params && spec.rangeReview !== "approved" && (
             <p className="tiny muted">
-              Khoảng tham số đang chờ duyệt khoa học (Q-C2-04): dùng được cho bài riêng tự kiểm duyệt, chưa dùng được cho thư viện chung.
+              {t.rangePending}
             </p>
           )}
         </>
@@ -258,15 +345,15 @@ export function TaxonomyFields({
 export function AttributionNote({ value }: { value?: Attribution | null }) {
   if (!value || (!value.sources && !value.note)) return null;
   return (
-    <aside className="attribution tiny" aria-label="Nguồn và giấy phép">
+    <aside className="attribution tiny" aria-label={t.attribution}>
       {value.note && <p>{value.note}</p>}
       {value.sources && (
         <p>
-          <b>Nguồn:</b> {value.sources}
+          <b>{t.source}</b> {value.sources}
           {value.licenseLabel && (
             <>
               {" · "}
-              <b>Giấy phép:</b> {value.licenseLabel}
+              <b>{t.licence}</b> {value.licenseLabel}
             </>
           )}
         </p>
@@ -280,8 +367,8 @@ export function ReleaseReviews({ lessonId, reviews }: { lessonId: string; review
   const record = useAction((kind: string) => api(`/lessons/${lessonId}/release-reviews`, "POST", { kind }));
   return (
     <fieldset className="review-checklist">
-      <legend>Duyệt phát hành thư viện chung</legend>
-      <p className="tiny muted">Mỗi lượt duyệt ghi tên người duyệt. Người duyệt chuyên môn và người duyệt bản quyền phải khác nhau.</p>
+      <legend>{t.releaseReview}</legend>
+      <p className="tiny muted">{t.reviewRule}</p>
       <ul className="release-reviews">
         {reviews.map((review) => (
           <li key={review.kind}>
@@ -289,14 +376,14 @@ export function ReleaseReviews({ lessonId, reviews }: { lessonId: string; review
               {review.label}:{" "}
               {review.reviewerName ? (
                 <b>
-                  {review.reviewerName} ({new Date(review.at!).toLocaleDateString("vi-VN")})
+                  {review.reviewerName} ({formatDate(review.at!)})
                 </b>
               ) : (
-                "chưa duyệt"
+                t.notReviewed
               )}
             </span>
             <button type="button" className="text-button" disabled={record.isPending} onClick={() => record.mutate(review.kind)}>
-              Ghi nhận tôi đã duyệt
+              {t.recordReview}
             </button>
           </li>
         ))}
@@ -306,43 +393,36 @@ export function ReleaseReviews({ lessonId, reviews }: { lessonId: string; review
   );
 }
 
-const stepLabels: Record<string, string> = {
-  READING: "Bài đọc",
-  VIDEO: "Video",
-  STUDY_CARDS: "Thẻ ghi nhớ",
-  QUIZ: "Kiểm tra",
-  LAB: "Thực hành",
-  CHALLENGE: "Thử thách",
-};
+const stepLabels: Record<string, string> = t.steps;
 
 /** Student-view preview with the text alternative of every step and readiness blockers. */
 export function PreviewModal({ id, onClose }: { id: string; onClose: () => void }) {
   const q = useQuery({ queryKey: ["content-preview", id], queryFn: () => api(`/teacher/content/${id}/preview`) });
   const data = q.data;
   return (
-    <Modal title={data ? "Xem trước: " + data.lesson.title : "Xem trước bài học"} onClose={onClose}>
-      {q.isLoading && <InlineLoader message="Đang tạo bản xem trước…" />}
+    <Modal title={data ? t.previewOf(data.lesson.title) : t.previewLesson} onClose={onClose}>
+      {q.isLoading && <InlineLoader message={t.buildingPreview} />}
       {q.error && (
         <div className="load-error">
           <ErrorBox error={q.error} />
           <button type="button" onClick={() => q.refetch()}>
-            Thử lại
+            {t.retry}
           </button>
         </div>
       )}
       {data && (
         <>
           <p className="muted">
-            {data.lesson.subject?.name} · Lớp {data.lesson.grade} · {data.lesson.chapter}
+            {data.lesson.subject?.name} · {t.grade(data.lesson.grade)} · {data.lesson.chapter}
             {data.lesson.domainLabel && " · " + data.lesson.domainLabel}
           </p>
           {data.readiness.ready ? (
             <p className="notice" role="status">
-              Sẵn sàng xuất bản.
+              {t.ready}
             </p>
           ) : (
             <div className="notice" role="status">
-              <b>Chưa thể xuất bản. Còn thiếu:</b>
+              <b>{t.blocked}</b>
               <ul className="publish-blockers">
                 {data.readiness.blockers.map((item: string) => (
                   <li key={item}>{item}</li>
@@ -359,7 +439,7 @@ export function PreviewModal({ id, onClose }: { id: string; onClose: () => void 
                   {step.title && ": " + step.title}
                 </h3>
                 {step.missingAlternative ? (
-                  <p className="error">Thiếu phương án văn bản cho bước này.</p>
+                  <p className="error">{t.noTextAlternative}</p>
                 ) : (
                   <p className="preview-text">{step.textAlternative}</p>
                 )}
@@ -367,7 +447,7 @@ export function PreviewModal({ id, onClose }: { id: string; onClose: () => void 
             ))}
           </ol>
           {data.materials.some((m: any) => m.type === "video" && !m.hasTranscript) && (
-            <p className="error">Có video chưa có bản chép lời.</p>
+            <p className="error">{t.noTranscript}</p>
           )}
           <AttributionNote value={data.attribution} />
         </>

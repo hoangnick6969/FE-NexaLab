@@ -1,12 +1,10 @@
-import { useSyncExternalStore } from "react";
-
 /**
  * UI language (acc-5, D-ACC-04). Copy lives next to each feature in `defineText({ vi, en })`;
  * the compiler requires `en` to have exactly the shape of `vi`. Lesson content and server
  * messages stay Vietnamese; server errors are translated by their stable `code` (see errors.ts).
  *
- * Changing the language remounts the app (main.tsx keys it by locale), so `t = someText()`
- * can be read anywhere during render without a hook.
+ * Changing the language reloads the page, so `someText()` can be read anywhere (render code or
+ * module-level label maps) and always reflects the locale the page was loaded with.
  */
 export type Locale = "vi" | "en";
 export const LOCALE_OPTIONS: { value: Locale; label: string }[] = [
@@ -26,29 +24,20 @@ function stored(): Locale {
   }
 }
 
-let current: Locale = stored();
-const listeners = new Set<() => void>();
+const current: Locale = stored();
 document.documentElement.lang = current;
 
 export const getLocale = () => current;
 
 export function setLocale(next: Locale) {
   if (!isLocale(next) || next === current) return;
-  current = next;
   try {
     localStorage.setItem(STORAGE_KEY, next);
   } catch {
-    /* Private mode or blocked storage: the language still applies for this page. */
+    /* Private mode or blocked storage: the reload below would come back in the old language. */
+    return;
   }
-  document.documentElement.lang = next;
-  listeners.forEach((listener) => listener());
-}
-
-export function useLocale() {
-  return useSyncExternalStore(
-    (listener) => (listeners.add(listener), () => listeners.delete(listener)),
-    () => current,
-  );
+  location.reload();
 }
 
 /** Same keys as the Vietnamese source; strings widen to string, functions keep their signature. */

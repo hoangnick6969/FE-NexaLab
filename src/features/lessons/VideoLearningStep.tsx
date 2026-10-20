@@ -1,6 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { api, inlineMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    loadFailed: "Không tải được video",
+    saveFailed: "Chưa lưu được tiến độ",
+    region: "Nội dung video",
+    preparing: "Đang chuẩn bị video…",
+    unsupported: "Trình duyệt không hỗ trợ phát video.",
+    failedWithAlt: "Video hiện không phát được. Bạn vẫn có thể học bằng nội dung thay thế đã xuất bản.",
+    failedNoAlt: "Video hiện không phát được. Hãy tải lại trang hoặc báo cho giáo viên.",
+    hideTranscript: "Ẩn bản chép lời",
+    showTranscript: "Xem bản chép lời",
+    hideAlt: "Ẩn nội dung thay thế",
+    showAlt: "Xem nội dung thay thế",
+    transcript: "Bản chép lời",
+    alternative: "Nội dung thay thế",
+    finishWithAlt: "Hoàn thành bằng nội dung thay thế",
+    saving: "Đang lưu tiến độ…",
+    saved: (n: number) => `Đã lưu ${n}%`,
+    resumeFrom: (s: number) => `tiếp tục từ ${s} giây`,
+    unsaved: (s: number) => `Chưa lưu: ${s} giây`,
+    saveAgain: "Thử lưu lại",
+  },
+  en: {
+    loadFailed: "The video could not be loaded",
+    saveFailed: "Progress could not be saved",
+    region: "Video content",
+    preparing: "Preparing the video…",
+    unsupported: "This browser cannot play the video.",
+    failedWithAlt: "The video cannot play right now. You can still learn from the published alternative.",
+    failedNoAlt: "The video cannot play right now. Reload the page or tell your teacher.",
+    hideTranscript: "Hide transcript",
+    showTranscript: "Show transcript",
+    hideAlt: "Hide the alternative",
+    showAlt: "Show the alternative",
+    transcript: "Transcript",
+    alternative: "Alternative content",
+    finishWithAlt: "Finish with the alternative",
+    saving: "Saving progress…",
+    saved: (n: number) => `Saved ${n}%`,
+    resumeFrom: (s: number) => `resume from ${s} s`,
+    unsaved: (s: number) => `Not saved: ${s} s`,
+    saveAgain: "Try saving again",
+  },
+});
+const t = text();
 
 type VideoObservation = {
   positionSeconds: number;
@@ -64,7 +111,7 @@ export function VideoLearningStep({
         if (!active) return;
         setSourceLoading(false);
         setMediaUnavailable(true);
-        setSaveError(error instanceof Error ? error.message : "Không tải được video");
+        setSaveError(error instanceof Error ? error.message : t.loadFailed);
       });
     return () => {
       active = false;
@@ -103,7 +150,7 @@ export function VideoLearningStep({
       succeeded = true;
     } catch (error) {
       setSaveState("error");
-      setSaveError(error instanceof Error ? error.message : "Chưa lưu được tiến độ");
+      setSaveError(error instanceof Error ? error.message : t.saveFailed);
     } finally {
       pendingRef.current = false;
       if (succeeded && flushRequestedRef.current && unsentRef.current) {
@@ -151,7 +198,7 @@ export function VideoLearningStep({
       onReconciled(updated.pathway ?? updated);
     } catch (error) {
       setSaveState("error");
-      setSaveError(error instanceof Error ? error.message : "Chưa lưu được tiến độ");
+      setSaveError(error instanceof Error ? error.message : t.saveFailed);
     } finally {
       pendingRef.current = false;
     }
@@ -165,8 +212,8 @@ export function VideoLearningStep({
   const hasUnsentEvidence = localPosition > officialPosition || Boolean(unsentRef.current?.ended);
 
   return (
-    <section className="video-learning" aria-label="Nội dung video">
-      {sourceLoading && <p className="video-placeholder">Đang chuẩn bị video…</p>}
+    <section className="video-learning" aria-label={t.region}>
+      {sourceLoading && <p className="video-placeholder">{t.preparing}</p>}
       {source && (
         <video
           ref={videoRef}
@@ -184,14 +231,14 @@ export function VideoLearningStep({
           onEnded={(event) => observe(event.currentTarget, true, true)}
           onError={() => setMediaUnavailable(true)}
         >
-          Trình duyệt không hỗ trợ phát video.
+          {t.unsupported}
         </video>
       )}
       {mediaUnavailable && (
         <p className="video-unavailable" role="status">
           {step.resource?.equivalentText
-            ? "Video hiện không phát được. Bạn vẫn có thể học bằng nội dung thay thế đã xuất bản."
-            : "Video hiện không phát được. Hãy tải lại trang hoặc báo cho giáo viên."}
+            ? t.failedWithAlt
+            : t.failedNoAlt}
         </p>
       )}
       <div className="video-actions">
@@ -203,7 +250,7 @@ export function VideoLearningStep({
             aria-controls={`video-transcript-${step.id}`}
             onClick={() => setShowTranscript((value) => !value)}
           >
-            {showTranscript ? "Ẩn bản chép lời" : "Xem bản chép lời"}
+            {showTranscript ? t.hideTranscript : t.showTranscript}
           </button>
         )}
         {step.resource?.equivalentText && (
@@ -214,14 +261,14 @@ export function VideoLearningStep({
             aria-controls={`video-equivalent-${step.id}`}
             onClick={() => setShowEquivalent((value) => !value)}
           >
-            {showEquivalent ? "Ẩn nội dung thay thế" : "Xem nội dung thay thế"}
+            {showEquivalent ? t.hideAlt : t.showAlt}
           </button>
         )}
       </div>
-      {showTranscript && step.resource?.transcript && !hideTranscript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>Bản chép lời</h5><p>{step.resource.transcript}</p></div>}
+      {showTranscript && step.resource?.transcript && !hideTranscript && <div id={`video-transcript-${step.id}`} className="video-transcript"><h5>{t.transcript}</h5><p>{step.resource.transcript}</p></div>}
       {showEquivalent && step.resource?.equivalentText && (
         <div id={`video-equivalent-${step.id}`} className="video-equivalent">
-          <h5>Nội dung thay thế</h5>
+          <h5>{t.alternative}</h5>
           <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.resource.equivalentText) }} />
           {step.state !== "COMPLETED" && (
             <button
@@ -230,18 +277,18 @@ export function VideoLearningStep({
               disabled={saveState === "saving"}
               onClick={() => void completeFallback()}
             >
-              Hoàn thành bằng nội dung thay thế
+              {t.finishWithAlt}
             </button>
           )}
         </div>
       )}
       <div className="video-save-status" role={saveState === "error" ? "alert" : "status"}>
-        {saveState === "saving" && "Đang lưu tiến độ…"}
-        {saveState === "saved" && `Đã lưu ${step.progressValue}%`}
-        {saveState === "idle" && `Đã lưu ${step.progressValue}%${officialPosition ? ` · tiếp tục từ ${officialPosition} giây` : ""}`}
-        {hasUnsentEvidence && saveState !== "saving" && saveState !== "error" && ` · Chưa lưu: ${localPosition} giây`}
+        {saveState === "saving" && t.saving}
+        {saveState === "saved" && t.saved(step.progressValue)}
+        {saveState === "idle" && `${t.saved(step.progressValue)}${officialPosition ? ` · ${t.resumeFrom(officialPosition)}` : ""}`}
+        {hasUnsentEvidence && saveState !== "saving" && saveState !== "error" && ` · ${t.unsaved(localPosition)}`}
         {saveState === "error" && (
-          <><span>{saveError || "Chưa lưu được tiến độ"}</span><button type="button" onClick={retry}>Thử lưu lại</button></>
+          <><span>{saveError || t.saveFailed}</span><button type="button" onClick={retry}>{t.saveAgain}</button></>
         )}
       </div>
     </section>

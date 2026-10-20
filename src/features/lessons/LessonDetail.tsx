@@ -11,6 +11,91 @@ import { VideoLearningStep } from "./VideoLearningStep";
 import { StudyCardsStep } from "./StudyCardsStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    opening: "Đang mở bài học…",
+    backToLibrary: "Quay lại thư viện",
+    cannotOpen: "Không mở được bài học",
+    notPublished: "Bài học chưa được phát hành hoặc không tồn tại.",
+    backToLessons: "Quay lại bài học",
+    reading: "Bài đọc",
+    video: "Video bài giảng",
+    exercise: "Bài tập luyện tập",
+    cards: "Thẻ ôn tập",
+    materials: "Tài liệu",
+    grade: (grade: number) => `LỚP ${grade}`,
+    sample: "Dữ liệu mẫu",
+    contentTabs: "Nội dung bài học",
+    completed: "Đã hoàn thành",
+    readingRegion: "Nội dung bài đọc có thể cuộn",
+    objective: "MỤC TIÊU BÀI HỌC",
+    prerequisites: "Kiến thức nền",
+    loadingContent: "Đang tải nội dung và tiến độ bài học…",
+    openNotice: "Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.",
+    savingProgress: "Đang lưu tiến độ…",
+    saveAgain: "Thử lưu lại",
+    finishReading: "Hoàn thành phần đọc",
+    readingDone: "Đã hoàn thành phần đọc. Tiến độ đã được lưu.",
+    loadingVideo: "Đang tải video bài giảng…",
+    videoUnavailable: "Video bài giảng hiện chưa khả dụng.",
+    cardsLocked: "Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.",
+    lessonMaterials: "Tài liệu bài học",
+    textbook: "Sách giáo khoa",
+    externalNote: "Tài liệu tham khảo bên ngoài · trang in và trang PDF có thể khác nhau.",
+    material: (n: number) => `Tài liệu ${n}`,
+    nextHint: "Sau khi hoàn thành bài đọc, tiếp tục với tab Video bài giảng và thẻ ôn tập.",
+    lessonDone: "Em đã hoàn thành nội dung bài học.",
+    continueAssignment: "Tiếp tục bài được giao",
+    passed: "Đã đạt",
+    lastNotPassed: "Lần trước chưa đạt",
+    needs: (n: number) => `cần ${n}%`,
+    grading: "Đang chấm…",
+    submitExercise: "Nộp bài luyện tập",
+  },
+  en: {
+    opening: "Opening the lesson…",
+    backToLibrary: "Back to the library",
+    cannotOpen: "The lesson could not be opened",
+    notPublished: "The lesson is not published or does not exist.",
+    backToLessons: "Back to lessons",
+    reading: "Reading",
+    video: "Lesson video",
+    exercise: "Practice exercise",
+    cards: "Review cards",
+    materials: "Materials",
+    grade: (grade: number) => `GRADE ${grade}`,
+    sample: "Sample data",
+    contentTabs: "Lesson content",
+    completed: "Completed",
+    readingRegion: "Scrollable reading content",
+    objective: "LESSON OBJECTIVE",
+    prerequisites: "Prerequisites",
+    loadingContent: "Loading the lesson content and progress…",
+    openNotice: "This is open curriculum content; reading and video progress are saved on their own, no assignment needed.",
+    savingProgress: "Saving progress…",
+    saveAgain: "Try saving again",
+    finishReading: "Finish the reading",
+    readingDone: "Reading finished. Progress saved.",
+    loadingVideo: "Loading the lesson video…",
+    videoUnavailable: "The lesson video is not available yet.",
+    cardsLocked: "Finish the content and video first to open the study cards.",
+    lessonMaterials: "Lesson materials",
+    textbook: "Textbook",
+    externalNote: "External reference · printed and PDF page numbers may differ.",
+    material: (n: number) => `Material ${n}`,
+    nextHint: "After the reading, continue with the Lesson video tab and the review cards.",
+    lessonDone: "You have finished the lesson content.",
+    continueAssignment: "Continue the assignment",
+    passed: "Passed",
+    lastNotPassed: "Last attempt not passed",
+    needs: (n: number) => `needs ${n}%`,
+    grading: "Grading…",
+    submitExercise: "Submit the exercise",
+  },
+});
+const t = text();
 
 export function LessonDetail() {
   const { id = "" } = useParams();
@@ -57,9 +142,9 @@ export function LessonDetail() {
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
   const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url));
 
-  if ((assignmentId ? videoPathway.isLoading : lessons.isLoading)) return <PageLoader message="Đang mở bài học…" />;
-  if ((assignmentId ? videoPathway.error : lessons.error) && !lesson) return <><ErrorBox error={assignmentId ? videoPathway.error : lessons.error} /><Link className="text-button" to="/lessons">Quay lại thư viện</Link></>;
-  if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học chưa được phát hành hoặc không tồn tại.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
+  if ((assignmentId ? videoPathway.isLoading : lessons.isLoading)) return <PageLoader message={t.opening} />;
+  if ((assignmentId ? videoPathway.error : lessons.error) && !lesson) return <><ErrorBox error={assignmentId ? videoPathway.error : lessons.error} /><Link className="text-button" to="/lessons">{t.backToLibrary}</Link></>;
+  if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.cannotOpen}</h1><p>{t.notPublished}</p><Link className="primary" to="/lessons">{t.backToLessons}</Link></section>;
 
   const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
   const hasCards = user.role === "STUDENT" && Boolean(studyCardsStep);
@@ -67,11 +152,11 @@ export function LessonDetail() {
   const learningObjective = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.learningObjective ?? "") ? "" : lesson.learningObjective;
   const prerequisites = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.prerequisites ?? "") ? "" : lesson.prerequisites;
   const tabs = [
-    { id: "reading" as const, label: "Bài đọc", icon: BookOpen },
-    ...(hasVideo ? [{ id: "video" as const, label: "Video bài giảng", icon: Play }] : []),
-    ...(basicExerciseStep ? [{ id: "exercise" as const, label: "Bài tập luyện tập", icon: Check }] : []),
-    ...(hasCards ? [{ id: "cards" as const, label: "Thẻ ôn tập", icon: Layers3 }] : []),
-    ...(hasMaterials ? [{ id: "materials" as const, label: "Tài liệu", icon: FileText }] : []),
+    { id: "reading" as const, label: t.reading, icon: BookOpen },
+    ...(hasVideo ? [{ id: "video" as const, label: t.video, icon: Play }] : []),
+    ...(basicExerciseStep ? [{ id: "exercise" as const, label: t.exercise, icon: Check }] : []),
+    ...(hasCards ? [{ id: "cards" as const, label: t.cards, icon: Layers3 }] : []),
+    ...(hasMaterials ? [{ id: "materials" as const, label: t.materials, icon: FileText }] : []),
   ];
   const changeTabByKeyboard = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
@@ -83,50 +168,50 @@ export function LessonDetail() {
   const materialsTab = tabs.some((tab) => tab.id === "materials");
 
   return <div className="lesson-detail-page">
-    <PageHeading eyebrow={`${lesson.subject.name} · LỚP ${lesson.grade}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">Dữ liệu mẫu</span> : undefined} />
-    <div className="lesson-detail-tabs" role="tablist" aria-label="Nội dung bài học">
+    <PageHeading eyebrow={`${lesson.subject.name} · ${t.grade(lesson.grade)}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
+    <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
         {tabs.map((tab, index) => {
         const Icon = tab.icon;
-        return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label="Đã hoàn thành" />}</button>;
+        return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label={t.completed} />}</button>;
       })}
     </div>
     {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
-      <div className="lesson-reading-scroll" role="region" aria-label="Nội dung bài đọc có thể cuộn" tabIndex={0}>
-        {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">MỤC TIÊU BÀI HỌC</span><p>{learningObjective}</p></>}{prerequisites && <small>Kiến thức nền · {prerequisites}</small>}</div>}
-        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
-      {user.role === "STUDENT" && !assignmentId && <p className="notice">Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.</p>}
+      <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
+        {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><p>{learningObjective}</p></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
+        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+      {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
       </div>
       {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
         {completeReading.error && <ErrorBox error={completeReading.error} />}
-        <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? "Đang lưu tiến độ…" : completeReading.error ? "Thử lưu lại" : "Hoàn thành phần đọc"}</button>
+        <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
       </div>}
-      {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">Đã hoàn thành phần đọc. Tiến độ đã được lưu.</p>}
+      {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
     </section>}
     {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
-      <h2 className="lesson-tab-title">Video bài giảng</h2>
+      <h2 className="lesson-tab-title">{t.video}</h2>
       {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
-        : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label="Video bài giảng" />
-          : videoPathway.isLoading ? <p className="video-placeholder" role="status">Đang tải video bài giảng…</p>
+        : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label={t.video} />
+          : videoPathway.isLoading ? <p className="video-placeholder" role="status">{t.loadingVideo}</p>
             : assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} />
-              : <p className="notice">Video bài giảng hiện chưa khả dụng.</p>}
+              : <p className="notice">{t.videoUnavailable}</p>}
     </section>}
     {activeTab === "exercise" && basicExerciseStep && <section id="lesson-panel-exercise" role="tabpanel" aria-labelledby="lesson-tab-exercise" className="panel lesson-tab-panel">
-      <h2 className="lesson-tab-title">Bài tập luyện tập</h2>
+      <h2 className="lesson-tab-title">{t.exercise}</h2>
       <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
     </section>}
     {activeTab === "cards" && studyCardsStep && <section id="lesson-panel-cards" role="tabpanel" aria-labelledby="lesson-tab-cards" className="panel lesson-tab-panel lesson-study-cards">
-      <h2 className="lesson-tab-title">Thẻ ôn tập</h2>
-      {studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.</p> : assignmentId && <StudyCardsStep lessonId={id} assignmentId={assignmentId} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id, assignmentId], updatedPathway)} />}
+      <h2 className="lesson-tab-title">{t.cards}</h2>
+      {studyCardsStep.state === "LOCKED" ? <p className="pathway-lock">{t.cardsLocked}</p> : assignmentId && <StudyCardsStep lessonId={id} assignmentId={assignmentId} step={studyCardsStep} onReconciled={(updatedPathway) => queryClient.setQueryData(["lesson-pathway", id, assignmentId], updatedPathway)} />}
     </section>}
     {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
-      <h2>Tài liệu bài học</h2>
-      {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>Sách giáo khoa · {lesson.subject.name}</b><small>Tài liệu tham khảo bên ngoài · trang in và trang PDF có thể khác nhau.</small></span><ArrowRight size={18} /></Link>}
-      {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => material.url?.startsWith("asset:") ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || `Tài liệu ${index + 1}`} <ExternalLink size={14} /></a>)}
+      <h2>{t.lessonMaterials}</h2>
+      {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>{t.textbook} · {lesson.subject.name}</b><small>{t.externalNote}</small></span><ArrowRight size={18} /></Link>}
+      {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => material.url?.startsWith("asset:") ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || t.material(index + 1)} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || t.material(index + 1)} <ExternalLink size={14} /></a>)}
       <ErrorBox error={materialOpen.error} />
       {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
     </section>}
-    {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">Sau khi hoàn thành bài đọc, tiếp tục với tab Video bài giảng và thẻ ôn tập.</p>}
-    {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>Tiếp tục bài được giao <ArrowRight size={16} /></Link>}</div>}
+    {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">{t.nextHint}</p>}
+    {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>{t.lessonDone}</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>{t.continueAssignment} <ArrowRight size={16} /></Link>}</div>}
   </div>;
 }
 
@@ -146,8 +231,8 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
       {question.options.map((option: any) => <label className="check" key={option.id}><input type="radio" name={question.id} value={option.id} checked={answers[question.id] === option.id} onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))} required />{option.text}</label>)}
     </fieldset>)}
     <ErrorBox error={attempt.error} />
-    {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? "Đã đạt" : "Lần trước chưa đạt"}: {step.exercise.score}% · cần {step.exercise.passThreshold}%</p>}
-    <button className="primary" type="submit" disabled={attempt.isPending || Object.keys(answers).length !== exercise.questions.length}>{attempt.isPending ? "Đang chấm…" : "Nộp bài luyện tập"}</button>
+    {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}% · {t.needs(step.exercise.passThreshold)}</p>}
+    <button className="primary" type="submit" disabled={attempt.isPending || Object.keys(answers).length !== exercise.questions.length}>{attempt.isPending ? t.grading : t.submitExercise}</button>
   </form>;
 }
 

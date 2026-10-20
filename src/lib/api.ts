@@ -1,5 +1,11 @@
 import { create } from "zustand";
 import { apiErrorMessage } from "../i18n/errors";
+import { defineText } from "../i18n";
+
+const text = defineText({
+  vi: { materialFailed: "Không mở được học liệu", videoFailed: "Không tải được video" },
+  en: { materialFailed: "The learning material could not be opened", videoFailed: "The video could not be loaded" },
+});
 export type User = {
   id: string;
   username?: string | null;
@@ -352,7 +358,7 @@ export async function openMaterial(url: string) {
     const r = await fetch(base + "/files/" + url.slice(6), {
       headers: { Authorization: "Bearer " + useAuth.getState().token },
     });
-    if (!r.ok) throw new Error("Không mở được học liệu");
+    if (!r.ok) throw new Error(text().materialFailed);
     const blob = URL.createObjectURL(await r.blob());
     if (win) win.location.href = blob;
     setTimeout(() => URL.revokeObjectURL(blob), 60000);
@@ -373,7 +379,7 @@ export async function inlineMaterial(url: string): Promise<InlineMaterial> {
   });
   let response = await request();
   if (response.status === 401 && await restore()) response = await request();
-  if (!response.ok) throw new Error("Không tải được video");
+  if (!response.ok) throw new Error(text().videoFailed);
 
   const src = URL.createObjectURL(await response.blob());
   return { src, revoke: () => URL.revokeObjectURL(src) };

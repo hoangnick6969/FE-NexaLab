@@ -6,6 +6,147 @@ import { api, type StudentPathway, type User } from "../../lib/api";
 import { Badge, Empty, ErrorBox, verdictLabel, InlineLoader } from "../../components/ui";
 import { LabCards } from "../labs/LabLibrary";
 import { labInfo } from "../labs/lab-info";
+import { defineText, formatDate } from "../../i18n";
+import { commonText } from "../../i18n/common";
+
+const text = defineText({
+  vi: {
+    stepNames: { READING: "Đọc nội dung", VIDEO: "Xem video", STUDY_CARDS: "Ôn thẻ ghi nhớ", QUIZ: "Làm bài kiểm tra nhỏ", LAB: "Bắt đầu thực hành", CHALLENGE: "Mở thử thách" } as Record<string, string>,
+    continueNames: { READING: "Bắt đầu đọc bài", VIDEO: "Xem nội dung video", STUDY_CARDS: "Bắt đầu ôn thẻ", QUIZ: "Làm bài kiểm tra nhỏ", LAB: "Bắt đầu thực hành", CHALLENGE: "Bắt đầu thử thách" } as Record<string, string>,
+    weekdays: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+    eyebrow: (grade: number) => `KHÔNG GIAN HỌC TẬP · LỚP ${grade}`,
+    hello: (name: string) => `Chào ${name}`,
+    intro: "Bài học, bài tập và những lần em tự thử.",
+    science: "KHOA HỌC TỰ NHIÊN",
+    summary: "Tóm tắt hoạt động học tập",
+    lessonsDone: "Bài học hoàn thành",
+    loadingProgress: "Đang tải tiến độ",
+    loadFailed: "Chưa tải được dữ liệu",
+    seeProgress: "Xem tiến độ của em",
+    noneCompleted: "Chưa hoàn thành bài nào",
+    noLearningData: "Chưa có dữ liệu học",
+    assignmentsLabel: "Bài tập",
+    loadingAssigned: "Đang tải bài giao",
+    dueSoonFirst: "Sắp đến hạn trước",
+    noAssigned: "Chưa có bài được giao",
+    simAttempts: "Lượt thử mô phỏng",
+    loadingHistory: "Đang tải lịch sử",
+    seePracticeHistory: "Xem lịch sử thực hành",
+    noAttempts: "Chưa có lần thử nào",
+    lessonsAndAssignments: "BÀI HỌC & BÀI TẬP",
+    startFromBasics: "BẮT ĐẦU TỪ KIẾN THỨC NỀN",
+    findingNext: "Đang tìm bài học tiếp theo",
+    yourNext: "Bài học tiếp theo của em",
+    checking: "Đang kiểm tra bài tập của em.",
+    howTo: "Đọc, xem nội dung và làm bài kiểm tra nhỏ trước khi mở phần thực hành.",
+    stepOf: (n: number, total: number) => `Bước ${n}/${total}`,
+    allSeen: "Em đã xem hết các bước trong bài này.",
+    lessonGroup: "Bài học",
+    assignmentGroup: "Bài tập",
+    reviewPathway: "Xem lại lộ trình bài học",
+    openAssignment: "Mở bài tập",
+    chooseLesson: "Chọn bài học để bắt đầu",
+    pathwayLabel: "Lộ trình học tập và bài tập",
+    stepsDone: (done: number, total: number) => `${done}/${total} bước`,
+    unlockQuiz: "Hoàn thành bài kiểm tra để mở khóa.",
+    unlockPrevious: "Hoàn thành bước trước để mở khóa.",
+    yourActivity: "HOẠT ĐỘNG CỦA EM",
+    thisWeek: "Tuần này",
+    loadingShort: "Đang tải…",
+    activeDays: (n: number) => `${n} ngày có hoạt động`,
+    noActivity: "Chưa có hoạt động tuần này",
+    loadingActivity: "Đang tải dữ liệu hoạt động…",
+    activityFailed: "Chưa thể tải hoạt động tuần này.",
+    weeklyAria: (list: string) => `Hoạt động từ thứ Hai đến Chủ nhật: ${list}`,
+    dayCount: (day: string, n: number) => `${day} ${n} lượt`,
+    dayTitle: (date: string, n: number) => `${date}: ${n} lượt ghi nhận`,
+    noActivityDot: "Chưa có hoạt động tuần này.",
+    afterLearning: "SAU KHI ĐÃ HỌC",
+    simAndPractice: "Mô phỏng và thực hành",
+    seeAssignments: "Xem bài tập",
+    relatedIntro: "Mỗi mô phỏng gắn với kiến thức em vừa học. Hoàn thành các bước nền tảng để mở phần thực hành phù hợp.",
+    byDueDate: "THEO HẠN HOÀN THÀNH",
+    loadingAssignedLong: "Đang nạp bài được giao…",
+    retry: "Thử lại",
+    overdueStillOpen: "Đã quá hạn · vẫn có thể học",
+    noAssignments: "Chưa có bài tập được giao.",
+    openAssignmentList: "Mở danh sách bài tập",
+    yourAttempts: "NHỮNG LẦN EM ĐÃ THỬ",
+    recent: "Gần đây",
+    allPracticeHistory: "Xem toàn bộ lịch sử thực hành",
+    loadingPracticeHistory: "Đang nạp lịch sử thực hành…",
+    practiceAttempt: "Lượt thực hành",
+    noRecordedAttempts: "Chưa có lần thử nào được ghi lại.",
+  },
+  en: {
+    stepNames: { READING: "Read the content", VIDEO: "Watch the video", STUDY_CARDS: "Review study cards", QUIZ: "Take the short quiz", LAB: "Start the practice", CHALLENGE: "Open the challenge" },
+    continueNames: { READING: "Start reading", VIDEO: "Watch the video", STUDY_CARDS: "Start the study cards", QUIZ: "Take the short quiz", LAB: "Start the practice", CHALLENGE: "Start the challenge" },
+    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    eyebrow: (grade: number) => `LEARNING SPACE · GRADE ${grade}`,
+    hello: (name: string) => `Hi ${name}`,
+    intro: "Lessons, assignments and your own attempts.",
+    science: "NATURAL SCIENCE",
+    summary: "Learning activity summary",
+    lessonsDone: "Lessons completed",
+    loadingProgress: "Loading progress",
+    loadFailed: "Could not load data",
+    seeProgress: "See your progress",
+    noneCompleted: "No lessons completed yet",
+    noLearningData: "No learning data yet",
+    assignmentsLabel: "Assignments",
+    loadingAssigned: "Loading assigned work",
+    dueSoonFirst: "Soonest due first",
+    noAssigned: "Nothing assigned yet",
+    simAttempts: "Simulation attempts",
+    loadingHistory: "Loading history",
+    seePracticeHistory: "See practice history",
+    noAttempts: "No attempts yet",
+    lessonsAndAssignments: "LESSONS & ASSIGNMENTS",
+    startFromBasics: "START FROM THE BASICS",
+    findingNext: "Finding your next lesson",
+    yourNext: "Your next lesson",
+    checking: "Checking your assignments.",
+    howTo: "Read, watch and take the short quiz before the practice opens.",
+    stepOf: (n: number, total: number) => `Step ${n}/${total}`,
+    allSeen: "You have seen every step of this lesson.",
+    lessonGroup: "Lesson",
+    assignmentGroup: "Assignment",
+    reviewPathway: "Review the lesson pathway",
+    openAssignment: "Open the assignment",
+    chooseLesson: "Choose a lesson to start",
+    pathwayLabel: "Learning and assignment pathway",
+    stepsDone: (done: number, total: number) => `${done}/${total} steps`,
+    unlockQuiz: "Pass the quiz to unlock.",
+    unlockPrevious: "Finish the previous step to unlock.",
+    yourActivity: "YOUR ACTIVITY",
+    thisWeek: "This week",
+    loadingShort: "Loading…",
+    activeDays: (n: number) => `${n} active ${n === 1 ? "day" : "days"}`,
+    noActivity: "No activity this week",
+    loadingActivity: "Loading activity…",
+    activityFailed: "This week's activity could not be loaded.",
+    weeklyAria: (list: string) => `Activity from Monday to Sunday: ${list}`,
+    dayCount: (day: string, n: number) => `${day} ${n}`,
+    dayTitle: (date: string, n: number) => `${date}: ${n} recorded`,
+    noActivityDot: "No activity this week.",
+    afterLearning: "AFTER LEARNING",
+    simAndPractice: "Simulations and practice",
+    seeAssignments: "See assignments",
+    relatedIntro: "Each simulation builds on what you just learned. Finish the basic steps to open the matching practice.",
+    byDueDate: "BY DUE DATE",
+    loadingAssignedLong: "Loading assigned work…",
+    retry: "Try again",
+    overdueStillOpen: "Overdue · still open",
+    noAssignments: "No assignments yet.",
+    openAssignmentList: "Open the assignment list",
+    yourAttempts: "YOUR ATTEMPTS",
+    recent: "Recent",
+    allPracticeHistory: "See all practice history",
+    loadingPracticeHistory: "Loading practice history…",
+    practiceAttempt: "Practice attempt",
+    noRecordedAttempts: "No attempts recorded yet.",
+  },
+});
 
 export function StudentDashboard({
   user,
@@ -17,6 +158,7 @@ export function StudentDashboard({
   assignments: any;
 }) {
   const reduceMotion = useReducedMotion();
+  const t = text();
   const assignment = assignments.data?.[0];
   const assignmentDetail = useQuery<any>({
     queryKey: ["assignment", assignment?.id],
@@ -35,22 +177,8 @@ export function StudentDashboard({
   const attempts = stats.data?.attempts ?? [];
   const pathway = pathwayQuery.data;
   const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
-  const stepNames: Record<string, string> = {
-    READING: "Đọc nội dung",
-    VIDEO: "Xem video",
-    STUDY_CARDS: "Ôn thẻ ghi nhớ",
-    QUIZ: "Làm bài kiểm tra nhỏ",
-    LAB: "Bắt đầu thực hành",
-    CHALLENGE: "Mở thử thách",
-  };
-  const continueNames: Record<string, string> = {
-    READING: "Bắt đầu đọc bài",
-    VIDEO: "Xem nội dung video",
-    STUDY_CARDS: "Bắt đầu ôn thẻ",
-    QUIZ: "Làm bài kiểm tra nhỏ",
-    LAB: "Bắt đầu thực hành",
-    CHALLENGE: "Bắt đầu thử thách",
-  };
+  const stepNames: Record<string, string> = t.stepNames;
+  const continueNames: Record<string, string> = t.continueNames;
   const subjectName = pathway?.lesson.subject.name;
   const subjectTone = subjectName?.includes("Vật lý")
     ? "physics"
@@ -67,7 +195,7 @@ export function StudentDashboard({
   const weeklyActivity = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + index);
-    return { date, label: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index], count: 0 };
+    return { date, label: t.weekdays[index], count: 0 };
   });
   const addActivityDate = (value: string) => {
     const date = new Date(value);
@@ -83,36 +211,36 @@ export function StudentDashboard({
     <div className="student-dashboard">
       <header className="student-dashboard-heading">
         <div>
-          <p className="eyebrow">KHÔNG GIAN HỌC TẬP · LỚP {user.grade}</p>
-          <h1>Chào {user.fullName.split(" ").at(-1)}</h1>
-          <p className="student-heading-copy">Bài học, bài tập và những lần em tự thử.</p>
+          <p className="eyebrow">{t.eyebrow(user.grade)}</p>
+          <h1>{t.hello(user.fullName.split(" ").at(-1) ?? "")}</h1>
+          <p className="student-heading-copy">{t.intro}</p>
         </div>
-        <Badge tone="outline">KHOA HỌC TỰ NHIÊN</Badge>
+        <Badge tone="outline">{t.science}</Badge>
       </header>
 
-      <section className="student-stats" aria-label="Tóm tắt hoạt động học tập">
+      <section className="student-stats" aria-label={t.summary}>
         <StudentStat
-          label="Bài học hoàn thành"
+          label={t.lessonsDone}
           value={stats.isLoading || stats.error || !progress.length ? "—" : lessonCount}
-          detail={stats.isLoading ? "Đang tải tiến độ" : stats.error ? "Chưa tải được dữ liệu" : progress.length ? lessonCount ? "Xem tiến độ của em" : "Chưa hoàn thành bài nào" : "Chưa có dữ liệu học"}
+          detail={stats.isLoading ? t.loadingProgress : stats.error ? t.loadFailed : progress.length ? lessonCount ? t.seeProgress : t.noneCompleted : t.noLearningData}
           icon={<BookOpen />}
           to="/progress"
           reduceMotion={reduceMotion}
           index={0}
         />
         <StudentStat
-          label="Bài tập"
+          label={t.assignmentsLabel}
           value={assignments.isLoading || assignments.error || !assignments.data?.length ? "—" : assignments.data.length}
-          detail={assignments.isLoading ? "Đang tải bài giao" : assignments.error ? "Chưa tải được dữ liệu" : assignments.data?.length ? "Sắp đến hạn trước" : "Chưa có bài được giao"}
+          detail={assignments.isLoading ? t.loadingAssigned : assignments.error ? t.loadFailed : assignments.data?.length ? t.dueSoonFirst : t.noAssigned}
           icon={<ClipboardList />}
           to="/assignments"
           reduceMotion={reduceMotion}
           index={1}
         />
         <StudentStat
-          label="Lượt thử mô phỏng"
+          label={t.simAttempts}
           value={stats.isLoading || stats.error || !attempts.length ? "—" : attempts.length}
-          detail={stats.isLoading ? "Đang tải lịch sử" : stats.error ? "Chưa tải được dữ liệu" : attempts.length ? "Xem lịch sử thực hành" : "Chưa có lần thử nào"}
+          detail={stats.isLoading ? t.loadingHistory : stats.error ? t.loadFailed : attempts.length ? t.seePracticeHistory : t.noAttempts}
           icon={<FlaskConical />}
           to="/progress"
           reduceMotion={reduceMotion}
@@ -131,40 +259,40 @@ export function StudentDashboard({
           <section className={`student-continue-card subject-${subjectTone}`}>
             <div className="student-continue-copy">
               <span className="student-card-kicker">
-                {assignment ? subjectName || "BÀI HỌC & BÀI TẬP" : "BẮT ĐẦU TỪ KIẾN THỨC NỀN"}
+                {assignment ? subjectName || t.lessonsAndAssignments : t.startFromBasics}
               </span>
               <h2>
                 {assignment
                   ? pathway?.lesson.title || assignmentDetail.data?.content?.title || assignment.title
                   : assignments.isLoading
-                    ? "Đang tìm bài học tiếp theo"
-                    : "Bài học tiếp theo của em"}
+                    ? t.findingNext
+                    : t.yourNext}
               </h2>
               <p>
                 {assignment
                   ? pathway?.lesson.learningObjective || assignmentDetail.data?.content?.learningObjective || assignment.classroom.name
                   : assignments.isLoading
-                    ? "Đang kiểm tra bài tập của em."
-                    : "Đọc, xem nội dung và làm bài kiểm tra nhỏ trước khi mở phần thực hành."}
+                    ? t.checking
+                    : t.howTo}
               </p>
               {pathway && nextStep && (
                 <p className="student-step-position">
-                  Bước {pathway.steps.findIndex((step) => step.id === nextStep.id) + 1}/{pathway.steps.length}
+                  {t.stepOf(pathway.steps.findIndex((step) => step.id === nextStep.id) + 1, pathway.steps.length)}
                   {" · "}{stepNames[nextStep.type]}
                 </p>
               )}
-              {pathway && !nextStep && <p className="student-step-position">Em đã xem hết các bước trong bài này.</p>}
+              {pathway && !nextStep && <p className="student-step-position">{t.allSeen}</p>}
               <Link
                 className="student-continue-action"
                 to={assignment ? (nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${lessonId}` : "/assignments/" + assignment.id) : "/lessons"}
               >
                 {assignment
                   ? nextStep
-                    ? ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) ? `Bài học · ${continueNames[nextStep.type]}` : `Bài tập · ${continueNames[nextStep.type]}`
+                    ? ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) ? `${t.lessonGroup} · ${continueNames[nextStep.type]}` : `${t.assignmentGroup} · ${continueNames[nextStep.type]}`
                     : pathway
-                      ? "Xem lại lộ trình bài học"
-                      : "Mở bài tập"
-                  : "Chọn bài học để bắt đầu"}
+                      ? t.reviewPathway
+                      : t.openAssignment
+                  : t.chooseLesson}
                 <ArrowRight size={18} />
               </Link>
               {assignmentDetail.error && <ErrorBox error={assignmentDetail.error} />}
@@ -186,12 +314,12 @@ export function StudentDashboard({
           </section>
 
           {pathway && (
-            <section className="student-pathway-card" aria-label="Lộ trình học tập và bài tập">
+            <section className="student-pathway-card" aria-label={t.pathwayLabel}>
               <div className="student-pathway-heading">
-                <div><span className="eyebrow">BÀI HỌC & BÀI TẬP</span><h3>{pathway.lesson.title}</h3></div>
-                <span>{pathway.steps.filter((step) => step.state === "COMPLETED").length}/{pathway.steps.length} bước</span>
+                <div><span className="eyebrow">{t.lessonsAndAssignments}</span><h3>{pathway.lesson.title}</h3></div>
+                <span>{t.stepsDone(pathway.steps.filter((step) => step.state === "COMPLETED").length, pathway.steps.length)}</span>
               </div>
-              {([["Bài học", ["READING", "VIDEO", "STUDY_CARDS"]], ["Bài tập", ["QUIZ", "LAB", "CHALLENGE"]]] as const).map(([groupName, types]) => <div className="student-pathway-group" key={groupName}>
+              {([[t.lessonGroup, ["READING", "VIDEO", "STUDY_CARDS"]], [t.assignmentGroup, ["QUIZ", "LAB", "CHALLENGE"]]] as const).map(([groupName, types]) => <div className="student-pathway-group" key={groupName}>
               <h4>{groupName}</h4>
               <ol className="student-pathway-steps">
                 {pathway.steps.filter((step) => (types as readonly string[]).includes(step.type)).map((step) => {
@@ -199,7 +327,7 @@ export function StudentDashboard({
                   return (
                     <li key={step.id} className={`student-pathway-step ${step.state.toLowerCase()}`}>
                       {isLocked ? (
-                        <button disabled title={step.lockReasonCode === "QUIZ_NOT_PASSED" ? "Hoàn thành bài kiểm tra để mở khóa." : "Hoàn thành bước trước để mở khóa."}>
+                        <button disabled title={step.lockReasonCode === "QUIZ_NOT_PASSED" ? t.unlockQuiz : t.unlockPrevious}>
                           <Lock size={15} strokeWidth={1.75} /><span>{stepNames[step.type]}</span>
                         </button>
                       ) : (
@@ -218,34 +346,34 @@ export function StudentDashboard({
 
           <section className="student-weekly-card" aria-labelledby="student-weekly-title">
             <div className="student-section-heading">
-              <div><p className="eyebrow">HOẠT ĐỘNG CỦA EM</p><h2 id="student-weekly-title">Tuần này</h2></div>
+              <div><p className="eyebrow">{t.yourActivity}</p><h2 id="student-weekly-title">{t.thisWeek}</h2></div>
               <span className="student-weekly-summary">
-                {stats.isLoading ? "Đang tải…" : activeDays ? `${activeDays} ngày có hoạt động` : "Chưa có hoạt động tuần này"}
+                {stats.isLoading ? t.loadingShort : activeDays ? t.activeDays(activeDays) : t.noActivity}
               </span>
             </div>
             {stats.isLoading ? (
-              <InlineLoader message="Đang tải dữ liệu hoạt động…" size="sm" />
+              <InlineLoader message={t.loadingActivity} size="sm" />
             ) : stats.error ? (
-              <Empty>Chưa thể tải hoạt động tuần này.</Empty>
+              <Empty>{t.activityFailed}</Empty>
             ) : activeDays ? (
-              <div className="student-weekly-chart" role="img" aria-label={`Hoạt động từ thứ Hai đến Chủ nhật: ${weeklyActivity.map((day) => `${day.label} ${day.count} lượt`).join(", ")}`}>
+              <div className="student-weekly-chart" role="img" aria-label={t.weeklyAria(weeklyActivity.map((day) => t.dayCount(day.label, day.count)).join(", "))}>
                 {weeklyActivity.map((day) => (
-                  <div className="student-weekly-day" key={day.label} title={`${day.date.toLocaleDateString("vi-VN")}: ${day.count} lượt ghi nhận`}>
+                  <div className="student-weekly-day" key={day.label} title={t.dayTitle(formatDate(day.date), day.count)}>
                     <span className="student-weekly-count">{day.count || ""}</span>
                     <span className="student-weekly-track"><i style={{ height: day.count ? `${Math.max(12, (day.count / maxActivity) * 100)}%` : "4px" }} /></span>
                     <span className="student-weekly-label">{day.label}</span>
                   </div>
                 ))}
               </div>
-            ) : <div className="student-weekly-empty">Chưa có hoạt động tuần này.</div>}
+            ) : <div className="student-weekly-empty">{t.noActivityDot}</div>}
           </section>
 
           <section className="student-related-work">
             <div className="student-section-heading">
-              <div><p className="eyebrow">SAU KHI ĐÃ HỌC</p><h2>Mô phỏng và thực hành</h2></div>
-            <Link to="/assignments">Xem bài tập <ArrowRight size={15} /></Link>
+              <div><p className="eyebrow">{t.afterLearning}</p><h2>{t.simAndPractice}</h2></div>
+            <Link to="/assignments">{t.seeAssignments} <ArrowRight size={15} /></Link>
             </div>
-            <p className="student-related-intro">Mỗi mô phỏng gắn với kiến thức em vừa học. Hoàn thành các bước nền tảng để mở phần thực hành phù hợp.</p>
+            <p className="student-related-intro">{t.relatedIntro}</p>
             <LabCards guided />
           </section>
         </div>
@@ -253,11 +381,11 @@ export function StudentDashboard({
         <aside className="student-dashboard-aside">
           <section id="student-exercises" className="student-side-card" aria-labelledby="student-assignments-title">
             <div className="student-section-heading">
-              <div><p className="eyebrow">THEO HẠN HOÀN THÀNH</p><h2 id="student-assignments-title">Bài tập</h2></div>
+              <div><p className="eyebrow">{t.byDueDate}</p><h2 id="student-assignments-title">{t.assignmentsLabel}</h2></div>
               <span className="student-side-count">{assignments.data?.length || "—"}</span>
             </div>
-            {assignments.isLoading ? <InlineLoader message="Đang nạp bài được giao…" size="sm" /> : assignments.error ? (
-              <div role="alert"><ErrorBox error={assignments.error} /><button onClick={() => assignments.refetch()}>Thử lại</button></div>
+            {assignments.isLoading ? <InlineLoader message={t.loadingAssignedLong} size="sm" /> : assignments.error ? (
+              <div role="alert"><ErrorBox error={assignments.error} /><button onClick={() => assignments.refetch()}>{t.retry}</button></div>
             ) : assignments.data?.length ? (
               <div className="student-list">
                 {assignments.data.map((item: any) =>
@@ -269,24 +397,24 @@ export function StudentDashboard({
                   ) : (
                     <Link key={item.id} className="student-assignment-row" to={`/assignments/${item.id}`}>
                       <span className="student-list-icon"><BookOpen size={17} /></span>
-                      <span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.dueDate ? "Hạn " + new Date(item.dueDate).toLocaleDateString("vi-VN") : "Không có hạn nộp"}</small>{item.overdue && <small className="student-overdue">Đã quá hạn · vẫn có thể học</small>}{item.notice && <small>{item.notice}</small>}</span>
+                      <span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.dueDate ? commonText().due(formatDate(item.dueDate)) : commonText().noDueDate}</small>{item.overdue && <small className="student-overdue">{t.overdueStillOpen}</small>}{item.notice && <small>{item.notice}</small>}</span>
                       <ArrowUpRight size={17} />
                     </Link>
                   ),
                 )}
               </div>
             ) : (
-              <div className="student-empty"><ClipboardList size={22} /><p>Chưa có bài tập được giao.</p><Link to="/assignments">Mở danh sách bài tập</Link></div>
+              <div className="student-empty"><ClipboardList size={22} /><p>{t.noAssignments}</p><Link to="/assignments">{t.openAssignmentList}</Link></div>
             )}
           </section>
 
           <section className="student-side-card" aria-labelledby="student-attempts-title">
             <div className="student-section-heading">
-              <div><p className="eyebrow">NHỮNG LẦN EM ĐÃ THỬ</p><h2 id="student-attempts-title">Gần đây</h2></div>
-              <Link to="/progress" aria-label="Xem toàn bộ lịch sử thực hành"><ArrowRight size={17} /></Link>
+              <div><p className="eyebrow">{t.yourAttempts}</p><h2 id="student-attempts-title">{t.recent}</h2></div>
+              <Link to="/progress" aria-label={t.allPracticeHistory}><ArrowRight size={17} /></Link>
             </div>
-            {stats.isLoading ? <InlineLoader message="Đang nạp lịch sử thực hành…" size="sm" /> : stats.error ? (
-              <div role="alert"><ErrorBox error={stats.error} /><button onClick={() => stats.refetch()}>Thử lại</button></div>
+            {stats.isLoading ? <InlineLoader message={t.loadingPracticeHistory} size="sm" /> : stats.error ? (
+              <div role="alert"><ErrorBox error={stats.error} /><button onClick={() => stats.refetch()}>{t.retry}</button></div>
             ) : recentAttempts.length ? (
               <div className="student-list">
                 {recentAttempts.map((attempt: any) => {
@@ -294,14 +422,14 @@ export function StudentDashboard({
                   return (
                     <Link className="student-attempt-row" key={attempt.id} to="/progress">
                       <span><FlaskConical size={18} /></span>
-                      <span className="student-attempt-copy"><b>{lab?.title || "Lượt thực hành"}</b><small>{new Date(attempt.createdAt).toLocaleDateString("vi-VN")}</small></span>
+                      <span className="student-attempt-copy"><b>{lab?.title || t.practiceAttempt}</b><small>{formatDate(attempt.createdAt)}</small></span>
                       <Badge tone={attempt.verdict}>{verdictLabel(attempt.verdict)}</Badge>
                     </Link>
                   );
                 })}
               </div>
             ) : (
-              <div className="student-empty"><FlaskConical size={22} /><p>Chưa có lần thử nào được ghi lại.</p></div>
+              <div className="student-empty"><FlaskConical size={22} /><p>{t.noRecordedAttempts}</p></div>
             )}
           </section>
         </aside>

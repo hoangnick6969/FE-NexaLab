@@ -9,6 +9,191 @@ import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLess
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
 import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
 import { StudentLessonsHub } from "./StudentLessonsHub";
+import { defineText, formatDate } from "../../i18n";
+import { commonText } from "../../i18n/common";
+
+const text = defineText({
+  vi: {
+    published: "Đã xuất bản",
+    draft: "Bản nháp",
+    archived: "Lưu trữ",
+    assignedBadge: "Được giao",
+    shared: "Bài học chung",
+    sharedBase: "Bài nền dùng chung",
+    privateCopy: "Bản riêng",
+    sample: "Dữ liệu mẫu",
+    inUse: "Đang được dùng",
+    customChallenge: "Thử thách tùy chỉnh",
+    naturalScience: "Khoa học tự nhiên",
+    gradeCaps: (grade: number) => `LỚP ${grade}`,
+    grade: (grade: number) => `Lớp ${grade}`,
+    openLesson: "Mở bài học",
+    enterLesson: "Vào bài học",
+    edit: "Chỉnh sửa",
+    preview: "Xem trước",
+    makeCopy: "Tạo bản riêng",
+    eyebrow: "THƯ VIỆN KIẾN THỨC",
+    title: "Bài học",
+    manageIntro: "Chọn bài học để tiếp tục.",
+    studentIntro: "Khám phá các môn học, bài học chung đã phát hành và bài được giao.",
+    createLesson: "Tạo bài học",
+    referenceBooks: "Sách tham khảo theo môn",
+    referenceTitle: "Sách tham khảo",
+    referenceIntro: "Mở sách giáo khoa trực tuyến theo môn học.",
+    subject: "Môn học",
+    chooseSubject: "Chọn môn học",
+    allSubjects: "Tất cả môn học",
+    gradeLabel: "Khối lớp",
+    chooseGrade: "Chọn khối lớp",
+    allGrades: "Tất cả khối",
+    all: "Tất cả",
+    assigned: "Được giao",
+    search: "Tìm bài học",
+    searchPlaceholder: "Tìm tên bài học…",
+    reload: "Thử tải lại",
+    retry: "Thử lại",
+    yourAssignments: "BÀI TẬP CỦA EM",
+    assignedLessons: "Bài học được giao",
+    count: (n: number) => `${n} bài`,
+    noAssigned: "Chưa có bài học nào được giao. Bài học chung vẫn mở cho em.",
+    noSharedMatch: "Không tìm thấy bài học chung phù hợp.",
+    noSharedPublished: "Chưa có bài học chung được phát hành cho lựa chọn này.",
+    subjectLibrary: "THƯ VIỆN MÔN HỌC",
+    subjects: "Các môn học",
+    subjectsIntro: "Môn học và tài liệu tham khảo đã cấu hình",
+    hasLessons: "Có bài học trong danh sách phía trên.",
+    noLessons: "Chưa có bài học được phát hành hoặc giao cho môn này.",
+    exploreLabs: "Khám phá phòng Lab nền tảng",
+    noFilterMatch: "Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.",
+    editLesson: "Chỉnh sửa bài học",
+    copyNotice: "Bản riêng tạo từ một bài khác. Thay đổi ở đây không ảnh hưởng bài gốc hay các lớp khác.",
+    lockedNotice: "Bài đang được giao hoặc đã có kết quả học tập: chỉ sửa được thông tin mô tả hoặc lưu trữ. Để đổi nội dung, câu hỏi hay phòng lab, hãy",
+    makeCopyLower: "tạo bản riêng",
+    fields: { title: "Tên bài", chapter: "Chương", topic: "Chủ đề", learningObjective: "Mục tiêu", prerequisites: "Kiến thức nền", curriculum: "Chuẩn chương trình" },
+    physics: "Vật lý",
+    biology: "Sinh học",
+    chemistry: "Hóa học",
+    attachedLab: "Lab đính kèm",
+    noneOption: "Không có",
+    circuit: "Mạch điện",
+    eye: "Mắt người",
+    reaction: "Phản ứng",
+    scope: "Phạm vi",
+    privateLesson: "Bài riêng",
+    sharedLibrary: "Thư viện chung (cần duyệt có tên)",
+    status: "Trạng thái",
+    draftOption: "Bản nháp",
+    publish: "Xuất bản",
+    archive: "Lưu trữ",
+    theory: "Nội dung lý thuyết",
+    materials: "Học liệu",
+    upload: "Tải PDF / ảnh / video (tối đa 20 MB)",
+    materialName: "Tên học liệu",
+    materialUrl: "URL video / PDF / ảnh",
+    materialType: "Loại học liệu",
+    image: "Ảnh",
+    transcript: "Bản chép lời video (bắt buộc khi xuất bản)",
+    removeMaterial: "Xóa học liệu",
+    addMaterialUrl: "Thêm học liệu URL",
+    question: (n: number) => `Câu ${n}`,
+    option: (n: number) => `Đáp án ${n}`,
+    correctAnswer: "Đáp án đúng",
+    removeQuestion: "Xóa câu hỏi",
+    addQuestion: "Thêm câu hỏi",
+    copyToChange: "Tạo bản riêng để thay đổi",
+    saveLesson: "Lưu bài học",
+  },
+  en: {
+    published: "Published",
+    draft: "Draft",
+    archived: "Archived",
+    assignedBadge: "Assigned",
+    shared: "Shared lesson",
+    sharedBase: "Shared base lesson",
+    privateCopy: "Private copy",
+    sample: "Sample data",
+    inUse: "In use",
+    customChallenge: "Custom challenge",
+    naturalScience: "Natural science",
+    gradeCaps: (grade: number) => `GRADE ${grade}`,
+    grade: (grade: number) => `Grade ${grade}`,
+    openLesson: "Open lesson",
+    enterLesson: "Go to lesson",
+    edit: "Edit",
+    preview: "Preview",
+    makeCopy: "Make a private copy",
+    eyebrow: "KNOWLEDGE LIBRARY",
+    title: "Lessons",
+    manageIntro: "Choose a lesson to continue.",
+    studentIntro: "Explore subjects, published shared lessons and assigned work.",
+    createLesson: "Create lesson",
+    referenceBooks: "Reference books by subject",
+    referenceTitle: "Reference books",
+    referenceIntro: "Open the online textbook for each subject.",
+    subject: "Subject",
+    chooseSubject: "Choose a subject",
+    allSubjects: "All subjects",
+    gradeLabel: "Grade",
+    chooseGrade: "Choose a grade",
+    allGrades: "All grades",
+    all: "All",
+    assigned: "Assigned",
+    search: "Search lessons",
+    searchPlaceholder: "Search lesson names…",
+    reload: "Reload",
+    retry: "Try again",
+    yourAssignments: "YOUR ASSIGNMENTS",
+    assignedLessons: "Assigned lessons",
+    count: (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`,
+    noAssigned: "No lessons are assigned yet. Shared lessons are still open to you.",
+    noSharedMatch: "No shared lessons match.",
+    noSharedPublished: "No shared lessons are published for this choice yet.",
+    subjectLibrary: "SUBJECT LIBRARY",
+    subjects: "Subjects",
+    subjectsIntro: "Configured subjects and references",
+    hasLessons: "Has lessons in the list above.",
+    noLessons: "No lessons are published or assigned for this subject yet.",
+    exploreLabs: "Explore the foundation labs",
+    noFilterMatch: "No lessons match the filter. Remove some filters or create your own lesson for this outcome.",
+    editLesson: "Edit lesson",
+    copyNotice: "A private copy of another lesson. Changes here do not affect the original or other classes.",
+    lockedNotice: "This lesson is assigned or has results: only its description can be edited, or it can be archived. To change content, questions or the lab,",
+    makeCopyLower: "make a private copy",
+    fields: { title: "Lesson name", chapter: "Chapter", topic: "Topic", learningObjective: "Objective", prerequisites: "Prerequisites", curriculum: "Curriculum standard" },
+    physics: "Physics",
+    biology: "Biology",
+    chemistry: "Chemistry",
+    attachedLab: "Attached lab",
+    noneOption: "None",
+    circuit: "Circuit",
+    eye: "Human eye",
+    reaction: "Reaction",
+    scope: "Scope",
+    privateLesson: "Private lesson",
+    sharedLibrary: "Shared library (needs a named review)",
+    status: "Status",
+    draftOption: "Draft",
+    publish: "Publish",
+    archive: "Archive",
+    theory: "Theory content",
+    materials: "Learning materials",
+    upload: "Upload PDF / image / video (up to 20 MB)",
+    materialName: "Material name",
+    materialUrl: "Video / PDF / image URL",
+    materialType: "Material type",
+    image: "Image",
+    transcript: "Video transcript (required to publish)",
+    removeMaterial: "Remove material",
+    addMaterialUrl: "Add a material URL",
+    question: (n: number) => `Question ${n}`,
+    option: (n: number) => `Answer ${n}`,
+    correctAnswer: "Correct answer",
+    removeQuestion: "Remove question",
+    addQuestion: "Add a question",
+    copyToChange: "Make a private copy to change it",
+    saveLesson: "Save lesson",
+  },
+});
 
 const blankLesson = {
   title: "",
@@ -40,6 +225,7 @@ export function Lessons() {
 }
 
 function LessonsLibrary({ user }: { user: any }) {
+  const t = text();
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
   const q = useQuery({
     queryKey: [manage ? "lessons" : "open-curriculum"],
@@ -126,9 +312,9 @@ function LessonsLibrary({ user }: { user: any }) {
     : filterStudentLessonCatalog(studentCatalog, filter as "all" | "assigned" | "shared", selectedSubjectId, selectedGrade, search);
   const groups = new Map<string, { chapter: string; grade: number; lessons: any[]; order: number; subjectId: string; subjectName: string }>();
   for (const lesson of lessonMatches) {
-    const chapter = lesson.chapter?.trim() || "Chưa phân chương";
+    const chapter = lesson.chapter?.trim() || commonText().noChapter;
     const key = `${lesson.subjectId}:${lesson.grade}:${chapter.toLocaleLowerCase("vi")}`;
-    const group: { chapter: string; grade: number; lessons: any[]; order: number; subjectId: string; subjectName: string } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER, subjectId: lesson.subjectId, subjectName: lesson.subject?.name ?? "Môn học" };
+    const group: { chapter: string; grade: number; lessons: any[]; order: number; subjectId: string; subjectName: string } = groups.get(key) ?? { chapter, grade: lesson.grade, lessons: [], order: Number.MAX_SAFE_INTEGER, subjectId: lesson.subjectId, subjectName: lesson.subject?.name ?? commonText().subject };
     group.lessons.push(lesson);
     group.order = Math.min(group.order, manage ? lessonNumber(lesson.title) : lesson.chapterOrder ?? Number.MAX_SAFE_INTEGER);
     groups.set(key, group);
@@ -140,32 +326,32 @@ function LessonsLibrary({ user }: { user: any }) {
     <article className={`panel lesson-card${manage ? "" : " student-lesson-card"}`} key={l.id}>
       <div className="lesson-card-top">
         <span className={`subject-icon ${khtnSubjectIds.has(l.subjectId) ? "khtn" : l.subjectId}`}><BookOpen /></span>
-        {manage ? <Badge>{l.status === "published" ? "Đã xuất bản" : l.status === "draft" ? "Bản nháp" : "Lưu trữ"}</Badge> : l.assignments?.length ? <Badge>Được giao</Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> Bài học chung</span>}
+        {manage ? <Badge>{l.status === "published" ? t.published : l.status === "draft" ? t.draft : t.archived}</Badge> : l.assignments?.length ? <Badge>{t.assignedBadge}</Badge> : <span className="student-lesson-kind"><BookOpen size={14} /> {t.shared}</span>}
       </div>
       {manage && <div className="badge-row">
-        <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? "Bài nền dùng chung" : "Bản riêng"}</Badge>
-        {l.synthetic && <Badge tone="outline">Dữ liệu mẫu</Badge>}
-        {meta.get(l.id)?.structureLocked && <Badge tone="outline">Đang được dùng</Badge>}
-        {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">Thử thách tùy chỉnh</Badge>}
+        <Badge tone="outline">{l.scope === "SHARED_LIBRARY" ? t.sharedBase : t.privateCopy}</Badge>
+        {l.synthetic && <Badge tone="outline">{t.sample}</Badge>}
+        {meta.get(l.id)?.structureLocked && <Badge tone="outline">{t.inUse}</Badge>}
+        {meta.get(l.id)?.hasChallengeVariant && <Badge tone="outline">{t.customChallenge}</Badge>}
       </div>}
-      <small className="eyebrow">{khtnSubjectIds.has(l.subjectId) ? "Khoa học tự nhiên" : l.subject.name} · LỚP {l.grade}</small>
+      <small className="eyebrow">{khtnSubjectIds.has(l.subjectId) ? t.naturalScience : l.subject.name} · {t.gradeCaps(l.grade)}</small>
       <h3>{l.title}</h3>
       {l.learningObjective && (manage || !/dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(l.learningObjective)) && <p>{l.learningObjective}</p>}
-      {!manage && <div className="student-lesson-context"><span>{l.chapter || "Chưa phân chương"}</span>{l.topic && <span>{l.topic}</span>}</div>}
+      {!manage && <div className="student-lesson-context"><span>{l.chapter || commonText().noChapter}</span>{l.topic && <span>{l.topic}</span>}</div>}
       <div className="card-footer">
-        {manage ? <button className="text-button" onClick={() => navigate(`/lessons/${l.id}`)}>Mở bài học <ArrowUpRight size={16} /></button> : l.assignments?.length ? l.assignments.map((assignment: any) => <Link className="student-lesson-open" key={assignment.id} to={`/assignments/${assignment.id}`}>{assignment.title} · {assignment.classroom.name}{assignment.dueDate ? ` · Hạn ${new Date(assignment.dueDate).toLocaleDateString("vi-VN")}` : ""} <ArrowUpRight size={16} /></Link>) : <button className="student-lesson-open" onClick={() => navigate(`/lessons/${l.id}`)}>Vào bài học <ArrowUpRight size={16} /></button>}
-        {manage && ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && <button className="text-button" onClick={() => setEdit(l)}>Chỉnh sửa</button>}
-        {manage && <button className="text-button" onClick={() => setPreviewId(l.id)}>Xem trước</button>}
-        {manage && <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>Tạo bản riêng</button>}
+        {manage ? <button className="text-button" onClick={() => navigate(`/lessons/${l.id}`)}>{t.openLesson} <ArrowUpRight size={16} /></button> : l.assignments?.length ? l.assignments.map((assignment: any) => <Link className="student-lesson-open" key={assignment.id} to={`/assignments/${assignment.id}`}>{assignment.title} · {assignment.classroom.name}{assignment.dueDate ? ` · ${commonText().due(formatDate(assignment.dueDate))}` : ""} <ArrowUpRight size={16} /></Link>) : <button className="student-lesson-open" onClick={() => navigate(`/lessons/${l.id}`)}>{t.enterLesson} <ArrowUpRight size={16} /></button>}
+        {manage && ((l.authorId === user.id && l.scope !== "SHARED_LIBRARY") || user.role === "ADMIN") && <button className="text-button" onClick={() => setEdit(l)}>{t.edit}</button>}
+        {manage && <button className="text-button" onClick={() => setPreviewId(l.id)}>{t.preview}</button>}
+        {manage && <button className="text-button" disabled={clone.isPending} onClick={() => startClone(l.id)}>{t.makeCopy}</button>}
       </div>
     </article>
   );
   return (
     <div className="student-lessons-page">
       <PageHeading
-        eyebrow="THƯ VIỆN KIẾN THỨC"
-        title="Bài học"
-        description={manage ? "Chọn bài học để tiếp tục." : "Khám phá các môn học, bài học chung đã phát hành và bài được giao."}
+        eyebrow={t.eyebrow}
+        title={t.title}
+        description={manage ? t.manageIntro : t.studentIntro}
         action={
           manage ? (
             <button
@@ -173,15 +359,15 @@ function LessonsLibrary({ user }: { user: any }) {
               onClick={() => setEdit({ ...blankLesson })}
             >
               <Plus size={16} />
-              Tạo bài học
+              {t.createLesson}
             </button>
           ) : null
         }
       />
       {subjects.data?.some((subject: any) => safeEbookUrl(subject.ebookUrl)) && (
-        <section className="subject-ebook-links" aria-label="Sách tham khảo theo môn">
-          <h2>Sách tham khảo</h2>
-          <p>Mở sách giáo khoa trực tuyến theo môn học.</p>
+        <section className="subject-ebook-links" aria-label={t.referenceBooks}>
+          <h2>{t.referenceTitle}</h2>
+          <p>{t.referenceIntro}</p>
           <div>
             {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl)).map((subject: any) => (
               <Link key={subject.id} to={`/ebooks/${subject.id}`}>
@@ -193,21 +379,21 @@ function LessonsLibrary({ user }: { user: any }) {
       )}
       <div className="filter-bar">
         {!manage && <>
-          <label className="sr-only" htmlFor="open-curriculum-subject">Môn học</label>
-          <select id="open-curriculum-subject" aria-label="Chọn môn học" value={selectedSubjectId} onChange={(event) => { setSelectedSubjectId(event.target.value); setSelectedGrade("all"); }}>
-            <option value="all">Tất cả môn học</option>
+          <label className="sr-only" htmlFor="open-curriculum-subject">{t.subject}</label>
+          <select id="open-curriculum-subject" aria-label={t.chooseSubject} value={selectedSubjectId} onChange={(event) => { setSelectedSubjectId(event.target.value); setSelectedGrade("all"); }}>
+            <option value="all">{t.allSubjects}</option>
             {subjects.data?.map((subject: any) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
           </select>
           {selectedSubjectId !== "all" && <>
-            <label className="sr-only" htmlFor="open-curriculum-grade">Khối lớp</label>
-            <select id="open-curriculum-grade" aria-label="Chọn khối lớp" value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value)}>
-              <option value="all">Tất cả khối</option>
-              {[...new Set(studentCatalog.filter((lesson) => lesson.subjectId === selectedSubjectId).map((lesson) => lesson.grade))].sort((a, b) => a - b).map((grade) => <option key={grade} value={grade}>Lớp {grade}</option>)}
+            <label className="sr-only" htmlFor="open-curriculum-grade">{t.gradeLabel}</label>
+            <select id="open-curriculum-grade" aria-label={t.chooseGrade} value={selectedGrade} onChange={(event) => setSelectedGrade(event.target.value)}>
+              <option value="all">{t.allGrades}</option>
+              {[...new Set(studentCatalog.filter((lesson) => lesson.subjectId === selectedSubjectId).map((lesson) => lesson.grade))].sort((a, b) => a - b).map((grade) => <option key={grade} value={grade}>{t.grade(grade)}</option>)}
             </select>
           </>}
         </>}
         <div className="tabs">
-          {(manage ? [["all", "Tất cả"], ["khtn", "Khoa học tự nhiên"]] : [["all", "Tất cả"], ["assigned", "Được giao"], ["shared", "Bài học chung"]]).map(([id, name]) => (
+          {(manage ? [["all", t.all], ["khtn", t.naturalScience]] : [["all", t.all], ["assigned", t.assigned], ["shared", t.shared]]).map(([id, name]) => (
             <button
               key={id}
               className={filter === id ? "active" : ""}
@@ -218,14 +404,14 @@ function LessonsLibrary({ user }: { user: any }) {
           ))}
         </div>
         <input
-          aria-label="Tìm bài học"
-          placeholder="Tìm tên bài học…"
+          aria-label={t.search}
+          placeholder={t.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
       <ErrorBox error={q.error || assignedLessonDetails.error || subjects.error || clone.error} />
-      {!manage && (q.error || assignedLessonDetails.error || subjects.error) && <button type="button" className="text-button" onClick={() => { void q.refetch(); void assignedLessonDetails.refetch(); void subjects.refetch(); }}>Thử tải lại</button>}
+      {!manage && (q.error || assignedLessonDetails.error || subjects.error) && <button type="button" className="text-button" onClick={() => { void q.refetch(); void assignedLessonDetails.refetch(); void subjects.refetch(); }}>{t.reload}</button>}
       {manage && (
         <LibraryFiltersBar
           filters={libraryFilters}
@@ -238,7 +424,7 @@ function LessonsLibrary({ user }: { user: any }) {
         <div className="load-error">
           <ErrorBox error={library.error} />
           <button type="button" onClick={() => library.refetch()}>
-            Thử lại
+            {t.retry}
           </button>
         </div>
       )}
@@ -251,30 +437,30 @@ function LessonsLibrary({ user }: { user: any }) {
       </div> : <div className="student-lesson-sections">
         {(q.isLoading || assignedLessonDetails.isLoading) && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
         {filter !== "shared" && <section className="student-lesson-section" aria-labelledby="assigned-lessons-title">
-          <header className="lesson-chapter-heading"><div><span className="eyebrow">BÀI TẬP CỦA EM</span><h2 id="assigned-lessons-title">Bài học được giao</h2></div><span className="lesson-chapter-count">{lessonMatches.filter((lesson: any) => lesson.assignments.length).length} bài</span></header>
-          {lessonMatches.filter((lesson: any) => lesson.assignments.length).length ? <div className="lesson-grid">{lessonMatches.filter((lesson: any) => lesson.assignments.length).map(renderLessonCard)}</div> : filter === "assigned" && !assignedLessonDetails.isLoading && !assignedLessonDetails.error && <Empty>Chưa có bài học nào được giao. Bài học chung vẫn mở cho em.</Empty>}
+          <header className="lesson-chapter-heading"><div><span className="eyebrow">{t.yourAssignments}</span><h2 id="assigned-lessons-title">{t.assignedLessons}</h2></div><span className="lesson-chapter-count">{t.count(lessonMatches.filter((lesson: any) => lesson.assignments.length).length)}</span></header>
+          {lessonMatches.filter((lesson: any) => lesson.assignments.length).length ? <div className="lesson-grid">{lessonMatches.filter((lesson: any) => lesson.assignments.length).map(renderLessonCard)}</div> : filter === "assigned" && !assignedLessonDetails.isLoading && !assignedLessonDetails.error && <Empty>{t.noAssigned}</Empty>}
         </section>}
         {filter !== "assigned" && <section className="student-lesson-section" aria-labelledby="shared-lessons-title">
-          <header className="lesson-chapter-heading"><div><span className="eyebrow">OPEN CURRICULUM</span><h2 id="shared-lessons-title">Bài học chung</h2></div></header>
+          <header className="lesson-chapter-heading"><div><span className="eyebrow">OPEN CURRICULUM</span><h2 id="shared-lessons-title">{t.shared}</h2></div></header>
           {chapterGroups.map((group) => {
             const lessons = lessonMatches.filter((lesson: any) => !lesson.assignments.length && lesson.subjectId === group.subjectId && lesson.grade === group.grade && lesson.chapter === group.chapter);
-            return lessons.length ? <section className="lesson-chapter-group" key={`${group.subjectId}-${group.grade}-${group.chapter}`}><header className="lesson-chapter-heading"><div><span className="eyebrow">{group.subjectName} · LỚP {group.grade}</span><h3>{group.chapter}</h3></div><span className="lesson-chapter-count">{lessons.length} bài</span></header><div className="lesson-grid">{lessons.map(renderLessonCard)}</div></section> : null;
+            return lessons.length ? <section className="lesson-chapter-group" key={`${group.subjectId}-${group.grade}-${group.chapter}`}><header className="lesson-chapter-heading"><div><span className="eyebrow">{group.subjectName} · {t.gradeCaps(group.grade)}</span><h3>{group.chapter}</h3></div><span className="lesson-chapter-count">{t.count(lessons.length)}</span></header><div className="lesson-grid">{lessons.map(renderLessonCard)}</div></section> : null;
           })}
-          {lessonMatches.filter((lesson: any) => !lesson.assignments.length).length === 0 && !q.isLoading && !q.error && <Empty>{studentCatalog.some((lesson: any) => !lesson.assignments.length) ? "Không tìm thấy bài học chung phù hợp." : "Chưa có bài học chung được phát hành cho lựa chọn này."}</Empty>}
+          {lessonMatches.filter((lesson: any) => !lesson.assignments.length).length === 0 && !q.isLoading && !q.error && <Empty>{studentCatalog.some((lesson: any) => !lesson.assignments.length) ? t.noSharedMatch : t.noSharedPublished}</Empty>}
         </section>}
       </div>}
       {!manage && <section className="student-subject-previews" aria-labelledby="subject-preview-title">
-        <div className="student-subject-previews-heading"><div><span className="eyebrow">THƯ VIỆN MÔN HỌC</span><h2 id="subject-preview-title">Các môn học</h2></div><p>Môn học và tài liệu tham khảo đã cấu hình</p></div>
-        <div className="subject-preview-grid">{subjects.data?.map((subject: any) => <article className="subject-preview-card" key={subject.id}><div className="subject-preview-title"><h3>{subject.name}</h3></div><p>{studentCatalog.some((lesson: any) => lesson.subjectId === subject.id) ? "Có bài học trong danh sách phía trên." : "Chưa có bài học được phát hành hoặc giao cho môn này."}</p></article>)}</div>
+        <div className="student-subject-previews-heading"><div><span className="eyebrow">{t.subjectLibrary}</span><h2 id="subject-preview-title">{t.subjects}</h2></div><p>{t.subjectsIntro}</p></div>
+        <div className="subject-preview-grid">{subjects.data?.map((subject: any) => <article className="subject-preview-card" key={subject.id}><div className="subject-preview-title"><h3>{subject.name}</h3></div><p>{studentCatalog.some((lesson: any) => lesson.subjectId === subject.id) ? t.hasLessons : t.noLessons}</p></article>)}</div>
       </section>}
-      {!manage && <p className="student-lab-catalog-link"><Link to="/labs">Khám phá phòng Lab nền tảng <ArrowUpRight size={16} /></Link></p>}
+      {!manage && <p className="student-lab-catalog-link"><Link to="/labs">{t.exploreLabs} <ArrowUpRight size={16} /></Link></p>}
       {filtersActive && library.data && library.data.items.length === 0 && (
-        <Empty>Không có bài học khớp bộ lọc. Hãy bỏ bớt điều kiện lọc hoặc tạo bài riêng cho yêu cầu cần đạt này.</Empty>
+        <Empty>{t.noFilterMatch}</Empty>
       )}
       {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
       {edit && (
         <Modal
-          title={edit.id ? "Chỉnh sửa bài học" : "Tạo bài học"}
+          title={edit.id ? t.editLesson : t.createLesson}
           onClose={() => setEdit(null)}
         >
           <form
@@ -284,26 +470,25 @@ function LessonsLibrary({ user }: { user: any }) {
             }}
           >
             {edit.clonedFromId && (
-              <p className="notice">Bản riêng tạo từ một bài khác. Thay đổi ở đây không ảnh hưởng bài gốc hay các lớp khác.</p>
+              <p className="notice">{t.copyNotice}</p>
             )}
             {meta.get(edit.id)?.structureLocked && (
               <p className="notice">
-                Bài đang được giao hoặc đã có kết quả học tập: chỉ sửa được thông tin mô tả hoặc lưu trữ. Để đổi nội dung,
-                câu hỏi hay phòng lab, hãy{" "}
+                {t.lockedNotice}{" "}
                 <button type="button" className="text-button" onClick={() => startClone(edit.id)}>
-                  tạo bản riêng
+                  {t.makeCopyLower}
                 </button>
                 .
               </p>
             )}
             <div className="form-grid">
               {[
-                ["title", "Tên bài"],
-                ["chapter", "Chương"],
-                ["topic", "Chủ đề"],
-                ["learningObjective", "Mục tiêu"],
-                ["prerequisites", "Kiến thức nền"],
-                ["curriculum", "Chuẩn chương trình"],
+                ["title", t.fields.title],
+                ["chapter", t.fields.chapter],
+                ["topic", t.fields.topic],
+                ["learningObjective", t.fields.learningObjective],
+                ["prerequisites", t.fields.prerequisites],
+                ["curriculum", t.fields.curriculum],
               ].map(([key, label]) => (
                 <Field
                   required
@@ -314,20 +499,20 @@ function LessonsLibrary({ user }: { user: any }) {
                 />
               ))}
               <label className="field">
-                <span>Môn học</span>
+                <span>{t.subject}</span>
                 <select
                   value={edit.subjectId}
                   onChange={(e) =>
                     setEdit({ ...edit, subjectId: e.target.value })
                   }
                 >
-                  <option value="physics">Vật lý</option>
-                  <option value="biology">Sinh học</option>
-                  <option value="chemistry">Hóa học</option>
+                  <option value="physics">{t.physics}</option>
+                  <option value="biology">{t.biology}</option>
+                  <option value="chemistry">{t.chemistry}</option>
                 </select>
               </label>
               <Field
-                label="Khối lớp"
+                label={t.gradeLabel}
                 type="number"
                 min={6}
                 max={9}
@@ -337,50 +522,50 @@ function LessonsLibrary({ user }: { user: any }) {
                 }
               />
               <label className="field">
-                <span>Lab đính kèm</span>
+                <span>{t.attachedLab}</span>
                 <select
                   value={edit.labId ?? ""}
                   onChange={(e) =>
                     setEdit({ ...edit, labId: e.target.value || null, challengeParams: null })
                   }
                 >
-                  <option value="">Không có</option>
-                  <option value="circuit">Mạch điện</option>
-                  <option value="eye">Mắt người</option>
-                  <option value="chemistry">Phản ứng</option>
+                  <option value="">{t.noneOption}</option>
+                  <option value="circuit">{t.circuit}</option>
+                  <option value="eye">{t.eye}</option>
+                  <option value="chemistry">{t.reaction}</option>
                 </select>
               </label>
               {user.role === "ADMIN" && !edit.id && (
                 <label className="field">
-                  <span>Phạm vi</span>
+                  <span>{t.scope}</span>
                   <select value={edit.scope ?? "TEACHER_PRIVATE"} onChange={(e) => setEdit({ ...edit, scope: e.target.value })}>
-                    <option value="TEACHER_PRIVATE">Bài riêng</option>
-                    <option value="SHARED_LIBRARY">Thư viện chung (cần duyệt có tên)</option>
+                    <option value="TEACHER_PRIVATE">{t.privateLesson}</option>
+                    <option value="SHARED_LIBRARY">{t.sharedLibrary}</option>
                   </select>
                 </label>
               )}
               <label className="field">
-                <span>Trạng thái</span>
+                <span>{t.status}</span>
                 <select
                   value={edit.status}
                   onChange={(e) => setEdit({ ...edit, status: e.target.value })}
                 >
-                  <option value="draft">Bản nháp</option>
-                  <option value="published">Xuất bản</option>
-                  <option value="archived">Lưu trữ</option>
+                  <option value="draft">{t.draftOption}</option>
+                  <option value="published">{t.publish}</option>
+                  <option value="archived">{t.archive}</option>
                 </select>
               </label>
             </div>
             <label className="field">
-              <span>Nội dung lý thuyết</span>
+              <span>{t.theory}</span>
               <RichEditor
                 value={edit.content}
                 onChange={(v) => setEdit((s: any) => ({ ...s, content: v }))}
               />
             </label>
-            <h3>Học liệu</h3>
+            <h3>{t.materials}</h3>
             <label className="field">
-              <span>Tải PDF / ảnh / video (tối đa 20 MB)</span>
+              <span>{t.upload}</span>
               <input
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg,.mp4"
@@ -394,7 +579,7 @@ function LessonsLibrary({ user }: { user: any }) {
             {edit.materials.map((m: any, i: number) => (
               <div className="form-grid" key={i}>
                 <Field
-                  label="Tên học liệu"
+                  label={t.materialName}
                   value={m.title}
                   required
                   onChange={(e) =>
@@ -407,7 +592,7 @@ function LessonsLibrary({ user }: { user: any }) {
                   }
                 />
                 <Field
-                  label="URL video / PDF / ảnh"
+                  label={t.materialUrl}
                   type="text"
                   value={m.url}
                   required
@@ -421,7 +606,7 @@ function LessonsLibrary({ user }: { user: any }) {
                   }
                 />
                 <select
-                  aria-label="Loại học liệu"
+                  aria-label={t.materialType}
                   value={m.type}
                   onChange={(e) =>
                     setEdit({
@@ -434,11 +619,11 @@ function LessonsLibrary({ user }: { user: any }) {
                 >
                   <option value="video">Video</option>
                   <option value="pdf">PDF</option>
-                  <option value="image">Ảnh</option>
+                  <option value="image">{t.image}</option>
                 </select>
                 {m.type === "video" && (
                   <label className="field wide-field">
-                    <span>Bản chép lời video (bắt buộc khi xuất bản)</span>
+                    <span>{t.transcript}</span>
                     <textarea
                       value={m.transcript ?? ""}
                       rows={3}
@@ -464,7 +649,7 @@ function LessonsLibrary({ user }: { user: any }) {
                     })
                   }
                 >
-                  Xóa học liệu
+                  {t.removeMaterial}
                 </button>
               </div>
             ))}
@@ -481,13 +666,13 @@ function LessonsLibrary({ user }: { user: any }) {
                 })
               }
             >
-              + Thêm học liệu URL
+              + {t.addMaterialUrl}
             </button>
             <h3>Quiz</h3>
             {edit.questions.map((q: any, i: number) => (
               <div className="quiz-editor" key={i}>
                 <Field
-                  label={"Câu " + (i + 1)}
+                  label={t.question(i + 1)}
                   required
                   value={q.prompt}
                   onChange={(e) =>
@@ -502,7 +687,7 @@ function LessonsLibrary({ user }: { user: any }) {
                 {q.options.map((o: string, k: number) => (
                   <Field
                     key={k}
-                    label={"Đáp án " + (k + 1)}
+                    label={t.option(k + 1)}
                     required
                     value={o}
                     onChange={(e) =>
@@ -524,7 +709,7 @@ function LessonsLibrary({ user }: { user: any }) {
                   />
                 ))}
                 <label className="field">
-                  <span>Đáp án đúng</span>
+                  <span>{t.correctAnswer}</span>
                   <select
                     value={q.answer}
                     onChange={(e) =>
@@ -540,7 +725,7 @@ function LessonsLibrary({ user }: { user: any }) {
                   >
                     {q.options.map((_: any, k: number) => (
                       <option value={k} key={k}>
-                        Đáp án {k + 1}
+                        {t.option(k + 1)}
                       </option>
                     ))}
                   </select>
@@ -556,7 +741,7 @@ function LessonsLibrary({ user }: { user: any }) {
                     })
                   }
                 >
-                  Xóa câu hỏi
+                  {t.removeQuestion}
                 </button>
               </div>
             ))}
@@ -573,7 +758,7 @@ function LessonsLibrary({ user }: { user: any }) {
                 })
               }
             >
-              + Thêm câu hỏi
+              + {t.addQuestion}
             </button>
             <TaxonomyFields edit={edit} setEdit={setEdit} taxonomy={library.data?.taxonomy} outcomes={library.data?.outcomes ?? []} />
             <ReviewChecklist value={edit.review} onChange={(review) => setEdit((s: any) => ({ ...s, review }))} />
@@ -590,7 +775,7 @@ function LessonsLibrary({ user }: { user: any }) {
             )}
             {isApiError(save.error, "LESSON_STRUCTURE_LOCKED") && edit.id && (
               <button type="button" className="secondary" onClick={() => startClone(edit.id)}>
-                Tạo bản riêng để thay đổi
+                {t.copyToChange}
               </button>
             )}
             <button
@@ -598,7 +783,7 @@ function LessonsLibrary({ user }: { user: any }) {
               disabled={save.isPending}
             >
               <Save size={16} />
-              Lưu bài học
+              {t.saveLesson}
             </button>
           </form>
         </Modal>
