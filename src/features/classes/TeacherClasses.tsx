@@ -7,6 +7,65 @@ import { PageHeading } from "../../components/PageHeading";
 import { type ClassSummary } from "./class-types";
 import { LoadError, ShownOnce, useMutate } from "./class-ui";
 import { ClassDetail } from "./ClassDetail";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    eyebrow: "CÙNG NHAU KHÁM PHÁ",
+    title: "Lớp học của tôi",
+    description: "Quản lý thành viên, mã tham gia và bài được giao cho từng lớp.",
+    createClass: "Tạo lớp",
+    classStatus: "Trạng thái lớp",
+    active: "Đang hoạt động",
+    archived: "Đã lưu trữ",
+    classList: "danh sách lớp",
+    grade: (g: number) => `Khối ${g}`,
+    members: (n: number) => `${n} thành viên`,
+    pending: (n: number) => `${n} chờ duyệt`,
+    activeWork: (n: number) => `${n} bài đang giao`,
+    archivedBadge: "Đã lưu trữ",
+    noCode: "Chưa có mã",
+    codeOn: "Mã đang bật",
+    codeOff: "Mã đã tắt",
+    needsApproval: "Cần duyệt",
+    noClasses: "Chưa có lớp nào. Hãy tạo lớp đầu tiên.",
+    noArchived: "Chưa có lớp đã lưu trữ.",
+    newClass: "Tạo lớp mới",
+    className: "Tên lớp",
+    gradeLabel: "Khối lớp",
+    approvalRule: "Học sinh vào bằng mã cần giáo viên duyệt",
+    creating: "Đang tạo…",
+    create: "Tạo lớp",
+  },
+  en: {
+    eyebrow: "EXPLORING TOGETHER",
+    title: "My classes",
+    description: "Manage members, join codes and assigned work for each class.",
+    createClass: "Create class",
+    classStatus: "Class status",
+    active: "Active",
+    archived: "Archived",
+    classList: "the class list",
+    grade: (g: number) => `Grade ${g}`,
+    members: (n: number) => `${n} ${n === 1 ? "member" : "members"}`,
+    pending: (n: number) => `${n} waiting`,
+    activeWork: (n: number) => `${n} active ${n === 1 ? "assignment" : "assignments"}`,
+    archivedBadge: "Archived",
+    noCode: "No code",
+    codeOn: "Code on",
+    codeOff: "Code off",
+    needsApproval: "Needs approval",
+    noClasses: "No classes yet. Create your first class.",
+    noArchived: "No archived classes.",
+    newClass: "Create a new class",
+    className: "Class name",
+    gradeLabel: "Grade",
+    approvalRule: "Students joining with a code need teacher approval",
+    creating: "Creating…",
+    create: "Create class",
+  },
+});
+const t = text();
 
 // ---------------- Teacher ----------------
 
@@ -26,9 +85,9 @@ export function TeacherClasses() {
   return (
     <>
       <PageHeading
-        eyebrow="CÙNG NHAU KHÁM PHÁ"
-        title="Lớp học của tôi"
-        description="Quản lý thành viên, mã tham gia và bài được giao cho từng lớp."
+        eyebrow={t.eyebrow}
+        title={t.title}
+        description={t.description}
         action={
           teacher ? (
             <button
@@ -40,12 +99,12 @@ export function TeacherClasses() {
                 setCreating(true);
               }}
             >
-              + Tạo lớp
+              + {t.createClass}
             </button>
           ) : null
         }
       />
-      <div className="tabs" role="tablist" aria-label="Trạng thái lớp">
+      <div className="tabs" role="tablist" aria-label={t.classStatus}>
         {(["ACTIVE", "ARCHIVED"] as const).map((value) => (
           <button
             key={value}
@@ -57,11 +116,11 @@ export function TeacherClasses() {
               setSelected(null);
             }}
           >
-            {value === "ACTIVE" ? "Đang hoạt động" : "Đã lưu trữ"}
+            {value === "ACTIVE" ? t.active : t.archived}
           </button>
         ))}
       </div>
-      <LoadError query={list} what="danh sách lớp" />
+      <LoadError query={list} what={t.classList} />
       <div className="class-grid">
         {list.isLoading && <CardSkeleton count={3} />}
         {list.data?.map((c) => (
@@ -74,29 +133,29 @@ export function TeacherClasses() {
             <Users size={24} />
             <h3>{c.name}</h3>
             <p>
-              Khối {c.grade} · {c.members.approved} thành viên
-              {c.members.pending > 0 && ` · ${c.members.pending} chờ duyệt`}
+              {t.grade(c.grade)} · {t.members(c.members.approved)}
+               {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
             </p>
-            <p>{c.assignments.active} bài đang giao</p>
+            <p>{t.activeWork(c.assignments.active)}</p>
             <div className="badge-row">
               {c.status === "ARCHIVED" ? (
-                <Badge tone="outline">Đã lưu trữ</Badge>
+                <Badge tone="outline">{t.archivedBadge}</Badge>
               ) : (
-                <Badge>{!c.joinCode.issued ? "Chưa có mã" : c.joinCode.enabled ? "Mã đang bật" : "Mã đã tắt"}</Badge>
+                <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
               )}
-              {c.requiresApproval && <Badge tone="outline">Cần duyệt</Badge>}
+              {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
             </div>
           </button>
         ))}
       </div>
       {list.data && list.data.length === 0 && (
-        <Empty>{status === "ACTIVE" ? "Chưa có lớp nào. Hãy tạo lớp đầu tiên." : "Chưa có lớp đã lưu trữ."}</Empty>
+        <Empty>{status === "ACTIVE" ? t.noClasses : t.noArchived}</Empty>
       )}
       {selected && teacher && list.data?.some((c) => c.id === selected) && (
         <ClassDetail classroom={list.data.find((c) => c.id === selected)!} />
       )}
       {creating && (
-        <Modal title="Tạo lớp mới" onClose={() => setCreating(false)}>
+        <Modal title={t.newClass} onClose={() => setCreating(false)}>
           {issuedCode ? (
             <ShownOnce code={issuedCode} onDone={() => setCreating(false)} />
           ) : (
@@ -125,24 +184,24 @@ export function TeacherClasses() {
                 );
               }}
             >
-              <Field label="Tên lớp" name="name" required maxLength={200} />
+              <Field label={t.className} name="name" required maxLength={200} />
               <label className="field">
-                <span>Khối lớp</span>
+                <span>{t.gradeLabel}</span>
                 <select name="grade" defaultValue={8}>
                   {[6, 7, 8, 9].map((g) => (
                     <option key={g} value={g}>
-                      Khối {g}
+                      {t.grade(g)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="check">
                 <input type="checkbox" name="requiresApproval" />
-                Học sinh vào bằng mã cần giáo viên duyệt
+                {t.approvalRule}
               </label>
               <ErrorBox error={create.error} />
               <button className="primary wide" disabled={create.isPending}>
-                {create.isPending ? "Đang tạo…" : "Tạo lớp"}
+                {create.isPending ? t.creating : t.create}
               </button>
             </form>
           )}

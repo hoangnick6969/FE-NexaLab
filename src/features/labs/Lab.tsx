@@ -14,6 +14,115 @@ import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
 import { Circuit, defaultCircuit } from "./Circuit";
 import { Chemistry } from "./Chemistry";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    notFound: "Không tìm thấy phòng lab.",
+    notPublished: "Phòng thực hành chưa được phát hành",
+    notInCurriculum: "Nội dung này chưa có trong chương trình nền tảng đã duyệt.",
+    backToList: "Quay lại danh sách",
+    labs: "Phòng thí nghiệm",
+    physics: "VẬT LÝ",
+    biology: "SINH HỌC",
+    chemistry: "HÓA HỌC",
+    grades: "LỚP 8–9",
+    discoveryRoom: "Phòng khám phá",
+    teacherPreview: "Giáo viên · Xem trước",
+    freePractice: "Thực hành tự do",
+    devicePreview: "Xem trước trên thiết bị:",
+    product: (n: number) => `${n} mol sản phẩm`,
+    runToSave: "Chạy thí nghiệm để lưu và chấm chính thức trên server.",
+    eyeModel: "Mô hình cấu tạo mắt",
+    bench: "Bàn thực hành",
+    reset: "Làm lại",
+    loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…",
+    engine: "Engine khoa học · v1.0.0",
+    computing: "Đang tính…",
+    gradeParts: "Chấm tên bộ phận",
+    run: "Chạy thí nghiệm",
+    challenge: "THỬ THÁCH 01",
+    circuitGoal: "LED sáng, dòng điện an toàn",
+    eyeGoal: "Em hiểu đôi mắt đến đâu?",
+    chemGoal: "Cân bằng lượng chất",
+    circuitTask: "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA.",
+    eyeTask: "Chuyển sang kiểm tra, nhập tên của 8 bộ phận rồi chấm.",
+    chemTask: "Chọn một phản ứng và điều chỉnh số mol để hai chất phản ứng vừa đủ.",
+    observe: "Quan sát trước khi thay đổi",
+    runToCheck: "Chạy để kiểm chứng dự đoán",
+    tryAgain: "Thử lại để hiểu rõ hơn",
+    result: "Kết quả mô phỏng",
+    totalCurrent: "mA · dòng tổng",
+    branchNote: "Ngưỡng được kiểm tra trên từng nhánh, không phải dòng tổng của các nhánh song song.",
+    productLabel: "Sản phẩm:",
+    excess: (s: string) => `Dư ${s}:`,
+    outOf100: "/ 100 điểm",
+    savedToRecord: "Đã lưu vào hồ sơ",
+    save: "Lưu thí nghiệm",
+    resultAfterRun: "Kết quả xuất hiện sau khi em chạy thí nghiệm.",
+    guide: "Người bạn hướng dẫn",
+    aiGuide: "AI + hướng dẫn từ engine",
+    ruleGuide: "Gợi ý theo luật · chưa cấu hình AI",
+    level: (n: number) => `MỨC ${n} / 4`,
+    stuck: "Chưa tìm ra câu trả lời? Bắt đầu từ một câu hỏi nhỏ.",
+    getHint: "Nhận gợi ý",
+    hintRule: "Chỉ mở mức gợi ý tiếp theo sau khi em thực sự thử lại.",
+    disclaimer: "Mô hình lý tưởng dùng cho học tập. Kết quả chính thức được tính trên máy chủ; không áp dụng để thiết kế mạch hoặc thao tác hóa chất thật.",
+  },
+  en: {
+    notFound: "Lab not found.",
+    notPublished: "This lab is not published yet",
+    notInCurriculum: "This content is not in the approved foundation curriculum yet.",
+    backToList: "Back to the list",
+    labs: "Labs",
+    physics: "PHYSICS",
+    biology: "BIOLOGY",
+    chemistry: "CHEMISTRY",
+    grades: "GRADES 8–9",
+    discoveryRoom: "Discovery room",
+    teacherPreview: "Teacher · Preview",
+    freePractice: "Free practice",
+    devicePreview: "On-device preview:",
+    product: (n: number) => `${n} mol of product`,
+    runToSave: "Run the experiment to save it and get the official result from the server.",
+    eyeModel: "Eye structure model",
+    bench: "Practice bench",
+    reset: "Reset",
+    loadingEye: "Loading the 3D eye anatomy model…",
+    engine: "Science engine · v1.0.0",
+    computing: "Computing…",
+    gradeParts: "Check the part names",
+    run: "Run the experiment",
+    challenge: "CHALLENGE 01",
+    circuitGoal: "LED on, safe current",
+    eyeGoal: "How well do you know the eye?",
+    chemGoal: "Balance the amounts",
+    circuitTask: "Build a closed circuit with a source, LED and resistor. Keep the current through each LED between 1 and 20 mA.",
+    eyeTask: "Switch to the check, type the names of the 8 parts, then grade.",
+    chemTask: "Choose a reaction and adjust the moles so both reactants are used up exactly.",
+    observe: "Observe before changing",
+    runToCheck: "Run to test your prediction",
+    tryAgain: "Try again to understand better",
+    result: "Simulation result",
+    totalCurrent: "mA · total current",
+    branchNote: "Limits are checked on each branch, not on the total current of parallel branches.",
+    productLabel: "Product:",
+    excess: (s: string) => `Excess ${s}:`,
+    outOf100: "/ 100 points",
+    savedToRecord: "Saved to your record",
+    save: "Save experiment",
+    resultAfterRun: "Results appear after you run the experiment.",
+    guide: "Your guide",
+    aiGuide: "AI + engine guidance",
+    ruleGuide: "Rule-based hints · AI not configured",
+    level: (n: number) => `LEVEL ${n} / 4`,
+    stuck: "Not there yet? Start with a small question.",
+    getHint: "Get a hint",
+    hintRule: "The next hint level opens only after you really try again.",
+    disclaimer: "An idealised model for learning. Official results are computed on the server; do not use it to design real circuits or handle real chemicals.",
+  },
+});
+const t = text();
 const Eye = lazy(() => import("./Eye"));
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -89,39 +198,39 @@ export default function Lab() {
     setSaved(false);
   };
   if (!["circuit", "eye", "chemistry"].includes(id))
-    return <p>Không tìm thấy phòng lab.</p>;
+    return <p>{t.notFound}</p>;
   if (user.role === "STUDENT" && labs.isSuccess && !lab)
-    return <section className="panel"><h1>Phòng thực hành chưa được phát hành</h1><p>Nội dung này chưa có trong chương trình nền tảng đã duyệt.</p><Link className="primary" to="/labs">Quay lại danh sách</Link></section>;
+    return <section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>;
   return (
     <>
       <Link className="back-link" to="/labs">
-        <ArrowLeft size={15} /> Phòng thí nghiệm
+        <ArrowLeft size={15} /> {t.labs}
       </Link>
       <div className="page-heading lab-heading">
         <div>
           <Badge>
             {id === "circuit"
-              ? "VẬT LÝ"
+              ? t.physics
               : id === "eye"
-                ? "SINH HỌC"
-                : "HÓA HỌC"}{" "}
-            · LỚP 8–9
+                ? t.biology
+                : t.chemistry}{" "}
+            · {t.grades}
           </Badge>
-          <h1>{lab?.title ?? "Phòng khám phá"}</h1>
+          <h1>{lab?.title ?? t.discoveryRoom}</h1>
           <p className="muted">{lab?.learningObjective}</p>
         </div>
         <Badge tone="outline">
           {user.role === "TEACHER"
-            ? "Giáo viên · Xem trước"
-            : "Thực hành tự do"}
+            ? t.teacherPreview
+            : t.freePractice}
         </Badge>
       </div>
       <ErrorBox error={labs.error} />
-      {preview && id !== "eye" && <div className="preview-strip">Xem trước trên thiết bị: {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : `${Number(preview.extent.toFixed(6))} mol sản phẩm`} · Chạy thí nghiệm để lưu và chấm chính thức trên server.</div>}
+      {preview && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           <div className="workspace-toolbar">
-            <b>{id === "eye" ? "Mô hình cấu tạo mắt" : "Bàn thực hành"}</b>
+            <b>{id === "eye" ? t.eyeModel : t.bench}</b>
             <button
               className="text-button"
               onClick={() => {
@@ -137,7 +246,7 @@ export default function Lab() {
               }}
             >
               <RotateCcw size={14} />
-              Làm lại
+              {t.reset}
             </button>
           </div>
           {id === "circuit" ? (
@@ -149,12 +258,12 @@ export default function Lab() {
           ) : id === "chemistry" ? (
             <Chemistry state={state} onChange={change} result={result} />
           ) : (
-            <Suspense fallback={<InlineLoader message="Đang nạp mô hình 3D giải phẫu mắt…" />}>
+            <Suspense fallback={<InlineLoader message={t.loadingEye} />}>
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
           )}
           <div className="lab-actions">
-            <span>Engine khoa học · v1.0.0</span>
+            <span>{t.engine}</span>
             <button
               className="primary"
               onClick={() => run.mutate(null)}
@@ -162,48 +271,48 @@ export default function Lab() {
             >
               <Play size={15} />
               {run.isPending
-                ? "Đang tính…"
+                ? t.computing
                 : id === "eye"
-                  ? "Chấm tên bộ phận"
-                  : "Chạy thí nghiệm"}
+                  ? t.gradeParts
+                  : t.run}
             </button>
           </div>
           <ErrorBox error={run.error} />
         </section>
         <aside className="lab-aside">
           <section className="panel challenge-panel">
-            <Badge tone="gold">THỬ THÁCH 01</Badge>
+            <Badge tone="gold">{t.challenge}</Badge>
             <h3>
               {id === "circuit"
-                ? "LED sáng, dòng điện an toàn"
+                ? t.circuitGoal
                 : id === "eye"
-                  ? "Em hiểu đôi mắt đến đâu?"
-                  : "Cân bằng lượng chất"}
+                  ? t.eyeGoal
+                  : t.chemGoal}
             </h3>
             <p>
               {id === "circuit"
-                ? "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA."
+                ? t.circuitTask
                 : id === "eye"
-                  ? "Chuyển sang kiểm tra, nhập tên của 8 bộ phận rồi chấm."
-                  : "Chọn một phản ứng và điều chỉnh số mol để hai chất phản ứng vừa đủ."}
+                  ? t.eyeTask
+                  : t.chemTask}
             </p>
             <ul className="checklist">
               <li>
                 <CheckCircle2 size={15} />
-                Quan sát trước khi thay đổi
+                {t.observe}
               </li>
               <li>
                 <CheckCircle2 size={15} />
-                Chạy để kiểm chứng dự đoán
+                {t.runToCheck}
               </li>
               <li>
                 <CheckCircle2 size={15} />
-                Thử lại để hiểu rõ hơn
+                {t.tryAgain}
               </li>
             </ul>
           </section>
           <section className="panel result-panel">
-            <h3>Kết quả mô phỏng</h3>
+            <h3>{t.result}</h3>
             {result ? (
               <>
                 <Badge tone={attempt.verdict}>
@@ -213,31 +322,30 @@ export default function Lab() {
                   <>
                     <div className="result-value">
                       {result.currentMa ?? "∞"}
-                      <small>mA · dòng tổng</small>
+                      <small>{t.totalCurrent}</small>
                     </div>
                     <p>
                       LED: {result.ledState} · {result.status}
                     </p>
                     <p className="tiny muted">
-                      Ngưỡng được kiểm tra trên từng nhánh, không phải dòng tổng
-                      của các nhánh song song.
+                      {t.branchNote}
                     </p>
                   </>
                 ) : id === "chemistry" ? (
                   <>
                     <b>{result.equation}</b>
                     <p>{result.phenomenon}</p>
-                    <p>Sản phẩm: {Number(result.extent.toFixed(6))} mol</p>
+                    <p>{t.productLabel} {Number(result.extent.toFixed(6))} mol</p>
                     <p>
-                      Dư {result.a}: {Number(result.remainingA.toFixed(6))} mol
+                      {t.excess(result.a)} {Number(result.remainingA.toFixed(6))} mol
                       <br />
-                      Dư {result.b}: {Number(result.remainingB.toFixed(6))} mol
+                      {t.excess(result.b)} {Number(result.remainingB.toFixed(6))} mol
                     </p>
                   </>
                 ) : (
                   <div className="result-value">
                     {result.score}
-                    <small>/ 100 điểm</small>
+                    <small>{t.outOf100}</small>
                   </div>
                 )}
                 {user.role === "STUDENT" && (
@@ -247,14 +355,14 @@ export default function Lab() {
                     onClick={() => save.mutate(null)}
                   >
                     <Bookmark size={15} />
-                    {saved ? "Đã lưu vào hồ sơ" : "Lưu thí nghiệm"}
+                    {saved ? t.savedToRecord : t.save}
                   </button>
                 )}
                 <ErrorBox error={save.error} />
               </>
             ) : (
               <p className="muted">
-                Kết quả xuất hiện sau khi em chạy thí nghiệm.
+                {t.resultAfterRun}
               </p>
             )}
           </section>
@@ -262,39 +370,38 @@ export default function Lab() {
             <section className="panel tutor-panel">
               <h3>
                 <Sparkles size={19} />
-                Người bạn hướng dẫn
+                {t.guide}
               </h3>
               <span className="tiny muted">
                 {tutorStatus.data?.provider === "anthropic"
-                  ? "AI + hướng dẫn từ engine"
-                  : "Gợi ý theo luật · chưa cấu hình AI"}
+                  ? t.aiGuide
+                  : t.ruleGuide}
               </span>
               {hint ? (
                 <div className="hint">
-                  <Badge>MỨC {hint.level} / 4</Badge>
+                  <Badge>{t.level(hint.level)}</Badge>
                   <p>{hint.content}</p>
                 </div>
               ) : (
-                <p>Chưa tìm ra câu trả lời? Bắt đầu từ một câu hỏi nhỏ.</p>
+                <p>{t.stuck}</p>
               )}
               <button
                 className="secondary wide"
                 disabled={!attempt || hintAction.isPending || !!hint}
                 onClick={() => hintAction.mutate(null)}
               >
-                Nhận gợi ý
+                {t.getHint}
               </button>
               <ErrorBox error={hintAction.error} />
               <small>
-                Chỉ mở mức gợi ý tiếp theo sau khi em thực sự thử lại.
+                {t.hintRule}
               </small>
             </section>
           )}
         </aside>
       </div>
       <p className="tiny muted">
-        Mô hình lý tưởng dùng cho học tập. Kết quả chính thức được tính trên máy
-        chủ; không áp dụng để thiết kế mạch hoặc thao tác hóa chất thật.
+        {t.disclaimer}
       </p>
     </>
   );

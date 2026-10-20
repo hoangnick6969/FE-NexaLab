@@ -1,30 +1,36 @@
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    circuit: { subject: "VẬT LÝ", tag: "THỬ THÁCH", title: "Thắp sáng ý tưởng", description: "Tự lắp mạch điện và tìm cách làm LED sáng an toàn." },
+    eye: { subject: "SINH HỌC", tag: "MÔ HÌNH 3D", title: "Thế giới qua đôi mắt", description: "Đi sâu vào cấu tạo mắt và theo dấu hành trình ánh sáng." },
+    chemistry: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Những biến đổi kỳ diệu", description: "Khám phá phản ứng, quan sát hiện tượng và chất dư." },
+  },
+  en: {
+    circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
+    eye: { subject: "BIOLOGY", tag: "3D MODEL", title: "The world through your eyes", description: "Look inside the eye and follow the path of light." },
+    chemistry: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Amazing changes", description: "Explore reactions, observe what happens and what is left over." },
+  },
+});
+const t = text();
 
 
 export const labInfo = [
   {
     id: "circuit",
-    subject: "VẬT LÝ",
-    tag: "THỬ THÁCH",
-    title: "Thắp sáng ý tưởng",
-    description: "Tự lắp mạch điện và tìm cách làm LED sáng an toàn.",
+    ...t.circuit,
     className: "physics",
     number: "01",
   },
   {
     id: "eye",
-    subject: "SINH HỌC",
-    tag: "MÔ HÌNH 3D",
-    title: "Thế giới qua đôi mắt",
-    description: "Đi sâu vào cấu tạo mắt và theo dấu hành trình ánh sáng.",
+    ...t.eye,
     className: "biology",
     number: "02",
   },
   {
     id: "chemistry",
-    subject: "HÓA HỌC",
-    tag: "THÍ NGHIỆM",
-    title: "Những biến đổi kỳ diệu",
-    description: "Khám phá phản ứng, quan sát hiện tượng và chất dư.",
+    ...t.chemistry,
     className: "chemistry",
     number: "03",
   },
