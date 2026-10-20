@@ -45,6 +45,8 @@ export function Status({ value }: { value: string }) {
     active: ["Đang hoạt động", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
     disabled: ["Đã vô hiệu hóa", "not_passed", <Ban size={13} aria-hidden key="i" />],
     READY: ["Sẵn sàng", "passed", <ShieldCheck size={13} aria-hidden key="i" />],
+    ACTIVE: ["Đang hoạt động", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    ARCHIVED: ["Đã lưu trữ", "outline", <Archive size={13} aria-hidden key="i" />],
     QUARANTINED: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     quarantined: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
     published: ["Đã xuất bản", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],

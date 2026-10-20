@@ -31,7 +31,11 @@ export function ProgressPage() {
     api("/children/link", "POST", { code }),
   );
   const verifyEmail = useAction(() => api("/auth/email/verify", "POST"));
-  const consent = useAction(() => api("/auth/consents", "POST", { purpose: "PARENT_CHILD_PROGRESS", version: "2026-10-v1", contentHash: "dev" }));
+  const consent = useAction(async () => {
+    // The server publishes the exact consent version and hash it accepts.
+    const terms = await api<{ purpose: string; version: string; contentHash: string }>("/auth/consents/parent-child-progress");
+    return api("/auth/consents", "POST", terms);
+  });
   const unlink = useAction((id: string) => api("/children/" + id + "/link", "DELETE"));
   return (
     <>

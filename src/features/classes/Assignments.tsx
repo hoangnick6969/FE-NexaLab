@@ -138,6 +138,9 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
 function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void }) {
   const [contentType, setContentType] = useState<AssignableType>("lesson");
   const [scope, setScope] = useState<"CLASS" | "SUBSET">("CLASS");
+  const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [contentId, setContentId] = useState("");
+  const [validation, setValidation] = useState("");
   const key = useRef(idempotencyKey());
   const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[] }>({
     queryKey: ["assignable", classroom.id],
@@ -157,6 +160,11 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         onSubmit={(e) => {
           e.preventDefault();
           const form = new FormData(e.currentTarget);
+          if (scope === "SUBSET" && studentIds.length === 0) {
+            setValidation("Hãy chọn ít nhất một học sinh.");
+            return;
+          }
+          setValidation("");
           const due = String(form.get("dueDate") ?? "");
           const title = String(form.get("title") ?? "").trim();
           act.mutate(
@@ -165,17 +173,18 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
               key: key.current,
               body: {
                 contentType,
-                contentId: String(form.get("contentId")),
+                contentId,
+                audience: scope,
                 ...(title ? { title } : {}),
                 dueDate: due ? new Date(due).toISOString() : null,
-                studentIds: scope === "SUBSET" ? form.getAll("studentIds").map(String) : [],
+                studentIds: scope === "SUBSET" ? studentIds : [],
               },
             },
             { onSuccess: (data) => onAssigned(data.message) },
           );
         }}
       >
-        <fieldset className="segmented">
+        <fieldset className="segmented" onChange={() => setContentId("")}>
           <legend>Loại nội dung</legend>
           <label className="check">
             <input type="radio" name="contentType" checked={contentType === "lesson"} onChange={() => setContentType("lesson")} />
@@ -192,7 +201,8 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         </fieldset>
         <label className="field">
           <span>Nội dung đã xuất bản</span>
-          <select name="contentId" required key={contentType}>
+          <select name="contentId" required value={contentId} onChange={(e) => setContentId(e.target.value)}>
+            <option value="">Chọn nội dung</option>
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
                 {isTest ? `${item.title} · phiên bản ${item.version} · ${item.questionCount} câu` : `${item.title} · Khối ${item.grade}`}
@@ -210,7 +220,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         )}
         {isTest && <p className="tiny muted">Chia sẻ bài kiểm tra trong Class Space không tạo bài giao. Chỉ học sinh được giao mới làm và nộp bài.</p>}
         <Field label="Tên nhiệm vụ (để trống sẽ dùng tên nội dung)" name="title" maxLength={200} />
-        <Field label={isTest ? "Hạn nộp (bắt buộc)" : "Hạn nộp (không bắt buộc)"} name="dueDate" type="datetime-local" required={isTest} key={contentType} />
+        <Field label={isTest ? "Hạn nộp (bắt buộc)" : "Hạn nộp (không bắt buộc)"} name="dueDate" type="datetime-local" required={isTest} />
         <fieldset className="segmented">
           <legend>Giao cho</legend>
           <label className="check">
@@ -225,13 +235,15 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         {scope === "SUBSET" &&
           approved.map((e) => (
             <label className="check" key={e.studentId}>
-              <input type="checkbox" name="studentIds" value={e.studentId} />
+              <input type="checkbox" name="studentIds" value={e.studentId} checked={studentIds.includes(e.studentId)} onChange={(event) => setStudentIds((current) => event.target.checked ? [...current, e.studentId] : current.filter((id) => id !== e.studentId))} />
               {e.student.fullName}
             </label>
           ))}
+        {scope === "SUBSET" && <p role="status">Đã chọn {studentIds.length} học sinh{studentIds.length === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}</p>}
+        <ErrorBox error={validation} />
         <p className="tiny muted">Danh sách người nhận được chốt khi giao; học sinh vào lớp sau sẽ không tự nhận bài này.</p>
         <ErrorBox error={act.error} />
-        <button className="primary wide" disabled={act.isPending || !options.length}>
+        <button className="primary wide" disabled={act.isPending || !contentId || !options.length || (scope === "SUBSET" && studentIds.length === 0)}>
           {act.isPending ? "Đang giao…" : "Giao bài"}
         </button>
       </form>

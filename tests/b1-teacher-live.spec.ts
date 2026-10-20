@@ -8,7 +8,7 @@ const expect = baseExpect.configure({ timeout: 20000 });
 // and web app with a seeded database; identities come from the environment:
 //   TEST_WEB, TEST_API, TEST_TEACHER_EMAIL, TEST_TEACHER_PASSWORD
 // (defaults: teacher.owner@nexalab.local with SEED_FIXTURE_PASSWORD).
-const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
 const teacherEmail = process.env.TEST_TEACHER_EMAIL ?? "teacher.owner@nexalab.local";
 const teacherPassword = process.env.TEST_TEACHER_PASSWORD ?? process.env.SEED_FIXTURE_PASSWORD;
 const prefix = "pw-b1-" + Date.now().toString(36);

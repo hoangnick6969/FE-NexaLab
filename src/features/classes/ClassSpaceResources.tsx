@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, idempotencyKey, mutate } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field } from "../../components/ui";
+import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
 
 type Kind = "DECK" | "STUDY_QUIZ" | "TEST";
 type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
 const names: Record<Kind, string> = { DECK: "Thẻ học", STUDY_QUIZ: "Quiz luyện tập không điểm", TEST: "Bài kiểm tra chờ giao" };
 const sample: Record<Kind, object> = {
-  DECK: { cards: [{ front: "Khái niệm", back: "Giải thích" }] },
-  STUDY_QUIZ: { questions: [{ prompt: "Câu hỏi", options: ["Phương án A", "Phương án B"] }] },
-  TEST: { questions: [{ prompt: "Câu hỏi", options: ["Phương án A", "Phương án B"], correctOption: 0 }] },
+  DECK: { cards: [{ front: "", back: "" }] },
+  STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""] }] },
+  TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
 };
 
 export function TeacherClassResources({ classId, disabled }: { classId: string; disabled: boolean }) {
@@ -19,15 +20,15 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
   const [kind, setKind] = useState<Kind>("DECK");
   const [title, setTitle] = useState("");
   const [lessonId, setLessonId] = useState("");
-  const [source, setSource] = useState(JSON.stringify(sample.DECK, null, 2));
+  const [source, setSource] = useState<ResourceContent>(sample.DECK);
   const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
   const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<unknown>(null);
   const action = useMutation({ mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
-  const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: JSON.parse(source) });
+  const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: resourceInput(kind, source) });
   const create = async (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
-    try { const body = resourceBody(); await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() }); setTitle(""); setSource(JSON.stringify(sample[kind], null, 2)); }
+    try { const body = resourceBody(); await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() }); setTitle(""); setSource(sample[kind]); }
     catch (e) { setError(e); }
   };
   const previewImport = async () => {
@@ -47,11 +48,11 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
     {!disabled && <div className="class-resource-create">
       <h3>Tạo nội dung trực tiếp</h3>
       <form onSubmit={create}>
-        <label className="field"><span>Loại nội dung</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(JSON.stringify(sample[next], null, 2)); setPreview(null); }}><option value="DECK">Thẻ học</option><option value="STUDY_QUIZ">Quiz luyện tập không điểm</option><option value="TEST">Bài kiểm tra (chưa được giao)</option></select></label>
+        <label className="field"><span>Loại nội dung</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); setPreview(null); }}><option value="DECK">Thẻ học</option><option value="STUDY_QUIZ">Quiz luyện tập không điểm</option><option value="TEST">Bài kiểm tra (chưa được giao)</option></select></label>
         <Field label="Tên tài nguyên" value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
         <label className="field"><span>Bài học liên kết</span><select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}><option value="">Chọn bài học</option>{lessons.data?.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>Khối {lesson.grade} · {lesson.subject.name} · {lesson.title}</option>)}</select></label>
-        <label className="field"><span>Nội dung JSON</span><textarea rows={9} value={source} onChange={(e) => setSource(e.target.value)} spellCheck={false} aria-label="Nội dung JSON" /></label>
-        <p className="tiny muted">Deck: cards[{`{front, back}`}]. Quiz: questions[{`{prompt, options}`}]. Test thêm correctOption (bắt đầu từ 0). Test chưa được giao và chưa chấm điểm.</p>
+        <ResourceEditor kind={kind} value={source} onChange={setSource} />
+        <p className="tiny muted">Lưu bản nháp để rà soát trước khi xuất bản. Bài kiểm tra chỉ được chấm điểm sau khi giao cho học sinh.</p>
         <ErrorBox error={error} /><button className="primary" disabled={action.isPending}>{action.isPending ? "Đang lưu…" : "Lưu bản nháp"}</button>
       </form>
       <details className="class-resource-import"><summary>Nhập CSV có cấu trúc</summary>
@@ -71,12 +72,12 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
 function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {
   const qc = useQueryClient();
   const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
-  const [contentDraft, setContentDraft] = useState(JSON.stringify(resource.content, null, 2));
+  const [contentDraft, setContentDraft] = useState<ResourceContent>(resource.content);
   const [titleDraft, setTitleDraft] = useState(resource.title);
-  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: JSON.parse(contentDraft) }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
   return <article className="class-resource-row"><div><b>{resource.title}</b><small>{names[resource.kind]} · Bản {resource.version} · {count ?? 0} mục</small></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? "Đã chia sẻ" : resource.status === "DRAFT" ? "Bản nháp" : "Đã lưu trữ"}</Badge>
-    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>Chỉnh sửa bản nháp</summary><label className="field"><span>Tên tài nguyên</span><input value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><label className="field"><span>Nội dung JSON</span><textarea rows={8} value={contentDraft} onChange={(event) => setContentDraft(event.target.value)} /></label><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending} onClick={() => update.mutate()}>Lưu bản nháp</button></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>Xuất bản cho lớp</button></>}
+    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>Chỉnh sửa bản nháp</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>Tên tài nguyên</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>Lưu bản nháp</button></form></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>Xuất bản cho lớp</button></>}
     {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>Tạo bản mới</button><button className="danger-text" disabled={action.isPending} onClick={() => action.mutate("archive")}>Lưu trữ</button></>}
     <ErrorBox error={action.error} />
   </article>;

@@ -23,7 +23,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
       <section className="panel" aria-labelledby="class-detail-title">
         <div className="section-heading">
           <div>
-            <h2 id="class-detail-title">{classroom.name}</h2>
+            <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
             <p className="tiny muted">
               Khối {classroom.grade} · {classroom.requiresApproval ? "Vào lớp bằng mã cần duyệt" : "Vào lớp bằng mã được duyệt ngay"}
             </p>

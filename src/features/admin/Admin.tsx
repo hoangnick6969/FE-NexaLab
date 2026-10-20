@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
 import { Overview } from "./Overview";
 import { Users } from "./Users";
@@ -26,7 +26,10 @@ const TABS: Array<[Tab, string]> = [
 ];
 
 export default function Admin() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("tab");
+  const tab = TABS.find(([id]) => id === requested)?.[0] ?? "overview";
+  const setTab = (id: Tab) => setParams((previous) => { previous.set("tab", id); return previous; });
   return (
     <>
       <PageHeading eyebrow="VẬN HÀNH NEXALAB" title="Quản trị hệ thống" />

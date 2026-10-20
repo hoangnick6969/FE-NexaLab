@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Field } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
+import { auditAction, auditChanges, auditTargets } from "./audit-labels";
 
 // ───────────────────────── audit ─────────────────────────
 export function AuditExplorer() {
@@ -12,10 +13,7 @@ export function AuditExplorer() {
     to: filters.to ? new Date(filters.to).toISOString() : "",
   });
   const rows = rowsOf(q);
-  const diff = (before: any, after: any) =>
-    [...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])].map(
-      (k) => `${k}: ${JSON.stringify(before?.[k] ?? null)} → ${JSON.stringify(after?.[k] ?? null)}`,
-    );
+  const diff = auditChanges;
   return (
     <section className="panel table-wrap">
       <h2>Nhật ký kiểm toán</h2>
@@ -76,10 +74,10 @@ export function AuditExplorer() {
                 <td className="tiny">{when(r.createdAt)}</td>
                 <td>{r.actor ? `${r.actor.fullName} (${ROLE_LABEL[r.actor.role] ?? r.actor.role})` : (r.actorRole ?? "Hệ thống")}</td>
                 <td>
-                  <code>{r.action}</code>
+                  <span title={r.action}>{auditAction(r.action)}</span>
                 </td>
                 <td className="tiny">
-                  {r.targetType}
+                  {auditTargets[r.targetType] ?? "Đối tượng hệ thống"}
                   {r.targetId ? ` · ${r.targetId}` : ""}
                 </td>
                 <td>

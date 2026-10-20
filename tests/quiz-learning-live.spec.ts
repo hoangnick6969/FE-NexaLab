@@ -4,7 +4,7 @@ const assignmentId = process.env.TEST_ASSIGNMENT_ID;
 const lessonId = process.env.TEST_LESSON_ID;
 const username = process.env.TEST_STUDENT_USERNAME;
 const password = process.env.TEST_STUDENT_PASSWORD;
-const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
 
 async function login(page: Page) {
   await page.goto("/login");

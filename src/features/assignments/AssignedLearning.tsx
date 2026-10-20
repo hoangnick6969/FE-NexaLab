@@ -93,7 +93,7 @@ export function AssignedLearning() {
         {assignment.contentType === "lesson" && pathway ? (
           <>
           {pathway.steps.some((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) && step.state !== "COMPLETED") && (
-            <div className="notice"><b>Bài học chưa hoàn tất</b><p>Hãy đọc nội dung và xem video trong mục Bài học trước. Bài kiểm tra và phần thực hành sẽ mở theo tiến độ đã được lưu.</p><Link className="primary" to={`/lessons/${lesson.id}`}>Quay lại Bài học <ArrowUpRight size={15} /></Link></div>
+            <div className="notice"><b>Các bước học tập</b><p>Hãy đọc nội dung và xem video trong mục Bài học trước. Tiến độ được lưu theo từng bước. Thẻ ôn tập nằm trong Class Space.</p><Link className="primary" to={`/lessons/${encodeURIComponent(lesson.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>Quay lại Bài học <ArrowUpRight size={15} /></Link>{pathway.steps.some((step) => step.type === "STUDY_CARDS" && step.state !== "COMPLETED") && <Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}`}>Ôn thẻ trong Class Space</Link>}</div>
           )}
           {!pathway.steps.some((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)) && <Empty>Bài tập này chưa có bài kiểm tra hoặc hoạt động thực hành.</Empty>}
           <div className="lesson-pathway" aria-label="Bài tập và thực hành">

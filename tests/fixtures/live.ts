@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 // Shared helpers for live FE/API/database specs. Identities come from the
 // environment (defaults: seeded accounts with SEED_PASSWORD / SEED_FIXTURE_PASSWORD).
 export const expect = baseExpect.configure({ timeout: 20000 });
-export const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
+export const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
 const fixturePassword = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD;
 const seedPassword = process.env.SEED_PASSWORD;
 
