@@ -13,6 +13,10 @@ async function uploadOn(page: Page) {
   await page.getByLabel("Chọn ảnh đại diện").setInputFiles({ name: "avatar.png", mimeType: "image/png", buffer: png });
   expect((await confirmed).status()).toBe(201);
   await expect(profile.locator("img.avatar-image")).toHaveAttribute("src", /^https?:\/\//);
+  // Confirmation moves the upload out of the staging prefix that the bucket lifecycle rule expires.
+  const src = (await profile.locator("img.avatar-image").getAttribute("src")) ?? "";
+  expect(decodeURIComponent(new URL(src).pathname)).toMatch(/\/avatars\/[^/]+\/[0-9a-f-]{36}\.png$/);
+  expect(src).not.toContain("/staging/");
   return profile;
 }
 
@@ -41,7 +45,7 @@ test("an adult uploads a private avatar, renames, and removes the avatar", async
 
   await profile.getByRole("button", { name: "Gỡ ảnh" }).click();
   await expect(profile.locator("img.avatar-image")).toHaveCount(0);
-  const refused = await call("/me/avatar", "POST", { key: "development/avatars/someone-else/00000000-0000-0000-0000-000000000000.png" }, await adultToken(accounts.owner));
+  const refused = await call("/me/avatar", "POST", { key: "development/staging/avatars/someone-else/00000000-0000-0000-0000-000000000000.png" }, await adultToken(accounts.owner));
   expect(refused.data?.code).toBe("AVATAR_KEY_INVALID");
 });
 
