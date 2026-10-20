@@ -312,6 +312,8 @@ small {
   flex-shrink: 0;
 }
 
+.avatar-image { object-fit: cover; padding: 0; }
+.avatar-link { display: inline-flex; border-radius: 50%; }
 .avatar.small {
   width: 29px;
   height: 29px;
@@ -5911,3 +5913,10 @@ td small {
   .hierarchy-choice, .hierarchy-chapter { transition: none; }
   .hierarchy-choice:hover, .hierarchy-chapter:hover { transform: none; }
 }
+
+/* acc-2 profile page */
+.profile-avatar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.profile-avatar .avatar { width: 88px; height: 88px; font-size: 2rem; }
+.profile-details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 12px 0 0; }
+.profile-details dt { color: var(--muted); }
+.profile-details dd { margin: 0; overflow-wrap: anywhere; }

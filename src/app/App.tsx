@@ -7,6 +7,8 @@ import { Login } from "../features/auth/Login";
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
+import { Avatar } from "../components/Avatar";
+import { useProfile } from "../lib/profile";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
@@ -63,6 +65,7 @@ const names = {
 
 export default function App() {
   const { user } = useAuth();
+  const profile = useProfile();
   const location = useLocation();
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
@@ -143,9 +146,7 @@ export default function App() {
           Cài đặt tài khoản
         </NavLink>
         <div className="user-card">
-          <span className="avatar">
-            {user.fullName.split(" ").at(-1)?.slice(0, 1)}
-          </span>
+          <Avatar name={user.fullName} url={profile.data?.avatarUrl} />
           <div>
             <b>{user.fullName}</b>
             <small>{names[user.role]}</small>
@@ -174,9 +175,9 @@ export default function App() {
             <Link
               to="/settings"
               aria-label="Tài khoản"
-              className="avatar small"
+              className="avatar-link"
             >
-              {user.fullName.charAt(0)}
+              <Avatar name={user.fullName} url={profile.data?.avatarUrl} className="avatar small" />
             </Link>
           </div>
         </header>
