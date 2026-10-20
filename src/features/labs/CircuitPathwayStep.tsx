@@ -13,6 +13,59 @@ import {
 import { Circuit, defaultCircuit } from "./Circuit";
 import { api } from "../../lib/api";
 import { Badge, ErrorBox } from "../../components/ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    saveFailed: "Lỗi khi lưu kết quả bài tập. Vui lòng thử lại.",
+    area: "Khu vực thực hành mạch điện",
+    slow: "Quá trình tải mô phỏng đang mất nhiều thời gian hơn bình thường. Bạn vẫn có thể thao tác với các linh kiện bên dưới.",
+    defaultTitle: "Thử thách: Mạch điện thắp sáng đèn LED",
+    passed: "Đã đạt",
+    todo: "Cần hoàn thành",
+    defaultInstruction: "Hãy kéo thả nguồn điện, điện trở thích hợp và công tắc để nối kín mạch điện làm đèn LED sáng an toàn.",
+    requirement: "Yêu cầu của thử thách:",
+    preview: "Xem trước:",
+    lit: "Đèn sáng",
+    notLit: "Đèn chưa sáng",
+    excellent: "Xuất sắc! Mạch điện đã hoạt động an toàn",
+    needsAdjust: "Mạch điện cần điều chỉnh thêm",
+    incomplete: "Mạch chưa hoàn thiện",
+    attempt: (n: number) => `Lượt #${n}`,
+    passedBody: "Đèn LED sáng đúng định mức. Em đã hoàn thành phần thực hành!",
+    tryBody: "Em hãy xem gợi ý bên dưới và điều chỉnh lại mạch điện.",
+    hint: "Gợi ý:",
+    retryKeep: "Thử lại (giữ nguyên mạch)",
+    savedToProgress: "Bước thực hành đã được lưu vào tiến độ học tập.",
+    checking: "Đang thẩm định kết quả…",
+    runSubmit: "Chạy thí nghiệm & Nộp bài",
+  },
+  en: {
+    saveFailed: "The result could not be saved. Please try again.",
+    area: "Circuit practice area",
+    slow: "The simulation is taking longer than usual to load. You can still work with the parts below.",
+    defaultTitle: "Challenge: a circuit that lights an LED",
+    passed: "Passed",
+    todo: "To complete",
+    defaultInstruction: "Drag in a power source, a suitable resistor and a switch to close the circuit and light the LED safely.",
+    requirement: "Challenge requirement:",
+    preview: "Preview:",
+    lit: "LED on",
+    notLit: "LED off",
+    excellent: "Excellent! The circuit works safely",
+    needsAdjust: "The circuit needs some adjustment",
+    incomplete: "The circuit is not complete",
+    attempt: (n: number) => `Attempt #${n}`,
+    passedBody: "The LED is lit within its rating. You finished the practice!",
+    tryBody: "Look at the hint below and adjust the circuit.",
+    hint: "Hint:",
+    retryKeep: "Try again (keep the circuit)",
+    savedToProgress: "The practice step is saved to your progress.",
+    checking: "Checking the result…",
+    runSubmit: "Run & submit",
+  },
+});
+const t = text();
 
 export interface CircuitPathwayStepProps {
   lessonId: string;
@@ -90,7 +143,7 @@ export function CircuitPathwayStep({
         onReconciled(response.pathway);
       }
     } catch (err: any) {
-      setError(err?.message || "Lỗi khi lưu kết quả bài tập. Vui lòng thử lại.");
+      setError(err?.message || t.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -111,7 +164,7 @@ export function CircuitPathwayStep({
   return (
     <section
       className="circuit-pathway-container"
-      aria-label="Khu vực thực hành mạch điện"
+      aria-label={t.area}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -126,7 +179,7 @@ export function CircuitPathwayStep({
           className="notice warning"
           style={{ padding: "0.75rem", borderRadius: "8px", background: "rgba(255,180,0,0.1)" }}
         >
-          <HelpCircle size={16} /> Quá trình tải mô phỏng đang mất nhiều thời gian hơn bình thường. Bạn vẫn có thể thao tác với các linh kiện bên dưới.
+          <HelpCircle size={16} /> {t.slow}
         </div>
       )}
 
@@ -142,19 +195,19 @@ export function CircuitPathwayStep({
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
           <h4 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 600 }}>
-            {step.resource?.title ?? "Thử thách: Mạch điện thắp sáng đèn LED"}
+            {step.resource?.title ?? t.defaultTitle}
           </h4>
           <Badge tone={isPassed ? "passed" : "outline"}>
-            {isPassed ? "Đã đạt" : "Cần hoàn thành"}
+            {isPassed ? t.passed : t.todo}
           </Badge>
         </div>
         <p style={{ margin: 0, fontSize: "0.92rem", color: "var(--muted, #9e9ea7)" }}>
           {step.resource?.instruction ??
-            "Hãy kéo thả nguồn điện, điện trở thích hợp và công tắc để nối kín mạch điện làm đèn LED sáng an toàn."}
+            t.defaultInstruction}
         </p>
         {step.type === "CHALLENGE" && workspace.data?.targetObjective && (
           <p className="notice" style={{ margin: "0.5rem 0 0" }}>
-            <b>Yêu cầu của thử thách:</b> {workspace.data.targetObjective}
+            <b>{t.requirement}</b> {workspace.data.targetObjective}
           </p>
         )}
 
@@ -173,7 +226,7 @@ export function CircuitPathwayStep({
           >
             <Sparkles size={15} color="#e5a93c" />
             <span>
-              Xem trước: <b>{preview.currentMa ?? 0} mA</b> · {preview.status === "lit" ? "Đèn sáng" : "Đèn chưa sáng"}
+              {t.preview} <b>{preview.currentMa ?? 0} mA</b> · {preview.status === "lit" ? t.lit : t.notLit}
             </span>
           </div>
         )}
@@ -234,22 +287,22 @@ export function CircuitPathwayStep({
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <b style={{ fontSize: "1.05rem" }}>
                   {isPassed
-                    ? "Xuất sắc! Mạch điện đã hoạt động an toàn"
+                    ? t.excellent
                     : verdict === "partial"
-                    ? "Mạch điện cần điều chỉnh thêm"
-                    : "Mạch chưa hoàn thiện"}
+                    ? t.needsAdjust
+                    : t.incomplete}
                 </b>
                 {attempt.attemptNumber && (
                   <Badge tone="outline">
-                    Lượt #{attempt.attemptNumber}
+                    {t.attempt(attempt.attemptNumber)}
                   </Badge>
                 )}
               </div>
               <p style={{ margin: "0.2rem 0 0", fontSize: "0.9rem", color: "var(--muted, #a0a0aa)" }}>
                 {attempt.simulationResult?.message ??
                   (isPassed
-                    ? "Đèn LED sáng đúng định mức. Em đã hoàn thành phần thực hành!"
-                    : "Em hãy xem gợi ý bên dưới và điều chỉnh lại mạch điện.")}
+                    ? t.passedBody
+                    : t.tryBody)}
               </p>
             </div>
           </div>
@@ -265,7 +318,7 @@ export function CircuitPathwayStep({
                 borderLeft: "3px solid #ffab00",
               }}
             >
-              💡 <b>Gợi ý:</b> {attempt.retryGuidance}
+              💡 <b>{t.hint}</b> {attempt.retryGuidance}
             </div>
           )}
 
@@ -279,12 +332,12 @@ export function CircuitPathwayStep({
                 data-testid="circuit-retry-button"
                 style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
               >
-                <RotateCcw size={16} /> Thử lại (giữ nguyên mạch)
+                <RotateCcw size={16} /> {t.retryKeep}
               </button>
             )}
             {isPassed && (
               <span style={{ fontSize: "0.9rem", color: "#2ed573", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <CheckCircle2 size={16} /> Bước thực hành đã được lưu vào tiến độ học tập.
+                <CheckCircle2 size={16} /> {t.savedToProgress}
               </span>
             )}
           </div>
@@ -309,7 +362,7 @@ export function CircuitPathwayStep({
             }}
           >
             {loading ? <Loader2 size={18} className="spin" /> : <Play size={18} />}
-            {loading ? "Đang thẩm định kết quả…" : "Chạy thí nghiệm & Nộp bài"}
+            {loading ? t.checking : t.runSubmit}
           </button>
         </div>
       )}

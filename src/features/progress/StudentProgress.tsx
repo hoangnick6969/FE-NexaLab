@@ -8,6 +8,67 @@ import { type SheetView, time } from "./progress-format";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ActivityGroups } from "./ActivityList";
 import { EvidenceSheet, SheetContent } from "./EvidenceSheet";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    reload: "Tải lại tiến độ",
+    loading: "Đang tải tiến độ…",
+    assignmentsDone: "Bài tập đã hoàn thành",
+    stepsLeft: "Bước bắt buộc còn lại",
+    practicals: (passed: number) => `Lượt thực hành · ${passed} lượt đạt`,
+    computed: (when: string) => `Số liệu được máy chủ tính từ từng lần học và lần thử của em. Cập nhật gần nhất: ${when}`,
+    assignments: "Bài tập",
+    noAssigned: "Em chưa có bài được giao nào.",
+    home: "Về trang chủ",
+    foundational: "Chương trình nền tảng",
+    foundationalIntro: "Tiến độ theo phiên bản chương trình chính thức, độc lập với bài tập được giao.",
+    loadingCurriculum: "Đang tải tiến độ chương trình…",
+    courseLine: (grade: number, version: string) => `LỚP ${grade} · PHIÊN BẢN ${version}`,
+    steps: (done: number, total: number) => `${done}/${total} bước`,
+    stateDone: "hoàn thành",
+    stateDoing: "đang học",
+    stateTodo: "chưa bắt đầu",
+    sourceUpdated: (source: string, when: string) => `Nguồn ${source} · cập nhật ${when}`,
+    noCurriculum: "Chương trình chính thức chưa được cấu hình; tiến độ nền tảng chưa được tính.",
+    history: "Lịch sử lần thử",
+    loadingHistory: "Đang tải lịch sử…",
+    retry: "Thử lại",
+    noAttempts: "Chưa có lần thử nào được ghi lại.",
+    retryNext: "Thử tải lại trang tiếp",
+    loadingShort: "Đang tải…",
+    older: "Xem thêm lần thử cũ hơn",
+  },
+  en: {
+    reload: "Reload progress",
+    loading: "Loading progress…",
+    assignmentsDone: "Assignments completed",
+    stepsLeft: "Required steps left",
+    practicals: (passed: number) => `Practice attempts · ${passed} passed`,
+    computed: (when: string) => `The server computes these from each of your lessons and attempts. Last updated: ${when}`,
+    assignments: "Assignments",
+    noAssigned: "You have no assigned work yet.",
+    home: "Go home",
+    foundational: "Foundation curriculum",
+    foundationalIntro: "Progress against the official curriculum version, separate from assigned work.",
+    loadingCurriculum: "Loading curriculum progress…",
+    courseLine: (grade: number, version: string) => `GRADE ${grade} · VERSION ${version}`,
+    steps: (done: number, total: number) => `${done}/${total} steps`,
+    stateDone: "completed",
+    stateDoing: "in progress",
+    stateTodo: "not started",
+    sourceUpdated: (source: string, when: string) => `Source ${source} · updated ${when}`,
+    noCurriculum: "The official curriculum is not configured; foundation progress is not computed.",
+    history: "Attempt history",
+    loadingHistory: "Loading history…",
+    retry: "Try again",
+    noAttempts: "No attempts recorded yet.",
+    retryNext: "Try loading the next page again",
+    loadingShort: "Loading…",
+    older: "Show older attempts",
+  },
+});
+const t = text();
 
 export function StudentProgress() {
   const progress = useQuery<MyProgressResponse>({ queryKey: ["me-progress"], queryFn: () => api("/me/progress") });
@@ -38,11 +99,11 @@ export function StudentProgress() {
       <ErrorBox error={progress.error} />
       {progress.isError && (
         <button className="secondary" type="button" onClick={() => progress.refetch()}>
-          Tải lại tiến độ
+          {t.reload}
         </button>
       )}
       {progress.isPending ? (
-        <Empty>Đang tải tiến độ…</Empty>
+        <Empty>{t.loading}</Empty>
       ) : summary ? (
         <>
           <div className="stats progress-stats">
@@ -50,32 +111,32 @@ export function StudentProgress() {
               <span><BookOpen /></span>
               <div>
                 <strong>{summary.activeAssignments ? `${summary.completedAssignments}/${summary.activeAssignments}` : "—"}</strong>
-                <p>Bài tập đã hoàn thành</p>
+                <p>{t.assignmentsDone}</p>
               </div>
             </button>
             <button type="button" className="stat" onClick={() => scrollTo("progress-completion")}>
               <span><ListChecks /></span>
               <div>
                 <strong>{summary.activeAssignments ? summary.remainingRequiredSteps : "—"}</strong>
-                <p>Bước bắt buộc còn lại</p>
+                <p>{t.stepsLeft}</p>
               </div>
             </button>
             <button type="button" className="stat" onClick={() => scrollTo("progress-history")}>
               <span><FlaskConical /></span>
               <div>
                 <strong>{summary.practicalAttempts}</strong>
-                <p>Lượt thực hành · {summary.passedPracticals} lượt đạt</p>
+                <p>{t.practicals(summary.passedPracticals)}</p>
               </div>
             </button>
           </div>
           <p className="tiny muted progress-updated">
-            Số liệu được máy chủ tính từ từng lần học và lần thử của em. Cập nhật gần nhất: {time(summary.updatedAt)}
+            {t.computed(time(summary.updatedAt))}
           </p>
           <section id="progress-completion" className="progress-section" aria-labelledby="progress-completion-title">
-            <h2 id="progress-completion-title">Bài tập</h2>
+            <h2 id="progress-completion-title">{t.assignments}</h2>
             {assignments.length === 0 ? (
               <Empty>
-                Em chưa có bài được giao nào. <Link to="/">Về trang chủ →</Link>
+                {t.noAssigned} <Link to="/">{t.home} →</Link>
               </Empty>
             ) : (
               assignments.map((assignment) => (
@@ -84,42 +145,42 @@ export function StudentProgress() {
             )}
           </section>
           <section className="panel progress-section" aria-labelledby="foundational-progress-title">
-            <h2 id="foundational-progress-title">Chương trình nền tảng</h2>
-            <p className="muted">Tiến độ theo phiên bản chương trình chính thức, độc lập với bài tập được giao.</p>
+            <h2 id="foundational-progress-title">{t.foundational}</h2>
+            <p className="muted">{t.foundationalIntro}</p>
             <ErrorBox error={foundational.error} />
-            {foundational.isPending ? <Empty>Đang tải tiến độ chương trình…</Empty> : foundational.data?.courses?.length ? foundational.data.courses.map((course: any) => (
+            {foundational.isPending ? <Empty>{t.loadingCurriculum}</Empty> : foundational.data?.courses?.length ? foundational.data.courses.map((course: any) => (
               <article className="progress-course" key={course.id}>
-                <div className="lesson-chapter-heading"><div><span className="eyebrow">LỚP {course.grade} · PHIÊN BẢN {course.version}</span><h3>{course.subject.name}</h3></div><Badge>{course.summary.completedEvidenceItems}/{course.summary.totalEvidenceItems} bước</Badge></div>
+                <div className="lesson-chapter-heading"><div><span className="eyebrow">{t.courseLine(course.grade, course.version)}</span><h3>{course.subject.name}</h3></div><Badge>{t.steps(course.summary.completedEvidenceItems, course.summary.totalEvidenceItems)}</Badge></div>
                 <div className="progress-track"><i style={{ width: `${course.summary.percent ?? 0}%` }} /></div>
-                <ol>{course.lessons.map((lesson: any) => <li key={lesson.id}><Link to={`/lessons/${lesson.id}`}>{lesson.title}</Link><span>{lesson.evidence.map((item: any) => `${item.kind}: ${item.state === "COMPLETED" ? "hoàn thành" : item.state === "IN_PROGRESS" ? "đang học" : "chưa bắt đầu"}${item.kind === "basicExercise" && item.score !== null ? ` (${item.score}% / ${item.passThreshold}%)` : ""}`).join(" · ")}</span>{lesson.evidence.filter((item: any) => item.updatedAt).map((item: any) => <small key={item.stepId}>Nguồn {item.sourceId} · cập nhật {time(item.updatedAt)}</small>)}</li>)}</ol>
+                <ol>{course.lessons.map((lesson: any) => <li key={lesson.id}><Link to={`/lessons/${lesson.id}`}>{lesson.title}</Link><span>{lesson.evidence.map((item: any) => `${item.kind}: ${item.state === "COMPLETED" ? t.stateDone : item.state === "IN_PROGRESS" ? t.stateDoing : t.stateTodo}${item.kind === "basicExercise" && item.score !== null ? ` (${item.score}% / ${item.passThreshold}%)` : ""}`).join(" · ")}</span>{lesson.evidence.filter((item: any) => item.updatedAt).map((item: any) => <small key={item.stepId}>{t.sourceUpdated(item.sourceId, time(item.updatedAt))}</small>)}</li>)}</ol>
               </article>
-            )) : <Empty>Chương trình chính thức chưa được cấu hình; tiến độ nền tảng chưa được tính.</Empty>}
+            )) : <Empty>{t.noCurriculum}</Empty>}
           </section>
         </>
       ) : null}
       <section id="progress-history" className="panel progress-section" aria-labelledby="progress-history-title">
-        <h2 id="progress-history-title">Lịch sử lần thử</h2>
+        <h2 id="progress-history-title">{t.history}</h2>
         {activity.isPending ? (
-          <Empty>Đang tải lịch sử…</Empty>
+          <Empty>{t.loadingHistory}</Empty>
         ) : activity.isError && !items.length ? (
           <>
             <ErrorBox error={activity.error} />
-            <button className="secondary" type="button" onClick={() => activity.refetch()}>Thử lại</button>
+            <button className="secondary" type="button" onClick={() => activity.refetch()}>{t.retry}</button>
           </>
         ) : items.length === 0 ? (
-          <Empty>Chưa có lần thử nào được ghi lại.</Empty>
+          <Empty>{t.noAttempts}</Empty>
         ) : (
           <>
             <ActivityGroups items={items} onOpen={open} />
             {activity.isFetchNextPageError && (
               <>
                 <ErrorBox error={activity.error} />
-                <button className="secondary" type="button" onClick={() => activity.fetchNextPage()}>Thử tải lại trang tiếp</button>
+                <button className="secondary" type="button" onClick={() => activity.fetchNextPage()}>{t.retryNext}</button>
               </>
             )}
             {activity.hasNextPage && !activity.isFetchNextPageError && (
               <button className="secondary load-more" type="button" disabled={activity.isFetchingNextPage} onClick={() => activity.fetchNextPage()}>
-                {activity.isFetchingNextPage ? "Đang tải…" : "Xem thêm lần thử cũ hơn"}
+                {activity.isFetchingNextPage ? t.loadingShort : t.older}
               </button>
             )}
           </>

@@ -4,6 +4,31 @@ import { Link } from "react-router-dom";
 import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { labInfo } from "./lab-info";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    grades: "Lớp 8–9",
+    basicsFirst: "Học kiến thức nền trước",
+    explore: "Khám phá phòng lab",
+    nonePublished: "Chưa có phòng thực hành nền tảng nào được phát hành.",
+    eyebrow: "HỌC QUA TRẢI NGHIỆM",
+    title: "Phòng thí nghiệm",
+    description: "Tự đặt câu hỏi, tự thử nghiệm và kiểm chứng bằng kết quả.",
+    disclaimer: "Mọi thí nghiệm đều là mô phỏng giáo dục. Không thực hiện với điện hoặc hóa chất thật theo mô hình này.",
+  },
+  en: {
+    grades: "Grades 8–9",
+    basicsFirst: "Learn the basics first",
+    explore: "Explore the lab",
+    nonePublished: "No foundation labs are published yet.",
+    eyebrow: "LEARN BY EXPERIENCE",
+    title: "Labs",
+    description: "Ask your own questions, experiment and check against the results.",
+    disclaimer: "Every experiment is an educational simulation. Do not try it with real electricity or chemicals.",
+  },
+});
+const t = text();
 
 export function LabCards({ guided = false }: { guided?: boolean } = {}) {
   const role = useAuth((s) => s.user!.role);
@@ -31,12 +56,12 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
           <div className="lab-copy">
             <div className="lab-meta">
               <span>{l.tag}</span>
-              <span>Lớp 8–9</span>
+              <span>{t.grades}</span>
             </div>
             <h3>{l.title}</h3>
             <p>{l.description}</p>
             <div className="card-footer">
-              <span>{guided && role === "STUDENT" ? "Học kiến thức nền trước" : "Khám phá phòng lab"}</span>
+              <span>{guided && role === "STUDENT" ? t.basicsFirst : t.explore}</span>
               <span className="round-arrow">
                 <ArrowUpRight size={17} />
               </span>
@@ -44,7 +69,7 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
           </div>
         </Link>
       ))}
-      {role === "STUDENT" && labs.isSuccess && cards.length === 0 && <p className="notice">Chưa có phòng thực hành nền tảng nào được phát hành.</p>}
+      {role === "STUDENT" && labs.isSuccess && cards.length === 0 && <p className="notice">{t.nonePublished}</p>}
     </div>
   );
 }
@@ -52,14 +77,13 @@ export function LabLibrary() {
   return (
     <>
       <PageHeading
-        eyebrow="HỌC QUA TRẢI NGHIỆM"
-        title="Phòng thí nghiệm"
-        description="Tự đặt câu hỏi, tự thử nghiệm và kiểm chứng bằng kết quả."
+        eyebrow={t.eyebrow}
+        title={t.title}
+        description={t.description}
       />
       <LabCards />
       <div className="notice">
-        Mọi thí nghiệm đều là mô phỏng giáo dục. Không thực hiện với điện hoặc
-        hóa chất thật theo mô hình này.
+        {t.disclaimer}
       </div>
     </>
   );

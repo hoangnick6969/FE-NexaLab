@@ -14,7 +14,7 @@ export type Enrollment = {
   studentId: string;
   status: "pending" | "approved" | "removed";
   joinedAt: string;
-  student: { id: string; fullName: string; username: string; grade: number; mustChangePassword: boolean };
+  student: { id: string; fullName: string; username: string; grade: number; mustChangePassword: boolean; avatarUrl?: string | null };
 };
 
 export type TeacherAssignment = {

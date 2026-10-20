@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-export const verdictLabel = (v: string) =>
-  ({ passed: "Đạt", partial: "Đạt một phần", not_passed: "Chưa đạt", needs_practice: "Cần luyện thêm" })[v] ?? v;
+import { commonText } from "../i18n/common";
+export const verdictLabel = (v: string) => commonText().verdicts[v] ?? v;
 export function Badge({
   children,
   tone = "",
@@ -81,7 +81,7 @@ export function Modal({
       >
         <header>
           <h2>{title}</h2>
-          <button className="icon-button" aria-label="Đóng" onClick={onClose}>
+          <button className="icon-button" aria-label={commonText().close} onClick={onClose}>
             ×
           </button>
         </header>
@@ -92,8 +92,8 @@ export function Modal({
 }
 
 export function PageLoader({
-  message = "Đang mở không gian khám phá…",
-  caption = "NexaLab · Quan sát, thử nghiệm và khám phá",
+  message = commonText().pageLoading,
+  caption = commonText().pageLoadingCaption,
   fullScreen = false,
 }: {
   message?: string;
@@ -127,7 +127,7 @@ export function PageLoader({
 }
 
 export function InlineLoader({
-  message = "Đang tải dữ liệu…",
+  message = commonText().loading,
   size = "md",
 }: {
   message?: string;

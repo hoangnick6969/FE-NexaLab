@@ -9,8 +9,68 @@ import { PracticalPathwayStep } from "../labs/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
 import { AssignedTest } from "./AssignedTest";
 import { QuizLearningStep } from "./QuizLearningStep";
+import { defineText, formatDate } from "../../i18n";
+import { commonText } from "../../i18n/common";
+
+const text = defineText({
+  vi: {
+    loading: "Đang nạp bài tập…",
+    caption: "NexaLab · Phòng thí nghiệm mô phỏng",
+    retry: "Thử lại",
+    loadingPathway: "Đang nạp lộ trình bài học…",
+    pathwayCaption: "NexaLab · Khoa học tự nhiên",
+    stepNames: { QUIZ: "Kiểm tra kiến thức", LAB: "Thực hành trong phòng lab", CHALLENGE: "Hoàn thành thử thách" } as Record<string, string>,
+    stateNames: { COMPLETED: "Đã hoàn thành", IN_PROGRESS: "Đang học", LOCKED: "Đã khóa" } as Record<string, string>,
+    continueNames: { QUIZ: "Bắt đầu kiểm tra", LAB: "Bắt đầu thực hành", CHALLENGE: "Hoàn thành thử thách" } as Record<string, string>,
+    lockReasons: { PREREQUISITE_INCOMPLETE: "Hoàn thành bước trước để tiếp tục.", QUIZ_NOT_PASSED: "Vượt qua bài kiểm tra để mở khóa bước này.", PRACTICE_NOT_PASSED: "Hoàn thành phần thực hành để mở khóa thử thách." } as Record<string, string>,
+    eyebrow: "BÀI TẬP",
+    grade: (grade: number | string | undefined) => `LỚP ${grade ?? ""}`,
+    objective: "Mục tiêu học tập:",
+    prerequisites: "Kiến thức nền:",
+    none: "Không yêu cầu",
+    overdue: "Đã quá hạn nhưng vẫn có thể học",
+    archivedNotice: "Nội dung này không còn được cập nhật. Em vẫn có thể học tiếp phần đã bắt đầu.",
+    lessonSteps: "Các bước học tập",
+    lessonUnfinishedBody: "Hãy đọc nội dung và xem video trong mục Bài học trước. Tiến độ được lưu theo từng bước. Thẻ ôn tập nằm trong Class Space.",
+    reviewCards: "Ôn thẻ trong Class Space",
+    backToLesson: "Quay lại Bài học",
+    noActivities: "Bài tập này chưa có bài kiểm tra hoặc hoạt động thực hành.",
+    pathwayLabel: "Bài tập và thực hành",
+    step: (n: number) => `Bước ${n}`,
+    stepUnavailable: "Bước học chưa khả dụng",
+    openLab: "Mở phòng lab",
+  },
+  en: {
+    loading: "Loading the assignment…",
+    caption: "NexaLab · Simulation lab",
+    retry: "Try again",
+    loadingPathway: "Loading the lesson pathway…",
+    pathwayCaption: "NexaLab · Natural science",
+    stepNames: { QUIZ: "Knowledge check", LAB: "Practice in the lab", CHALLENGE: "Complete the challenge" },
+    stateNames: { COMPLETED: "Completed", IN_PROGRESS: "In progress", LOCKED: "Locked" },
+    continueNames: { QUIZ: "Start the quiz", LAB: "Start the practice", CHALLENGE: "Complete the challenge" },
+    lockReasons: { PREREQUISITE_INCOMPLETE: "Finish the previous step to continue.", QUIZ_NOT_PASSED: "Pass the quiz to unlock this step.", PRACTICE_NOT_PASSED: "Finish the practice to unlock the challenge." },
+    eyebrow: "ASSIGNMENT",
+    grade: (grade: number | string | undefined) => `GRADE ${grade ?? ""}`,
+    objective: "Learning objective:",
+    prerequisites: "Prerequisites:",
+    none: "None",
+    overdue: "Overdue but still open",
+    archivedNotice: "This content is no longer updated. You can still continue what you started.",
+    lessonSteps: "Learning steps",
+    lessonUnfinishedBody: "Read the content and watch the video under Lessons first. Progress is saved step by step. Study cards are in Class Space.",
+    reviewCards: "Review cards in Class Space",
+    backToLesson: "Back to the lesson",
+    noActivities: "This assignment has no quiz or practice yet.",
+    pathwayLabel: "Assignments and practice",
+    step: (n: number) => `Step ${n}`,
+    stepUnavailable: "This step is not available yet",
+    openLab: "Open the lab",
+  },
+});
 
 export function AssignedLearning() {
+  const t = text();
   const { id } = useParams();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -36,67 +96,51 @@ export function AssignedLearning() {
     });
     return () => cancelAnimationFrame(frame);
   }, [location.hash, query.data, pathwayQuery.data]);
-  if (query.isLoading) return <PageLoader message="Đang nạp bài tập…" caption="NexaLab · Phòng thí nghiệm mô phỏng" />;
-  if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>Thử lại</button></div>;
+  if (query.isLoading) return <PageLoader message={t.loading} caption={t.caption} />;
+  if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>{t.retry}</button></div>;
   const assignment = query.data;
   const content = assignment.content;
   if (assignment.contentType === "test") return <AssignedTest assignment={assignment} />;
   if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
-    return <PageLoader message="Đang nạp lộ trình bài học…" caption="NexaLab · Khoa học tự nhiên" />;
+    return <PageLoader message={t.loadingPathway} caption={t.pathwayCaption} />;
   if (assignment.contentType === "lesson" && pathwayQuery.error)
-    return <div><ErrorBox error={pathwayQuery.error} /><button onClick={() => pathwayQuery.refetch()}>Thử lại</button></div>;
+    return <div><ErrorBox error={pathwayQuery.error} /><button onClick={() => pathwayQuery.refetch()}>{t.retry}</button></div>;
   const pathway = pathwayQuery.data;
   const lesson = pathway?.lesson ?? content;
-  const stepNames: Record<string, string> = {
-    QUIZ: "Kiểm tra kiến thức",
-    LAB: "Thực hành trong phòng lab",
-    CHALLENGE: "Hoàn thành thử thách",
-  };
-  const stateNames: Record<string, string> = {
-    COMPLETED: "Đã hoàn thành",
-    IN_PROGRESS: "Đang học",
-    LOCKED: "Đã khóa",
-  };
-  const continueNames: Record<string, string> = {
-    QUIZ: "Bắt đầu kiểm tra",
-    LAB: "Bắt đầu thực hành",
-    CHALLENGE: "Hoàn thành thử thách",
-  };
-  const lockReasons: Record<string, string> = {
-    PREREQUISITE_INCOMPLETE: "Hoàn thành bước trước để tiếp tục.",
-    QUIZ_NOT_PASSED: "Vượt qua bài kiểm tra để mở khóa bước này.",
-    PRACTICE_NOT_PASSED: "Hoàn thành phần thực hành để mở khóa thử thách.",
-  };
+  const stepNames: Record<string, string> = t.stepNames;
+  const stateNames: Record<string, string> = t.stateNames;
+  const continueNames: Record<string, string> = t.continueNames;
+  const lockReasons: Record<string, string> = t.lockReasons;
   const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
   return (
     <div className="student-assigned-learning">
       <PageHeading
-        eyebrow="BÀI TẬP"
+        eyebrow={t.eyebrow}
         title={lesson.title}
-        description={`${assignment.classroom.name} · ${assignment.dueDate ? `Hạn ${new Date(assignment.dueDate).toLocaleDateString("vi-VN")}` : "Không có hạn nộp"}`}
+        description={`${assignment.classroom.name} · ${assignment.dueDate ? commonText().due(formatDate(assignment.dueDate)) : commonText().noDueDate}`}
       />
       <section className="panel lesson-content">
         <p className="eyebrow">
-          {lesson.subject?.name} · LỚP {lesson.grade ?? lesson.subject?.grade}
+          {lesson.subject?.name} · {t.grade(lesson.grade ?? lesson.subject?.grade)}
         </p>
         <h2>{lesson.topic}</h2>
         <div className="notice">
-          <b>Mục tiêu học tập:</b> {lesson.learningObjective}
+          <b>{t.objective}</b> {lesson.learningObjective}
           <br />
-          <b>Kiến thức nền:</b> {lesson.prerequisites || "Không yêu cầu"}
+          <b>{t.prerequisites}</b> {lesson.prerequisites || t.none}
         </div>
-        {assignment.overdue && <Badge tone="outline">Đã quá hạn nhưng vẫn có thể học</Badge>}
+        {assignment.overdue && <Badge tone="outline">{t.overdue}</Badge>}
         {pathway?.contentArchived && (
-          <p className="notice" role="status">Nội dung này không còn được cập nhật. Em vẫn có thể học tiếp phần đã bắt đầu.</p>
+          <p className="notice" role="status">{t.archivedNotice}</p>
         )}
         <AttributionNote value={pathway?.attribution} />
         {assignment.contentType === "lesson" && pathway ? (
           <>
           {pathway.steps.some((step) => ["READING", "VIDEO", "STUDY_CARDS"].includes(step.type) && step.state !== "COMPLETED") && (
-            <div className="notice"><b>Các bước học tập</b><p>Hãy đọc nội dung và xem video trong mục Bài học trước. Tiến độ được lưu theo từng bước. Thẻ ôn tập nằm trong Class Space.</p><Link className="primary" to={`/lessons/${encodeURIComponent(lesson.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>Quay lại Bài học <ArrowUpRight size={15} /></Link>{pathway.steps.some((step) => step.type === "STUDY_CARDS" && step.state !== "COMPLETED") && <Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}`}>Ôn thẻ trong Class Space</Link>}</div>
+            <div className="notice"><b>{t.lessonSteps}</b><p>{t.lessonUnfinishedBody}</p><Link className="primary" to={`/lessons/${encodeURIComponent(lesson.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>{t.backToLesson} <ArrowUpRight size={15} /></Link>{pathway.steps.some((step) => step.type === "STUDY_CARDS" && step.state !== "COMPLETED") && <Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}`}>{t.reviewCards}</Link>}</div>
           )}
-          {!pathway.steps.some((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)) && <Empty>Bài tập này chưa có bài kiểm tra hoặc hoạt động thực hành.</Empty>}
-          <div className="lesson-pathway" aria-label="Bài tập và thực hành">
+          {!pathway.steps.some((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)) && <Empty>{t.noActivities}</Empty>}
+          <div className="lesson-pathway" aria-label={t.pathwayLabel}>
             <ol className="pathway-steps">
               {pathway.steps.filter((step) => ["QUIZ", "LAB", "CHALLENGE"].includes(step.type)).map((step, index) => (
                 <li
@@ -106,7 +150,7 @@ export function AssignedLearning() {
                 >
                   <div className="pathway-step-heading">
                     <div>
-                      <span className="pathway-position">Bước {index + 1}</span>
+                      <span className="pathway-position">{t.step(index + 1)}</span>
                       <h3>{stepNames[step.type]}</h3>
                     </div>
                     <Badge tone={step.state === "COMPLETED" ? "passed" : "outline"}>
@@ -114,7 +158,7 @@ export function AssignedLearning() {
                     </Badge>
                   </div>
                   {step.state === "LOCKED" && (
-                    <p className="pathway-lock">{step.lockReasonCode ? lockReasons[step.lockReasonCode] : "Bước học chưa khả dụng"}</p>
+                    <p className="pathway-lock">{step.lockReasonCode ? lockReasons[step.lockReasonCode] : t.stepUnavailable}</p>
                   )}
                   {step.type === "QUIZ" && ["IN_PROGRESS", "COMPLETED"].includes(step.state) && (
                     <QuizLearningStep
@@ -148,7 +192,7 @@ export function AssignedLearning() {
           </>
         ) : (
           <Link className="primary" to={"/labs/" + content.id}>
-            Mở phòng lab <ArrowUpRight size={16} />
+            {t.openLab} <ArrowUpRight size={16} />
           </Link>
         )}
       </section>

@@ -1,6 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff } from "lucide-react";
 import { ErrorBox } from "../../components/ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    showHand: "Đưa một bàn tay vào khung hình",
+    pinch: "Chụm ngón: chọn bộ phận tiếp theo",
+    move: "Di chuyển tay: xoay và tách mô hình",
+    denied: "Camera chưa được cho phép. Em vẫn có thể dùng đầy đủ bằng chuột và thanh trượt.",
+    failed: "Không mở được camera hoặc mô hình nhận dạng. Em có thể tiếp tục dùng chuột.",
+    opening: "Đang mở…",
+    off: "Tắt camera",
+    on: "Bật điều khiển cử chỉ",
+    privacy: "Chỉ xử lý trên thiết bị. Không ghi, lưu hoặc gửi hình ảnh.",
+  },
+  en: {
+    showHand: "Show one hand to the camera",
+    pinch: "Pinch: select the next part",
+    move: "Move your hand: rotate and separate the model",
+    denied: "Camera access is not allowed. You can still do everything with the mouse and sliders.",
+    failed: "The camera or recognition model could not open. You can keep using the mouse.",
+    opening: "Opening…",
+    off: "Turn camera off",
+    on: "Turn on gesture control",
+    privacy: "Processed on this device only. No images are recorded, stored or sent.",
+  },
+});
+const tx = text();
 export function HandControl({
   onGesture,
 }: {
@@ -56,7 +83,7 @@ export function HandControl({
       v.srcObject = stream;
       await v.play();
       setActive(true);
-      setStatus("Đưa một bàn tay vào khung hình");
+      setStatus(tx.showHand);
       let last = 0;
       let lastTime = -1;
       let wasPinched = false;
@@ -80,8 +107,8 @@ export function HandControl({
             wasPinched = pinch;
             setStatus(
               pinch
-                ? "Chụm ngón: chọn bộ phận tiếp theo"
-                : "Di chuyển tay: xoay và tách mô hình",
+                ? tx.pinch
+                : tx.move,
             );
           }
         }
@@ -93,8 +120,8 @@ export function HandControl({
       setActive(false);
       setError(
         e.name === "NotAllowedError"
-          ? "Camera chưa được cho phép. Em vẫn có thể dùng đầy đủ bằng chuột và thanh trượt."
-          : "Không mở được camera hoặc mô hình nhận dạng. Em có thể tiếp tục dùng chuột.",
+          ? tx.denied
+          : tx.failed,
       );
     } finally {
       setBusy(false);
@@ -113,10 +140,10 @@ export function HandControl({
           }
         >
           {active ? <CameraOff size={15} /> : <Camera size={15} />}{" "}
-          {busy ? "Đang mở…" : active ? "Tắt camera" : "Bật điều khiển cử chỉ"}
+          {busy ? tx.opening : active ? tx.off : tx.on}
         </button>
         <span className="tiny muted">
-          Chỉ xử lý trên thiết bị. Không ghi, lưu hoặc gửi hình ảnh.
+          {tx.privacy}
         </span>
       </div>
       <video

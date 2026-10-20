@@ -4,6 +4,96 @@ import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type ClassSummary, type Enrollment } from "./class-types";
 import { Confirm, LoadError, statusLabel, useMutate } from "./class-ui";
+import { Avatar } from "../../components/Avatar";
+import { defineText, formatDateTime } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    members: "Thành viên lớp",
+    enrolExisting: "Ghi danh tài khoản có sẵn",
+    issueAccount: "Cấp tài khoản học sinh",
+    memberStatus: "Trạng thái thành viên",
+    memberList: "danh sách thành viên",
+    loadingList: "Đang tải danh sách…",
+    noPending: "Không có yêu cầu chờ duyệt.",
+    noRemoved: "Chưa có học sinh rời lớp.",
+    noApproved: "Lớp chưa có thành viên đã duyệt.",
+    student: "Học sinh",
+    status: "Trạng thái",
+    actions: "Thao tác",
+    account: "Tài khoản:",
+    tempNotChanged: "Chưa đổi mật khẩu tạm",
+    approve: "Duyệt",
+    resetPassword: "Cấp lại mật khẩu",
+    removeAvatar: "Gỡ ảnh",
+    removeAvatarAction: "gỡ ảnh đại diện của",
+    removeAvatarDetail: "Ảnh bị xóa vĩnh viễn và thao tác được ghi vào nhật ký. Học sinh có thể tải ảnh khác.",
+    reject: "Từ chối",
+    remove: "Xóa khỏi lớp",
+    rejectAction: "từ chối yêu cầu của",
+    removeAction: "xóa khỏi lớp",
+    removeDetail: "Học sinh mất quyền vào bài của lớp ngay. Kết quả học tập đã có vẫn được giữ.",
+    username: "Tên đăng nhập",
+    fullName: "Họ tên",
+    gradeLabel: "Khối lớp",
+    grade: (g: number) => `Khối ${g}`,
+    schoolConsent: "Nhà trường đã có chấp thuận xử lý dữ liệu học sinh.",
+    issue: "Cấp tài khoản",
+    studentUsername: "Tên đăng nhập học sinh",
+    enrolNote: "Học sinh được duyệt vào lớp ngay. Bài đã giao trước đó không tự động thêm cho học sinh mới.",
+    resetTitle: "Cấp lại mật khẩu học sinh",
+    creatingTemp: "Đang tạo mật khẩu tạm mới…",
+    credentials: "Thông tin đăng nhập",
+    usernameLabel: "Tên đăng nhập:",
+    tempPassword: "Mật khẩu tạm:",
+    expires: "Hạn dùng:",
+    shareOnce: "Hãy lưu và gửi riêng cho học sinh. Mật khẩu sẽ không hiển thị lại.",
+    saved: "Đã lưu thông tin",
+  },
+  en: {
+    members: "Class members",
+    enrolExisting: "Enrol an existing account",
+    issueAccount: "Issue a student account",
+    memberStatus: "Member status",
+    memberList: "the member list",
+    loadingList: "Loading the list…",
+    noPending: "No requests waiting.",
+    noRemoved: "No students have left.",
+    noApproved: "The class has no approved members yet.",
+    student: "Student",
+    status: "Status",
+    actions: "Actions",
+    account: "Account:",
+    tempNotChanged: "Temporary password not changed",
+    approve: "Approve",
+    resetPassword: "Reset password",
+    removeAvatar: "Remove picture",
+    removeAvatarAction: "remove the profile picture of",
+    removeAvatarDetail: "The picture is deleted permanently and the action is logged. The student can upload another one.",
+    reject: "Reject",
+    remove: "Remove from class",
+    rejectAction: "reject the request from",
+    removeAction: "remove from the class",
+    removeDetail: "The student loses access to class work at once. Existing results are kept.",
+    username: "Username",
+    fullName: "Full name",
+    gradeLabel: "Grade",
+    grade: (g: number) => `Grade ${g}`,
+    schoolConsent: "The school has consent to process student data.",
+    issue: "Issue account",
+    studentUsername: "Student username",
+    enrolNote: "The student is approved at once. Work assigned earlier is not added for new students automatically.",
+    resetTitle: "Reset the student's password",
+    creatingTemp: "Creating a new temporary password…",
+    credentials: "Sign-in details",
+    usernameLabel: "Username:",
+    tempPassword: "Temporary password:",
+    expires: "Expires:",
+    shareOnce: "Save it and give it to the student privately. The password will not be shown again.",
+    saved: "I saved the details",
+  },
+});
+const t = text();
 
 export function Roster({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
@@ -13,6 +103,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
   const [parentTarget, setParentTarget] = useState<Enrollment | null>(null);
   const [parentCode, setParentCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const [confirm, setConfirm] = useState<Enrollment | null>(null);
+  const [avatarTarget, setAvatarTarget] = useState<Enrollment | null>(null);
   const formKey = useRef(idempotencyKey());
   const roster = useQuery<Enrollment[]>({
     queryKey: ["roster", classroom.id],
@@ -29,31 +120,31 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
   return (
     <section className="panel" aria-labelledby="roster-title">
       <div className="section-heading">
-        <h2 id="roster-title">Thành viên lớp</h2>
+        <h2 id="roster-title">{t.members}</h2>
         {!archived && (
           <div className="button-row">
             <button className="secondary" onClick={() => open("enroll")}>
-              Ghi danh tài khoản có sẵn
+              {t.enrolExisting}
             </button>
             <button className="primary" onClick={() => open("provision")}>
-              Cấp tài khoản học sinh
+              {t.issueAccount}
             </button>
           </div>
         )}
       </div>
-      <div className="tabs" role="tablist" aria-label="Trạng thái thành viên">
+      <div className="tabs" role="tablist" aria-label={t.memberStatus}>
         {(["approved", "pending", "removed"] as const).map((value) => (
           <button key={value} role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>
             {statusLabel[value]} ({roster.data?.filter((e) => e.status === value).length ?? 0})
           </button>
         ))}
       </div>
-      <LoadError query={roster} what="danh sách thành viên" />
+      <LoadError query={roster} what={t.memberList} />
       <ErrorBox error={!modal && !confirm ? act.error : null} />
-      {roster.isLoading && <p className="muted">Đang tải danh sách…</p>}
+      {roster.isLoading && <p className="muted">{t.loadingList}</p>}
       {roster.data && rows.length === 0 && (
         <Empty>
-          {tab === "pending" ? "Không có yêu cầu chờ duyệt." : tab === "removed" ? "Chưa có học sinh rời lớp." : "Lớp chưa có thành viên đã duyệt."}
+          {tab === "pending" ? t.noPending : tab === "removed" ? t.noRemoved : t.noApproved}
         </Empty>
       )}
       {rows.length > 0 && (
@@ -61,21 +152,24 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
           <table>
             <thead>
               <tr>
-                <th>Học sinh</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
+                <th>{t.student}</th>
+                <th>{t.status}</th>
+                <th>{t.actions}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((e) => (
                 <tr key={e.studentId}>
-                  <td>
-                    {e.student.fullName}
-                    <small>Tài khoản: {e.student.username}</small>
+                  <td className="roster-student">
+                    <Avatar name={e.student.fullName} url={e.student.avatarUrl} className="avatar small" />
+                    <span>
+                      {e.student.fullName}
+                      <small>{t.account} {e.student.username}</small>
+                    </span>
                   </td>
                   <td>
                     <Badge tone={e.status === "approved" ? "" : "outline"}>{statusLabel[e.status]}</Badge>
-                    {e.student.mustChangePassword && <small>Chưa đổi mật khẩu tạm</small>}
+                    {e.student.mustChangePassword && <small>{t.tempNotChanged}</small>}
                   </td>
                   <td>
                     {!archived && e.status === "pending" && (
@@ -84,7 +178,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                         disabled={act.isPending}
                         onClick={() => act.mutate({ path: `/classes/${classroom.id}/students/${e.studentId}`, method: "PUT", body: { status: "approved" } })}
                       >
-                        Duyệt
+                        {t.approve}
                       </button>
                     )}
                     {!archived && e.status !== "removed" && (
@@ -102,7 +196,12 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                               );
                             }}
                           >
-                            Cấp lại mật khẩu
+                            {t.resetPassword}
+                          </button>
+                        )}
+                        {e.status === "approved" && e.student.avatarUrl && (
+                          <button className="danger-text" onClick={() => setAvatarTarget(e)}>
+                            {t.removeAvatar}
                           </button>
                         )}
                         {e.status === "approved" && (
@@ -119,7 +218,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                           </button>
                         )}
                         <button className="danger-text" onClick={() => setConfirm(e)}>
-                          {e.status === "pending" ? "Từ chối" : "Xóa khỏi lớp"}
+                          {e.status === "pending" ? t.reject : t.remove}
                         </button>
                       </>
                     )}
@@ -132,9 +231,9 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
       )}
       {confirm && (
         <Confirm
-          action={confirm.status === "pending" ? "từ chối yêu cầu của" : "xóa khỏi lớp"}
+          action={confirm.status === "pending" ? t.rejectAction : t.removeAction}
           item={confirm.student.fullName}
-          detail="Học sinh mất quyền vào bài của lớp ngay. Kết quả học tập đã có vẫn được giữ."
+          detail={t.removeDetail}
           pending={act.isPending}
           error={act.error}
           onClose={() => {
@@ -149,8 +248,24 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
           }
         />
       )}
+      {avatarTarget && (
+        <Confirm
+          action={t.removeAvatarAction}
+          item={avatarTarget.student.fullName}
+          detail={t.removeAvatarDetail}
+          pending={act.isPending}
+          error={act.error}
+          onClose={() => {
+            act.reset();
+            setAvatarTarget(null);
+          }}
+          onConfirm={() =>
+            act.mutate({ path: `/classes/${classroom.id}/students/${avatarTarget.studentId}/avatar`, method: "DELETE" }, { onSuccess: () => setAvatarTarget(null) })
+          }
+        />
+      )}
       {modal === "provision" && (
-        <Modal title="Cấp tài khoản học sinh" onClose={() => setModal("")}>
+        <Modal title={t.issueAccount} onClose={() => setModal("")}>
           {credentials ? (
             <CredentialNotice credentials={credentials} onDone={() => setModal("")} />
           ) : (
@@ -168,32 +283,32 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                 );
               }}
             >
-              <Field label="Tên đăng nhập" name="username" required autoComplete="off" minLength={3} maxLength={32} />
-              <Field label="Họ tên" name="fullName" required maxLength={200} />
+              <Field label={t.username} name="username" required autoComplete="off" minLength={3} maxLength={32} />
+              <Field label={t.fullName} name="fullName" required maxLength={200} />
               <label className="field">
-                <span>Khối lớp</span>
+                <span>{t.gradeLabel}</span>
                 <select name="grade" defaultValue={classroom.grade}>
                   {[6, 7, 8, 9].map((g) => (
                     <option key={g} value={g}>
-                      Khối {g}
+                      {t.grade(g)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="check">
                 <input type="checkbox" required />
-                Nhà trường đã có chấp thuận xử lý dữ liệu học sinh.
+                {t.schoolConsent}
               </label>
               <ErrorBox error={act.error} />
               <button className="primary wide" disabled={act.isPending}>
-                Cấp tài khoản
+                {t.issue}
               </button>
             </form>
           )}
         </Modal>
       )}
       {modal === "enroll" && (
-        <Modal title="Ghi danh tài khoản có sẵn" onClose={() => setModal("")}>
+        <Modal title={t.enrolExisting} onClose={() => setModal("")}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -204,8 +319,8 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
               );
             }}
           >
-            <Field label="Tên đăng nhập học sinh" name="username" required autoComplete="off" />
-            <p className="tiny muted">Học sinh được duyệt vào lớp ngay. Bài đã giao trước đó không tự động thêm cho học sinh mới.</p>
+            <Field label={t.studentUsername} name="username" required autoComplete="off" />
+            <p className="tiny muted">{t.enrolNote}</p>
             <ErrorBox error={act.error} />
             <button className="primary wide" disabled={act.isPending}>
               Ghi danh
@@ -251,9 +366,9 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
         </Modal>
       )}
       {modal === "credentials" && (
-        <Modal title="Cấp lại mật khẩu học sinh" onClose={() => setModal("")}>
+        <Modal title={t.resetTitle} onClose={() => setModal("")}>
           <ErrorBox error={act.error} />
-          {credentials ? <CredentialNotice credentials={credentials} onDone={() => setModal("")} /> : !act.error && <div className="notice">Đang tạo mật khẩu tạm mới…</div>}
+          {credentials ? <CredentialNotice credentials={credentials} onDone={() => setModal("")} /> : !act.error && <div className="notice">{t.creatingTemp}</div>}
         </Modal>
       )}
     </section>
@@ -263,17 +378,17 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
 function CredentialNotice({ credentials, onDone }: { credentials: { username: string; temporaryPassword: string; expiresAt: string }; onDone: () => void }) {
   return (
     <div className="notice" role="status">
-      <b>Thông tin đăng nhập</b>
+      <b>{t.credentials}</b>
       <p>
-        Tên đăng nhập: <code>{credentials.username}</code>
+        {t.usernameLabel} <code>{credentials.username}</code>
       </p>
       <p>
-        Mật khẩu tạm: <code>{credentials.temporaryPassword}</code>
+        {t.tempPassword} <code>{credentials.temporaryPassword}</code>
       </p>
-      <p>Hạn dùng: {new Date(credentials.expiresAt).toLocaleString("vi-VN")}</p>
-      <p className="tiny">Hãy lưu và gửi riêng cho học sinh. Mật khẩu sẽ không hiển thị lại.</p>
+      <p>{t.expires} {formatDateTime(credentials.expiresAt)}</p>
+      <p className="tiny">{t.shareOnce}</p>
       <button type="button" className="secondary" onClick={onDone}>
-        Đã lưu thông tin
+        {t.saved}
       </button>
     </div>
   );

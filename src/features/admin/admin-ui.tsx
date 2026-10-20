@@ -3,31 +3,97 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { AlertTriangle, Archive, Ban, CheckCircle2, CircleSlash, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import { Badge, ErrorBox, Modal } from "../../components/ui";
+import { defineText, formatDateTime } from "../../i18n";
+import { commonText } from "../../i18n/common";
 
-export const ROLE_LABEL: Record<string, string> = { STUDENT: "Học sinh", TEACHER: "Giáo viên", PARENT: "Phụ huynh", ADMIN: "Quản trị viên" };
+const adminText = defineText({
+  vi: {
+    draft: "Bản nháp",
+    published: "Đã xuất bản",
+    archived: "Đã lưu trữ",
+    quarantined: "Đang cách ly",
+    teacherPrivate: "Riêng của giáo viên",
+    sharedLibrary: "Thư viện chung",
+    passed: "Đạt",
+    partial: "Đạt một phần",
+    needsPractice: "Cần luyện thêm",
+    invalid: "Trạng thái không hợp lệ",
+    original: "NexaLab tự biên soạn",
+    schoolOwned: "Nhà trường sở hữu",
+    active: "Đang hoạt động",
+    disabled: "Đã vô hiệu hóa",
+    ready: "Sẵn sàng",
+    retired: "Đã thay thế",
+    success: "Thành công",
+    denied: "Bị từ chối",
+    failure: "Thất bại",
+    loading: "Đang tải…",
+    retry: "Thử lại",
+    refreshing: "Đang cập nhật dữ liệu mới nhất…",
+    stale: "Không làm mới được; đang hiển thị dữ liệu trước đó.",
+    noData: "Không có dữ liệu phù hợp.",
+    reason: "Lý do (bắt buộc, được ghi vào nhật ký kiểm toán)",
+    cancel: "Hủy",
+    working: "Đang xử lý…",
+    loadMore: "Tải thêm",
+  },
+  en: {
+    draft: "Draft",
+    published: "Published",
+    archived: "Archived",
+    quarantined: "Quarantined",
+    teacherPrivate: "Teacher's private",
+    sharedLibrary: "Shared library",
+    passed: "Passed",
+    partial: "Partly passed",
+    needsPractice: "Needs more practice",
+    invalid: "Invalid state",
+    original: "Written by NexaLab",
+    schoolOwned: "School-owned",
+    active: "Active",
+    disabled: "Disabled",
+    ready: "Ready",
+    retired: "Superseded",
+    success: "Succeeded",
+    denied: "Denied",
+    failure: "Failed",
+    loading: "Loading…",
+    retry: "Try again",
+    refreshing: "Fetching the latest data…",
+    stale: "Could not refresh; showing the previous data.",
+    noData: "No matching data.",
+    reason: "Reason (required, recorded in the audit log)",
+    cancel: "Cancel",
+    working: "Working…",
+    loadMore: "Load more",
+  },
+});
+const t = adminText();
+
+export const ROLE_LABEL: Record<string, string> = commonText().roles;
 
 export const LESSON_STATUS: Record<string, string> = {
-  draft: "Bản nháp",
-  published: "Đã xuất bản",
-  archived: "Đã lưu trữ",
-  quarantined: "Đang cách ly",
+  draft: t.draft,
+  published: t.published,
+  archived: t.archived,
+  quarantined: t.quarantined,
 };
 
-export const SCOPE_LABEL: Record<string, string> = { TEACHER_PRIVATE: "Riêng của giáo viên", SHARED_LIBRARY: "Thư viện chung" };
+export const SCOPE_LABEL: Record<string, string> = { TEACHER_PRIVATE: t.teacherPrivate, SHARED_LIBRARY: t.sharedLibrary };
 
 export const VERDICT_LABEL: Record<string, string> = {
-  passed: "Đạt",
-  partial: "Đạt một phần",
-  needs_practice: "Cần luyện thêm",
-  invalid: "Trạng thái không hợp lệ",
+  passed: t.passed,
+  partial: t.partial,
+  needs_practice: t.needsPractice,
+  invalid: t.invalid,
 };
 
 export const LICENSE_LABEL: Record<string, string> = {
-  ORIGINAL: "NexaLab tự biên soạn",
+  ORIGINAL: t.original,
   CC0: "CC0",
   CC_BY: "CC BY",
   CC_BY_SA: "CC BY-SA",
-  SCHOOL_OWNED: "Nhà trường sở hữu",
+  SCHOOL_OWNED: t.schoolOwned,
 };
 
 const qs = (params: Record<string, unknown>) => {
@@ -37,25 +103,25 @@ const qs = (params: Record<string, unknown>) => {
   return text ? "?" + text : "";
 };
 
-export const when = (value?: string | null) => (value ? new Date(value).toLocaleString("vi-VN") : "—");
+export const when = (value?: string | null) => (value ? formatDateTime(value) : "—");
 
 /** Text + icon status; never colour alone. */
 export function Status({ value }: { value: string }) {
   const map: Record<string, [string, string, JSX.Element]> = {
-    active: ["Đang hoạt động", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
-    disabled: ["Đã vô hiệu hóa", "not_passed", <Ban size={13} aria-hidden key="i" />],
-    READY: ["Sẵn sàng", "passed", <ShieldCheck size={13} aria-hidden key="i" />],
-    ACTIVE: ["Đang hoạt động", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
-    ARCHIVED: ["Đã lưu trữ", "outline", <Archive size={13} aria-hidden key="i" />],
-    QUARANTINED: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
-    quarantined: ["Đang cách ly", "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
-    published: ["Đã xuất bản", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
-    draft: ["Bản nháp", "outline", <CircleSlash size={13} aria-hidden key="i" />],
-    archived: ["Đã lưu trữ", "outline", <Archive size={13} aria-hidden key="i" />],
-    retired: ["Đã thay thế", "outline", <Archive size={13} aria-hidden key="i" />],
-    success: ["Thành công", "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
-    denied: ["Bị từ chối", "not_passed", <Ban size={13} aria-hidden key="i" />],
-    failure: ["Thất bại", "partial", <AlertTriangle size={13} aria-hidden key="i" />],
+    active: [t.active, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    disabled: [t.disabled, "not_passed", <Ban size={13} aria-hidden key="i" />],
+    READY: [t.ready, "passed", <ShieldCheck size={13} aria-hidden key="i" />],
+    ACTIVE: [t.active, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    ARCHIVED: [t.archived, "outline", <Archive size={13} aria-hidden key="i" />],
+    QUARANTINED: [t.quarantined, "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
+    quarantined: [t.quarantined, "not_passed", <ShieldAlert size={13} aria-hidden key="i" />],
+    published: [t.published, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    draft: [t.draft, "outline", <CircleSlash size={13} aria-hidden key="i" />],
+    archived: [t.archived, "outline", <Archive size={13} aria-hidden key="i" />],
+    retired: [t.retired, "outline", <Archive size={13} aria-hidden key="i" />],
+    success: [t.success, "passed", <CheckCircle2 size={13} aria-hidden key="i" />],
+    denied: [t.denied, "not_passed", <Ban size={13} aria-hidden key="i" />],
+    failure: [t.failure, "partial", <AlertTriangle size={13} aria-hidden key="i" />],
   };
   const [label, tone, icon] = map[value] ?? [value, "outline", null];
   return (
@@ -73,7 +139,7 @@ export function QueryState({ query, empty, children }: { query: any; empty?: boo
   if (query.isLoading)
     return (
       <p className="muted" role="status">
-        Đang tải…
+        {t.loading}
       </p>
     );
   if (query.error && !query.data)
@@ -81,7 +147,7 @@ export function QueryState({ query, empty, children }: { query: any; empty?: boo
       <div className="load-error" role="alert">
         <ErrorBox error={query.error} />
         <button type="button" className="secondary" onClick={() => query.refetch()}>
-          <RefreshCw size={14} aria-hidden /> Thử lại
+          <RefreshCw size={14} aria-hidden /> {t.retry}
         </button>
       </div>
     );
@@ -89,15 +155,15 @@ export function QueryState({ query, empty, children }: { query: any; empty?: boo
     <>
       {query.isFetching && (
         <p className="tiny muted admin-stale" role="status">
-          Đang cập nhật dữ liệu mới nhất…
+          {t.refreshing}
         </p>
       )}
       {query.error && (
         <p className="tiny muted" role="alert">
-          Không làm mới được; đang hiển thị dữ liệu trước đó.
+          {t.stale}
         </p>
       )}
-      {empty ? <p className="empty">Không có dữ liệu phù hợp.</p> : children}
+      {empty ? <p className="empty">{t.noData}</p> : children}
     </>
   );
 }
@@ -137,16 +203,16 @@ export function ReasonDialog({
         <div className="notice admin-effect">{effect}</div>
         {children}
         <label className="field">
-          <span>Lý do (bắt buộc, được ghi vào nhật ký kiểm toán)</span>
+          <span>{t.reason}</span>
           <textarea required minLength={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
         <ErrorBox error={error} />
         <div className="button-row">
           <button type="button" className="secondary" onClick={onClose}>
-            Hủy
+            {t.cancel}
           </button>
           <button type="submit" className={danger ? "danger" : "primary"} disabled={pending || reason.trim().length < 3}>
-            {pending ? "Đang xử lý…" : confirmLabel}
+            {pending ? t.working : confirmLabel}
           </button>
         </div>
       </form>
@@ -168,7 +234,7 @@ export const rowsOf = (query: any) => (query.data?.pages ?? []).flatMap((p: any)
 export function LoadMore({ query }: { query: any }) {
   return query.hasNextPage ? (
     <button type="button" className="secondary admin-more" disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>
-      {query.isFetchingNextPage ? "Đang tải…" : "Tải thêm"}
+      {query.isFetchingNextPage ? t.loading : t.loadMore}
     </button>
   ) : null;
 }

@@ -14,6 +14,43 @@ import {
   Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    battery: "Nguồn điện",
+    resistor: "Điện trở",
+    led: "LED đỏ",
+    switchName: "Công tắc",
+    closed: "Đóng",
+    open: "Mở",
+    drop: "Sụt áp 2 V",
+    instructions: "Kéo linh kiện để sắp xếp. Kéo từ chấm phải sang chấm trái để nối dây thành vòng kín. Chọn dây và nhấn Delete để xóa.",
+    value: "Giá trị",
+    valueLabel: "Giá trị linh kiện",
+    closeSwitch: "Đóng công tắc",
+    removePart: "Xóa linh kiện",
+    selectPart: "Chọn một linh kiện để chỉnh tham số.",
+    autoWire: "Nối nhanh một vòng theo thứ tự linh kiện",
+  },
+  en: {
+    battery: "Power source",
+    resistor: "Resistor",
+    led: "Red LED",
+    switchName: "Switch",
+    closed: "Closed",
+    open: "Open",
+    drop: "2 V drop",
+    instructions: "Drag parts to arrange them. Drag from a right dot to a left dot to wire a closed loop. Select a wire and press Delete to remove it.",
+    value: "Value",
+    valueLabel: "Component value",
+    closeSwitch: "Close the switch",
+    removePart: "Remove part",
+    selectPart: "Select a part to adjust it.",
+    autoWire: "Quick-wire a loop in part order",
+  },
+});
+const t = text();
 const icons: Record<string, string> = {
   battery: "▰",
   resistor: "⌁",
@@ -21,10 +58,10 @@ const icons: Record<string, string> = {
   switch: "⏻",
 };
 const labels: Record<string, string> = {
-  battery: "Nguồn điện",
-  resistor: "Điện trở",
-  led: "LED đỏ",
-  switch: "Công tắc",
+  battery: t.battery,
+  resistor: t.resistor,
+  led: t.led,
+  switch: t.switchName,
 };
 export function defaultCircuit() {
   return {
@@ -52,9 +89,9 @@ function ComponentNode({ data, selected }: NodeProps) {
             ? data.value + " Ω"
             : data.kind === "switch"
               ? data.closed
-                ? "Đóng"
-                : "Mở"
-              : "Sụt áp 2 V"}
+                ? t.closed
+                : t.open
+              : t.drop}
       </small>
       <Handle type="source" position={Position.Right} />
     </div>
@@ -192,8 +229,7 @@ export function Circuit({
         </ReactFlow>
       </div>
       <div className="circuit-help">
-        Kéo linh kiện để sắp xếp. Kéo từ chấm phải sang chấm trái để nối dây
-        thành vòng kín. Chọn dây và nhấn Delete để xóa.
+        {t.instructions}
       </div>
       <div className="component-properties">
         {current ? (
@@ -201,9 +237,9 @@ export function Circuit({
             <b>{labels[current.data.kind as string]}</b>
             {["battery", "resistor"].includes(current.data.kind as string) && (
               <label>
-                Giá trị{" "}
+                {t.value}{" "}
                 <input
-                  aria-label="Giá trị linh kiện"
+                  aria-label={t.valueLabel}
                   type="number"
                   min={current.data.kind === "battery" ? 1 : 0}
                   max={current.data.kind === "battery" ? 24 : 100000}
@@ -220,15 +256,15 @@ export function Circuit({
                   checked={!!current.data.closed}
                   onChange={(e) => update({ closed: e.target.checked })}
                 />
-                Đóng công tắc
+                {t.closeSwitch}
               </label>
             )}
             <button className="danger-text" onClick={remove}>
-              Xóa linh kiện
+              {t.removePart}
             </button>
           </>
         ) : (
-          <span className="muted">Chọn một linh kiện để chỉnh tham số.</span>
+          <span className="muted">{t.selectPart}</span>
         )}
       </div>
       <button
@@ -244,7 +280,7 @@ export function Circuit({
           emit(nodes, pairs);
         }}
       >
-        Nối nhanh một vòng theo thứ tự linh kiện
+        {t.autoWire}
       </button>
     </>
   );

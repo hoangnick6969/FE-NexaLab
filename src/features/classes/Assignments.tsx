@@ -5,8 +5,105 @@ import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
 import { Confirm, LoadError, dueLabel, toLocalInput, useMutate } from "./class-ui";
 import { TestTracking } from "./TestAssignments";
+import { defineText } from "../../i18n";
 
-const contentTypeLabel: Record<AssignableType, string> = { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra" };
+const text = defineText({
+  vi: {
+    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra" },
+    students: (n: number) => `${n} học sinh`,
+    group: " (nhóm)",
+    wholeClass: " (cả lớp)",
+    counts: (submitted: number, pending: number, rejected: number, overdue: number) => `Đã nộp ${submitted} · Chờ duyệt ${pending} · Bị từ chối ${rejected} · Quá hạn chưa nộp ${overdue}`,
+    extendedTimes: (n: number) => `Đã dời hạn (lần ${n})`,
+    overdue: "Quá hạn",
+    trackSubmissions: "Theo dõi bài nộp",
+    edit: "Sửa",
+    archive: "Lưu trữ",
+    assigned: "Bài đã giao",
+    assign: "Giao bài",
+    assignedList: "danh sách bài đã giao",
+    noneActive: "Chưa có bài đang giao.",
+    archivedCount: (n: number) => `Bài đã lưu trữ (${n})`,
+    editAssigned: "Sửa bài đã giao",
+    taskName: "Tên nhiệm vụ",
+    testLocked: "Hạn nộp và danh sách học sinh của bài kiểm tra được chốt khi giao.",
+    dueOptional: "Hạn nộp (có thể để trống)",
+    saveChanges: "Lưu thay đổi",
+    archiveAction: "lưu trữ bài",
+    archiveDetail: "Bài rời khỏi danh sách của học sinh. Kết quả học tập đã có vẫn còn trong lịch sử.",
+    contentType: "Loại nội dung",
+    lesson: "Bài học",
+    labPractice: "Bài thực hành (lab)",
+    test: "Bài kiểm tra",
+    published: "Nội dung đã xuất bản",
+    testOption: (title: string, version: string | number, n: number) => `${title} · phiên bản ${version} · ${n} câu`,
+    lessonOption: (title: string, grade: number) => `${title} · Khối ${grade}`,
+    sampleSuffix: " · dữ liệu mẫu",
+    privateSuffix: " · bản riêng",
+    assignable: "nội dung có thể giao",
+    noTests: "Chưa có bài kiểm tra đã xuất bản trong Class Space. Hãy xuất bản bài kiểm tra trước khi giao.",
+    noContent: "Chưa có nội dung đã xuất bản. Hãy xuất bản nội dung trước khi giao.",
+    shareNote: "Chia sẻ bài kiểm tra trong Class Space không tạo bài giao. Chỉ học sinh được giao mới làm và nộp bài.",
+    taskNameOptional: "Tên nhiệm vụ (để trống sẽ dùng tên nội dung)",
+    dueRequired: "Hạn nộp (bắt buộc)",
+    dueNotRequired: "Hạn nộp (không bắt buộc)",
+    wholeClassApproved: (n: number) => `Cả lớp (${n} học sinh đã duyệt)`,
+    someStudents: "Một nhóm học sinh",
+    recipientsFixed: "Danh sách người nhận được chốt khi giao; học sinh vào lớp sau sẽ không tự nhận bài này.",
+    assigning: "Đang giao…",
+    chooseContent: "Chọn nội dung",
+    selectedCount: (n: number) => `Đã chọn ${n} học sinh${n === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}`,
+  },
+  en: {
+    types: { lesson: "Lesson", lab: "Lab", test: "Test" },
+    students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
+    group: " (group)",
+    wholeClass: " (whole class)",
+    counts: (submitted: number, pending: number, rejected: number, overdue: number) => `Submitted ${submitted} · Waiting ${pending} · Rejected ${rejected} · Overdue, not submitted ${overdue}`,
+    extendedTimes: (n: number) => `Extended (${n}×)`,
+    overdue: "Overdue",
+    trackSubmissions: "Track submissions",
+    edit: "Edit",
+    archive: "Archive",
+    assigned: "Assigned work",
+    assign: "Assign",
+    assignedList: "the assigned work list",
+    noneActive: "Nothing is assigned right now.",
+    archivedCount: (n: number) => `Archived work (${n})`,
+    editAssigned: "Edit assigned work",
+    taskName: "Task name",
+    testLocked: "A test's due date and students are fixed when it is assigned.",
+    dueOptional: "Due date (optional)",
+    saveChanges: "Save changes",
+    archiveAction: "archive",
+    archiveDetail: "It leaves the students' list. Existing results stay in the history.",
+    contentType: "Content type",
+    lesson: "Lesson",
+    labPractice: "Practice (lab)",
+    test: "Test",
+    published: "Published content",
+    testOption: (title: string, version: string | number, n: number) => `${title} · version ${version} · ${n} ${n === 1 ? "question" : "questions"}`,
+    lessonOption: (title: string, grade: number) => `${title} · Grade ${grade}`,
+    sampleSuffix: " · sample data",
+    privateSuffix: " · private copy",
+    assignable: "assignable content",
+    noTests: "No published tests in Class Space. Publish a test before assigning it.",
+    noContent: "No published content. Publish content before assigning it.",
+    shareNote: "Sharing a test in Class Space does not assign it. Only assigned students take and submit it.",
+    taskNameOptional: "Task name (blank uses the content name)",
+    dueRequired: "Due date (required)",
+    dueNotRequired: "Due date (optional)",
+    wholeClassApproved: (n: number) => `Whole class (${n} approved ${n === 1 ? "student" : "students"})`,
+    someStudents: "A group of students",
+    recipientsFixed: "Recipients are fixed when assigned; students who join later do not get this work automatically.",
+    assigning: "Assigning…",
+    chooseContent: "Choose content",
+    selectedCount: (n: number) => `${n} ${n === 1 ? "student" : "students"} selected${n === 0 ? ". Choose at least one student." : "."}`,
+  },
+});
+const t = text();
+
+const contentTypeLabel: Record<AssignableType, string> = t.types;
 
 export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
@@ -27,29 +124,29 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       <div>
         <b>{a.title}</b>
         <small>
-          {contentTypeLabel[a.contentType]} · {dueLabel(a.dueDate)} · {a.recipientCount} học sinh
-          {a.audience === "SUBSET" ? " (nhóm)" : " (cả lớp)"}
+          {contentTypeLabel[a.contentType]} · {dueLabel(a.dueDate)} · {t.students(a.recipientCount)}
+          {a.audience === "SUBSET" ? t.group : t.wholeClass}
         </small>
         {a.testSummary && (
           <small>
-            Đã nộp {a.testSummary.counts.SUBMITTED} · Chờ duyệt {a.testSummary.counts.LATE_REVIEW_PENDING} · Bị từ chối {a.testSummary.counts.REJECTED} · Quá hạn chưa nộp {a.testSummary.counts.OVERDUE_UNSUBMITTED}
+            {t.counts(a.testSummary.counts.SUBMITTED, a.testSummary.counts.LATE_REVIEW_PENDING, a.testSummary.counts.REJECTED, a.testSummary.counts.OVERDUE_UNSUBMITTED)}
           </small>
         )}
-        {a.testSummary?.extended && <Badge tone="gold">Đã dời hạn (lần {a.testSummary.revision - 1})</Badge>}
-        {a.overdue && a.status === "ACTIVE" && <Badge tone="outline">Quá hạn</Badge>}
+        {a.testSummary?.extended && <Badge tone="gold">{t.extendedTimes(a.testSummary.revision - 1)}</Badge>}
+        {a.overdue && a.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
       </div>
       {a.contentType === "test" && (
         <button className="text-button" onClick={() => setTracking(a)}>
-          Theo dõi bài nộp
+          {t.trackSubmissions}
         </button>
       )}
       {a.status === "ACTIVE" && !archived && (
         <div className="button-row">
           <button className="text-button" onClick={() => { act.reset(); setEditing(a); }}>
-            Sửa
+            {t.edit}
           </button>
           <button className="danger-text" onClick={() => { act.reset(); setArchiving(a); }}>
-            Lưu trữ
+            {t.archive}
           </button>
         </div>
       )}
@@ -58,20 +155,20 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   return (
     <section className="panel" aria-labelledby="assignments-title">
       <div className="section-heading">
-        <h2 id="assignments-title">Bài đã giao</h2>
+        <h2 id="assignments-title">{t.assigned}</h2>
         {!archived && (
           <button className="primary" onClick={() => { setNotice(null); setAssigning(true); }}>
-            Giao bài
+            {t.assign}
           </button>
         )}
       </div>
       {notice && <p className="notice" role="status">{notice}</p>}
-      <LoadError query={list} what="danh sách bài đã giao" />
-      {list.data && active.length === 0 && <Empty>Chưa có bài đang giao.</Empty>}
+      <LoadError query={list} what={t.assignedList} />
+      {list.data && active.length === 0 && <Empty>{t.noneActive}</Empty>}
       {active.map(row)}
       {past.length > 0 && (
         <details>
-          <summary>Bài đã lưu trữ ({past.length})</summary>
+          <summary>{t.archivedCount(past.length)}</summary>
           {past.map(row)}
         </details>
       )}
@@ -86,7 +183,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
         />
       )}
       {editing && (
-        <Modal title="Sửa bài đã giao" onClose={() => setEditing(null)}>
+        <Modal title={t.editAssigned} onClose={() => setEditing(null)}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -104,15 +201,15 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
               );
             }}
           >
-            <Field label="Tên nhiệm vụ" name="title" required defaultValue={editing.title} />
+            <Field label={t.taskName} name="title" required defaultValue={editing.title} />
             {editing.contentType === "test" ? (
-              <p className="tiny muted">{dueLabel(editing.dueDate)}. Hạn nộp và danh sách học sinh của bài kiểm tra được chốt khi giao.</p>
+              <p className="tiny muted">{dueLabel(editing.dueDate)}. {t.testLocked}</p>
             ) : (
-              <Field label="Hạn nộp (có thể để trống)" name="dueDate" type="datetime-local" defaultValue={editing.dueDate ? toLocalInput(editing.dueDate) : ""} />
+              <Field label={t.dueOptional} name="dueDate" type="datetime-local" defaultValue={editing.dueDate ? toLocalInput(editing.dueDate) : ""} />
             )}
             <ErrorBox error={act.error} />
             <button className="primary wide" disabled={act.isPending}>
-              Lưu thay đổi
+              {t.saveChanges}
             </button>
           </form>
         </Modal>
@@ -120,9 +217,9 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       {tracking && <TestTracking classroom={classroom} assignment={tracking} onClose={() => setTracking(null)} />}
       {archiving && (
         <Confirm
-          action="lưu trữ bài"
+          action={t.archiveAction}
           item={archiving.title}
-          detail="Bài rời khỏi danh sách của học sinh. Kết quả học tập đã có vẫn còn trong lịch sử."
+          detail={t.archiveDetail}
           pending={act.isPending}
           error={act.error}
           onClose={() => setArchiving(null)}
@@ -155,7 +252,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
   const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : content.data?.tests ?? [];
   const isTest = contentType === "test";
   return (
-    <Modal title="Giao bài" onClose={onClose}>
+    <Modal title={t.assign} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -185,51 +282,51 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         }}
       >
         <fieldset className="segmented" onChange={() => setContentId("")}>
-          <legend>Loại nội dung</legend>
+          <legend>{t.contentType}</legend>
           <label className="check">
             <input type="radio" name="contentType" checked={contentType === "lesson"} onChange={() => setContentType("lesson")} />
-            Bài học
+            {t.lesson}
           </label>
           <label className="check">
             <input type="radio" name="contentType" checked={contentType === "lab"} onChange={() => setContentType("lab")} />
-            Bài thực hành (lab)
+            {t.labPractice}
           </label>
           <label className="check">
             <input type="radio" name="contentType" checked={isTest} onChange={() => setContentType("test")} />
-            Bài kiểm tra
+            {t.test}
           </label>
         </fieldset>
         <label className="field">
-          <span>Nội dung đã xuất bản</span>
+          <span>{t.published}</span>
           <select name="contentId" required value={contentId} onChange={(e) => setContentId(e.target.value)}>
-            <option value="">Chọn nội dung</option>
+            <option value="">{t.chooseContent}</option>
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
-                {isTest ? `${item.title} · phiên bản ${item.version} · ${item.questionCount} câu` : `${item.title} · Khối ${item.grade}`}
-                {item.synthetic ? " · dữ liệu mẫu" : ""}
-                {item.scope === "TEACHER_PRIVATE" ? " · bản riêng" : ""}
+                {isTest ? t.testOption(item.title, item.version, item.questionCount) : t.lessonOption(item.title, item.grade)}
+                {item.synthetic ? t.sampleSuffix : ""}
+                {item.scope === "TEACHER_PRIVATE" ? t.privateSuffix : ""}
               </option>
             ))}
           </select>
         </label>
-        <LoadError query={content} what="nội dung có thể giao" />
+        <LoadError query={content} what={t.assignable} />
         {content.data && options.length === 0 && (
           <p className="notice">
-            {isTest ? "Chưa có bài kiểm tra đã xuất bản trong Class Space. Hãy xuất bản bài kiểm tra trước khi giao." : "Chưa có nội dung đã xuất bản. Hãy xuất bản nội dung trước khi giao."}
+            {isTest ? t.noTests : t.noContent}
           </p>
         )}
-        {isTest && <p className="tiny muted">Chia sẻ bài kiểm tra trong Class Space không tạo bài giao. Chỉ học sinh được giao mới làm và nộp bài.</p>}
-        <Field label="Tên nhiệm vụ (để trống sẽ dùng tên nội dung)" name="title" maxLength={200} />
-        <Field label={isTest ? "Hạn nộp (bắt buộc)" : "Hạn nộp (không bắt buộc)"} name="dueDate" type="datetime-local" required={isTest} />
+        {isTest && <p className="tiny muted">{t.shareNote}</p>}
+        <Field label={t.taskNameOptional} name="title" maxLength={200} />
+        <Field label={isTest ? t.dueRequired : t.dueNotRequired} name="dueDate" type="datetime-local" required={isTest} />
         <fieldset className="segmented">
           <legend>Giao cho</legend>
           <label className="check">
             <input type="radio" name="scope" checked={scope === "CLASS"} onChange={() => setScope("CLASS")} />
-            Cả lớp ({approved.length} học sinh đã duyệt)
+            {t.wholeClassApproved(approved.length)}
           </label>
           <label className="check">
             <input type="radio" name="scope" checked={scope === "SUBSET"} onChange={() => setScope("SUBSET")} />
-            Một nhóm học sinh
+            {t.someStudents}
           </label>
         </fieldset>
         {scope === "SUBSET" &&
@@ -239,12 +336,12 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
               {e.student.fullName}
             </label>
           ))}
-        {scope === "SUBSET" && <p role="status">Đã chọn {studentIds.length} học sinh{studentIds.length === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}</p>}
+        {scope === "SUBSET" && <p role="status">{t.selectedCount(studentIds.length)}</p>}
         <ErrorBox error={validation} />
-        <p className="tiny muted">Danh sách người nhận được chốt khi giao; học sinh vào lớp sau sẽ không tự nhận bài này.</p>
+        <p className="tiny muted">{t.recipientsFixed}</p>
         <ErrorBox error={act.error} />
         <button className="primary wide" disabled={act.isPending || !contentId || !options.length || (scope === "SUBSET" && studentIds.length === 0)}>
-          {act.isPending ? "Đang giao…" : "Giao bài"}
+          {act.isPending ? t.assigning : t.assign}
         </button>
       </form>
     </Modal>

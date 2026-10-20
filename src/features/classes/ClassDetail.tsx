@@ -8,6 +8,51 @@ import { Roster } from "./Roster";
 import { LateQueue } from "./TestAssignments";
 import { Assignments } from "./Assignments";
 import { PracticeAnalytics } from "./PracticeAnalytics";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    grade: (g: number) => `Khối ${g}`,
+    codeNeedsApproval: "Vào lớp bằng mã cần duyệt",
+    codeApprovesAtOnce: "Vào lớp bằng mã được duyệt ngay",
+    editClass: "Sửa lớp",
+    newCode: "Tạo mã mới",
+    createCode: "Tạo mã tham gia",
+    codeOff: "Tắt mã",
+    codeOn: "Bật mã",
+    archiveClass: "Lưu trữ lớp",
+    archivedNote: "Lớp đã lưu trữ: học sinh không còn mở được bài của lớp. Thành viên, bài đã giao và kết quả học tập vẫn được giữ.",
+    className: "Tên lớp",
+    gradeLabel: "Khối lớp",
+    approvalRule: "Học sinh vào bằng mã cần giáo viên duyệt",
+    saveChanges: "Lưu thay đổi",
+    newCodeAction: "tạo mã tham gia mới cho",
+    newCodeDetail: "Mã cũ sẽ ngừng hoạt động ngay. Học sinh đã trong lớp không bị ảnh hưởng.",
+    archiveAction: "lưu trữ lớp",
+    archiveDetail: "Học sinh mất quyền vào mọi bài của lớp ngay lập tức. Lớp không nhận thêm thành viên hay bài giao. Dữ liệu và kết quả học tập được giữ nguyên.",
+  },
+  en: {
+    grade: (g: number) => `Grade ${g}`,
+    codeNeedsApproval: "Joining with a code needs approval",
+    codeApprovesAtOnce: "Joining with a code is approved at once",
+    editClass: "Edit class",
+    newCode: "Create a new code",
+    createCode: "Create a join code",
+    codeOff: "Turn code off",
+    codeOn: "Turn code on",
+    archiveClass: "Archive class",
+    archivedNote: "Archived class: students can no longer open its work. Members, assigned work and results are kept.",
+    className: "Class name",
+    gradeLabel: "Grade",
+    approvalRule: "Students joining with a code need teacher approval",
+    saveChanges: "Save changes",
+    newCodeAction: "create a new join code for",
+    newCodeDetail: "The old code stops working at once. Students already in the class are not affected.",
+    archiveAction: "archive the class",
+    archiveDetail: "Students lose access to all class work at once. The class takes no new members or assignments. Data and results are kept.",
+  },
+});
+const t = text();
 
 export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
@@ -25,16 +70,16 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
           <div>
             <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
             <p className="tiny muted">
-              Khối {classroom.grade} · {classroom.requiresApproval ? "Vào lớp bằng mã cần duyệt" : "Vào lớp bằng mã được duyệt ngay"}
+              {t.grade(classroom.grade)} · {classroom.requiresApproval ? t.codeNeedsApproval : t.codeApprovesAtOnce}
             </p>
           </div>
           {!archived && (
             <div className="button-row">
               <button className="secondary" onClick={() => setModal("edit")}>
-                Sửa lớp
+                {t.editClass}
               </button>
               <button className="secondary" onClick={() => setModal("rotate")}>
-                <KeyRound size={16} /> {classroom.joinCode.issued ? "Tạo mã mới" : "Tạo mã tham gia"}
+                <KeyRound size={16} /> {classroom.joinCode.issued ? t.newCode : t.createCode}
               </button>
               {classroom.joinCode.issued && (
                 <button
@@ -44,18 +89,18 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
                     act.mutate({ path: `/classes/${classroom.id}`, method: "PUT", body: { joinCodeEnabled: !classroom.joinCode.enabled } })
                   }
                 >
-                  {classroom.joinCode.enabled ? "Tắt mã" : "Bật mã"}
+                  {classroom.joinCode.enabled ? t.codeOff : t.codeOn}
                 </button>
               )}
               <button className="danger-text" onClick={() => setModal("archive")}>
-                <Archive size={16} /> Lưu trữ lớp
+                <Archive size={16} /> {t.archiveClass}
               </button>
             </div>
           )}
         </div>
         {archived && (
           <p className="notice">
-            Lớp đã lưu trữ: học sinh không còn mở được bài của lớp. Thành viên, bài đã giao và kết quả học tập vẫn được giữ.
+            {t.archivedNote}
           </p>
         )}
         {code && <ShownOnce code={code} onDone={() => setCode(null)} />}
@@ -67,7 +112,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
       <Assignments classroom={classroom} />
       {!archived && <PracticeAnalytics classId={classroom.id} />}
       {modal === "edit" && (
-        <Modal title="Sửa lớp" onClose={close}>
+        <Modal title={t.editClass} onClose={close}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -86,33 +131,33 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
               );
             }}
           >
-            <Field label="Tên lớp" name="name" required defaultValue={classroom.name} maxLength={200} />
+            <Field label={t.className} name="name" required defaultValue={classroom.name} maxLength={200} />
             <label className="field">
-              <span>Khối lớp</span>
+              <span>{t.gradeLabel}</span>
               <select name="grade" defaultValue={classroom.grade}>
                 {[6, 7, 8, 9].map((g) => (
                   <option key={g} value={g}>
-                    Khối {g}
+                    {t.grade(g)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="check">
               <input type="checkbox" name="requiresApproval" defaultChecked={classroom.requiresApproval} />
-              Học sinh vào bằng mã cần giáo viên duyệt
+              {t.approvalRule}
             </label>
             <ErrorBox error={act.error} />
             <button className="primary wide" disabled={act.isPending}>
-              Lưu thay đổi
+              {t.saveChanges}
             </button>
           </form>
         </Modal>
       )}
       {modal === "rotate" && (
         <Confirm
-          action="tạo mã tham gia mới cho"
+          action={t.newCodeAction}
           item={classroom.name}
-          detail="Mã cũ sẽ ngừng hoạt động ngay. Học sinh đã trong lớp không bị ảnh hưởng."
+          detail={t.newCodeDetail}
           pending={act.isPending}
           error={act.error}
           onClose={close}
@@ -131,9 +176,9 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
       )}
       {modal === "archive" && (
         <Confirm
-          action="lưu trữ lớp"
+          action={t.archiveAction}
           item={classroom.name}
-          detail="Học sinh mất quyền vào mọi bài của lớp ngay lập tức. Lớp không nhận thêm thành viên hay bài giao. Dữ liệu và kết quả học tập được giữ nguyên."
+          detail={t.archiveDetail}
           pending={act.isPending}
           error={act.error}
           onClose={close}

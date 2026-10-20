@@ -3,6 +3,37 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { HandControl } from "./HandControl";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    separate: "Tách rời",
+    separateLabel: "Tách rời",
+    hideSclera: "Ẩn củng mạc",
+    crossSection: "Cắt tiết diện",
+    explore: "Khám phá",
+    checkNames: "Kiểm tra tên gọi",
+    part: (n: number) => `Bộ phận ${n}`,
+    quizHint: "Nhìn mô hình và nhập tên của bộ phận đang được chọn.",
+    partName: (n: number) => `Tên bộ phận #${n}`,
+    placeholder: "Nhập tên bộ phận bằng tiếng Việt",
+    disclaimer: "Mô hình hình học minh họa, không phải mô hình giải phẫu chuẩn y khoa. Kéo để xoay, cuộn để phóng to, chuột phải để di chuyển.",
+  },
+  en: {
+    separate: "Separate",
+    separateLabel: "Separate",
+    hideSclera: "Hide the sclera",
+    crossSection: "Cross-section",
+    explore: "Explore",
+    checkNames: "Check the names",
+    part: (n: number) => `Part ${n}`,
+    quizHint: "Look at the model and type the name of the selected part.",
+    partName: (n: number) => `Name of part #${n}`,
+    placeholder: "Type the part name in Vietnamese",
+    disclaimer: "An illustrative geometric model, not a medical-grade anatomy model. Drag to rotate, scroll to zoom, right-click to move.",
+  },
+});
+const t = text();
 const parts = [
   {
     id: "cornea",
@@ -91,9 +122,9 @@ export default function Eye({
     <div className="eye-lab">
       <div className="eye-tools">
         <label>
-          Tách rời{" "}
+          {t.separate}{" "}
           <input
-            aria-label="Tách rời"
+            aria-label={t.separateLabel}
             type="range"
             min="0"
             max="2"
@@ -108,7 +139,7 @@ export default function Eye({
             checked={hide}
             onChange={(e) => setHide(e.target.checked)}
           />
-          Ẩn củng mạc
+          {t.hideSclera}
         </label>
         <label>
           <input
@@ -116,13 +147,13 @@ export default function Eye({
             checked={clip}
             onChange={(e) => setClip(e.target.checked)}
           />
-          Cắt tiết diện
+          {t.crossSection}
         </label>
         <button
           className={quiz ? "primary" : "secondary"}
           onClick={() => setQuiz(!quiz)}
         >
-          {quiz ? "Khám phá" : "Kiểm tra tên gọi"}
+          {quiz ? t.explore : t.checkNames}
         </button>
       </div>
       <HandControl
@@ -186,12 +217,12 @@ export default function Eye({
       <div className="eye-description">
         <b>
           {quiz
-            ? "Bộ phận " + (parts.findIndex((x) => x.id === p.id) + 1)
+            ? t.part(parts.findIndex((x) => x.id === p.id) + 1)
             : p.name}
         </b>
         <p>
           {quiz
-            ? "Nhìn mô hình và nhập tên của bộ phận đang được chọn."
+            ? t.quizHint
             : p.desc}
         </p>
       </div>
@@ -208,7 +239,7 @@ export default function Eye({
       </div>
       {quiz && (
         <label className="field anatomy-answer">
-          <span>Tên bộ phận #{parts.findIndex((x) => x.id === p.id) + 1}</span>
+          <span>{t.partName(parts.findIndex((x) => x.id === p.id) + 1)}</span>
           <input
             value={state.answers?.[selected] ?? ""}
             onChange={(e) =>
@@ -217,13 +248,12 @@ export default function Eye({
                 answers: { ...state.answers, [selected]: e.target.value },
               })
             }
-            placeholder="Nhập tên bộ phận bằng tiếng Việt"
+            placeholder={t.placeholder}
           />
         </label>
       )}
       <p className="tiny muted">
-        Mô hình hình học minh họa, không phải mô hình giải phẫu chuẩn y khoa.
-        Kéo để xoay, cuộn để phóng to, chuột phải để di chuyển.
+        {t.disclaimer}
       </p>
     </div>
   );

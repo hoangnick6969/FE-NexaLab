@@ -7,6 +7,12 @@ import { Login } from "../features/auth/Login";
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
+import { Avatar } from "../components/Avatar";
+import { PROFILE_KEY, useProfile, type Profile } from "../lib/profile";
+import { setThemePreference } from "../lib/theme";
+import { defineText, getLocale, setLocale, takeLocaleChosenBeforeSignIn } from "../i18n";
+import { commonText } from "../i18n/common";
+import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
@@ -46,6 +52,9 @@ const Saved = lazy(() =>
   import("../features/saved/Saved").then((m) => ({ default: m.Saved }))
 );
 
+const NotificationsPage = lazy(() =>
+  import("../features/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage }))
+);
 const SettingsPage = lazy(() =>
   import("../features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage }))
 );
@@ -54,16 +63,90 @@ const AdminPage = lazy(() => import("../features/admin/Admin"));
 
 export const Lab = lazy(() => import("../features/labs/Lab"));
 
-const names = {
-  STUDENT: "Học sinh",
-  TEACHER: "Giáo viên",
-  PARENT: "Phụ huynh",
-  ADMIN: "Quản trị viên",
-};
+const text = defineText({
+  vi: {
+    starting: "Đang khởi tạo không gian học tập…",
+    startingCaption: "NexaLab · Chạm vào khoa học",
+    openingLanding: "Đang mở trang giới thiệu…",
+    landingCaption: "NexaLab · Phòng thí nghiệm mô phỏng",
+    workspace: "Không gian học tập",
+    workspaceScope: "Khoa học tự nhiên · THCS",
+    navCaption: "KHÁM PHÁ & HỌC TẬP",
+    home: "Trang chủ",
+    lessons: "Bài học",
+    labsLabel: "Phòng thí nghiệm",
+    labsShort: "Lab",
+    assignments: "Bài tập",
+    classSpace: "Class Space",
+    progress: "Tiến độ",
+    overview: "Tổng quan",
+    lessonLibrary: "Thư viện bài học",
+    myClasses: "Lớp học của tôi",
+    childProgress: "Tiến độ của con",
+    learningProgress: "Tiến độ học tập",
+    admin: "Quản trị",
+    settings: "Cài đặt tài khoản",
+    signOut: "Đăng xuất",
+    ready: "Sẵn sàng khám phá",
+    account: "Tài khoản",
+    loadingSpace: "Đang nạp không gian học tập…",
+    footerLeft: "NexaLab · Chạm vào khoa học",
+    footerRight: "Quan sát. Thử nghiệm. Thấu hiểu.",
+  },
+  en: {
+    starting: "Starting your learning space…",
+    startingCaption: "NexaLab · Touch science",
+    openingLanding: "Opening the welcome page…",
+    landingCaption: "NexaLab · Simulation lab",
+    workspace: "Learning space",
+    workspaceScope: "Natural science · Lower secondary",
+    navCaption: "EXPLORE & LEARN",
+    home: "Home",
+    lessons: "Lessons",
+    labsLabel: "Labs",
+    labsShort: "Lab",
+    assignments: "Assignments",
+    classSpace: "Class Space",
+    progress: "Progress",
+    overview: "Overview",
+    lessonLibrary: "Lesson library",
+    myClasses: "My classes",
+    childProgress: "My child's progress",
+    learningProgress: "Learning progress",
+    admin: "Administration",
+    settings: "Account settings",
+    signOut: "Sign out",
+    ready: "Ready to explore",
+    account: "Account",
+    loadingSpace: "Loading your learning space…",
+    footerLeft: "NexaLab · Touch science",
+    footerRight: "Observe. Experiment. Understand.",
+  },
+});
 
 export default function App() {
   const { user } = useAuth();
+  const profile = useProfile();
   const location = useLocation();
+  // The saved profile preference wins over this device's copy once the profile loads.
+  const savedTheme = profile.data?.preferences?.theme;
+  const savedLocale = profile.data?.preferences?.locale;
+  useEffect(() => {
+    if (savedTheme) setThemePreference(savedTheme);
+  }, [savedTheme]);
+  const profileLoaded = Boolean(profile.data);
+  useEffect(() => {
+    if (!profileLoaded) return;
+    if (takeLocaleChosenBeforeSignIn() && savedLocale !== getLocale()) {
+      // Picked on the sign-in page: newer than the profile's value, so save it rather than adopt.
+      void api<{ preferences: Profile["preferences"] }>("/me/preferences", "PATCH", { locale: getLocale() }).then(({ preferences }) =>
+        queryClient.setQueryData<Profile>(PROFILE_KEY, (old) => (old ? { ...old, preferences } : old)),
+      );
+      return;
+    }
+    if (savedLocale) setLocale(savedLocale);
+  }, [profileLoaded, savedLocale]);
+  const t = text();
   const [ready, setReady] = useState(false);
   useLayoutEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -75,8 +158,8 @@ export default function App() {
     return (
       <PageLoader
         fullScreen
-        message="Đang khởi tạo không gian học tập…"
-        caption="NexaLab · Chạm vào khoa học"
+        message={t.starting}
+        caption={t.startingCaption}
       />
     );
   if (!user) {
@@ -88,8 +171,8 @@ export default function App() {
         fallback={
           <PageLoader
             fullScreen
-            message="Đang mở trang giới thiệu…"
-            caption="NexaLab · Phòng thí nghiệm mô phỏng"
+            message={t.openingLanding}
+            caption={t.landingCaption}
           />
         }
       >
@@ -112,46 +195,44 @@ export default function App() {
             <GraduationCap size={20} />
           </span>
           <div>
-            <b>Không gian học tập</b>
-            <small>Khoa học tự nhiên · THCS</small>
+            <b>{t.workspace}</b>
+            <small>{t.workspaceScope}</small>
           </div>
         </div>
-        <p className="nav-caption">KHÁM PHÁ & HỌC TẬP</p>
+        <p className="nav-caption">{t.navCaption}</p>
         <nav>
           {user.role === "STUDENT" ? (
             <>
-              <NavLink end to="/" aria-label="Trang chủ"><LayoutDashboard />Trang chủ</NavLink>
-              <NavLink to="/lessons" aria-label="Bài học"><BookOpen />Bài học</NavLink>
-              <NavLink to="/labs" aria-label="Phòng thí nghiệm"><FlaskConical />Lab</NavLink>
-              <NavLink to="/assignments" aria-label="Bài tập"><ClipboardList />Bài tập</NavLink>
-              <NavLink to="/classes" aria-label="Class Space"><Users />Class Space</NavLink>
-              <NavLink to="/progress" aria-label="Tiến độ"><ChartNoAxesCombined />Tiến độ</NavLink>
+              <NavLink end to="/" aria-label={t.home}><LayoutDashboard />{t.home}</NavLink>
+              <NavLink to="/lessons" aria-label={t.lessons}><BookOpen />{t.lessons}</NavLink>
+              <NavLink to="/labs" aria-label={t.labsLabel}><FlaskConical />{t.labsShort}</NavLink>
+              <NavLink to="/assignments" aria-label={t.assignments}><ClipboardList />{t.assignments}</NavLink>
+              <NavLink to="/classes" aria-label={t.classSpace}><Users />{t.classSpace}</NavLink>
+              <NavLink to="/progress" aria-label={t.progress}><ChartNoAxesCombined />{t.progress}</NavLink>
             </>
           ) : (
             <>
-              <NavLink end to="/"><LayoutDashboard />Tổng quan</NavLink>
-              {user.role === "TEACHER" && <NavLink to="/labs"><FlaskConical />Phòng thí nghiệm</NavLink>}
-              <NavLink to="/lessons"><BookOpen />Thư viện bài học</NavLink>
-              {user.role === "TEACHER" && <NavLink to="/classes"><Users />Lớp học của tôi</NavLink>}
-              {user.role === "PARENT" && <NavLink to="/progress"><ChartNoAxesCombined />Tiến độ của con</NavLink>}
-              {user.role === "ADMIN" && <NavLink to="/admin"><Settings />Quản trị</NavLink>}
+              <NavLink end to="/"><LayoutDashboard />{t.overview}</NavLink>
+              {user.role === "TEACHER" && <NavLink to="/labs"><FlaskConical />{t.labsLabel}</NavLink>}
+              <NavLink to="/lessons"><BookOpen />{t.lessonLibrary}</NavLink>
+              {user.role === "TEACHER" && <NavLink to="/classes"><Users />{t.myClasses}</NavLink>}
+              {user.role === "PARENT" && <NavLink to="/progress"><ChartNoAxesCombined />{t.childProgress}</NavLink>}
+              {user.role === "ADMIN" && <NavLink to="/admin"><Settings />{t.admin}</NavLink>}
             </>
           )}
         </nav>
         <NavLink className="settings-link" to="/settings">
           <Settings size={18} />
-          Cài đặt tài khoản
+          {t.settings}
         </NavLink>
         <div className="user-card">
-          <span className="avatar">
-            {user.fullName.split(" ").at(-1)?.slice(0, 1)}
-          </span>
+          <Avatar name={user.fullName} url={profile.data?.avatarUrl} />
           <div>
             <b>{user.fullName}</b>
-            <small>{names[user.role]}</small>
+            <small>{commonText().roles[user.role]}</small>
           </div>
           <button
-            title="Đăng xuất"
+            title={t.signOut}
             className="icon-button"
             onClick={async () => {
               try {
@@ -170,18 +251,19 @@ export default function App() {
         <header className="topbar">
           <TopbarBreadcrumb pathname={location.pathname} user={user} />
           <div>
-            <span className="online-dot" /> Sẵn sàng khám phá{" "}
+            <span className="online-dot" /> {t.ready}{" "}
+            <NotificationBell />
             <Link
               to="/settings"
-              aria-label="Tài khoản"
-              className="avatar small"
+              aria-label={t.account}
+              className="avatar-link"
             >
-              {user.fullName.charAt(0)}
+              <Avatar name={user.fullName} url={profile.data?.avatarUrl} className="avatar small" />
             </Link>
           </div>
         </header>
         <main className="main">
-          <Suspense fallback={<PageLoader message="Đang nạp không gian học tập…" />}>
+          <Suspense fallback={<PageLoader message={t.loadingSpace} />}>
             <Routes>
               <Route
                 path="/"
@@ -211,6 +293,7 @@ export default function App() {
               <Route path="/progress" element={["STUDENT", "PARENT"].includes(user.role) ? <ProgressPage /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />
               <Route path="/saved" element={<Saved />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route
                 path="/admin"
                 element={
@@ -222,8 +305,8 @@ export default function App() {
           </Suspense>
         </main>
         <footer className="footer">
-          <span>NexaLab · Chạm vào khoa học</span>
-          <span>Quan sát. Thử nghiệm. Thấu hiểu.</span>
+          <span>{t.footerLeft}</span>
+          <span>{t.footerRight}</span>
         </footer>
       </div>
     </div>

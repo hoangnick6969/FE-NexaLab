@@ -5,6 +5,79 @@ import { Badge, ErrorBox, Field, Modal } from "../../components/ui";
 import { dateTime, submissionStatusLabel, testStatusLabel, testStatusTone, type TestState } from "../../lib/test-status";
 import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import { LoadError, toLocalInput, useMutate } from "./class-ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    lateQueue: "Bài nộp trễ chờ duyệt",
+    lateList: "danh sách bài nộp trễ",
+    submittedAt: (at: string, due: string) => `Nộp lúc ${at} · Hạn hiện tại ${due}`,
+    reason: "Lý do:",
+    extendGroup: "Dời hạn cho cả nhóm",
+    reject: "Từ chối (0 điểm)",
+    rejectTitle: "Từ chối bài nộp trễ",
+    rejectLead: "Bài nộp trễ của",
+    rejectTail: "sẽ nhận 0 điểm và được ghi là chưa đạt. Bài nộp và lý do vẫn được lưu.",
+    noteForStudent: "Ghi chú cho học sinh (không bắt buộc)",
+    cancel: "Hủy",
+    working: "Đang xử lý…",
+    rejectZero: "Từ chối, ghi 0 điểm",
+    extendTitle: "Dời hạn nộp cho cả nhóm",
+    extendNote: (due: string) => `Hạn hiện tại: ${due}. Hạn mới áp dụng cho toàn bộ học sinh đã được giao bài này, kể cả em đã nộp; mọi bài nộp trễ đang chờ duyệt sẽ được chấp nhận. Lịch sử hạn nộp và bài nộp trước vẫn được giữ.`,
+    newDue: "Hạn nộp mới",
+    noteOptional: "Ghi chú (không bắt buộc)",
+    saving: "Đang lưu…",
+    extend: "Dời hạn",
+    testStatus: "trạng thái bài kiểm tra",
+    currentDue: "Hạn hiện tại:",
+    extendedTimes: (n: number) => `đã dời ${n} lần`,
+    dueHistory: "Lịch sử hạn nộp",
+    setAt: (at: string) => `đặt lúc ${at}`,
+    student: "Học sinh",
+    status: "Trạng thái",
+    currentSubmission: "Bài nộp hiện tại",
+    actions: "Thao tác",
+    points: (n: number) => `${n} điểm`,
+    submissions: (n: number) => `${n} lần nộp`,
+    notSubmitted: "Chưa nộp",
+    noAutoZero: "Quá hạn mà chưa nộp không tự bị chấm 0 điểm.",
+  },
+  en: {
+    lateQueue: "Late submissions to review",
+    lateList: "the late submission list",
+    submittedAt: (at: string, due: string) => `Submitted ${at} · Now due ${due}`,
+    reason: "Reason:",
+    extendGroup: "Extend for the group",
+    reject: "Reject (0 points)",
+    rejectTitle: "Reject the late submission",
+    rejectLead: "The late submission from",
+    rejectTail: "will get 0 points and be recorded as not passed. The submission and reason are kept.",
+    noteForStudent: "Note for the student (optional)",
+    cancel: "Cancel",
+    working: "Working…",
+    rejectZero: "Reject with 0 points",
+    extendTitle: "Extend the due date for the group",
+    extendNote: (due: string) => `Now due: ${due}. The new date applies to every student assigned this work, including those who submitted; every late submission waiting for review is accepted. Earlier due dates and submissions are kept.`,
+    newDue: "New due date",
+    noteOptional: "Note (optional)",
+    saving: "Saving…",
+    extend: "Extend",
+    testStatus: "the test status",
+    currentDue: "Now due:",
+    extendedTimes: (n: number) => `extended ${n}×`,
+    dueHistory: "Due date history",
+    setAt: (at: string) => `set ${at}`,
+    student: "Student",
+    status: "Status",
+    currentSubmission: "Current submission",
+    actions: "Actions",
+    points: (n: number) => `${n} points`,
+    submissions: (n: number) => `${n} submissions`,
+    notSubmitted: "Not submitted",
+    noAutoZero: "Overdue work that was not submitted is not scored 0 automatically.",
+  },
+});
+const t = text();
 
 type LateQueueItem = {
   assignmentId: string;
@@ -26,25 +99,25 @@ export function LateQueue({ classroom }: { classroom: ClassSummary }) {
   if (!queue.error && !queue.data?.length) return null;
   return (
     <section className="panel" aria-labelledby="late-queue-title">
-      <h2 id="late-queue-title">Bài nộp trễ chờ duyệt</h2>
-      <LoadError query={queue} what="danh sách bài nộp trễ" />
+      <h2 id="late-queue-title">{t.lateQueue}</h2>
+      <LoadError query={queue} what={t.lateList} />
       {queue.data?.map((item) => (
         <div className="assignment-row" key={item.submissionId}>
           <div>
             <b>{item.student.fullName}</b> · {item.assignmentTitle}
             <small>
-              Nộp lúc {dateTime(item.submittedAt)} · Hạn hiện tại {dateTime(item.dueAt)}
+              {t.submittedAt(dateTime(item.submittedAt), dateTime(item.dueAt))}
             </small>
-            <small>Lý do: {item.lateReason}</small>
+            <small>{t.reason} {item.lateReason}</small>
           </div>
           <div className="button-row">
             {item.permittedDecisions.includes("REVISE_DEADLINE_FOR_CLASS") && (
               <button className="text-button" onClick={() => setExtending(item)}>
-                Dời hạn cho cả nhóm
+                {t.extendGroup}
               </button>
             )}
             <button className="danger-text" onClick={() => setRejecting(item)}>
-              Từ chối (0 điểm)
+              {t.reject}
             </button>
           </div>
         </div>
@@ -69,17 +142,17 @@ function RejectLate({ classId, item, onClose }: { classId: string; item: { assig
   const key = useRef(idempotencyKey());
   const [note, setNote] = useState("");
   return (
-    <Modal title="Từ chối bài nộp trễ" onClose={onClose}>
+    <Modal title={t.rejectTitle} onClose={onClose}>
       <p>
-        Bài nộp trễ của <b>{item.student.fullName}</b> sẽ nhận 0 điểm và được ghi là chưa đạt. Bài nộp và lý do vẫn được lưu.
+        {t.rejectLead} <b>{item.student.fullName}</b> {t.rejectTail}
       </p>
       <label className="field">
-        <span>Ghi chú cho học sinh (không bắt buộc)</span>
+        <span>{t.noteForStudent}</span>
         <textarea maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} />
       </label>
       <ErrorBox error={act.error} />
       <div className="button-row">
-        <button type="button" className="secondary" onClick={onClose}>Hủy</button>
+        <button type="button" className="secondary" onClick={onClose}>{t.cancel}</button>
         <button
           type="button"
           className="danger"
@@ -91,7 +164,7 @@ function RejectLate({ classId, item, onClose }: { classId: string; item: { assig
             )
           }
         >
-          {act.isPending ? "Đang xử lý…" : "Từ chối, ghi 0 điểm"}
+          {act.isPending ? t.working : t.rejectZero}
         </button>
       </div>
     </Modal>
@@ -103,7 +176,7 @@ function ReviseDeadline({ classId, assignmentId, revision, dueAt, submissionId, 
   const act = useMutate<{ message: string; acceptedSubmissions: number }>();
   const key = useRef(idempotencyKey());
   return (
-    <Modal title="Dời hạn nộp cho cả nhóm" onClose={onClose}>
+    <Modal title={t.extendTitle} onClose={onClose}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -119,15 +192,15 @@ function ReviseDeadline({ classId, assignmentId, revision, dueAt, submissionId, 
           );
         }}
       >
-        <p className="tiny muted">Hạn hiện tại: {dateTime(dueAt)}. Hạn mới áp dụng cho toàn bộ học sinh đã được giao bài này, kể cả em đã nộp; mọi bài nộp trễ đang chờ duyệt sẽ được chấp nhận. Lịch sử hạn nộp và bài nộp trước vẫn được giữ.</p>
-        <Field label="Hạn nộp mới" name="dueAt" type="datetime-local" required min={toLocalInput(new Date().toISOString())} />
+        <p className="tiny muted">{t.extendNote(dateTime(dueAt))}</p>
+        <Field label={t.newDue} name="dueAt" type="datetime-local" required min={toLocalInput(new Date().toISOString())} />
         <label className="field">
-          <span>Ghi chú (không bắt buộc)</span>
+          <span>{t.noteOptional}</span>
           <textarea name="note" maxLength={1000} />
         </label>
         <ErrorBox error={act.error} />
         <button className="primary wide" disabled={act.isPending}>
-          {act.isPending ? "Đang lưu…" : "Dời hạn"}
+          {act.isPending ? t.saving : t.extend}
         </button>
       </form>
     </Modal>
@@ -152,20 +225,20 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
   return (
     <>
     <Modal title={assignment.title} onClose={onClose}>
-      <LoadError query={data} what="trạng thái bài kiểm tra" />
+      <LoadError query={data} what={t.testStatus} />
       {data.data && latest && (
         <>
           <p>
-            Hạn hiện tại: <b>{dateTime(latest.dueAt)}</b>
-            {data.data.deadlines.length > 1 && ` · đã dời ${data.data.deadlines.length - 1} lần`}
+            {t.currentDue} <b>{dateTime(latest.dueAt)}</b>
+            {data.data.deadlines.length > 1 && ` · ${t.extendedTimes(data.data.deadlines.length - 1)}`}
           </p>
           {data.data.deadlines.length > 1 && (
             <details>
-              <summary>Lịch sử hạn nộp</summary>
+              <summary>{t.dueHistory}</summary>
               <ol>
                 {data.data.deadlines.map((d) => (
                   <li key={d.revision}>
-                    {dateTime(d.dueAt)} (đặt lúc {dateTime(d.createdAt)}){d.note ? ` · ${d.note}` : ""}
+                    {dateTime(d.dueAt)} ({t.setAt(dateTime(d.createdAt))}){d.note ? ` · ${d.note}` : ""}
                   </li>
                 ))}
               </ol>
@@ -173,17 +246,17 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
           )}
           {data.data.permittedDecisions.includes("REVISE_DEADLINE_FOR_CLASS") && (
             <button className="secondary" onClick={() => setExtending(true)}>
-              Dời hạn cho cả nhóm
+              {t.extendGroup}
             </button>
           )}
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Học sinh</th>
-                  <th>Trạng thái</th>
-                  <th>Bài nộp hiện tại</th>
-                  <th>Thao tác</th>
+                  <th>{t.student}</th>
+                  <th>{t.status}</th>
+                  <th>{t.currentSubmission}</th>
+                  <th>{t.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,18 +270,18 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
                       {row.current ? (
                         <>
                           {dateTime(row.current.submittedAt)} · {submissionStatusLabel[row.current.status]}
-                          {row.current.score !== null && ` · ${row.current.score} điểm`}
-                          {row.current.lateReason && <small> · Lý do: {row.current.lateReason}</small>}
-                          {row.history.length > 1 && <small> · {row.history.length} lần nộp</small>}
+                          {row.current.score !== null && ` · ${t.points(row.current.score)}`}
+                          {row.current.lateReason && <small> · {t.reason} {row.current.lateReason}</small>}
+                          {row.history.length > 1 && <small> · {t.submissions(row.history.length)}</small>}
                         </>
                       ) : (
-                        "Chưa nộp"
+                        t.notSubmitted
                       )}
                     </td>
                     <td>
                       {row.status === "LATE_REVIEW_PENDING" && row.current && (
                         <button className="danger-text" onClick={() => setRejecting({ submissionId: row.current!.id, student: row.student })}>
-                          Từ chối (0 điểm)
+                          {t.reject}
                         </button>
                       )}
                     </td>
@@ -217,7 +290,7 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
               </tbody>
             </table>
           </div>
-          <p className="tiny muted">Quá hạn mà chưa nộp không tự bị chấm 0 điểm.</p>
+          <p className="tiny muted">{t.noAutoZero}</p>
         </>
       )}
     </Modal>

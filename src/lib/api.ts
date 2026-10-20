@@ -1,4 +1,11 @@
 import { create } from "zustand";
+import { apiErrorMessage } from "../i18n/errors";
+import { defineText } from "../i18n";
+
+const text = defineText({
+  vi: { materialFailed: "Không mở được học liệu", videoFailed: "Không tải được video" },
+  en: { materialFailed: "The learning material could not be opened", videoFailed: "The video could not be loaded" },
+});
 export type User = {
   id: string;
   username?: string | null;
@@ -91,7 +98,7 @@ export type ApiErrorEnvelope = {
   message: string;
   details?: unknown;
 };
-/** Thrown for every non-2xx API response; branch on `code`, show `message`. */
+/** Thrown for every non-2xx API response; branch on `code`, show `message` (already in the UI language). */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -113,12 +120,9 @@ async function readError(r: Response): Promise<ApiError> {
   } catch {
     // Non-JSON gateway errors still produce a typed error.
   }
-  return new ApiError(
-    data.statusCode ?? r.status,
-    typeof data.code === "string" ? data.code : "HTTP_" + r.status,
-    data.message ?? "Không thể kết nối máy chủ",
-    data.details,
-  );
+  const status = data.statusCode ?? r.status;
+  const code = typeof data.code === "string" ? data.code : "HTTP_" + r.status;
+  return new ApiError(status, code, apiErrorMessage(status, code, data.message), data.details);
 }
 export type QuizAttemptResponse = {
   attempt: QuizAttemptSummary;
@@ -372,7 +376,7 @@ export async function openMaterial(url: string) {
   try {
     let r = await fetchAssetFile(id);
     if (r.status === 401 && await restore()) r = await fetchAssetFile(id);
-    if (!r.ok) throw new Error("Không mở được học liệu");
+    if (!r.ok) throw new Error(text().materialFailed);
     const blob = URL.createObjectURL(await r.blob());
     if (win) win.location.href = blob;
     setTimeout(() => URL.revokeObjectURL(blob), 60000);
@@ -390,7 +394,7 @@ export async function inlineMaterial(url: string): Promise<InlineMaterial> {
 
   let response = await fetchAssetFile(id);
   if (response.status === 401 && await restore()) response = await fetchAssetFile(id);
-  if (!response.ok) throw new Error("Không tải được video");
+  if (!response.ok) throw new Error(text().videoFailed);
 
   const src = URL.createObjectURL(await response.blob());
   return { src, revoke: () => URL.revokeObjectURL(src) };

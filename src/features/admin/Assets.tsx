@@ -3,6 +3,77 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { Field, useAction } from "../../components/ui";
 import { LICENSE_LABEL, LoadMore, QueryState, ROLE_LABEL, ReasonDialog, SCOPE_LABEL, Status, rowsOf, usePaged } from "./admin-ui";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    labels: { quarantine: "Cách ly", release: "Gỡ cách ly", reassign: "Chuyển chủ sở hữu", share: "Đưa vào thư viện chung", delete: "Xóa" } as Record<string, string>,
+    effects: { quarantine: "Không ai ngoài quản trị viên mở được tệp, kể cả trong bài đã xuất bản, cho tới khi gỡ cách ly.", release: "Tệp được phục vụ lại như trước.", reassign: "Quyền quản lý tệp chuyển cho người nhận; các bài đang tham chiếu không đổi.", share: "Mọi giáo viên dùng được tệp. Phải ghi rõ giấy phép và nguồn; đây không phải duyệt chuyên môn.", delete: "Tệp bị xóa vĩnh viễn. Máy chủ từ chối nếu còn bài học hay phòng thực hành tham chiếu." } as Record<string, string>,
+    title: "Tệp và nguồn",
+    note: "Quản lý tệp, nguồn và quyền sử dụng. Dung lượng và mã kiểm tra toàn vẹn được lấy từ phiên bản sẵn sàng mới nhất.",
+    filter: "Lọc tệp",
+    status: "Trạng thái",
+    all: "Tất cả",
+    ready: "Sẵn sàng",
+    quarantined: "Đang cách ly",
+    active: "Đang hoạt động",
+    archived: "Đã lưu trữ",
+    scope: "Phạm vi",
+    teacherPrivate: "Riêng của giáo viên",
+    shared: "Thư viện chung",
+    file: "Tệp",
+    owner: "Chủ sở hữu",
+    scopeLicence: "Phạm vi / giấy phép",
+    references: "Tham chiếu",
+    actions: "Thao tác",
+    noChecksum: "Chưa có mã kiểm tra toàn vẹn",
+    noMime: "Chưa có loại tệp",
+    noSize: "Chưa có dung lượng",
+    noReadyVersion: "Chưa có phiên bản sẵn sàng",
+    refCounts: (lessons: number, labs: number) => `${lessons} bài, ${labs} phòng`,
+    none: "Không",
+    inUse: "Đang được tham chiếu; không thể xóa",
+    delete: "Xóa",
+    recipient: "Người nhận",
+    choose: "— Chọn —",
+    licence: "Giấy phép",
+    source: "Nguồn / ghi công",
+  },
+  en: {
+    labels: { quarantine: "Quarantine", release: "Release", reassign: "Change owner", share: "Add to the shared library", delete: "Delete" },
+    effects: { quarantine: "Only administrators can open the file, even in published lessons, until it is released.", release: "The file is served again as before.", reassign: "Management of the file moves to the recipient; lessons that use it do not change.", share: "Every teacher can use the file. A licence and source are required; this is not a subject review.", delete: "The file is deleted permanently. The server refuses if a lesson or lab still uses it." },
+    title: "Files and sources",
+    note: "Manage files, sources and usage rights. Size and integrity checksum come from the latest ready version.",
+    filter: "Filter files",
+    status: "Status",
+    all: "All",
+    ready: "Ready",
+    quarantined: "Quarantined",
+    active: "Active",
+    archived: "Archived",
+    scope: "Scope",
+    teacherPrivate: "Teacher's private",
+    shared: "Shared library",
+    file: "File",
+    owner: "Owner",
+    scopeLicence: "Scope / licence",
+    references: "References",
+    actions: "Actions",
+    noChecksum: "No integrity checksum yet",
+    noMime: "No file type yet",
+    noSize: "No size yet",
+    noReadyVersion: "No ready version yet",
+    refCounts: (lessons: number, labs: number) => `${lessons} lessons, ${labs} labs`,
+    none: "None",
+    inUse: "In use; cannot be deleted",
+    delete: "Delete",
+    recipient: "Recipient",
+    choose: "— Choose —",
+    licence: "Licence",
+    source: "Source / attribution",
+  },
+});
+const t = text();
 
 // ───────────────────────── assets ─────────────────────────
 export function Assets() {
@@ -20,43 +91,31 @@ export function Assets() {
     enabled: op?.action === "reassign",
   });
   const [extra, setExtra] = useState<any>({});
-  const labels: Record<string, string> = {
-    quarantine: "Cách ly",
-    release: "Gỡ cách ly",
-    reassign: "Chuyển chủ sở hữu",
-    share: "Đưa vào thư viện chung",
-    delete: "Xóa",
-  };
-  const effects: Record<string, string> = {
-    quarantine: "Không ai ngoài quản trị viên mở được tệp, kể cả trong bài đã xuất bản, cho tới khi gỡ cách ly.",
-    release: "Tệp được phục vụ lại như trước.",
-    reassign: "Quyền quản lý tệp chuyển cho người nhận; các bài đang tham chiếu không đổi.",
-    share: "Mọi giáo viên dùng được tệp. Phải ghi rõ giấy phép và nguồn; đây không phải duyệt chuyên môn.",
-    delete: "Tệp bị xóa vĩnh viễn. Máy chủ từ chối nếu còn bài học hay phòng thực hành tham chiếu.",
-  };
+  const labels: Record<string, string> = t.labels;
+  const effects: Record<string, string> = t.effects;
   const refs = (a: any) => a.references.lessons.length + a.references.labs.length;
   return (
     <section className="panel table-wrap">
-      <h2>Tệp và nguồn</h2>
+      <h2>{t.title}</h2>
       <p className="tiny muted">
-        Quản lý tệp, nguồn và quyền sử dụng. Dung lượng và mã kiểm tra toàn vẹn được lấy từ phiên bản sẵn sàng mới nhất.
+        {t.note}
       </p>
-      <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label="Lọc tệp">
+      <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label={t.filter}>
         <label className="field">
-          <span>Trạng thái</span>
+          <span>{t.status}</span>
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-            <option value="">Tất cả</option>
-            <option value="ACTIVE">Đang hoạt động</option>
-            <option value="QUARANTINED">Đang cách ly</option>
-            <option value="ARCHIVED">Đã lưu trữ</option>
+            <option value="">{t.all}</option>
+            <option value="ACTIVE">{t.active}</option>
+            <option value="QUARANTINED">{t.quarantined}</option>
+            <option value="ARCHIVED">{t.archived}</option>
           </select>
         </label>
         <label className="field">
-          <span>Phạm vi</span>
+          <span>{t.scope}</span>
           <select value={filters.scope} onChange={(e) => setFilters({ ...filters, scope: e.target.value })}>
-            <option value="">Tất cả</option>
-            <option value="TEACHER_PRIVATE">Riêng của giáo viên</option>
-            <option value="SHARED_LIBRARY">Thư viện chung</option>
+            <option value="">{t.all}</option>
+            <option value="TEACHER_PRIVATE">{t.teacherPrivate}</option>
+            <option value="SHARED_LIBRARY">{t.shared}</option>
           </select>
         </label>
       </form>
@@ -64,12 +123,12 @@ export function Assets() {
         <table>
           <thead>
             <tr>
-              <th>Tệp</th>
-              <th>Chủ sở hữu</th>
-              <th>Phạm vi / giấy phép</th>
-              <th>Trạng thái</th>
-              <th>Tham chiếu</th>
-              <th>Thao tác</th>
+              <th>{t.file}</th>
+              <th>{t.owner}</th>
+              <th>{t.scopeLicence}</th>
+              <th>{t.status}</th>
+              <th>{t.references}</th>
+              <th>{t.actions}</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +139,7 @@ export function Assets() {
                 <td>
                   {a.title}
                   <p className="tiny muted">
-                    {ready ? `${ready.mime ?? "Chưa có loại tệp"} · ${ready.bytes == null ? "Chưa có dung lượng" : `${Math.ceil(ready.bytes / 1024)} KB`} · ${ready.sha256 ? `SHA-256 ${ready.sha256.slice(0, 12)}…` : "Chưa có mã kiểm tra toàn vẹn"}` : "Chưa có phiên bản sẵn sàng"}
+                    {ready ? `${ready.mime ?? t.noMime} · ${ready.bytes == null ? t.noSize : `${Math.ceil(ready.bytes / 1024)} KB`} · ${ready.sha256 ? `SHA-256 ${ready.sha256.slice(0, 12)}…` : t.noChecksum}` : t.noReadyVersion}
                   </p>
                   <details><summary>Phiên bản ({a.versions?.length ?? 0})</summary>{a.versions?.map((version: any) => <p key={version.id} className="tiny">Bản {version.version} · {version.status === "READY" ? "Sẵn sàng" : version.status === "FAILED" ? "Không thành công" : "Đang xử lý"}{version.failureReason ? ` · ${version.failureReason}` : ""}</p>)}</details>
                 </td>
@@ -96,7 +155,7 @@ export function Assets() {
                 <td>
                   <Status value={a.status} />
                 </td>
-                <td>{refs(a) ? `${a.references.lessons.length} bài, ${a.references.labs.length} phòng` : "Không"}</td>
+                <td>{refs(a) ? t.refCounts(a.references.lessons.length, a.references.labs.length) : t.none}</td>
                 <td className="admin-row-actions">
                   {(a.status === "QUARANTINED"
                     ? ["release", "reassign"]
@@ -119,13 +178,13 @@ export function Assets() {
                     type="button"
                     className="danger-text"
                     disabled={refs(a) > 0}
-                    title={refs(a) ? "Đang được tham chiếu; không thể xóa" : ""}
+                    title={refs(a) ? t.inUse : ""}
                     onClick={() => {
                       act.reset();
                       setOp({ asset: a, action: "delete" });
                     }}
                   >
-                    Xóa
+                    {t.delete}
                   </button>
                 </td>
               </tr>
@@ -156,9 +215,9 @@ export function Assets() {
         >
           {op.action === "reassign" && (
             <label className="field">
-              <span>Người nhận</span>
+              <span>{t.recipient}</span>
               <select value={extra.newOwnerId ?? ""} onChange={(e) => setExtra({ newOwnerId: e.target.value })}>
-                <option value="">— Chọn —</option>
+                <option value="">{t.choose}</option>
                 {(staff.data ?? [])
                   .filter((u: any) => u.id !== op.asset.ownerId)
                   .map((u: any) => (
@@ -172,9 +231,9 @@ export function Assets() {
           {op.action === "share" && (
             <>
               <label className="field">
-                <span>Giấy phép</span>
+                <span>{t.licence}</span>
                 <select value={extra.license ?? ""} onChange={(e) => setExtra({ ...extra, license: e.target.value })}>
-                  <option value="">— Chọn —</option>
+                  <option value="">{t.choose}</option>
                   {Object.entries(LICENSE_LABEL).map(([v, l]) => (
                     <option key={v} value={v}>
                       {l}
@@ -182,7 +241,7 @@ export function Assets() {
                   ))}
                 </select>
               </label>
-              <Field label="Nguồn / ghi công" value={extra.source ?? ""} onChange={(e) => setExtra({ ...extra, source: e.target.value })} />
+              <Field label={t.source} value={extra.source ?? ""} onChange={(e) => setExtra({ ...extra, source: e.target.value })} />
             </>
           )}
         </ReasonDialog>

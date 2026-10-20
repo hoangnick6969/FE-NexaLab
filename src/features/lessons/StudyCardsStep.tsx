@@ -1,6 +1,43 @@
 import { useEffect, useState } from "react";
 import { api, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 import { withAssignmentContext } from "./lesson-catalog";
+import { defineText } from "../../i18n";
+
+const text = defineText({
+  vi: {
+    saveFailed: "Chưa lưu được lượt ôn thẻ",
+    none: "Chưa có thẻ học khả dụng.",
+    region: "Thẻ ghi nhớ",
+    card: (n: number, total: number) => `Thẻ ${n} / ${total}`,
+    seen: (n: number, total: number) => `${n} / ${total} đã xem`,
+    flip: "Hiện mặt sau của thẻ",
+    back: "Mặt sau",
+    front: "Mặt trước",
+    previous: "Trước",
+    saving: "Đang lưu…",
+    markSeen: "Đánh dấu đã xem",
+    finish: "Hoàn thành ôn thẻ",
+    seeAll: "Xem đủ tất cả thẻ để hoàn thành",
+    retry: "Thử lại",
+  },
+  en: {
+    saveFailed: "This review could not be saved",
+    none: "No study cards are available yet.",
+    region: "Study cards",
+    card: (n: number, total: number) => `Card ${n} / ${total}`,
+    seen: (n: number, total: number) => `${n} / ${total} seen`,
+    flip: "Show the back of the card",
+    back: "Back",
+    front: "Front",
+    previous: "Previous",
+    saving: "Saving…",
+    markSeen: "Mark as seen",
+    finish: "Finish the review",
+    seeAll: "See every card to finish",
+    retry: "Try again",
+  },
+});
+const t = text();
 
 export function StudyCardsStep({
   lessonId,
@@ -33,7 +70,7 @@ export function StudyCardsStep({
       setSaveState("idle");
     } catch (e) {
       setSaveState("error");
-      setError(e instanceof Error ? e.message : "Chưa lưu được lượt ôn thẻ");
+      setError(e instanceof Error ? e.message : t.saveFailed);
     }
   };
   useEffect(() => {
@@ -45,22 +82,22 @@ export function StudyCardsStep({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [cards.length, index, saveState]);
-  if (!card) return <p role="status">Chưa có thẻ học khả dụng.</p>;
+  if (!card) return <p role="status">{t.none}</p>;
   const isLast = index === cards.length - 1;
   const allVisited = visited.size === cards.length;
   return (
-    <section className="study-cards" aria-label="Thẻ ghi nhớ" tabIndex={0}>
-      <div className="study-cards-toolbar"><span>Thẻ {index + 1} / {cards.length}</span><span>{visited.size} / {cards.length} đã xem</span></div>
-      <button type="button" className="study-card" onClick={() => setShowBack((value) => !value)} aria-label="Hiện mặt sau của thẻ">
-        <span className="study-card-label">{showBack ? "Mặt sau" : "Mặt trước"}</span><strong>{showBack ? card.back : card.front}</strong>
+    <section className="study-cards" aria-label={t.region} tabIndex={0}>
+      <div className="study-cards-toolbar"><span>{t.card(index + 1, cards.length)}</span><span>{t.seen(visited.size, cards.length)}</span></div>
+      <button type="button" className="study-card" onClick={() => setShowBack((value) => !value)} aria-label={t.flip}>
+        <span className="study-card-label">{showBack ? t.back : t.front}</span><strong>{showBack ? card.back : card.front}</strong>
       </button>
       <div className="study-card-actions">
-        <button type="button" className="secondary" disabled={index === 0} onClick={() => { setIndex((value) => value - 1); setShowBack(false); }}>Trước</button>
-        <button type="button" className="secondary" onClick={() => void visit()} disabled={saveState === "saving"}>{saveState === "saving" ? "Đang lưu…" : "Đánh dấu đã xem"}</button>
+        <button type="button" className="secondary" disabled={index === 0} onClick={() => { setIndex((value) => value - 1); setShowBack(false); }}>{t.previous}</button>
+        <button type="button" className="secondary" onClick={() => void visit()} disabled={saveState === "saving"}>{saveState === "saving" ? t.saving : t.markSeen}</button>
         <button type="button" className="secondary" disabled={isLast} onClick={() => { setIndex((value) => value + 1); setShowBack(false); }}>Sau</button>
       </div>
-      {isLast && <button type="button" className="primary" disabled={!allVisited || saveState === "saving"} onClick={() => void visit(true)}>{allVisited ? "Hoàn thành ôn thẻ" : "Xem đủ tất cả thẻ để hoàn thành"}</button>}
-      {saveState === "error" && <p role="alert">{error} <button type="button" onClick={() => void visit(isLast && allVisited)}>Thử lại</button></p>}
+      {isLast && <button type="button" className="primary" disabled={!allVisited || saveState === "saving"} onClick={() => void visit(true)}>{allVisited ? t.finish : t.seeAll}</button>}
+      {saveState === "error" && <p role="alert">{error} <button type="button" onClick={() => void visit(isLast && allVisited)}>{t.retry}</button></p>}
     </section>
   );
 }
