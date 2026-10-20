@@ -1,5 +1,5 @@
 import { test, type Page } from "@playwright/test";
-import { accounts, adultLogin, adultToken, call, expect, PILOT_CLASS, studentLogin, studentToken } from "./fixtures/live";
+import { accounts, adultLogin, adultToken, call, expect, PILOT_CLASS, PILOT_CLASS_NAME, studentLogin, studentToken } from "./fixtures/live";
 
 // acc-2 on the real FE/API/R2: private avatar upload and removal, adult display name,
 // student name lock, and avatar moderation by the owning teacher only.
@@ -62,8 +62,17 @@ test("a student cannot rename, and only the owning teacher can remove the studen
   test.skip(!accounts.outsiderTeacher.password, "Set SEED_FIXTURE_PASSWORD for teacher.outsider");
   const outsider = await call(`/classes/${PILOT_CLASS}/students/${studentId}/avatar`, "DELETE", undefined, await adultToken(accounts.outsiderTeacher));
   expect(outsider.status).toBe(403);
-  const owner = await call(`/classes/${PILOT_CLASS}/students/${studentId}/avatar`, "DELETE", undefined, await adultToken(accounts.owner));
-  expect(owner.data?.removed).toBe(true);
+  // The owning teacher removes it from the class roster (acc-2 moderation UI).
+  const teacher = await adultLogin(browser, accounts.owner);
+  await teacher.goto("/classes");
+  await teacher.getByRole("button", { name: PILOT_CLASS_NAME }).first().click();
+  const row = teacher.getByRole("row").filter({ hasText: accounts.student.username });
+  await expect(row.locator("img.avatar-image")).toBeVisible();
+  const removed = teacher.waitForResponse((r) => r.request().method() === "DELETE" && r.url().endsWith(`/students/${studentId}/avatar`));
+  await row.getByRole("button", { name: "Gỡ ảnh" }).click();
+  await teacher.getByRole("dialog", { name: "Xác nhận thao tác" }).getByRole("button", { name: "Xác nhận" }).click();
+  expect((await removed).status()).toBe(200);
+  await expect(row.getByRole("button", { name: "Gỡ ảnh" })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("region", { name: "Hồ sơ" }).locator("img.avatar-image")).toHaveCount(0);
 });

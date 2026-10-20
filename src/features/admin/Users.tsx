@@ -4,6 +4,7 @@ import { api, isApiError } from "../../lib/api";
 import { ErrorBox, Field, Modal, useAction } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, ReasonDialog, SCOPE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
 import { defineText } from "../../i18n";
+import { Avatar } from "../../components/Avatar";
 
 const text = defineText({
   vi: {
@@ -67,6 +68,8 @@ const text = defineText({
     choose: "— Chọn —",
     recipientFor: (label: string) => `Người nhận ${label}`,
     recipient: "— Người nhận —",
+    removeAvatar: "Gỡ ảnh đại diện",
+    avatarRemoved: "Đã gỡ ảnh đại diện.",
   },
   en: {
     users: "Users",
@@ -129,6 +132,8 @@ const text = defineText({
     choose: "— Choose —",
     recipientFor: (label: string) => `Recipient for ${label}`,
     recipient: "— Recipient —",
+    removeAvatar: "Remove profile picture",
+    avatarRemoved: "Profile picture removed.",
   },
 });
 const t = text();
@@ -286,8 +291,11 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
       <QueryState query={q}>
         {user && (
           <div className="admin-detail">
-            <p>
-              <b>{user.fullName}</b> · {user.email ?? user.username} · {ROLE_LABEL[user.role]} <Status value={user.status} />
+            <p className="admin-user-identity">
+              <Avatar name={user.fullName} url={user.avatarUrl} className="avatar small" />
+              <span>
+                <b>{user.fullName}</b> · {user.email ?? user.username} · {ROLE_LABEL[user.role]} <Status value={user.status} />
+              </span>
             </p>
             <p className="tiny muted">
               {t.createdAt(when(user.createdAt))}
@@ -329,6 +337,11 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   }
                 >
                   {t.sendReset}
+                </button>
+              )}
+              {user.avatarUrl && (
+                <button type="button" className="danger-text" disabled={act.isPending} onClick={() => run(`/admin/users/${id}/avatar`, undefined, "DELETE", t.avatarRemoved)}>
+                  {t.removeAvatar}
                 </button>
               )}
               {user.status === "active" ? (

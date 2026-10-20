@@ -4,6 +4,7 @@ import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type ClassSummary, type Enrollment } from "./class-types";
 import { Confirm, LoadError, statusLabel, useMutate } from "./class-ui";
+import { Avatar } from "../../components/Avatar";
 import { defineText, formatDateTime } from "../../i18n";
 
 const text = defineText({
@@ -24,6 +25,9 @@ const text = defineText({
     tempNotChanged: "Chưa đổi mật khẩu tạm",
     approve: "Duyệt",
     resetPassword: "Cấp lại mật khẩu",
+    removeAvatar: "Gỡ ảnh",
+    removeAvatarAction: "gỡ ảnh đại diện của",
+    removeAvatarDetail: "Ảnh bị xóa vĩnh viễn và thao tác được ghi vào nhật ký. Học sinh có thể tải ảnh khác.",
     reject: "Từ chối",
     remove: "Xóa khỏi lớp",
     rejectAction: "từ chối yêu cầu của",
@@ -63,6 +67,9 @@ const text = defineText({
     tempNotChanged: "Temporary password not changed",
     approve: "Approve",
     resetPassword: "Reset password",
+    removeAvatar: "Remove picture",
+    removeAvatarAction: "remove the profile picture of",
+    removeAvatarDetail: "The picture is deleted permanently and the action is logged. The student can upload another one.",
     reject: "Reject",
     remove: "Remove from class",
     rejectAction: "reject the request from",
@@ -94,6 +101,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
   const [modal, setModal] = useState<"" | "provision" | "enroll" | "credentials">("");
   const [credentials, setCredentials] = useState<any>(null);
   const [confirm, setConfirm] = useState<Enrollment | null>(null);
+  const [avatarTarget, setAvatarTarget] = useState<Enrollment | null>(null);
   const formKey = useRef(idempotencyKey());
   const roster = useQuery<Enrollment[]>({
     queryKey: ["roster", classroom.id],
@@ -150,9 +158,12 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
             <tbody>
               {rows.map((e) => (
                 <tr key={e.studentId}>
-                  <td>
-                    {e.student.fullName}
-                    <small>{t.account} {e.student.username}</small>
+                  <td className="roster-student">
+                    <Avatar name={e.student.fullName} url={e.student.avatarUrl} className="avatar small" />
+                    <span>
+                      {e.student.fullName}
+                      <small>{t.account} {e.student.username}</small>
+                    </span>
                   </td>
                   <td>
                     <Badge tone={e.status === "approved" ? "" : "outline"}>{statusLabel[e.status]}</Badge>
@@ -186,6 +197,11 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                             {t.resetPassword}
                           </button>
                         )}
+                        {e.status === "approved" && e.student.avatarUrl && (
+                          <button className="danger-text" onClick={() => setAvatarTarget(e)}>
+                            {t.removeAvatar}
+                          </button>
+                        )}
                         <button className="danger-text" onClick={() => setConfirm(e)}>
                           {e.status === "pending" ? t.reject : t.remove}
                         </button>
@@ -214,6 +230,22 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
               { path: `/classes/${classroom.id}/students/${confirm.studentId}`, method: "PUT", body: { status: "removed", confirm: true } },
               { onSuccess: () => setConfirm(null) },
             )
+          }
+        />
+      )}
+      {avatarTarget && (
+        <Confirm
+          action={t.removeAvatarAction}
+          item={avatarTarget.student.fullName}
+          detail={t.removeAvatarDetail}
+          pending={act.isPending}
+          error={act.error}
+          onClose={() => {
+            act.reset();
+            setAvatarTarget(null);
+          }}
+          onConfirm={() =>
+            act.mutate({ path: `/classes/${classroom.id}/students/${avatarTarget.studentId}/avatar`, method: "DELETE" }, { onSuccess: () => setAvatarTarget(null) })
           }
         />
       )}

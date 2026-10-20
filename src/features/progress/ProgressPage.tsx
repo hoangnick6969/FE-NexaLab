@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, useAuth } from "../../lib/api";
@@ -28,6 +28,7 @@ const text = defineText({
     extended: " (hạn đã được dời)",
     notSubmitted: "Con chưa nộp bài",
     overdue: "Quá hạn",
+    markSeen: "Đã xem",
     loadingNotices: "Đang tải thông báo…",
     noOverdue: "Không có bài kiểm tra nào quá hạn.",
     parentNote: "Thông báo chỉ để phụ huynh nắm tình hình; quá hạn không tự bị chấm 0 điểm. Việc nộp bài và quyết định về bài trễ thuộc về học sinh và giáo viên.",
@@ -66,6 +67,7 @@ const text = defineText({
     extended: " (due date extended)",
     notSubmitted: "Not submitted yet",
     overdue: "Overdue",
+    markSeen: "Mark as seen",
     loadingNotices: "Loading notices…",
     noOverdue: "No tests are overdue.",
     parentNote: "Notices keep parents informed; overdue work is not scored 0 automatically. Submitting and late decisions belong to the student and teacher.",
@@ -103,7 +105,17 @@ export function ProgressPage() {
     queryFn: () => api(user.role === "PARENT" ? "/children/" + student + "/progress" : "/progress/" + student),
     enabled: !!student && user.role !== "STUDENT",
   });
-  const notices = useQuery<Array<{ id: string; assignmentId: string; title: string; className: string; dueAt: string; extended: boolean }>>({
+  const queryClient = useQueryClient();
+  // Each notice is the stored notification the bell shows (acc-3), so marking it here clears it there too.
+  const markSeen = useMutation({
+    mutationFn: (id: string) => api(`/me/notifications/${id}/read`, "POST"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["assignment-notices"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications-unread"] });
+    },
+  });
+  const notices = useQuery<Array<{ id: string; assignmentId: string; title: string; className: string; dueAt: string; extended: boolean; readAt: string | null }>>({
     queryKey: ["assignment-notices", student],
     queryFn: () => api("/children/" + student + "/assignment-notices"),
     enabled: !!student && user.role === "PARENT",
@@ -186,6 +198,11 @@ export function ProgressPage() {
                       </small>
                     </div>
                     <Badge tone="not_passed">{t.overdue}</Badge>
+                    {!notice.readAt && (
+                      <button type="button" className="text-button" disabled={markSeen.isPending} onClick={() => markSeen.mutate(notice.id)}>
+                        {t.markSeen}
+                      </button>
+                    )}
                   </div>
                 ))
               ) : notices.isLoading ? (
