@@ -125,6 +125,7 @@ test("shared lesson details use foundational progress without requesting an assi
   await mockStudentApi(page);
   let assignmentPathwayRequested = false;
   let progressSaved = false;
+  let exerciseAttempt: any = null;
   page.on("request", (request) => {
     if (request.url().includes("/api/lessons/lesson-shared/pathway")) assignmentPathwayRequested = true;
   });
@@ -135,13 +136,34 @@ test("shared lesson details use foundational progress without requesting an assi
       curriculum: "Khoa học tự nhiên THCS",
       content: "<p>Nội dung bài học chung.</p>",
       materials: [],
-      steps: [{ id: "reading-1", type: "READING", state: "NOT_STARTED", progressValue: 0, resource: { html: "<p>Nội dung đọc.</p>" } }],
+      steps: [
+        { id: "reading-1", type: "READING", state: "NOT_STARTED", progressValue: 0, resource: { html: "<p>Nội dung đọc.</p>" } },
+        {
+          id: "step-practice-series-current",
+          type: "BASIC_EXERCISE",
+          state: "NOT_STARTED",
+          progressValue: 0,
+          resource: {
+            passThreshold: 60,
+            questions: [{
+              id: "practice-current-question",
+              prompt: "Dòng điện trong mạch nối tiếp như thế nào?",
+              options: [{ id: "same-current", text: "Bằng nhau" }, { id: "decreasing-current", text: "Giảm dần" }],
+            }],
+          },
+          exercise: null,
+        },
+      ],
       ebookEditions: [],
     }),
   }));
   await page.route("**/api/open-curriculum/lessons/lesson-shared/steps/reading-1/progress", (route) => {
     progressSaved = true;
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ step: { id: "reading-1", state: "COMPLETED", progressValue: 100 } }) });
+  });
+  await page.route("**/api/open-curriculum/lessons/lesson-shared/exercises/step-practice-series-current/attempts", async (route) => {
+    exerciseAttempt = await route.request().postDataJSON();
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ score: 100, passThreshold: 60, passed: true }) });
   });
 
   await page.goto("/lessons");
@@ -152,6 +174,13 @@ test("shared lesson details use foundational progress without requesting an assi
   await expect(page.getByText("Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.")).toBeVisible();
   await page.getByRole("button", { name: "Hoàn thành phần đọc" }).click();
   await expect.poll(() => progressSaved).toBe(true);
+  await page.getByRole("tab", { name: "Bài tập luyện tập" }).click();
+  await page.getByLabel("Bằng nhau").check();
+  await page.getByRole("button", { name: "Nộp bài luyện tập" }).click();
+  await expect.poll(() => exerciseAttempt?.answers).toEqual([
+    { questionId: "practice-current-question", optionId: "same-current" },
+  ]);
+  await expect(page.getByRole("status")).toContainText("Đã đạt: 100%");
   expect(assignmentPathwayRequested).toBe(false);
 });
 
