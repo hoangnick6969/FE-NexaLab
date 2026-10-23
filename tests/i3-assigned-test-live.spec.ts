@@ -1,5 +1,5 @@
 import { test, type Page } from "@playwright/test";
-import { accounts, adultLogin, adultToken, assignTest, call, cleanupList, expect, localInput, publishedTest as createPublishedTest, studentLogin as loginStudent } from "./fixtures/live";
+import { accounts, adultLogin, adultToken, assignTest, call, cleanupList, expect, localInput, mailedToken, publishedTest as createPublishedTest, studentLogin as loginStudent } from "./fixtures/live";
 
 // Real FE/API/database journey for I3 (Stories 3.1-3.6). Requires a running API
 // and web app with a seeded database; identities come from the environment
@@ -140,10 +140,17 @@ test("I3: linked parent sees a read-only overdue notice that an extension clears
   const classId = "demo-class";
   const token = await adultToken(demoTeacher);
   const parentToken = await adultToken(parentAccount);
-  // The seeded link is pending until the parent verifies email and accepts consent (the same calls as the UI buttons).
+  // The seeded link is pending until the parent verifies email (mailed one-time link, needs `npm run mailbox`)
+  // and accepts consent — the same calls as the UI.
   let children = (await call("/children", "GET", undefined, parentToken)).data ?? [];
   if (!children.some((c: any) => c.student.id === "student")) {
-    await call("/auth/email/verify", "POST", undefined, parentToken);
+    const since = Date.now();
+    const request = await call("/auth/email/verify/request", "POST", undefined, parentToken);
+    if (request.data?.sent) {
+      const verifyToken = await mailedToken(parentAccount.email, "verifyEmail", since);
+      expect(verifyToken, "verification mail reached the dev mailbox").toBeTruthy();
+      await call("/auth/email/verify", "POST", { token: verifyToken });
+    }
     await call("/auth/consents", "POST", { purpose: "PARENT_CHILD_PROGRESS", version: "2026-10-v1", contentHash: "dev" }, parentToken);
     children = (await call("/children", "GET", undefined, parentToken)).data ?? [];
   }
