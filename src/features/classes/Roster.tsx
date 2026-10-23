@@ -41,6 +41,15 @@ const text = defineText({
     issue: "Cấp tài khoản",
     studentUsername: "Tên đăng nhập học sinh",
     enrolNote: "Học sinh được duyệt vào lớp ngay. Bài đã giao trước đó không tự động thêm cho học sinh mới.",
+    enrol: "Ghi danh",
+    parentCode: "Mã liên kết phụ huynh",
+    parentCodeFor: (name: string) => `Mã cho phụ huynh của ${name}`,
+    parentCodeExpires: (date: string) => `Hạn dùng: ${date}`,
+    parentCodeOnce: "Mã chỉ hiển thị một lần và chỉ dùng được một lần. Hãy gửi riêng cho phụ huynh.",
+    parentCodeSaved: "Đã lưu mã",
+    parentCodeStudent: (name: string) => `Học sinh: ${name}`,
+    guardianVerified: "Tôi đã xác minh người nhận là phụ huynh hoặc người giám hộ theo hồ sơ của nhà trường.",
+    issueParentCode: "Tạo mã liên kết",
     resetTitle: "Cấp lại mật khẩu học sinh",
     creatingTemp: "Đang tạo mật khẩu tạm mới…",
     credentials: "Thông tin đăng nhập",
@@ -83,6 +92,15 @@ const text = defineText({
     issue: "Issue account",
     studentUsername: "Student username",
     enrolNote: "The student is approved at once. Work assigned earlier is not added for new students automatically.",
+    enrol: "Enrol",
+    parentCode: "Parent link code",
+    parentCodeFor: (name: string) => `Code for ${name}'s parent`,
+    parentCodeExpires: (date: string) => `Valid until: ${date}`,
+    parentCodeOnce: "The code is shown once and works once. Send it privately to the parent.",
+    parentCodeSaved: "Code saved",
+    parentCodeStudent: (name: string) => `Student: ${name}`,
+    guardianVerified: "I have verified the recipient as the parent or guardian against school records.",
+    issueParentCode: "Create link code",
     resetTitle: "Reset the student's password",
     creatingTemp: "Creating a new temporary password…",
     credentials: "Sign-in details",
@@ -214,7 +232,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                               setModal("parent-code");
                             }}
                           >
-                            Mã liên kết phụ huynh
+                            {t.parentCode}
                           </button>
                         )}
                         <button className="danger-text" onClick={() => setConfirm(e)}>
@@ -323,23 +341,23 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
             <p className="tiny muted">{t.enrolNote}</p>
             <ErrorBox error={act.error} />
             <button className="primary wide" disabled={act.isPending}>
-              Ghi danh
+              {t.enrol}
             </button>
           </form>
         </Modal>
       )}
       {modal === "parent-code" && parentTarget && (
-        <Modal title="Mã liên kết phụ huynh" onClose={() => setModal("")}>
+        <Modal title={t.parentCode} onClose={() => setModal("")}>
           {parentCode ? (
             <div className="notice" role="status">
-              <b>Mã cho phụ huynh của {parentTarget.student.fullName}</b>
+              <b>{t.parentCodeFor(parentTarget.student.fullName)}</b>
               <p>
                 <code className="link-code">{parentCode.code}</code>
               </p>
-              <p>Hạn dùng: {new Date(parentCode.expiresAt).toLocaleString("vi-VN")}</p>
-              <p className="tiny">Mã chỉ hiển thị một lần và chỉ dùng được một lần. Hãy gửi riêng cho phụ huynh.</p>
+              <p>{t.parentCodeExpires(formatDateTime(parentCode.expiresAt))}</p>
+              <p className="tiny">{t.parentCodeOnce}</p>
               <button type="button" className="secondary" onClick={() => setModal("")}>
-                Đã lưu mã
+                {t.parentCodeSaved}
               </button>
             </div>
           ) : (
@@ -352,14 +370,14 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                 );
               }}
             >
-              <p>Học sinh: {parentTarget.student.fullName}</p>
+              <p>{t.parentCodeStudent(parentTarget.student.fullName)}</p>
               <label className="check">
                 <input type="checkbox" required />
-                Tôi đã xác minh người nhận là phụ huynh hoặc người giám hộ theo hồ sơ của nhà trường.
+                {t.guardianVerified}
               </label>
               <ErrorBox error={act.error} />
               <button className="primary wide" disabled={act.isPending}>
-                Tạo mã liên kết
+                {t.issueParentCode}
               </button>
             </form>
           )}

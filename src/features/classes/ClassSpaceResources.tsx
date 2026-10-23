@@ -155,12 +155,15 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
     {!disabled && <div className="class-resource-create">
       <h3>{t.createDirect}</h3>
       <form onSubmit={create}>
+        {/* Locked while saving: the post-save reset would otherwise wipe edits made meanwhile, including a kind switch. */}
+        <fieldset className="form-lock" disabled={action.isPending}>
         <label className="field"><span>{t.contentType}</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); setPreview(null); }}><option value="DECK">{t.deck}</option><option value="STUDY_QUIZ">{t.practiceQuiz}</option><option value="TEST">{t.testUnassigned}</option></select></label>
         <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
         <label className="field"><span>{t.linkedLesson}</span><select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}><option value="">{t.chooseLesson}</option>{lessons.data?.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}</option>)}</select></label>
         <ResourceEditor kind={kind} value={source} onChange={setSource} />
         <p className="tiny muted">{t.draftHint}</p>
         <ErrorBox error={error} /><button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
+        </fieldset>
       </form>
       <details className="class-resource-import"><summary>{t.importCsv}</summary>
         <p className="tiny muted">{t.csvRules}</p>

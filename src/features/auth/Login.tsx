@@ -24,7 +24,8 @@ const text = defineText({
     adminIntro: "Đăng nhập dành riêng cho quản trị viên.",
     adultIntro: "Dành cho giáo viên và phụ huynh quản lý việc học.",
     studentIntro: "Tài khoản học sinh được giáo viên hoặc nhà trường cấp.",
-    forgotIntro: "Nhập email giáo viên hoặc phụ huynh để nhận mật khẩu tạm thời.",
+    forgotIntro: "Nhập email giáo viên hoặc phụ huynh để nhận liên kết đặt lại mật khẩu (dùng một lần, hết hạn sau 60 phút).",
+    resetIntro: "Nhập mật khẩu mới (ít nhất 12 ký tự) cho tài khoản của bạn.",
     parentIntro: "Tài khoản phụ huynh dành cho người lớn.",
     fullName: "Họ và tên",
     studentUsername: "Tên đăng nhập học sinh",
@@ -61,7 +62,8 @@ const text = defineText({
     adminIntro: "Sign-in for administrators only.",
     adultIntro: "For teachers and parents who manage learning.",
     studentIntro: "Student accounts are issued by the teacher or school.",
-    forgotIntro: "Enter a teacher or parent email to receive a temporary password.",
+    forgotIntro: "Enter a teacher or parent email to receive a password reset link (single use, expires after 60 minutes).",
+    resetIntro: "Enter a new password (at least 12 characters) for your account.",
     parentIntro: "Parent accounts are for adults.",
     fullName: "Full name",
     studentUsername: "Student username",
@@ -169,7 +171,9 @@ export function Login() {
                   ? t.studentIntro
                   : mode === "forgot"
                     ? t.forgotIntro
-                    : t.parentIntro}
+                    : mode === "reset"
+                      ? t.resetIntro
+                      : t.parentIntro}
           </p>
           <form
             onSubmit={(e) => {

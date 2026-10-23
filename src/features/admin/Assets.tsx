@@ -30,7 +30,7 @@ const text = defineText({
     noMime: "Chưa có loại tệp",
     noSize: "Chưa có dung lượng",
     noReadyVersion: "Chưa có phiên bản sẵn sàng",
-    refCounts: (lessons: number, labs: number) => `${lessons} bài, ${labs} phòng`,
+    refCounts: (lessons: number, labs: number, packs: number) => `${lessons} bài, ${labs} phòng${packs ? `, ${packs} gói mô phỏng` : ""}`,
     none: "Không",
     inUse: "Đang được tham chiếu; không thể xóa",
     delete: "Xóa",
@@ -63,7 +63,7 @@ const text = defineText({
     noMime: "No file type yet",
     noSize: "No size yet",
     noReadyVersion: "No ready version yet",
-    refCounts: (lessons: number, labs: number) => `${lessons} lessons, ${labs} labs`,
+    refCounts: (lessons: number, labs: number, packs: number) => `${lessons} lessons, ${labs} labs${packs ? `, ${packs} simulation packs` : ""}`,
     none: "None",
     inUse: "In use; cannot be deleted",
     delete: "Delete",
@@ -93,7 +93,7 @@ export function Assets() {
   const [extra, setExtra] = useState<any>({});
   const labels: Record<string, string> = t.labels;
   const effects: Record<string, string> = t.effects;
-  const refs = (a: any) => a.references.lessons.length + a.references.labs.length;
+  const refs = (a: any) => a.references.lessons.length + a.references.labs.length + (a.references.simPacks?.length ?? 0);
   return (
     <section className="panel table-wrap">
       <h2>{t.title}</h2>
@@ -155,7 +155,7 @@ export function Assets() {
                 <td>
                   <Status value={a.status} />
                 </td>
-                <td>{refs(a) ? t.refCounts(a.references.lessons.length, a.references.labs.length) : t.none}</td>
+                <td>{refs(a) ? t.refCounts(a.references.lessons.length, a.references.labs.length, a.references.simPacks?.length ?? 0) : t.none}</td>
                 <td className="admin-row-actions">
                   {(a.status === "QUARANTINED"
                     ? ["release", "reassign"]

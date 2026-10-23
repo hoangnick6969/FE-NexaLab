@@ -847,6 +847,7 @@ small {
 .class-resource-row small { display: block; margin-top: 4px; color: var(--muted); }
 .class-resource-list { margin-top: 18px; }
 .resource-practice-items { flex: 1 1 100%; display: grid; gap: 10px; }
+.form-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
 .resource-practice-items fieldset { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
 .resource-practice-items legend { font-weight: 600; }
 .resource-practice-items .study-card { min-height: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; }

@@ -4,6 +4,7 @@ import { Routes, Route, NavLink, Navigate, useLocation, Link } from "react-route
 import { api, useAuth, restore } from "../lib/api";
 import { PageLoader } from "../components/ui";
 import { Login } from "../features/auth/Login";
+import { EmailVerification } from "../features/auth/EmailVerification";
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
@@ -162,6 +163,8 @@ export default function App() {
         caption={t.startingCaption}
       />
     );
+  const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
+  if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {
     const isPasswordReset = new URLSearchParams(location.search).has("reset");
     return location.pathname === "/login" || isPasswordReset ? (
