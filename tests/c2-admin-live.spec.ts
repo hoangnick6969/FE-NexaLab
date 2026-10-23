@@ -34,8 +34,9 @@ test("C2 admin disables an owner with explicit resolution and finds it in the au
   expect(klass.status()).toBe(201);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/login");
-  await page.getByRole("button", { name: "Cổng quản trị viên" }).click();
+  // The admin portal has no link on the sign-in page; it opens from /login?admin.
+  await page.goto("/login?admin");
+  await expect(page.getByRole("heading", { name: "CỔNG QUẢN TRỊ NEXALAB" })).toBeVisible();
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(adminPassword);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();

@@ -18,6 +18,8 @@ export const commonText = defineText({
     working: "Đang xử lý…",
     retry: "Thử lại",
     retrying: "Đang thử lại…",
+    showPassword: "Hiện mật khẩu",
+    hidePassword: "Ẩn mật khẩu",
   },
   en: {
     roles: { STUDENT: "Student", TEACHER: "Teacher", PARENT: "Parent", ADMIN: "Administrator" },
@@ -35,5 +37,7 @@ export const commonText = defineText({
     working: "Working…",
     retry: "Try again",
     retrying: "Trying again…",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
   },
 });

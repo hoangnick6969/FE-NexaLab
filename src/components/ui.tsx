@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commonText } from "../i18n/common";
 export const verdictLabel = (v: string) => commonText().verdicts[v] ?? v;
@@ -37,6 +38,28 @@ export function Field({
       <span>{label}</span>
       <input {...props} />
     </label>
+  );
+}
+// The toggle sits outside the <label> so the input's accessible name stays just `label`.
+export function PasswordField({
+  label,
+  id,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
+  const fallbackId = useId();
+  const inputId = id ?? fallbackId;
+  const [visible, setVisible] = useState(false);
+  const toggleLabel = visible ? commonText().hidePassword : commonText().showPassword;
+  return (
+    <div className="field">
+      <label htmlFor={inputId}>{label}</label>
+      <div className="password-input">
+        <input id={inputId} type={visible ? "text" : "password"} {...props} />
+        <button type="button" className="password-toggle" aria-label={toggleLabel} title={toggleLabel} aria-pressed={visible} onClick={() => setVisible((v) => !v)}>
+          {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
+    </div>
   );
 }
 export function Modal({
