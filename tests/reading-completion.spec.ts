@@ -5,7 +5,7 @@ if (!password) throw new Error("Set SEED_FIXTURE_PASSWORD or SEED_PASSWORD from 
 
 test("assigned reading completion retries and resumes from server evidence", async ({ page }) => {
   let failedOnce = false;
-  await page.route("**/api/lessons/*/steps/*/progress", async (route) => {
+  await page.route("**/api/lessons/*/steps/*/progress*", async (route) => {
     if (!failedOnce && route.request().method() === "PUT") {
       failedOnce = true;
       await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Lỗi tạm thời" }) });
@@ -27,7 +27,7 @@ test("assigned reading completion retries and resumes from server evidence", asy
     page.getByRole("complementary").getByText("Không gian học tập"),
   ).toBeVisible();
   // I1 moved reading, video and study cards from the assignment page to the lesson page.
-  await page.goto("/lessons/lesson-circuit");
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
 
   const reading = page.getByRole("region", { name: "Nội dung bài đọc có thể cuộn" });
   const complete = page.getByRole("button", { name: "Hoàn thành phần đọc" });
@@ -42,7 +42,7 @@ test("assigned reading completion retries and resumes from server evidence", asy
     await page.getByRole("button", { name: "Thử lưu lại" }).click();
   }
   await expect(done).toBeVisible();
-  await expect(page.getByRole("tab", { name: /Bài đọc/ }).getByLabel("Đã hoàn thành")).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Nội dung bài/ }).getByLabel("Đã hoàn thành")).toBeVisible();
 
   await page.reload();
   await expect(done).toBeVisible();

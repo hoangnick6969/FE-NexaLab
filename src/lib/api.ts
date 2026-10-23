@@ -3,8 +3,8 @@ import { apiErrorMessage } from "../i18n/errors";
 import { defineText } from "../i18n";
 
 const text = defineText({
-  vi: { materialFailed: "Không mở được học liệu", videoFailed: "Không tải được video" },
-  en: { materialFailed: "The learning material could not be opened", videoFailed: "The video could not be loaded" },
+  vi: { materialFailed: "Không mở được học liệu", videoFailed: "Không tải được video", uploadFailed: "Tải tệp lên kho lưu trữ thất bại" },
+  en: { materialFailed: "The learning material could not be opened", videoFailed: "The video could not be loaded", uploadFailed: "The file could not be uploaded to storage" },
 });
 export type User = {
   id: string;
@@ -335,7 +335,60 @@ export function mutate<T = any>(path: string, method: string, body: unknown, key
   return api<T>(path, method, body, true, { "Idempotency-Key": key });
 }
 
+/** Largest file sent through `POST /files`; bigger media goes straight to object storage (backend FORM_LIMIT). */
+const FORM_UPLOAD_LIMIT = 20 * 1024 * 1024;
+const KIND_BY_EXTENSION: Record<string, string> = { mp4: "video", pdf: "pdf", png: "image", jpg: "image", jpeg: "image", vtt: "caption", glb: "model" };
+const MIME_BY_EXTENSION: Record<string, string> = { mp4: "video/mp4", pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", vtt: "text/vtt", glb: "model/gltf-binary" };
+
+async function putObject(url: string, body: Blob, headers: Record<string, string> = {}) {
+  const r = await fetch(url, { method: "PUT", headers, body });
+  if (!r.ok) throw new Error(text().uploadFailed);
+  return r;
+}
+
+/**
+ * CF-T2 presigned upload: a single PUT, or multipart with presigned parts and their ETags (the bucket's CORS
+ * policy must expose the ETag header). The server validates and checksums the object before it becomes READY.
+ */
+async function uploadToStorage(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const init = await api<any>("/assets/uploads", "POST", {
+    fileName: file.name,
+    mime: file.type || MIME_BY_EXTENSION[extension] || "application/octet-stream",
+    bytes: file.size,
+    title: file.name,
+  });
+  try {
+    let parts: Array<{ partNumber: number; etag: string }> | undefined;
+    if (init.mode === "single") await putObject(init.upload.url, file, init.upload.headers);
+    else {
+      parts = [];
+      const numbers = Array.from({ length: init.partCount }, (_, i) => i + 1);
+      for (let i = 0; i < numbers.length; i += 100) {
+        const { parts: urls } = await api<{ parts: Array<{ partNumber: number; url: string }> }>(
+          `/assets/uploads/${init.versionId}/parts`,
+          "POST",
+          { partNumbers: numbers.slice(i, i + 100) },
+        );
+        for (const part of urls) {
+          const start = (part.partNumber - 1) * init.partSize;
+          const etag = (await putObject(part.url, file.slice(start, start + init.partSize))).headers.get("ETag");
+          if (!etag) throw new Error(text().uploadFailed);
+          parts.push({ partNumber: part.partNumber, etag });
+        }
+      }
+    }
+    const done = await api<any>(`/assets/uploads/${init.versionId}/complete`, "POST", parts ? { parts } : {});
+    return { id: done.versionId, assetId: done.assetId, url: done.url, type: KIND_BY_EXTENSION[extension] ?? "pdf", title: file.name, sha256: done.sha256 };
+  } catch (error) {
+    // Leave no half-written upload behind; the original error is what the user needs to see.
+    await api(`/assets/uploads/${init.versionId}/abort`, "POST").catch(() => undefined);
+    throw error;
+  }
+}
+
 export async function uploadFile(file: File) {
+  if (file.size > FORM_UPLOAD_LIMIT) return uploadToStorage(file);
   const data = new FormData();
   data.append("file", file);
   const r = await fetch(base + "/files", {

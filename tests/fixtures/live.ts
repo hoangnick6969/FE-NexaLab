@@ -1,10 +1,12 @@
 import { expect as baseExpect, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { resolve } from "node:path";
 
 // Shared helpers for live FE/API/database specs. Identities come from the
 // environment (defaults: seeded accounts with SEED_PASSWORD / SEED_FIXTURE_PASSWORD).
 export const expect = baseExpect.configure({ timeout: 20000 });
-export const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
+export const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
 const fixturePassword = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD;
 const seedPassword = process.env.SEED_PASSWORD;
 
@@ -32,6 +34,23 @@ export async function call(path: string, method = "GET", body?: unknown, token?:
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return { status: response.status, data: await response.json().catch(() => null) };
+}
+
+/** Dev SMTP mailbox written by `npm run mailbox` in BE-NexaLab (override with MAILBOX_DIR). */
+const mailbox = resolve(process.env.MAILBOX_DIR ?? "../BE-NexaLab/.local/mailbox");
+
+/** Waits for a mail to `to` written after `since` and returns the value of `param` in its link (quoted-printable aware). */
+export async function mailedToken(to: string, param: string, since: number, timeoutMs = 15000) {
+  for (const end = Date.now() + timeoutMs; Date.now() < end; await new Promise((r) => setTimeout(r, 250))) {
+    for (const file of await readdir(mailbox).catch(() => [])) {
+      const path = resolve(mailbox, file);
+      if ((await stat(path)).mtimeMs < since) continue;
+      const raw = (await readFile(path, "utf8")).replace(/=\r?\n/g, "").replace(/=3D/g, "=");
+      const token = raw.includes(to) ? raw.match(new RegExp(param + "=([a-f0-9]{64})"))?.[1] : undefined;
+      if (token) return token;
+    }
+  }
+  return null;
 }
 
 /** The API allows 10 logins per minute per IP; live suites log in more often than that. */

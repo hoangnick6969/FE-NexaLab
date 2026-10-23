@@ -51,7 +51,7 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
   };
 
   await page.route("https://media.example.test/video.mp4", (route) => route.abort());
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const response = await route.fetch();
     basePathway = await response.json();
     await route.fulfill({
@@ -59,7 +59,7 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
       json: currentVideoPathway(basePathway, resource, completed, position, progress),
     });
   });
-  await page.route("**/api/lessons/*/steps/*/progress", async (route: Route) => {
+  await page.route("**/api/lessons/*/steps/*/progress*", async (route: Route) => {
     const body = route.request().postDataJSON();
     writes.push(body);
     if (failOnce) {
@@ -89,7 +89,7 @@ test("batches media evidence, retains failed high-water, completes, and resumes 
 
   await login(page);
   // I1 moved video from the assignment page to the lesson page tabs.
-  await page.goto("/lessons/lesson-circuit");
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
   await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   const video = page.getByRole("region", { name: "Nội dung video" }).locator("video");
   await expect(video).toHaveCount(1);
@@ -165,7 +165,7 @@ test("keyboard completion uses only a published equivalent and remains usable at
   };
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route(resource.url, (route) => route.abort());
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const response = await route.fetch();
     basePathway = await response.json();
     await route.fulfill({
@@ -173,7 +173,7 @@ test("keyboard completion uses only a published equivalent and remains usable at
       json: currentVideoPathway(basePathway, resource, completed, 0, completed ? 100 : 0),
     });
   });
-  await page.route("**/api/lessons/*/steps/*/progress", async (route) => {
+  await page.route("**/api/lessons/*/steps/*/progress*", async (route) => {
     receivedBody = route.request().postDataJSON();
     completed = true;
     const pathway = currentVideoPathway(basePathway, resource, true, 0, 100);
@@ -189,7 +189,7 @@ test("keyboard completion uses only a published equivalent and remains usable at
 
   await login(page);
   // I1 moved video from the assignment page to the lesson page tabs.
-  await page.goto("/lessons/lesson-circuit");
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
   await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   const video = page.getByRole("region", { name: "Nội dung video" }).locator("video");
   await video.evaluate((element) => {
@@ -235,7 +235,7 @@ test("asset video refreshes authentication, creates a blob URL, and revokes it o
       revokeObjectURL(value);
     };
   });
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const response = await route.fetch();
     basePathway = await response.json();
     await route.fulfill({
@@ -255,7 +255,7 @@ test("asset video refreshes authentication, creates a blob URL, and revokes it o
 
   await login(page);
   // I1 moved video from the assignment page to the lesson page tabs.
-  await page.goto("/lessons/lesson-circuit");
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
   await page.getByRole("tab", { name: /Video bài giảng/ }).click();
   await expect.poll(() => fileRequests).toBe(2);
   expect(authorizationHeaders.every((value) => value?.startsWith("Bearer "))).toBe(true);

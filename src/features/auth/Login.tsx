@@ -1,8 +1,8 @@
 import { Atom, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { api, useAuth } from "../../lib/api";
-import { Badge, ErrorBox, Field, useAction } from "../../components/ui";
-import { chooseLocaleBeforeSignIn, defineText, getLocale, LOCALE_OPTIONS } from "../../i18n";
+import { Badge, ErrorBox, Field, PasswordField, useAction } from "../../components/ui";
+import { defineText } from "../../i18n";
 
 const text = defineText({
   vi: {
@@ -24,7 +24,8 @@ const text = defineText({
     adminIntro: "Đăng nhập dành riêng cho quản trị viên.",
     adultIntro: "Dành cho giáo viên và phụ huynh quản lý việc học.",
     studentIntro: "Tài khoản học sinh được giáo viên hoặc nhà trường cấp.",
-    forgotIntro: "Nhập email giáo viên hoặc phụ huynh để nhận mật khẩu tạm thời.",
+    forgotIntro: "Nhập email giáo viên hoặc phụ huynh để nhận liên kết đặt lại mật khẩu (dùng một lần, hết hạn sau 60 phút).",
+    resetIntro: "Nhập mật khẩu mới (ít nhất 12 ký tự) cho tài khoản của bạn.",
     parentIntro: "Tài khoản phụ huynh dành cho người lớn.",
     fullName: "Họ và tên",
     studentUsername: "Tên đăng nhập học sinh",
@@ -37,8 +38,6 @@ const text = defineText({
     createAccount: "Tạo tài khoản",
     confirm: "Xác nhận",
     studentByUsername: "Học sinh đăng nhập bằng tên tài khoản",
-    userLogin: "Đăng nhập người dùng",
-    adminLink: "Cổng quản trị viên",
     forgotLink: "Quên mật khẩu?",
     registerParent: "Đăng ký phụ huynh",
     backToLogin: "Quay lại đăng nhập",
@@ -63,7 +62,8 @@ const text = defineText({
     adminIntro: "Sign-in for administrators only.",
     adultIntro: "For teachers and parents who manage learning.",
     studentIntro: "Student accounts are issued by the teacher or school.",
-    forgotIntro: "Enter a teacher or parent email to receive a temporary password.",
+    forgotIntro: "Enter a teacher or parent email to receive a password reset link (single use, expires after 60 minutes).",
+    resetIntro: "Enter a new password (at least 12 characters) for your account.",
     parentIntro: "Parent accounts are for adults.",
     fullName: "Full name",
     studentUsername: "Student username",
@@ -76,8 +76,6 @@ const text = defineText({
     createAccount: "Create account",
     confirm: "Confirm",
     studentByUsername: "Students sign in with a username",
-    userLogin: "User sign-in",
-    adminLink: "Administrator portal",
     forgotLink: "Forgot password?",
     registerParent: "Parent sign-up",
     backToLogin: "Back to sign-in",
@@ -87,11 +85,11 @@ const text = defineText({
 
 export function Login() {
   const t = text();
-  const [mode, setMode] = useState(
-    new URLSearchParams(location.search).has("reset")
-      ? "reset"
-      : "student-login",
-  );
+  // The admin portal has no link in the UI; administrators open /login?admin directly.
+  const [mode, setMode] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.has("reset") ? "reset" : params.has("admin") ? "admin-login" : "student-login";
+  });
   const [message, setMessage] = useState("");
   const action = useAction(async (b: any) => {
     if (mode === "forgot") {
@@ -150,13 +148,6 @@ export function Login() {
       </section>
       <section className="login-form">
         <div>
-          <div className="login-language" role="group" aria-label="Ngôn ngữ / Language">
-            {LOCALE_OPTIONS.map((option) => (
-              <button type="button" key={option.value} lang={option.value} aria-pressed={getLocale() === option.value} onClick={() => chooseLocaleBeforeSignIn(option.value)}>
-                {option.label}
-              </button>
-            ))}
-          </div>
           <Badge>{t.welcome}</Badge>
           <h2>
             {mode === "admin-login"
@@ -180,7 +171,9 @@ export function Login() {
                   ? t.studentIntro
                   : mode === "forgot"
                     ? t.forgotIntro
-                    : t.parentIntro}
+                    : mode === "reset"
+                      ? t.resetIntro
+                      : t.parentIntro}
           </p>
           <form
             onSubmit={(e) => {
@@ -209,14 +202,13 @@ export function Login() {
               />
             )}
             {mode !== "forgot" && (
-              <Field
+              <PasswordField
                 label={t.password}
                 name="password"
-                type="password"
                 minLength={mode === "login" || mode === "student-login" || mode === "admin-login" ? 1 : 12}
                 required
                 autoComplete={
-                  mode === "login" || mode === "student-login" ? "current-password" : "new-password"
+                  mode === "login" || mode === "student-login" || mode === "admin-login" ? "current-password" : "new-password"
                 }
               />
             )}{" "}
@@ -256,14 +248,6 @@ export function Login() {
               {mode === "student-login"
                 ? t.adultLogin
                 : t.studentByUsername}
-            </button>
-            <button
-              onClick={() => {
-                setMode(mode === "admin-login" ? "student-login" : "admin-login");
-                setMessage("");
-              }}
-            >
-              {mode === "admin-login" ? t.userLogin : t.adminLink}
             </button>
             <button
               onClick={() => {

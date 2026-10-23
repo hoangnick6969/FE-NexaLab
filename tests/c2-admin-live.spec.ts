@@ -4,7 +4,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 // C2_ADMIN_PASSWORD) and TEST_API pointing at the same API the web app uses.
 // Each run creates a uniquely named teacher; disabled accounts keep their audit
 // history by design, so this spec is meant for local/development databases.
-const api = process.env.TEST_API ?? "http://127.0.0.1:4100/api";
+const api = process.env.TEST_API ?? "http://127.0.0.1:4000/api";
 const adminEmail = process.env.C2_ADMIN_EMAIL ?? "admin@nexalab.local";
 const adminPassword = process.env.C2_ADMIN_PASSWORD ?? process.env.SEED_PASSWORD ?? "";
 const tag = "c2ui" + Date.now().toString(36);
@@ -34,8 +34,9 @@ test("C2 admin disables an owner with explicit resolution and finds it in the au
   expect(klass.status()).toBe(201);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/login");
-  await page.getByRole("button", { name: "Cổng quản trị viên" }).click();
+  // The admin portal has no link on the sign-in page; it opens from /login?admin.
+  await page.goto("/login?admin");
+  await expect(page.getByRole("heading", { name: "CỔNG QUẢN TRỊ NEXALAB" })).toBeVisible();
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(adminPassword);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
@@ -66,7 +67,10 @@ test("C2 admin disables an owner with explicit resolution and finds it in the au
   await page.getByLabel("Mã đối tượng").fill((await made.json()).id);
   await page.getByRole("button", { name: "Lọc" }).click();
   await expect(page.getByRole("cell", { name: "Giáo viên chuyển trường" })).toBeVisible();
-  await expect(page.getByText(/status: "active" → "disabled"/)).toBeVisible();
+  const change = page.getByRole("cell", { name: /Trạng thái: Đang hoạt động → Đã vô hiệu hóa/ });
+  await expect(change).toBeVisible();
+  await expect(change).toContainText("Phiên đăng nhập bị thu hồi");
+  await expect(change).not.toContainText("Thông tin bổ sung");
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);

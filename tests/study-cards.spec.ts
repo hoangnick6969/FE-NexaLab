@@ -22,7 +22,7 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
   let failOnce = true;
   const writes: any[] = [];
 
-  await page.route("**/api/lessons/*/pathway", async (route) => {
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
     const response = await route.fetch();
     basePathway = await response.json();
     const steps = basePathway.steps.map((step: any) => {
@@ -45,7 +45,7 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
     await route.fulfill({ response, json: { ...basePathway, steps, nextStepId: completed ? steps.find((step: any) => step.type === "QUIZ")?.id : steps.find((step: any) => step.type === "STUDY_CARDS")?.id } });
   });
 
-  await page.route("**/api/lessons/*/steps/*/progress", async (route) => {
+  await page.route("**/api/lessons/*/steps/*/progress*", async (route) => {
     const body = route.request().postDataJSON();
     writes.push(body);
     if (failOnce && body.action === "complete") {
@@ -67,7 +67,7 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
 
   await login(page);
   // I1 moved study cards from the assignment page to the lesson page tabs.
-  await page.goto("/lessons/lesson-circuit");
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
   await page.getByRole("tab", { name: /Thẻ ôn tập/ }).click();
   const cards = page.getByRole("region", { name: "Thẻ ghi nhớ" });
   await expect(cards).toBeVisible();

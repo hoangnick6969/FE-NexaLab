@@ -847,6 +847,7 @@ small {
 .class-resource-row small { display: block; margin-top: 4px; color: var(--muted); }
 .class-resource-list { margin-top: 18px; }
 .resource-practice-items { flex: 1 1 100%; display: grid; gap: 10px; }
+.form-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
 .resource-practice-items fieldset { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
 .resource-practice-items legend { font-weight: 600; }
 .resource-practice-items .study-card { min-height: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
@@ -968,7 +969,8 @@ small {
   margin-bottom: 16px;
 }
 
-.field>span {
+.field>span,
+.field>label {
   font-size: 11px;
   color: var(--ink-olive-55);
   font-weight: 500;
@@ -993,6 +995,23 @@ small {
   margin: 12px 0 20px;
 }
 
+.password-input { position: relative; }
+.password-input input { width: 100%; padding-right: 44px; }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.password-toggle:hover { color: var(--green); }
 .login-remember { flex-wrap: wrap; }
 .login-remember small { flex-basis: 100%; }
 
@@ -2084,7 +2103,8 @@ td small {
   font-size: 15px;
 }
 
-.login-form .field > span {
+.login-form .field > span,
+.login-form .field > label {
   color: var(--ink-sky-36);
   font-size: 14px;
 }
@@ -5931,9 +5951,6 @@ td small {
 .theme-choice label:has(input:checked) { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
 
 /* acc-5 language switch on the sign-in card */
-.login-language { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 12px; }
-.login-language button { min-height: 32px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--muted); }
-.login-language button[aria-pressed="true"] { border-color: var(--green); color: var(--green); font-weight: 600; }
 .site-language { min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-weight: 600; font-size: 12px; }
 .roster-student { display: flex; align-items: center; gap: 10px; }
 .roster-student > span { display: flex; flex-direction: column; }

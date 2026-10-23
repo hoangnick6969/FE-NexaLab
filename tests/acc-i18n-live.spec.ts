@@ -9,13 +9,16 @@ test.beforeAll(() => {
   test.skip(!accounts.student.password, "Set SEED_FIXTURE_PASSWORD");
 });
 
-test("English from the sign-in page through the app, saved on the profile, then back to Vietnamese", async ({ browser }) => {
+test("English from the landing page through the app, saved on the profile, then back to Vietnamese", async ({ browser }) => {
   test.setTimeout(120000);
   const { token } = await studentToken(accounts.student);
   try {
     const page = await (await browser.newContext()).newPage();
+    // The sign-in page has no language switch; the choice is made on the public landing page.
+    await page.goto("/");
+    await page.getByRole("button", { name: "EN", exact: true }).click();
+    await expect.poll(() => lang(page)).toBe("en");
     await page.goto("/login");
-    await page.getByRole("button", { name: "English" }).click();
     await expect(page.getByRole("heading", { name: "Student sign-in" })).toBeVisible();
     expect(await lang(page)).toBe("en");
 

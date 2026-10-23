@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 (async () => {
-  const api = process.env.TEST_API ?? 'http://127.0.0.1:4100/api';
+  const api = process.env.TEST_API ?? 'http://127.0.0.1:4000/api';
   async function request(path, body, token) {
     const r = await fetch(api + path, { method: body ? 'POST' : 'GET', headers: { 'Content-Type':'application/json', ...(token ? {Authorization:`Bearer ${token}`} : {}) }, ...(body ? {body:JSON.stringify(body)} : {}) });
     return {status:r.status, data:await r.json()};

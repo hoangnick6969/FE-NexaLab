@@ -42,15 +42,15 @@ test("assignment quiz preserves retry keys, retains history, passes at 50%, and 
     pathway = { lesson, steps, nextStepId: passed ? steps.find((step) => step.type === "LAB")!.id : quizStepId };
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(pathway) });
   });
-  await page.route("**/api/lessons/*/quiz-attempts", async (route) => {
+  await page.route("**/api/lessons/*/quiz-attempts*", async (route) => {
     const latestId = attempts.at(-1)?.id;
     const bestId = [...attempts].sort((a, b) => b.score - a.score)[0]?.id;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ attempts: [...attempts].reverse().map((attempt) => ({ ...attempt, latest: attempt.id === latestId, best: attempt.id === bestId })) }) });
   });
-  await page.route("**/api/lessons/*/quiz", async (route) => {
+  await page.route(/\/api\/lessons\/[^/]+\/quiz(\?|$)/, async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ lessonId: "lesson-circuit", stepId: quizStepId, questions }) });
   });
-  await page.route("**/api/lessons/*/quiz-attempts", async (route) => {
+  await page.route("**/api/lessons/*/quiz-attempts*", async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
     const body = route.request().postDataJSON();
     submissions.push(body);

@@ -15,10 +15,22 @@ const text = defineText({
     title: "Tiến độ học tập",
     description: "Mỗi lần thử đều là một bước tiến trong hành trình hiểu biết.",
     linked: "Học sinh đã liên kết",
-    verifyEmail: "Xác minh email",
+    verifyEmail: "Gửi email xác minh",
+    verifySent: "Đã gửi email xác minh. Mở liên kết trong email để hoàn tất.",
+    emailVerified: "Email đã xác minh",
+    emailNotVerified: "Email chưa xác minh",
     consent: "Chấp thuận theo dõi tiến độ",
+    consentDone: "Đã chấp thuận theo dõi tiến độ",
+    consentMissing: "Chưa chấp thuận theo dõi tiến độ",
+    consentSaved: "Đã ghi nhận chấp thuận.",
+    pendingTitle: "Liên kết đang chờ kích hoạt",
+    pendingHint: "Liên kết được kích hoạt khi bạn đã xác minh email và chấp thuận theo dõi tiến độ.",
+    linkedPending: "Đã nhận mã. Liên kết đang chờ: hãy xác minh email và chấp thuận theo dõi tiến độ.",
+    linkedApproved: "Đã liên kết thành công.",
+    unlinked: "Đã hủy liên kết.",
+    confirmUnlink: (name: string) => `Hủy liên kết với ${name}? Bạn sẽ không còn xem được tiến độ của con.`,
     unlink: "Hủy liên kết",
-    code: "Mã liên kết do con cung cấp",
+    code: "Mã liên kết do giáo viên cấp",
     link: "Liên kết",
     linkScope: "Liên kết chỉ hiển thị tiến độ tổng hợp và hoạt động an toàn của con; không hiển thị đáp án, gợi ý hoặc trạng thái lab thô.",
     openClasses: "Mở lớp học để xem phân tích từng học sinh",
@@ -54,10 +66,22 @@ const text = defineText({
     title: "Learning progress",
     description: "Every attempt is a step forward in understanding.",
     linked: "Linked students",
-    verifyEmail: "Verify email",
+    verifyEmail: "Send verification email",
+    verifySent: "Verification email sent. Open the link in it to finish.",
+    emailVerified: "Email verified",
+    emailNotVerified: "Email not verified",
     consent: "Consent to progress tracking",
+    consentDone: "Progress tracking consented",
+    consentMissing: "Progress tracking not consented",
+    consentSaved: "Consent recorded.",
+    pendingTitle: "Links waiting for activation",
+    pendingHint: "A link activates once your email is verified and you have consented to progress tracking.",
+    linkedPending: "Code accepted. The link is pending: verify your email and consent to progress tracking.",
+    linkedApproved: "Linked successfully.",
+    unlinked: "Link removed.",
+    confirmUnlink: (name: string) => `Unlink ${name}? You will no longer see their progress.`,
     unlink: "Unlink",
-    code: "Link code from your child",
+    code: "Link code from the teacher",
     link: "Link",
     linkScope: "A link shows only summary progress and safe activity; never answers, hints or raw lab state.",
     openClasses: "Open a class to see each student's analysis",
@@ -120,16 +144,35 @@ export function ProgressPage() {
     queryFn: () => api("/children/" + student + "/assignment-notices"),
     enabled: !!student && user.role === "PARENT",
   });
-  const link = useAction((code: string) =>
-    api("/children/link", "POST", { code }),
-  );
-  const verifyEmail = useAction(() => api("/auth/email/verify", "POST"));
+  // Activation prerequisites and pending links (C1 CAP-3); approved children come from /children.
+  const linkStatus = useQuery<{ emailVerified: boolean; consent: boolean; pending: Array<{ studentId: string; fullName: string }> }>({
+    queryKey: ["children-link-status"],
+    queryFn: () => api("/children/link-status"),
+    enabled: user.role === "PARENT",
+  });
+  const [notice, setNotice] = useState("");
+  const link = useAction(async (code: string) => {
+    const result = await api<{ status: string }>("/children/link", "POST", { code });
+    setNotice(result.status === "approved" ? t.linkedApproved : t.linkedPending);
+  });
+  // The email counts as verified only after the parent opens the mailed one-time link.
+  const verifyEmail = useAction(async () => {
+    await api("/auth/email/verify/request", "POST");
+    setNotice(t.verifySent);
+  });
   const consent = useAction(async () => {
     // The server publishes the exact consent version and hash it accepts.
     const terms = await api<{ purpose: string; version: string; contentHash: string }>("/auth/consents/parent-child-progress");
-    return api("/auth/consents", "POST", terms);
+    await api("/auth/consents", "POST", terms);
+    setNotice(t.consentSaved);
   });
-  const unlink = useAction((id: string) => api("/children/" + id + "/link", "DELETE"));
+  const unlink = useAction(async (id: string) => {
+    await api("/children/" + id + "/link", "DELETE");
+    // The unlinked child's data is no longer readable, so stop showing it.
+    if (id === student) setStudent("");
+    setNotice(t.unlinked);
+  });
+  const status = linkStatus.data;
   return (
     <>
       <PageHeading
@@ -142,18 +185,44 @@ export function ProgressPage() {
       {user.role === "PARENT" && (
         <section className="panel">
           <h3>{t.linked}</h3>
-          <div className="button-row">
-            <button className="secondary" onClick={() => verifyEmail.mutate()}>{t.verifyEmail}</button>
-            <button className="secondary" onClick={() => consent.mutate()}>{t.consent}</button>
-          </div>
+          {status && (
+            <div className="button-row">
+              <Badge tone={status.emailVerified ? "passed" : "not_passed"}>{status.emailVerified ? t.emailVerified : t.emailNotVerified}</Badge>
+              {!status.emailVerified && (
+                <button className="secondary" disabled={verifyEmail.isPending} onClick={() => verifyEmail.mutate(undefined)}>{t.verifyEmail}</button>
+              )}
+              <Badge tone={status.consent ? "passed" : "not_passed"}>{status.consent ? t.consentDone : t.consentMissing}</Badge>
+              {!status.consent && (
+                <button className="secondary" disabled={consent.isPending} onClick={() => consent.mutate(undefined)}>{t.consent}</button>
+              )}
+            </div>
+          )}
           <div className="button-row">
             {children.data?.map((c: any) => (
               <span key={c.student.id}>
                 <button className="secondary" onClick={() => setStudent(c.student.id)}>{c.student.fullName}</button>
-                <button className="icon-button" aria-label={t.unlink} onClick={() => unlink.mutate(c.student.id)}>×</button>
+                <button
+                  className="icon-button"
+                  aria-label={t.unlink}
+                  disabled={unlink.isPending}
+                  onClick={() => window.confirm(t.confirmUnlink(c.student.fullName)) && unlink.mutate(c.student.id)}
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>
+          {status?.pending.length ? (
+            <div>
+              <h4>{t.pendingTitle}</h4>
+              <ul>
+                {status.pending.map((p) => (
+                  <li key={p.studentId}>{p.fullName}</li>
+                ))}
+              </ul>
+              <p className="tiny muted">{t.pendingHint}</p>
+            </div>
+          ) : null}
           <form
             className="inline-form"
             onSubmit={(e) => {
@@ -169,7 +238,8 @@ export function ProgressPage() {
           <p className="tiny muted">
             {t.linkScope}
           </p>
-          <ErrorBox error={link.error || children.error} />
+          {notice && <p className="notice" role="status">{notice}</p>}
+          <ErrorBox error={link.error || verifyEmail.error || consent.error || unlink.error || children.error || linkStatus.error} />
         </section>
       )}
       {user.role === "STUDENT" ? (

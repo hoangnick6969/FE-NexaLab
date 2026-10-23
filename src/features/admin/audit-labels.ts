@@ -11,8 +11,8 @@ export function auditAction(value: string) {
   const verb = actions[parts.at(-1)!];
   return verb && domains[parts[0]] ? `${verb} ${domains[parts[0]]}` : "Hoạt động hệ thống";
 }
-const fields: Record<string, string> = { status: "Trạng thái", title: "Tên", classId: "Lớp", dueDate: "Hạn nộp", dueAt: "Hạn nộp", deadlineRevision: "Lần cập nhật hạn", acceptedCount: "Số bài được chấp nhận", recipientCount: "Số người nhận", audience: "Người nhận", contentType: "Loại nội dung", contentVersion: "Phiên bản", contentId: "Nội dung", resourceKind: "Loại tài nguyên", resourceVersion: "Phiên bản tài nguyên", itemCount: "Số mục", submissionId: "Bài nộp", assignmentId: "Bài giao", timing: "Thời điểm nộp", ownerId: "Chủ sở hữu", scope: "Phạm vi", role: "Vai trò", name: "Tên", enabled: "Đang bật", requiresApproval: "Cần duyệt", grade: "Khối" };
-const values: Record<string, string> = { ACTIVE: "Đang hoạt động", ARCHIVED: "Đã lưu trữ", DRAFT: "Bản nháp", PUBLISHED: "Đã xuất bản", SUBSET: "Nhóm học sinh", CLASS: "Cả lớp", TEST: "Bài kiểm tra", DECK: "Thẻ học", STUDY_QUIZ: "Luyện tập", lesson: "Bài học", lab: "Phòng thực hành", test: "Bài kiểm tra", LATE: "Nộp trễ", ON_TIME: "Đúng hạn", TEACHER_PRIVATE: "Riêng của giáo viên", SHARED_LIBRARY: "Thư viện chung" };
+const fields: Record<string, string> = { status: "Trạng thái", title: "Tên", classId: "Lớp", dueDate: "Hạn nộp", dueAt: "Hạn nộp", deadlineRevision: "Lần cập nhật hạn", acceptedCount: "Số bài được chấp nhận", recipientCount: "Số người nhận", audience: "Người nhận", contentType: "Loại nội dung", contentVersion: "Phiên bản", contentId: "Nội dung", resourceKind: "Loại tài nguyên", resourceVersion: "Phiên bản tài nguyên", itemCount: "Số mục", submissionId: "Bài nộp", assignmentId: "Bài giao", timing: "Thời điểm nộp", ownerId: "Chủ sở hữu", scope: "Phạm vi", role: "Vai trò", name: "Tên", enabled: "Đang bật", requiresApproval: "Cần duyệt", grade: "Khối", sessionsRevoked: "Phiên đăng nhập bị thu hồi", resolutions: "Dữ liệu được xử lý", studentId: "Học sinh", enrollmentStatus: "Trạng thái thành viên", decision: "Quyết định", sourceName: "Tệp nguồn", joinCodeRotated: "Đổi mã tham gia", joinCodeEnabled: "Mã tham gia đang bật", ebookUrl: "Link ebook" };
+const values: Record<string, string> = { ACTIVE: "Đang hoạt động", ARCHIVED: "Đã lưu trữ", DRAFT: "Bản nháp", PUBLISHED: "Đã xuất bản", SUBSET: "Nhóm học sinh", CLASS: "Cả lớp", TEST: "Bài kiểm tra", DECK: "Thẻ học", STUDY_QUIZ: "Luyện tập", lesson: "Bài học", lab: "Phòng thực hành", test: "Bài kiểm tra", LATE: "Nộp trễ", ON_TIME: "Đúng hạn", TEACHER_PRIVATE: "Riêng của giáo viên", SHARED_LIBRARY: "Thư viện chung", active: "Đang hoạt động", disabled: "Đã vô hiệu hóa", deleted: "Đã xóa", pending: "Chờ duyệt", approved: "Đã duyệt", removed: "Đã rời lớp", REJECT_ZERO: "Từ chối (0 điểm)" };
 function display(value: unknown): string {
   if (value == null) return "Chưa có";
   if (typeof value === "boolean") return value ? "Có" : "Không";
@@ -22,5 +22,5 @@ function display(value: unknown): string {
   return values[text] ?? text;
 }
 export function auditChanges(before: Record<string, unknown> | null, after: Record<string, unknown> | null) {
-  return [...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])].map((key) => `${fields[key] ?? "Thông tin bổ sung"}: ${display(before?.[key])} → ${display(after?.[key])}`);
+  return [...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])].map((key) => `${fields[key] ?? `Thông tin bổ sung (${key})`}: ${display(before?.[key])} → ${display(after?.[key])}`);
 }
