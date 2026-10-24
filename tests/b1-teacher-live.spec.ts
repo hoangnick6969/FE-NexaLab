@@ -60,6 +60,16 @@ async function studentLogin(browser: Browser, username: string, password: string
   return page;
 }
 
+/** Student Class Space lists work by subject, grade and chapter; walks to the row with this title. */
+async function classWorkRow(page: Page, className: string, title: string) {
+  await page.goto("/classes");
+  await page.getByRole("link", { name: className, exact: true }).click();
+  await expect(page).toHaveURL(/\/classes\/[^/]+\/catalog/);
+  await page.locator(".hierarchy-choice").first().click();
+  await page.locator(".hierarchy-chapter").first().click();
+  return page.locator(".student-assignment-row", { hasText: title });
+}
+
 async function noHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
@@ -134,15 +144,13 @@ test.describe.serial("B1 teacher operations (real dependencies)", () => {
     await expect(page.locator(".assignment-row", { hasText: `${prefix} Mạch điện` })).toContainText("2 học sinh");
 
     // Students see only their applicable work and can open it.
-    await studentB.goto("/classes");
-    const row = studentB.locator(".assignment-row", { hasText: `${prefix} Mạch điện` });
+    const row = await classWorkRow(studentB, className, `${prefix} Mạch điện`);
     await expect(row).toBeVisible();
-    await row.getByRole("link", { name: "Mở bài →" }).click();
+    await row.click();
     await expect(studentB).toHaveURL(/\/assignments\//);
     await expect(studentB.getByLabel("Bài tập và thực hành")).toBeVisible();
     const studentA = await studentLogin(browser, `${prefix}-a`, tempA, true);
-    await studentA.goto("/classes");
-    await expect(studentA.locator(".assignment-row", { hasText: `${prefix} Mạch điện` })).toBeVisible();
+    await expect(await classWorkRow(studentA, className, `${prefix} Mạch điện`)).toBeVisible();
     await studentA.context().close();
     await studentB.context().close();
 
