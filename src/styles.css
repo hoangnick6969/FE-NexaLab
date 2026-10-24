@@ -4716,6 +4716,7 @@ td small {
   .app-shell-student .sidebar nav {
     height: 100%;
     display: flex;
+    flex-direction: row;
     align-items: stretch;
     justify-content: space-around;
     gap: 3px;

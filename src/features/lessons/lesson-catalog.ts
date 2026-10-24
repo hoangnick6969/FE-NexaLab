@@ -61,8 +61,9 @@ export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[]
             subjectId: subject.id,
             subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl },
             grade: grade.grade,
-            chapter: lesson.chapter || chapter.title,
-            topic: lesson.topic || topicTitle,
+            // The official chapter/topic from the catalog wins over the lesson's free-text label.
+            chapter: chapter.title || lesson.chapter,
+            topic: topicTitle || lesson.topic,
             chapterOrder: chapter.officialOrder,
             topicOrder: lesson.topicOrder,
             curriculumOrder: lesson.curriculumOrder,

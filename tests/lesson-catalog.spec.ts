@@ -66,7 +66,7 @@ test("flattens released chapter and topic lessons and supplies their official su
   const lessons = flattenReleasedCurriculum({ subjects: [{
     id: "khtn",
     name: "Khoa học tự nhiên",
-    grades: [{ grade: 8, chapters: [{ title: "Chương 1", officialOrder: 1, lessons: [{ id: sharedLesson.id, title: sharedLesson.title }], topics: [{ title: "Năng lượng", lessons: [{ id: "lesson-topic", title: "Bài theo chủ đề" }] }] }] }],
+    grades: [{ grade: 8, chapters: [{ title: "Chương 1", officialOrder: 1, lessons: [{ id: sharedLesson.id, title: sharedLesson.title }], topics: [{ title: "Năng lượng", lessons: [{ id: "lesson-topic", title: "Bài theo chủ đề", chapter: "Nhãn tự do", topic: "Chủ đề tự do" }] }] }] }],
   }] });
 
   expect(lessons.map((lesson) => lesson.id)).toEqual([sharedLesson.id, "lesson-topic"]);
