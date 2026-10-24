@@ -1,5 +1,5 @@
 import { test, type Page } from "@playwright/test";
-import { accounts, adultLogin, adultToken, assignTest, call, cleanupList, expect, localInput, mailedToken, publishedTest as createPublishedTest, studentLogin as loginStudent } from "./fixtures/live";
+import { accounts, adultLogin, adultToken, assignTest, call, cleanupList, expect, localInput, mailedToken, publishedTest as createPublishedTest, studentAssignmentRow, studentLogin as loginStudent } from "./fixtures/live";
 
 // Real FE/API/database journey for I3 (Stories 3.1-3.6). Requires a running API
 // and web app with a seeded database; identities come from the environment
@@ -58,9 +58,9 @@ test("I3: teacher assigns a test, student submits on time and late, teacher exte
   // ---------- 3.2 / 3.4 student submits on time ----------
   const learner = await studentLogin(browser);
   await learner.goto("/assignments");
-  const onTimeRow = learner.getByRole("link", { name: new RegExp(`${prefix} đúng-hạn`) });
-  await expect(onTimeRow).toContainText("Chưa đến hạn");
   await expect(learner.getByRole("status").filter({ hasText: "sắp đến hạn trong 24 giờ" })).toContainText(`${prefix} trễ-dời-hạn`);
+  const onTimeRow = await studentAssignmentRow(learner, `${prefix} đúng-hạn`);
+  await expect(onTimeRow).toContainText("Chưa đến hạn");
   await onTimeRow.click();
   await expect(learner.getByRole("heading", { name: `${prefix} đúng-hạn` })).toBeVisible();
   // With no submission yet the form is already open.
@@ -169,8 +169,12 @@ test("I3: linked parent sees a read-only overdue notice that an extension clears
   const notice = notices.locator(".assignment-row").filter({ hasText: `${prefix} quá-hạn` });
   await expect(notice).toContainText("Con chưa nộp bài");
   await expect(notices).toContainText("quá hạn không tự bị chấm 0 điểm");
-  await expect(notice.getByRole("button")).toHaveCount(0);
+  // Read-only for the work itself: the only control marks the stored notification seen (acc-3).
   await expect(notice.getByRole("link")).toHaveCount(0);
+  await expect(notice.getByRole("button")).toHaveText(["Đã xem"]);
+  await notice.getByRole("button", { name: "Đã xem" }).click();
+  await expect(notice.getByRole("button")).toHaveCount(0);
+  await expect(notice).toContainText("Con chưa nộp bài");
 
   const revised = await call(`/classes/${classId}/assignments/${aid}/deadline-revisions`, "POST", { dueAt: new Date(Date.now() + 86400000).toISOString(), expectedRevision: 1 }, token);
   expect(revised.status, JSON.stringify(revised.data)).toBe(201);

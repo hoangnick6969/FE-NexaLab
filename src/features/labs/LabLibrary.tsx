@@ -41,7 +41,7 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
     <div className="lab-grid">
       {cards.map((l) => (
         <Link
-          to={guided && role === "STUDENT" ? "/lessons" : ["STUDENT", "TEACHER"].includes(role) ? "/labs/" + l.id : "/lessons"}
+          to={guided && role === "STUDENT" ? "/lessons" : ["STUDENT", "TEACHER"].includes(role) ? "/labs/" + l.id : "/labs"}
           className="lab-card"
           key={l.id}
         >
