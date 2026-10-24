@@ -25,12 +25,32 @@ async function teacherResources(page: Page) {
   return panel;
 }
 
-async function createDraft(panel: ReturnType<Page["getByRole"]>, kind: string, title: string, content: unknown) {
+type Content = { cards?: Array<{ front: string; back: string }>; questions?: Array<{ prompt: string; options: string[]; correctOption?: number }> };
+
+// The resource form is a structured editor: one field per card side, question and option.
+async function fillContent(form: ReturnType<Page["locator"]>, content: Content) {
+  for (const [index, card] of (content.cards ?? []).entries()) {
+    if (index > 0) await form.getByRole("button", { name: "Thêm thẻ" }).click();
+    await form.getByLabel(`Mặt trước thẻ ${index + 1}`, { exact: true }).fill(card.front);
+    await form.getByLabel(`Mặt sau thẻ ${index + 1}`, { exact: true }).fill(card.back);
+  }
+  for (const [index, question] of (content.questions ?? []).entries()) {
+    if (index > 0) await form.getByRole("button", { name: "Thêm câu hỏi" }).click();
+    await form.getByLabel(`Nội dung câu hỏi ${index + 1}`, { exact: true }).fill(question.prompt);
+    for (const [optionIndex, option] of question.options.entries()) {
+      if (optionIndex > 1) await form.locator("fieldset fieldset").nth(index).getByRole("button", { name: "Thêm phương án" }).click();
+      await form.getByLabel(`Câu ${index + 1} · Phương án ${optionIndex + 1}`, { exact: true }).fill(option);
+    }
+    if (question.correctOption != null) await form.getByLabel(`Đáp án đúng câu ${index + 1}`).selectOption(String(question.correctOption));
+  }
+}
+
+async function createDraft(panel: ReturnType<Page["getByRole"]>, kind: string, title: string, content: Content) {
   const form = panel.locator(".class-resource-create form");
   await form.getByLabel("Loại nội dung").selectOption(kind);
   await form.getByLabel("Tên tài nguyên").fill(title);
   await form.getByLabel("Bài học liên kết").selectOption("lesson-circuit");
-  await form.getByLabel("Nội dung JSON").fill(JSON.stringify(content));
+  await fillContent(form, content);
   await form.getByRole("button", { name: "Lưu bản nháp" }).click();
   const row = panel.locator(".class-resource-row").filter({ hasText: title });
   await expect(row).toContainText("Bản nháp");
@@ -48,7 +68,7 @@ test("owner authors and publishes a deck; a member flips cards and practice is s
   await expect(row.getByRole("button", { name: "Tạo bản mới" })).toBeVisible();
 
   const student = await studentLogin(browser);
-  await student.goto("/classes");
+  await student.goto(`/classes/${PILOT_CLASS}?tab=resources`);
   const card = student.locator(".student-resource").filter({ hasText: title });
   await expect(card).toContainText("Điện trở");
   const save = student.waitForResponse((r) => r.request().method() === "PUT" && r.url().endsWith("/practice"));
@@ -75,7 +95,7 @@ test("a shared test shows members no questions and a study quiz stays unscored",
   await expect(quizRow).toContainText("Đã chia sẻ");
 
   const student = await studentLogin(browser);
-  await student.goto("/classes");
+  await student.goto(`/classes/${PILOT_CLASS}?tab=resources`);
   const test = student.locator(".student-resource").filter({ hasText: testTitle });
   await expect(test).toContainText("Bài kiểm tra này chưa được giao");
   await expect(student.getByText("Câu hỏi bí mật về điện trở?")).toHaveCount(0);

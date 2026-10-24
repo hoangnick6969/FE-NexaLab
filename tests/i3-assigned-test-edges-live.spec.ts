@@ -13,6 +13,7 @@ import {
   PILOT_CLASS,
   PILOT_CLASS_NAME,
   publishedTest,
+  studentAssignmentRow,
   studentLogin,
 } from "./fixtures/live";
 
@@ -165,8 +166,7 @@ test("archiving an assigned test removes it from the student queue", async ({ br
   const title = `${prefix} sẽ lưu trữ`;
   const aid = await assignTest(PILOT_CLASS, ownerToken, testId, title, inDays(2), [learner.id], cleanup);
   const student = await studentLogin(browser);
-  await student.goto("/assignments");
-  await expect(student.getByRole("link", { name: new RegExp(title) })).toBeVisible();
+  await expect(await studentAssignmentRow(student, title)).toBeVisible();
 
   const teacher = await adultLogin(browser, accounts.owner);
   await openPilotClass(teacher);
@@ -174,9 +174,10 @@ test("archiving an assigned test removes it from the student queue", async ({ br
   await teacher.getByRole("dialog", { name: "Xác nhận thao tác" }).getByRole("button", { name: "Xác nhận" }).click();
   await expect(teacher.getByRole("dialog", { name: "Xác nhận thao tác" })).toHaveCount(0);
 
-  await student.reload();
+  const reloaded = student.waitForResponse((r) => r.request().method() === "GET" && new URL(r.url()).pathname === "/api/assignments");
+  await student.goto("/assignments");
+  expect(((await (await reloaded).json()) as any[]).some((row) => row.title === title)).toBe(false);
   await expect(student.getByRole("heading", { name: "Bài tập" })).toBeVisible();
-  await expect(student.getByRole("link", { name: new RegExp(title) })).toHaveCount(0);
   await student.goto(`/assignments/${aid}`);
   await expect(student.getByRole("alert")).toContainText("Không tìm thấy bài được giao");
 });
