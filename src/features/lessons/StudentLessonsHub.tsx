@@ -21,18 +21,18 @@ const text = defineText({
     doAssignment: "Làm bài tập",
     eyebrow: "THƯ VIỆN KIẾN THỨC",
     title: "Bài học",
-    description: "Khám phá môn học, sách giáo khoa và bài được giao trong cùng một nơi.",
+    description: "Khám phá thư viện bài học mở hoặc xem nội dung được giao từ lớp học.",
     filterLabel: "Lọc bài học",
     all: "Tất cả",
     assignedLessons: "Bài học được giao",
-    sharedLessons: "Bài học chung",
+    sharedLessons: "Thư viện mở",
+    assignedSection: "Được giao từ lớp học",
     search: "Tìm bài học",
     searchPlaceholder: "Tìm tên bài, môn học hoặc chương…",
     filtering: "Đang lọc:",
     clearFilter: "Xóa bộ lọc",
     reload: "Thử tải lại",
     subjectIndex: "MỤC LỤC MÔN HỌC",
-    openAndAssigned: "CHƯƠNG TRÌNH MỞ VÀ BÀI ĐƯỢC GIAO",
     lessonIndex: "Mục lục bài học",
     bySubject: "Học theo môn và khối",
     count: (n: number) => `${n} bài`,
@@ -51,18 +51,18 @@ const text = defineText({
     doAssignment: "Do the assignment",
     eyebrow: "KNOWLEDGE LIBRARY",
     title: "Lessons",
-    description: "Explore subjects, textbooks and assigned work in one place.",
+    description: "Explore the open lesson library or lessons assigned by your classes.",
     filterLabel: "Filter lessons",
     all: "All",
     assignedLessons: "Assigned lessons",
-    sharedLessons: "Shared lessons",
+    sharedLessons: "Open library",
+    assignedSection: "Assigned by your class",
     search: "Search lessons",
     searchPlaceholder: "Search by lesson, subject or chapter…",
     filtering: "Filtering:",
     clearFilter: "Clear filter",
     reload: "Reload",
     subjectIndex: "SUBJECT INDEX",
-    openAndAssigned: "OPEN CURRICULUM AND ASSIGNED WORK",
     lessonIndex: "Lesson index",
     bySubject: "Learn by subject and grade",
     count: (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`,
@@ -156,6 +156,8 @@ export function StudentLessonsHub() {
     assigned.data?.assignments ?? [],
   ), [curriculum.data, assigned.data]);
   const matching = filterStudentLessonCatalog(catalog, filter, "all", "all", search);
+  const openLessons = matching.filter((lesson) => lesson.assignments.length === 0);
+  const assignedLessons = matching.filter((lesson) => lesson.assignments.length > 0);
   const orderedMatching = [...matching].sort((left, right) => Number(right.assignments.length > 0) - Number(left.assignments.length > 0));
   const retry = () => { void curriculum.refetch(); void assigned.refetch(); };
   const hasError = curriculum.isError || assigned.isError;
@@ -187,10 +189,23 @@ export function StudentLessonsHub() {
       {loading && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
       {!loading && (
         <>
-          <section aria-labelledby="catalog-lessons-title" className="student-lesson-section">
-            <header className="lesson-chapter-heading"><div><span className="eyebrow">{catalogRoute ? t.subjectIndex : t.openAndAssigned}</span><h2 id="catalog-lessons-title">{catalogRoute ? t.lessonIndex : t.bySubject}</h2></div><span className="lesson-chapter-count">{t.count(orderedMatching.length)}</span></header>
-            <LessonGroups lessons={catalogRoute ? matching : orderedMatching} emptyCopy={assigned.isError || curriculum.isError ? t.loadFailed : filter === "assigned" ? t.noAssigned : filter === "shared" ? t.noShared : t.noMatch} />
-          </section>
+          {catalogRoute ? (
+            <section aria-labelledby="catalog-lessons-title" className="student-lesson-section">
+              <header className="lesson-chapter-heading"><div><span className="eyebrow">{t.subjectIndex}</span><h2 id="catalog-lessons-title">{t.lessonIndex}</h2></div><span className="lesson-chapter-count">{t.count(orderedMatching.length)}</span></header>
+              <LessonGroups lessons={matching} emptyCopy={assigned.isError || curriculum.isError ? t.loadFailed : filter === "assigned" ? t.noAssigned : filter === "shared" ? t.noShared : t.noMatch} />
+            </section>
+          ) : (
+            <>
+              {(filter === "all" || filter === "shared") && <section aria-labelledby="open-lessons-title" className="student-lesson-section">
+                <header className="lesson-chapter-heading"><div><span className="eyebrow">{t.sharedLessons}</span><h2 id="open-lessons-title">{t.bySubject}</h2></div><span className="lesson-chapter-count">{t.count(openLessons.length)}</span></header>
+                <LessonGroups lessons={openLessons} emptyCopy={assigned.isError || curriculum.isError ? t.loadFailed : t.noShared} />
+              </section>}
+              {(filter === "all" || filter === "assigned") && <section aria-labelledby="assigned-lessons-title" className="student-lesson-section">
+                <header className="lesson-chapter-heading"><div><span className="eyebrow">{t.assignedSection}</span><h2 id="assigned-lessons-title">{t.assignedLessons}</h2></div><span className="lesson-chapter-count">{t.count(assignedLessons.length)}</span></header>
+                <LessonGroups lessons={assignedLessons} emptyCopy={assigned.isError ? t.loadFailed : t.noAssigned} />
+              </section>}
+            </>
+          )}
         </>
       )}
     </div>
