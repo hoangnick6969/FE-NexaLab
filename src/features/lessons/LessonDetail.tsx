@@ -40,6 +40,7 @@ export function LessonDetail() {
   });
   const lesson = user.role === "STUDENT" ? (assignmentId ? videoPathway.data?.lesson : lessons.data) : lessons.data?.find((item: any) => item.id === id);
   const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
+  const attachedVideos = [...(lesson?.videos ?? []), ...(lesson?.sections ?? []).flatMap((section: any) => section.videos ?? [])];
   const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING") ?? lesson?.steps?.find((step: any) => step.type === "READING");
   const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
@@ -62,7 +63,7 @@ export function LessonDetail() {
   if ((assignmentId ? videoPathway.error : lessons.error) && !lesson) return <><ErrorBox error={assignmentId ? videoPathway.error : lessons.error} /><Link className="text-button" to="/lessons">Quay lại thư viện</Link></>;
   if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>Không mở được bài học</h1><p>Bài học chưa được phát hành hoặc không tồn tại.</p><Link className="primary" to="/lessons">Quay lại bài học</Link></section>;
 
-  const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
+  const hasVideo = Boolean(videoMaterial || attachedVideos.length || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
   const hasMaterials = Boolean(ebookUrl || lesson.materials?.length || canViewAttribution);
   const learningObjective = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.learningObjective ?? "") ? "" : lesson.learningObjective;
   const prerequisites = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.prerequisites ?? "") ? "" : lesson.prerequisites;
@@ -105,6 +106,7 @@ export function LessonDetail() {
       <h2 className="lesson-tab-title">Video bài giảng</h2>
       {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
         : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label="Video bài giảng" />
+          : attachedVideos.length ? <div className="lesson-attached-videos">{attachedVideos.map((video: any, index: number) => <AttachedVideo key={`${video.url}-${index}`} video={video} />)}</div>
           : videoPathway.isLoading ? <p className="video-placeholder" role="status">Đang tải video bài giảng…</p>
             : assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} />
               : <p className="notice">Video bài giảng hiện chưa khả dụng.</p>}
@@ -124,6 +126,11 @@ export function LessonDetail() {
     {user.role === "STUDENT" && studyCardsStep && assignmentId && <p><Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignmentId)}`}>Mở thẻ ôn tập trong Class Space</Link></p>}
     {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>Em đã hoàn thành nội dung bài học.</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>Tiếp tục bài được giao <ArrowRight size={16} /></Link>}</div>}
   </div>;
+}
+
+function AttachedVideo({ video }: { video: { title?: string; url: string; transcript?: string; captionUrl?: string } }) {
+  const youtube = video.url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i)?.[1];
+  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{youtube ? <div className="video-embed"><iframe src={`https://www.youtube.com/embed/${youtube}`} title={video.title || "Video bài học"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
 }
 
 function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
