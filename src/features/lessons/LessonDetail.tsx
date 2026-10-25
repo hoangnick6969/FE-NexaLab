@@ -12,7 +12,25 @@ import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
-import { youtubeEmbedUrl } from "./youtube";
+import { youtubeEmbedUrl, youtubeVideoId } from "./youtube";
+
+declare global {
+  interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void; }
+}
+
+let youtubeApiPromise: Promise<any> | null = null;
+function loadYoutubeApi() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (!youtubeApiPromise) youtubeApiPromise = new Promise((resolve) => {
+    const previous = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { previous?.(); resolve(window.YT); };
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    script.async = true;
+    document.head.appendChild(script);
+  });
+  return youtubeApiPromise;
+}
 
 export function LessonDetail() {
   const { id = "" } = useParams();
@@ -133,21 +151,45 @@ export function LessonDetail() {
 }
 
 function AttachedVideo({ video, lessonId, videoStep, onReconciled }: { video: { title?: string; url: string; transcript?: string; captionUrl?: string }; lessonId: string; videoStep?: any; onReconciled: (updated: any) => void }) {
-  const [saving, setSaving] = useState(false);
+  const playerHost = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<any>(null);
+  const lastSentRef = useRef(0);
   const [saved, setSaved] = useState(videoStep?.state === "COMPLETED");
   const embed = youtubeEmbedUrl(video.url);
-  const markWatched = async () => {
-    if (!videoStep || saving || saved) return;
-    setSaving(true);
-    try {
-      const updated = await api<any>(`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(videoStep.id)}/progress`, "PUT", { action: "complete-fallback" });
-      setSaved(true);
+  useEffect(() => {
+    const id = youtubeVideoId(video.url);
+    if (!embed || !id || !videoStep || !playerHost.current) return;
+    let active = true;
+    let interval: number | undefined;
+    const send = async (ended = false) => {
+      const player = playerRef.current;
+      if (!player || !active) return;
+      const positionSeconds = Math.floor(player.getCurrentTime?.() ?? 0);
+      const durationSeconds = Math.floor(player.getDuration?.() ?? 0);
+      if (!durationSeconds || positionSeconds - lastSentRef.current < 10 && !ended) return;
+      lastSentRef.current = positionSeconds;
+      const updated = await api<any>(`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(videoStep.id)}/progress`, "PUT", { action: ended ? "ended" : "heartbeat", positionSeconds, durationSeconds });
+      if (updated?.step?.state === "COMPLETED") setSaved(true);
       onReconciled(updated);
-    } finally {
-      setSaving(false);
-    }
-  };
-  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{embed ? <div className="video-embed"><iframe src={embed} title={video.title || "Video bài học"} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{videoStep && <button type="button" className="secondary" disabled={saving || saved} onClick={() => void markWatched()}>{saved ? "Đã lưu tiến độ xem video" : saving ? "Đang lưu tiến độ…" : "Đánh dấu đã xem"}</button>}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
+    };
+    loadYoutubeApi().then((YT) => {
+      if (!active || !playerHost.current) return;
+      playerRef.current = new YT.Player(playerHost.current, {
+        videoId: id,
+        playerVars: { origin: window.location.origin, rel: 0 },
+        events: {
+          onReady: (event: any) => {
+            const resumeAt = videoStep.lastPosition ?? 0;
+            if (resumeAt > 0) event.target.seekTo(resumeAt, true);
+            interval = window.setInterval(() => void send(), 5000);
+          },
+          onStateChange: (event: any) => { if (event.data === YT.PlayerState.ENDED) void send(true); },
+        },
+      });
+    });
+    return () => { active = false; if (interval) window.clearInterval(interval); playerRef.current?.destroy?.(); playerRef.current = null; };
+  }, [embed, lessonId, video.url, videoStep, onReconciled]);
+  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{embed ? <div className="video-embed" ref={playerHost} aria-label={video.title || "Video bài học"} /> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{videoStep && saved && <p className="notice" role="status">Đã lưu tiến độ xem video.</p>}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
 }
 
 function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
