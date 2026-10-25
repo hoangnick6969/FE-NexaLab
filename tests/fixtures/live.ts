@@ -150,3 +150,14 @@ export async function noHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow, "page has no horizontal scroll").toBeLessThanOrEqual(1);
 }
+
+// /assignments groups work by grade → subject → chapter; open the chapter screen that lists `title`.
+export async function studentAssignmentRow(page: Page, title: string) {
+  const loaded = page.waitForResponse((r) => r.request().method() === "GET" && new URL(r.url()).pathname === "/api/assignments");
+  await page.goto("/assignments");
+  const item = ((await (await loaded).json()) as any[]).find((row) => row.title === title);
+  expect(item, `${title} is in the student's assignments`).toBeTruthy();
+  if (item.subject && item.grade)
+    await page.goto(`/assignments/catalog/grades/${item.grade}/subjects/${encodeURIComponent(item.subject.id)}/chapters/${encodeURIComponent(item.chapter || "Chưa phân chương")}`);
+  return page.locator(".student-assignment-row", { hasText: title });
+}

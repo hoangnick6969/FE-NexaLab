@@ -14,7 +14,7 @@ async function login(page: Page) {
   expect((await response).ok()).toBeTruthy();
 }
 
-test("study cards support flip, keyboard/touch actions, retry and server-confirmed Quiz boundary", async ({ page }) => {
+test("assigned study cards in Class Space support flip, retry and server-confirmed progress", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   let basePathway: any;
@@ -66,9 +66,8 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
   });
 
   await login(page);
-  // I1 moved study cards from the assignment page to the lesson page tabs.
-  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
-  await page.getByRole("tab", { name: /Thẻ ôn tập/ }).click();
+  // Assigned decks are reviewed in Class Space; the lesson page keeps only content and video.
+  await page.goto("/classes?tab=resources&assignmentId=pilot-a-lesson-assignment");
   const cards = page.getByRole("region", { name: "Thẻ ghi nhớ" });
   await expect(cards).toBeVisible();
   await expect(cards.getByText("Thẻ 1 / 2")).toBeVisible();
@@ -82,14 +81,13 @@ test("study cards support flip, keyboard/touch actions, retry and server-confirm
   await cards.getByRole("button", { name: /Hoàn thành ôn thẻ/ }).click();
   await expect(cards.getByRole("alert")).toContainText("Lỗi lưu tạm thời");
   await cards.getByRole("button", { name: "Thử lại" }).click();
-  // With every lesson step complete, the lesson page hands over to the assignment (Quiz boundary).
-  await expect(page.getByText("Em đã hoàn thành nội dung bài học.")).toBeVisible();
+  await expect(cards.getByRole("alert")).toHaveCount(0);
+  await expect(cards.getByText("2 / 2 đã xem")).toBeVisible();
   expect(writes).toEqual([
     { action: "visit", cardIndex: 0 },
     { action: "visit", cardIndex: 1 },
     { action: "complete", cardIndex: 1 },
     { action: "complete", cardIndex: 1 },
   ]);
-  await expect(page.getByRole("link", { name: /Chuyển sang Bài tập/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
