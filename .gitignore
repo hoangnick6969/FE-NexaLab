@@ -4,6 +4,12 @@ dist/
 *.tsbuildinfo
 test-results/
 playwright-report/
+codex-work-*/
+workspaces/
+tmp/
+*.pdf
+**/crop*/
+**/crops*/
 
 .env.*
 !.env.example
