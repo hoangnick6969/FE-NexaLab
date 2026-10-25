@@ -73,6 +73,19 @@ test("flattens released chapter and topic lessons and supplies their official su
   expect(lessons[1]).toMatchObject({ subjectId: "khtn", grade: 8, chapter: "Chương 1", topic: "Năng lượng", shared: true });
 });
 
+test("groups physics, chemistry, and biology lessons under the KHTN UI subject", () => {
+  const subjects = ["khtn", "physics", "chemistry", "biology"].map((id, index) => ({
+    id,
+    name: id === "khtn" ? "Khoa học tự nhiên" : id,
+    grades: [{ grade: 9, chapters: [{ title: `Chương ${index + 1}`, lessons: [{ id: `lesson-${id}`, title: `Bài ${id}` }] }] }],
+  }));
+
+  const lessons = flattenReleasedCurriculum({ subjects });
+
+  expect(lessons).toHaveLength(4);
+  expect(lessons.every((lesson) => lesson.subjectId === "khtn" && lesson.subject.name === "Khoa học tự nhiên")).toBe(true);
+});
+
 test("ignores assignments that cannot open and handles an empty released catalog", () => {
   const closed = { ...assignmentFor(assignedLesson), canOpen: false };
   expect(buildStudentLessonCatalog([], [assignedLesson], [closed])).toEqual([]);

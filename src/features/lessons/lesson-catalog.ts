@@ -51,15 +51,20 @@ type CatalogSubject = {
 
 export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[] } | null | undefined): StudentLessonCard[] {
   const lessons = new Map<string, StudentLessonCard>();
+  const scienceSubjectIds = new Set(["khtn", "physics", "chemistry", "biology"]);
+  const khtnSubject = catalog?.subjects?.find((subject) => subject.id === "khtn");
   for (const subject of catalog?.subjects ?? []) {
+    const displaySubject = scienceSubjectIds.has(subject.id)
+      ? { id: "khtn", name: khtnSubject?.name ?? "Khoa học tự nhiên", ebookUrl: khtnSubject?.ebookUrl }
+      : { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl };
     for (const grade of subject.grades ?? []) {
       for (const chapter of grade.chapters ?? []) {
         const add = (lesson: any, topicTitle = "") => {
           if (!lesson?.id || lessons.has(lesson.id)) return;
           lessons.set(lesson.id, {
             ...lesson,
-            subjectId: subject.id,
-            subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl },
+            subjectId: displaySubject.id,
+            subject: displaySubject,
             grade: grade.grade,
             // The official chapter/topic from the catalog wins over the lesson's free-text label.
             chapter: chapter.title || lesson.chapter,
