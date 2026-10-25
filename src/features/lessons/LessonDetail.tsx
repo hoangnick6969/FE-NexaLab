@@ -12,6 +12,7 @@ import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
+import { youtubeEmbedUrl } from "./youtube";
 
 export function LessonDetail() {
   const { id = "" } = useParams();
@@ -129,8 +130,8 @@ export function LessonDetail() {
 }
 
 function AttachedVideo({ video }: { video: { title?: string; url: string; transcript?: string; captionUrl?: string } }) {
-  const youtube = video.url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i)?.[1];
-  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{youtube ? <div className="video-embed"><iframe src={`https://www.youtube.com/embed/${youtube}`} title={video.title || "Video bài học"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
+  const embed = youtubeEmbedUrl(video.url);
+  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{embed ? <div className="video-embed"><iframe src={embed} title={video.title || "Video bài học"} referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
 }
 
 function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
