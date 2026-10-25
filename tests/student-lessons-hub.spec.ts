@@ -210,6 +210,62 @@ test("shared lesson details use foundational progress without requesting an assi
   expect(assignmentPathwayRequested).toBe(false);
 });
 
+test("structured lessons render math and GFM tables once and omit unverified page zero", async ({ page }) => {
+  await mockStudentApi(page);
+  await page.route("**/api/open-curriculum/lessons/lesson-math", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      ...released,
+      title: "Bài 4. Dung dịch và nồng độ",
+      learningObjective: "■ Nhận biết $m_{nước}$.\n■ Tính $C_{M}$.\n\\frac{m_{ct}}{V_{dd}}",
+      materials: [],
+      steps: [],
+      ebookEditions: [],
+      structuredContent: {
+        book: { title: "Khoa học tự nhiên 8" },
+        sourceBlocks: [
+          { id: "verified", physicalPageIndex: 23, printedPageLabel: "21" },
+          { id: "unverified", physicalPageIndex: null, printedPageLabel: null },
+        ],
+        learningContent: {
+          summary: "Tính $m_{nước}$ và nồng độ.\n\n- Chất tan\n- Dung môi\n\n| Đại lượng | Ký hiệu |\n| --- | --- |\n| Nồng độ | $C_{M}$ |",
+          summarySourceBlockIds: ["verified", "unverified"],
+          sections: [{
+            id: "section-1",
+            heading: "## Công thức và bảng",
+            content: "Tính $m_{nước}$ và nồng độ.\n\n- Chất tan\n- Dung môi\n\n| Đại lượng | Ký hiệu |\n| --- | --- |\n| Nồng độ | $C_{M}$ |",
+            sourceBlockIds: ["verified", "unverified"],
+          }],
+          knowledgeUnits: [{ claims: [{ text: "Tính $m_{nước}$ và nồng độ.", sourceBlockIds: ["verified"] }] }],
+          definitions: [{ text: "Tính $m_{nước}$ và nồng độ.", sourceBlockIds: ["verified"] }],
+          formulas: [{ id: "formula-1", text: "\\mathrm{C}_{\\mathrm{M}} = \\frac{n_{ct}}{V_{dd}}", sourceBlockIds: ["verified"] }],
+          tables: [],
+          examples: [],
+          basicExercises: [],
+        },
+      },
+    }),
+  }));
+
+  await page.goto("/lessons/lesson-math");
+  await expect(page.getByRole("heading", { name: "Bài 4. Dung dịch và nồng độ" })).toBeVisible();
+  const objective = page.locator(".lesson-objective");
+  await expect(objective.locator(".katex")).toHaveCount(3);
+  await expect(objective.locator(".katex-display")).toHaveCount(1);
+  await expect(objective.getByRole("listitem")).toHaveCount(2);
+  await expect(objective).not.toContainText("$");
+  expect(await objective.locator(".lesson-objective-content").evaluate((node) => getComputedStyle(node).fontWeight)).toBe("400");
+  await expect(page.locator(".katex").first()).toBeVisible();
+  expect(await page.locator(".lesson-structured-content .katex-display").count()).toBeGreaterThan(0);
+  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.locator(".lesson-structured-markdown").getByRole("listitem")).toHaveCount(2);
+  await expect(page.locator(".lesson-structured-summary")).toHaveCount(0);
+  await expect(page.getByText("PDF trang 23", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(/PDF trang 0/)).toHaveCount(0);
+  await expect(page.locator(".lesson-structured-markdown")).toContainText("Tính");
+  await page.screenshot({ path: "test-results/structured-lesson-math-gfm.png", fullPage: true });
+});
+
 test("assignment catalog uses the enriched list and opens route-based chapter screens without detail fan-out", async ({ page }) => {
   await mockStudentApi(page);
   await page.setViewportSize({ width: 375, height: 812 });

@@ -1,5 +1,10 @@
 import { useRef, useState } from "react";
 import DOMPurify from "dompurify";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowRight, BookOpen, Check, ExternalLink, FileText, Play } from "lucide-react";
@@ -176,7 +181,7 @@ export function LessonDetail() {
     </div>
     {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
       <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
-        {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><p>{learningObjective}</p></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
+        {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
         {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
       {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
       </div>
@@ -232,47 +237,122 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
   </form>;
 }
 
+function objectiveMarkdown(value: string) {
+  return value.replace(/(^|\s)■\s*/gu, (_marker, prefix: string) => `${prefix.trimEnd()}\n- `)
+    .split(/\r?\n/)
+    .map((line) => line.trimStart().startsWith("- ") || !line.trim() ? line : `${line}  `)
+    .join("\n");
+}
+
+function LessonMarkdown({ value, displayMath = false }: { value: string; displayMath?: boolean }) {
+  const hasDelimitedMath = /\$[^$]+\$/.test(value);
+  const trimmedValue = value.trim();
+  const displayValue = displayMath && hasDelimitedMath
+    ? value.replace(/\$([^$]+)\$/g, (_match, formula: string) => `\n\n$$\n${formula}\n$$\n\n`)
+    : displayMath && /^\\[A-Za-z]+/.test(trimmedValue)
+      ? `$$\n${trimmedValue}\n$$`
+      : value;
+  let inDisplayMath = false;
+  const markdown = displayValue.split(/\r?\n/).map((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("$$")) {
+      if (!trimmed.endsWith("$$") || trimmed.length === 2) inDisplayMath = !inDisplayMath;
+      return line;
+    }
+    if (inDisplayMath) return line;
+    return /^\\[A-Za-z]+/.test(trimmed) ? `$$\n${trimmed}\n$$` : line;
+  }).join("\n");
+  return <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: false }]]}>{markdown}</ReactMarkdown>;
+}
+
 function StructuredLessonBody({ value }: { value: any }) {
   const content = value.learningContent ?? {};
-  const pageByBlock = new Map<string, number>();
-  for (const block of value.sourceBlocks ?? []) if (block?.id && Number.isFinite(Number(block.pdfPage))) pageByBlock.set(block.id, Number(block.pdfPage));
+  const pageByBlock = new Map<string, { pdfPage?: number; printedPageLabel?: string }>();
+  for (const block of value.sourceBlocks ?? []) {
+    if (typeof block?.id !== "string") continue;
+    const pdfPage = Number.isInteger(block.physicalPageIndex) && block.physicalPageIndex > 0 ? block.physicalPageIndex : undefined;
+    const printedPageLabel = typeof block.printedPageLabel === "string" && block.printedPageLabel.trim() ? block.printedPageLabel.trim() : undefined;
+    if (pdfPage || printedPageLabel) pageByBlock.set(block.id, { pdfPage, printedPageLabel });
+  }
   const evidence = (ids: unknown) => {
     if (!Array.isArray(ids)) return null;
     const blocks = ids.filter((id): id is string => typeof id === "string");
     if (!blocks.length) return null;
-    const pages = [...new Set(blocks.map((id) => pageByBlock.get(id)).filter((page): page is number => page !== undefined))].sort((a, b) => a - b);
-    return <small className="lesson-structured-source">{pages.length ? `Nguồn PDF trang ${pages.join(", ")} · ` : "Nguồn · "}{blocks.join(", ")}</small>;
+    const references = [...new Map(blocks.flatMap((id) => {
+      const reference = pageByBlock.get(id);
+      if (!reference) return [];
+      const label = reference.pdfPage ? `PDF trang ${reference.pdfPage}` : "";
+      const printed = reference.printedPageLabel ? `trang in ${reference.printedPageLabel}` : "";
+      const text = [label, printed].filter(Boolean).join(" · ");
+      return text ? [[text, text] as const] : [];
+    })).keys()];
+    return <small className="lesson-structured-source">{references.length ? `Nguồn ${references.join("; ")}` : "Nguồn sách giáo khoa"}</small>;
   };
   const textOf = (item: any) => typeof item === "string" ? item : item?.text ?? item?.content ?? item?.prompt ?? "";
-  const tableRows = (raw: any) => {
-    const text = typeof raw === "string" ? raw : raw?.text;
-    if (typeof text !== "string") return null;
-    const rows = text.split(/\r?\n/).filter((line) => line.includes("|"))
-      .map((line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim()))
-      .filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
-    return rows.length >= 2 ? rows : null;
-  };
-  const renderTable = (table: any, index: number) => {
-    const rows = tableRows(table);
-    return <div className="lesson-structured-table-wrap" key={table?.id ?? index}>
-      {rows ? <table className="lesson-structured-table"><thead><tr>{rows[0].map((cell, i) => <th key={i}>{cell}</th>)}</tr></thead><tbody>{rows.slice(1).map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, i) => <td key={i}>{cell}</td>)}</tr>)}</tbody></table> : <pre>{typeof table === "string" ? table : JSON.stringify(table, null, 2)}</pre>}
-      {evidence(table?.sourceBlockIds)}
-    </div>;
+  const coveredBlocks = new Set<string>();
+  const renderedText = new Set<string>();
+  const sectionTextByBlock = new Map<string, string[]>();
+  const normalize = (value: string) => value.replace(/\$+/g, "").replace(/\s+/g, " ").trim().toLocaleLowerCase("vi");
+  if (typeof content.summary === "string") renderedText.add(normalize(content.summary));
+  const sections = Array.isArray(content.sections) ? content.sections : [];
+  const summarySourceIds = Array.isArray(content.summarySourceBlockIds) ? content.summarySourceBlockIds : [];
+  const sectionSourceIds = new Set(sections.flatMap((section: any) => Array.isArray(section.sourceBlockIds) ? section.sourceBlockIds : []));
+  const summaryDuplicatesSection = summarySourceIds.some((id: unknown) => typeof id === "string" && sectionSourceIds.has(id))
+    || sections.some((section: any) => normalize(section.content ?? "") === normalize(content.summary ?? ""));
+  const renderSupplement = (item: any, key: string | number, displayMath = false) => {
+    const rawText = textOf(item);
+    const ids = Array.isArray(item?.sourceBlockIds) ? item.sourceBlockIds.filter((id: unknown): id is string => typeof id === "string") : [];
+    let uniqueText = rawText;
+    for (const sectionText of ids.flatMap((id: string) => sectionTextByBlock.get(id) ?? [])) {
+      const normalizedUnique = normalize(uniqueText);
+      const normalizedSection = normalize(sectionText);
+      if (!normalizedUnique || !normalizedSection) continue;
+      if (normalizedSection.includes(normalizedUnique)) return null;
+      if (!normalizedUnique.includes(normalizedSection)) continue;
+      if (!uniqueText.includes(sectionText)) return null;
+      uniqueText = uniqueText.replace(sectionText, " ").trim();
+    }
+    const normalized = normalize(uniqueText);
+    if (!normalized || renderedText.has(normalized)) return null;
+    renderedText.add(normalized);
+    ids.forEach((id: string) => coveredBlocks.add(id));
+    return <div key={item?.id ?? key}><LessonMarkdown value={uniqueText} displayMath={displayMath} />{evidence(ids)}</div>;
   };
   const range = value.pdfPageRange ? `PDF ${value.pdfPageRange.start}–${value.pdfPageRange.end}` : "";
   return <div className="lesson-content lesson-structured-content">
-    {content.summary && <p className="lesson-structured-summary">{content.summary}</p>}
-    {(content.sections ?? []).map((section: any, index: number) => <section key={section.id ?? index}>
-      {section.heading && <h2>{section.heading}</h2>}{section.content && <p>{section.content}</p>}{evidence(section.sourceBlockIds)}
-    </section>)}
-    {(content.knowledgeUnits ?? []).map((unit: any, index: number) => <section key={unit.id ?? index}>
-      {unit.title && <h2>{unit.title}</h2>}{(unit.claims ?? []).map((claim: any, claimIndex: number) => <div key={claim.id ?? claimIndex}><p>{textOf(claim)}</p>{evidence(claim.sourceBlockIds ?? unit.sourceBlockIds)}</div>)}
-    </section>)}
-    {(content.definitions ?? []).length > 0 && <section><h2>Khái niệm</h2>{content.definitions.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
-    {(content.formulas ?? []).length > 0 && <section><h2>Công thức</h2>{content.formulas.map((item: any, index: number) => <div className="lesson-structured-formula" key={item.id ?? index}><code>{textOf(item)}</code>{evidence(item.sourceBlockIds)}</div>)}</section>}
-    {(content.tables ?? []).length > 0 && <section><h2>Bảng</h2>{content.tables.map(renderTable)}</section>}
-    {(content.examples ?? []).length > 0 && <section><h2>Ví dụ</h2>{content.examples.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
-    {(content.basicExercises ?? []).length > 0 && <section><h2>Luyện tập trong nguồn</h2>{content.basicExercises.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
+    {content.summary && !summaryDuplicatesSection && <div className="lesson-structured-summary"><LessonMarkdown value={content.summary} /></div>}
+    {sections.map((section: any, index: number) => {
+      const ids = Array.isArray(section.sourceBlockIds) ? section.sourceBlockIds : [];
+      ids.forEach((id: unknown) => { if (typeof id === "string") coveredBlocks.add(id); });
+      const body = typeof section.content === "string" ? section.content : "";
+      const comparable = (text: string) => normalize(text).replace(/^\d+[.)]\s*/, "");
+      const bodyRepeatsHeading = Boolean(section.heading && body && comparable(section.heading) === comparable(body));
+      renderedText.add(normalize(`${section.heading ?? ""} ${body}`));
+      if (body) renderedText.add(normalize(body));
+      if (typeof section.heading === "string") renderedText.add(normalize(section.heading));
+      ids.forEach((id: unknown) => {
+        if (typeof id !== "string") return;
+        const texts = [body, typeof section.heading === "string" ? section.heading : ""].filter(Boolean);
+        sectionTextByBlock.set(id, [...(sectionTextByBlock.get(id) ?? []), ...texts]);
+      });
+      return <section key={section.id ?? index}>
+      {section.heading && (/^#{1,6}\s/.test(section.heading) ? <LessonMarkdown value={section.heading} /> : <h2>{section.heading}</h2>)}{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
+    </section>;
+    })}
+    {(content.knowledgeUnits ?? []).map((unit: any, index: number) => {
+      const claims = (unit.claims ?? []).map((claim: any, claimIndex: number) => renderSupplement({ ...claim, sourceBlockIds: claim.sourceBlockIds ?? unit.sourceBlockIds }, claim.id ?? claimIndex)).filter(Boolean);
+      return claims.length ? <section key={unit.id ?? index}>{unit.title && <h2>{unit.title}</h2>}{claims}</section> : null;
+    })}
+    {[
+      ["Khái niệm", content.definitions, false],
+      ["Công thức", content.formulas, true],
+      ["Bảng", content.tables, false],
+      ["Ví dụ", content.examples, false],
+      ["Luyện tập trong nguồn", content.basicExercises, false],
+    ].map(([heading, items, displayMath]) => {
+      const rendered = (Array.isArray(items) ? items : []).map((item: any, index: number) => renderSupplement(item, index, Boolean(displayMath))).filter(Boolean);
+      return rendered.length ? <section key={String(heading)}><h2>{heading}</h2>{rendered}</section> : null;
+    })}
     {(value.book?.title || range) && <small className="lesson-structured-provenance">Nguồn: {value.book?.title ?? ""}{value.book?.author ? ` · ${value.book.author}` : ""}{value.book?.version ? ` · ${value.book.version}` : ""}{range ? ` · ${range}` : ""}</small>}
   </div>;
 }

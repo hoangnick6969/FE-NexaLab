@@ -5080,7 +5080,27 @@ td small {
 .lesson-detail-reading { min-width: 0; padding: clamp(18px, 3vw, 32px); }
 .lesson-detail-reading .lesson-content { margin-top: 22px; line-height: 1.8; overflow-wrap: anywhere; }
 .lesson-structured-content > section { margin: 1.5rem 0; }
-.lesson-structured-content .lesson-structured-summary { font-weight: 550; }
+.lesson-structured-content > section > :first-child,
+.lesson-structured-content .lesson-structured-markdown > :first-child { margin-top: 0; }
+.lesson-structured-content .lesson-structured-summary { font-weight: 400; }
+.lesson-structured-markdown p,
+.lesson-structured-summary p { margin: 0 0 .8em; }
+.lesson-structured-markdown ul,
+.lesson-structured-markdown ol,
+.lesson-structured-summary ul,
+.lesson-structured-summary ol { margin: .45em 0 .9em; padding-left: 1.45em; }
+.lesson-structured-markdown li + li,
+.lesson-structured-summary li + li { margin-top: .35em; }
+.lesson-structured-markdown table,
+.lesson-structured-summary table { width: 100%; border-collapse: collapse; font-size: .92em; }
+.lesson-structured-markdown th,
+.lesson-structured-markdown td,
+.lesson-structured-summary th,
+.lesson-structured-summary td { padding: .55rem .7rem; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.lesson-structured-markdown th,
+.lesson-structured-summary th { background: var(--fill-neutral-96-2); font-weight: 650; }
+.lesson-structured-markdown table { display: block; max-width: 100%; overflow-x: auto; }
+.lesson-structured-content .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: .25rem 0; }
 .lesson-structured-source,
 .lesson-structured-provenance { display: block; margin: .4rem 0 .9rem; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
 .lesson-structured-formula { margin: .7rem 0; padding: .75rem 1rem; overflow-x: auto; border-left: 3px solid var(--green); background: var(--fill-neutral-96-2); }
@@ -5505,7 +5525,11 @@ td small {
   background: var(--fill-neutral-95);
 }
 .app-shell-student .lesson-objective .eyebrow { margin: 0; color: var(--ink-sky-43); }
-.app-shell-student .lesson-objective p { color: var(--ink-sky-31); font-size: 16px; font-weight: 600; line-height: 1.6; }
+.app-shell-student .lesson-objective-content { color: var(--ink-sky-31); font-size: 15px; line-height: 1.65; }
+.app-shell-student .lesson-objective-content p { margin: 0 0 .55em; color: inherit; font-size: inherit; font-weight: 400; line-height: inherit; }
+.app-shell-student .lesson-objective-content ul,
+.app-shell-student .lesson-objective-content ol { margin: .15em 0 .25em; padding-left: 1.35em; }
+.app-shell-student .lesson-objective-content li + li { margin-top: .3em; }
 .app-shell-student .lesson-objective small { color: var(--text-muted); font-size: 13px; }
 .app-shell-student .lesson-detail-reading .lesson-content h2 {
   margin: 1.6em 0 .6em;
@@ -5807,7 +5831,7 @@ td small {
 .app-shell-student .lesson-detail-reading .lesson-content { font-size: 16px; line-height: 1.7; }
 .app-shell-student .lesson-detail-reading .lesson-content h2 { font-size: 20px; }
 .app-shell-student .lesson-detail-reading .lesson-content h3 { font-size: 17px; }
-.app-shell-student .lesson-detail-reading .lesson-objective p { font-size: 15px; }
+.app-shell-student .lesson-detail-reading .lesson-objective-content { font-size: 14px; }
 .app-shell-student .lesson-detail-reading .lesson-content-ocr { max-width: 72ch; margin-inline: auto; }
 .app-shell-student .lesson-detail-reading .lesson-content-ocr > :first-child { margin-top: 0; }
 .app-shell-student .lesson-detail-reading .lesson-content-ocr h2 {
