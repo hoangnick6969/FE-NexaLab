@@ -177,7 +177,7 @@ export function LessonDetail() {
     {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
       <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
         {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><p>{learningObjective}</p></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
       {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
       </div>
       {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
@@ -230,6 +230,51 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
     {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}% · {t.needs(step.exercise.passThreshold)}</p>}
     <button className="primary" type="submit" disabled={attempt.isPending || Object.keys(answers).length !== exercise.questions.length}>{attempt.isPending ? t.grading : t.submitExercise}</button>
   </form>;
+}
+
+function StructuredLessonBody({ value }: { value: any }) {
+  const content = value.learningContent ?? {};
+  const pageByBlock = new Map<string, number>();
+  for (const block of value.sourceBlocks ?? []) if (block?.id && Number.isFinite(Number(block.pdfPage))) pageByBlock.set(block.id, Number(block.pdfPage));
+  const evidence = (ids: unknown) => {
+    if (!Array.isArray(ids)) return null;
+    const blocks = ids.filter((id): id is string => typeof id === "string");
+    if (!blocks.length) return null;
+    const pages = [...new Set(blocks.map((id) => pageByBlock.get(id)).filter((page): page is number => page !== undefined))].sort((a, b) => a - b);
+    return <small className="lesson-structured-source">{pages.length ? `Nguồn PDF trang ${pages.join(", ")} · ` : "Nguồn · "}{blocks.join(", ")}</small>;
+  };
+  const textOf = (item: any) => typeof item === "string" ? item : item?.text ?? item?.content ?? item?.prompt ?? "";
+  const tableRows = (raw: any) => {
+    const text = typeof raw === "string" ? raw : raw?.text;
+    if (typeof text !== "string") return null;
+    const rows = text.split(/\r?\n/).filter((line) => line.includes("|"))
+      .map((line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim()))
+      .filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+    return rows.length >= 2 ? rows : null;
+  };
+  const renderTable = (table: any, index: number) => {
+    const rows = tableRows(table);
+    return <div className="lesson-structured-table-wrap" key={table?.id ?? index}>
+      {rows ? <table className="lesson-structured-table"><thead><tr>{rows[0].map((cell, i) => <th key={i}>{cell}</th>)}</tr></thead><tbody>{rows.slice(1).map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, i) => <td key={i}>{cell}</td>)}</tr>)}</tbody></table> : <pre>{typeof table === "string" ? table : JSON.stringify(table, null, 2)}</pre>}
+      {evidence(table?.sourceBlockIds)}
+    </div>;
+  };
+  const range = value.pdfPageRange ? `PDF ${value.pdfPageRange.start}–${value.pdfPageRange.end}` : "";
+  return <div className="lesson-content lesson-structured-content">
+    {content.summary && <p className="lesson-structured-summary">{content.summary}</p>}
+    {(content.sections ?? []).map((section: any, index: number) => <section key={section.id ?? index}>
+      {section.heading && <h2>{section.heading}</h2>}{section.content && <p>{section.content}</p>}{evidence(section.sourceBlockIds)}
+    </section>)}
+    {(content.knowledgeUnits ?? []).map((unit: any, index: number) => <section key={unit.id ?? index}>
+      {unit.title && <h2>{unit.title}</h2>}{(unit.claims ?? []).map((claim: any, claimIndex: number) => <div key={claim.id ?? claimIndex}><p>{textOf(claim)}</p>{evidence(claim.sourceBlockIds ?? unit.sourceBlockIds)}</div>)}
+    </section>)}
+    {(content.definitions ?? []).length > 0 && <section><h2>Khái niệm</h2>{content.definitions.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
+    {(content.formulas ?? []).length > 0 && <section><h2>Công thức</h2>{content.formulas.map((item: any, index: number) => <div className="lesson-structured-formula" key={item.id ?? index}><code>{textOf(item)}</code>{evidence(item.sourceBlockIds)}</div>)}</section>}
+    {(content.tables ?? []).length > 0 && <section><h2>Bảng</h2>{content.tables.map(renderTable)}</section>}
+    {(content.examples ?? []).length > 0 && <section><h2>Ví dụ</h2>{content.examples.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
+    {(content.basicExercises ?? []).length > 0 && <section><h2>Luyện tập trong nguồn</h2>{content.basicExercises.map((item: any, index: number) => <div key={item.id ?? index}><p>{textOf(item)}</p>{evidence(item.sourceBlockIds)}</div>)}</section>}
+    {(value.book?.title || range) && <small className="lesson-structured-provenance">Nguồn: {value.book?.title ?? ""}{value.book?.author ? ` · ${value.book.author}` : ""}{value.book?.version ? ` · ${value.book.version}` : ""}{range ? ` · ${range}` : ""}</small>}
+  </div>;
 }
 
 function LessonBody({ content, title, chapter }: { content: string; title: string; chapter: string }) {

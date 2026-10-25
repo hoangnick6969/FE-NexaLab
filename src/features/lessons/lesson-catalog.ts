@@ -43,6 +43,7 @@ type CatalogSubject = {
     chapters?: Array<{
       title: string;
       officialOrder?: number;
+      displayOrder?: number;
       lessons?: any[];
       topics?: Array<{ title: string; officialOrder?: number; lessons?: any[] }>;
     }>;
@@ -63,7 +64,7 @@ export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[]
             grade: grade.grade,
             chapter: lesson.chapter || chapter.title,
             topic: lesson.topic || topicTitle,
-            chapterOrder: chapter.officialOrder,
+            chapterOrder: chapter.officialOrder ?? chapter.displayOrder,
             topicOrder: lesson.topicOrder,
             curriculumOrder: lesson.curriculumOrder,
             shared: true,
