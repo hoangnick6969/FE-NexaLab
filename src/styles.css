@@ -5079,6 +5079,17 @@ td small {
 .lesson-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 300px); align-items: start; gap: 18px; }
 .lesson-detail-reading { min-width: 0; padding: clamp(18px, 3vw, 32px); }
 .lesson-detail-reading .lesson-content { margin-top: 22px; line-height: 1.8; overflow-wrap: anywhere; }
+.lesson-structured-content > section { margin: 1.5rem 0; }
+.lesson-structured-content .lesson-structured-summary { font-weight: 550; }
+.lesson-structured-source,
+.lesson-structured-provenance { display: block; margin: .4rem 0 .9rem; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+.lesson-structured-formula { margin: .7rem 0; padding: .75rem 1rem; overflow-x: auto; border-left: 3px solid var(--green); background: var(--fill-neutral-96-2); }
+.lesson-structured-formula code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lesson-structured-table-wrap { max-width: 100%; margin: .8rem 0 1.2rem; overflow-x: auto; }
+.lesson-structured-table { width: 100%; border-collapse: collapse; font-size: .92em; }
+.lesson-structured-table th,
+.lesson-structured-table td { padding: .55rem .7rem; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.lesson-structured-table th { background: var(--fill-neutral-96-2); font-weight: 650; }
 .reading-completion { margin-top: 22px; }
 .lesson-study-cards { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
 .lesson-study-cards h2 { margin: 0 0 12px; font-size: 20px; }

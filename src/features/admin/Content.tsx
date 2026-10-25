@@ -70,12 +70,46 @@ export function Content() {
   const effects: Record<string, string> = t.effects;
   const labels: Record<string, string> = t.labels;
   const warning = isApiError(act.error, "ACTIVE_ASSIGNMENTS_WARNING");
+  const drafts = useQuery<any[]>({ queryKey: ["admin", "structured-lesson-drafts"], queryFn: () => api("/admin/structured-lessons/drafts") });
+  const [draftId, setDraftId] = useState("");
+  const selectedDraftId = draftId || drafts.data?.[0]?.id || "";
+  const draft = useQuery<any>({
+    queryKey: ["admin", "structured-lesson-draft", selectedDraftId],
+    queryFn: () => api(`/admin/structured-lessons/drafts/${encodeURIComponent(selectedDraftId)}`),
+    enabled: Boolean(selectedDraftId),
+  });
+  const manifest = draft.data?.manifest;
   return (
     <section className="panel table-wrap">
       <h2>{t.title}</h2>
       <p className="tiny muted">
         {t.note}
       </p>
+      <details open>
+        <summary>Bản xem trước Structured Lesson riêng tư ({drafts.data?.length ?? 0})</summary>
+        <p className="tiny muted">Chỉ ADMIN đọc được. Đây là bản nháp nhập liệu, không phải Open Curriculum và không tạo quyết định duyệt.</p>
+        {drafts.isError ? <p role="alert">Không tải được bản nháp.</p> : drafts.isLoading ? <p>Đang tải bản nháp…</p> : (
+          <label className="field">
+            <span>Lesson cần xem</span>
+            <select value={selectedDraftId} onChange={(event) => setDraftId(event.target.value)}>
+              {(drafts.data ?? []).map((item: any) => <option key={item.id} value={item.id}>{item.chapter.title} · {item.sourceLesson.title}</option>)}
+            </select>
+          </label>
+        )}
+        {draft.isError && <p role="alert">Không đọc được bản nháp đã chọn.</p>}
+        {manifest && (
+          <article className="admin-detail">
+            <h3>{manifest.sourceLesson.title}</h3>
+            <p className="tiny muted">{manifest.book.title} · {manifest.chapter.title} · PDF {manifest.pdfPageRange?.start}–{manifest.pdfPageRange?.end}</p>
+            <p className="tiny"><b>Source ID:</b> {manifest.sourceLesson.id}<br /><b>Digest:</b> {draft.data.digest}<br /><b>Trạng thái:</b> private draft · {manifest.contentReview?.status ?? "needs_review"}</p>
+            {manifest.warnings?.length > 0 && <details><summary>Cảnh báo ({manifest.warnings.length})</summary><ul>{manifest.warnings.map((item: string) => <li key={item}>{item}</li>)}</ul></details>}
+            {manifest.learningContent?.summary && <><h4>Tóm tắt</h4><p>{manifest.learningContent.summary}</p></>}
+            {(manifest.learningContent?.sections ?? []).map((section: any) => <section key={section.id}><h4>{section.heading}</h4><p>{section.content}</p><p className="tiny muted">Source blocks: {(section.sourceBlockIds ?? []).join(", ")}</p></section>)}
+            {(manifest.learningContent?.formulas ?? []).length > 0 && <details><summary>Công thức ({manifest.learningContent.formulas.length})</summary>{manifest.learningContent.formulas.map((formula: any, index: number) => <pre key={formula.id ?? index}>{formula.latex ?? formula.text ?? JSON.stringify(formula, null, 2)}</pre>)}</details>}
+            {(manifest.learningContent?.tables ?? []).length > 0 && <details><summary>Bảng ({manifest.learningContent.tables.length})</summary>{manifest.learningContent.tables.map((table: any, index: number) => <pre key={table.id ?? index}>{JSON.stringify(table, null, 2)}</pre>)}</details>}
+          </article>
+        )}
+      </details>
       <form className="admin-filters" onSubmit={(e) => e.preventDefault()} aria-label={t.filter}>
         <Field label={t.search} value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} />
         <label className="field">

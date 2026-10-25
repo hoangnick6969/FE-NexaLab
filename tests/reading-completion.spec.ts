@@ -34,15 +34,14 @@ test("assigned reading completion retries and resumes from server evidence", asy
   const done = page.getByRole("status").filter({ hasText: "Đã hoàn thành phần đọc" });
   await expect(reading).toBeVisible();
   await expect(complete.or(done)).toBeVisible();
-  if (await complete.count()) {
-    await complete.focus();
-    await complete.press("Enter");
-    await expect(page.getByRole("alert")).toContainText("Lỗi tạm thời");
-    await expect(page.getByRole("button", { name: "Thử lưu lại" })).toBeEnabled();
-    await page.getByRole("button", { name: "Thử lưu lại" }).click();
-  }
+  await expect(complete).toBeVisible();
+  await complete.focus();
+  await complete.press("Enter");
+  await expect(page.getByRole("alert")).toContainText("Lỗi tạm thời");
+  await expect(page.getByRole("button", { name: "Thử lưu lại" })).toBeEnabled();
+  await page.getByRole("button", { name: "Thử lưu lại" }).click();
   await expect(done).toBeVisible();
-  await expect(page.getByRole("tab", { name: /Nội dung bài/ }).getByLabel("Đã hoàn thành")).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Nội dung bài/ }).getByRole("img", { name: "Đã hoàn thành" })).toBeVisible();
 
   await page.reload();
   await expect(done).toBeVisible();

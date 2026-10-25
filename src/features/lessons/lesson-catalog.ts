@@ -43,6 +43,7 @@ type CatalogSubject = {
     chapters?: Array<{
       title: string;
       officialOrder?: number;
+      displayOrder?: number;
       lessons?: any[];
       topics?: Array<{ title: string; officialOrder?: number; lessons?: any[] }>;
     }>;
@@ -64,7 +65,7 @@ export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[]
             // The official chapter/topic from the catalog wins over the lesson's free-text label.
             chapter: chapter.title || lesson.chapter,
             topic: topicTitle || lesson.topic,
-            chapterOrder: chapter.officialOrder,
+            chapterOrder: chapter.officialOrder ?? chapter.displayOrder,
             topicOrder: lesson.topicOrder,
             curriculumOrder: lesson.curriculumOrder,
             shared: true,
