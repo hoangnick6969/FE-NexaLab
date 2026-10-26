@@ -5480,6 +5480,9 @@ td small {
 .app-shell-student .lesson-objective .eyebrow { margin: 0; color: #145961; }
 .app-shell-student .lesson-objective p { color: #24343c; font-size: 16px; font-weight: 600; line-height: 1.6; }
 .app-shell-student .lesson-objective small { color: #506070; font-size: 13px; }
+.lesson-sgk-reference { margin: 12px 0 18px; padding: 12px 14px; border: 1px solid #c9ddd8; border-radius: 10px; background: #f4faf8; }
+.lesson-sgk-reference p { margin: 4px 0; }
+.lesson-sgk-reference small { color: #506070; }
 .app-shell-student .lesson-detail-reading .lesson-content h2 {
   margin: 1.6em 0 .6em;
   padding-bottom: 8px;

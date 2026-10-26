@@ -57,7 +57,11 @@ export type StudentLearningStep = {
   resource: {
     html?: string;
     title?: string;
+    videoId?: string;
     url?: string;
+    provider?: "YOUTUBE" | "DIRECT";
+    providerVideoId?: string;
+    completionThresholdPercent?: number;
     type?: string;
     equivalentText?: string;
     transcript?: string;
@@ -67,6 +71,13 @@ export type StudentLearningStep = {
     labId?: string;
     challengeId?: string;
     sameAsLab?: boolean;
+  } | null;
+  videoEvidence?: {
+    coveragePercent: number;
+    watchedRanges: Array<{ startSecond: number; endSecond: number }>;
+    durationSeconds: number;
+    lastPosition: number;
+    completionMethod?: string | null;
   } | null;
 };
 export type StudentPathway = {

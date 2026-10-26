@@ -13,6 +13,7 @@ import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 import { youtubeEmbedUrl, youtubeVideoId } from "./youtube";
+import { isCredibleContinuousAdvance, stepForVideo } from "./video-progress";
 
 declare global {
   interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void; }
@@ -61,7 +62,8 @@ export function LessonDetail() {
   const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
   const attachedVideos = [...(lesson?.videos ?? []), ...(lesson?.sections ?? []).flatMap((section: any) => section.videos ?? [])];
   const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING") ?? lesson?.steps?.find((step: any) => step.type === "READING");
-  const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
+  const videoSteps = (videoPathway.data?.steps ?? lesson?.steps ?? []).filter((step: any) => step.type === "VIDEO");
+  const videoStep = videoSteps[0];
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
   const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO"].includes(step.type)) ?? [];
@@ -106,12 +108,14 @@ export function LessonDetail() {
     <div className="lesson-detail-tabs" role="tablist" aria-label="Nội dung bài học">
         {tabs.map((tab, index) => {
         const Icon = tab.icon;
-        return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label="Đã hoàn thành" />}</button>;
+        const allVideosComplete = videoSteps.length > 0 && videoSteps.every((step: any) => step.state === "COMPLETED");
+        return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && allVideosComplete)) && <Check size={15} aria-label="Đã hoàn thành" />}</button>;
       })}
     </div>
     {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
       <div className="lesson-reading-scroll" role="region" aria-label="Nội dung bài đọc có thể cuộn" tabIndex={0}>
         {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">MỤC TIÊU BÀI HỌC</span><p>{learningObjective}</p></>}{prerequisites && <small>Kiến thức nền · {prerequisites}</small>}</div>}
+        {lesson.sgkReference && <SgkReference value={lesson.sgkReference} />}
         {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">Đang tải nội dung và tiến độ bài học…</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : <LessonBody content={user.role === "STUDENT" && !assignmentId ? lesson.content : (readingStep?.resource?.html || lesson.content)} title={lesson.title} chapter={lesson.chapter} />}
       {user.role === "STUDENT" && !assignmentId && <p className="notice">Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.</p>}
       </div>
@@ -123,9 +127,9 @@ export function LessonDetail() {
     </section>}
     {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
       <h2 className="lesson-tab-title">Video bài giảng</h2>
-      {attachedVideos.length ? <div className="lesson-attached-videos">{attachedVideos.map((video: any, index: number) => <AttachedVideo key={`${video.url}-${index}`} video={video} lessonId={id} videoStep={videoStep} onReconciled={(updated: any) => {
+      {attachedVideos.length ? <div className="lesson-attached-videos">{attachedVideos.map((video: any, index: number) => <AttachedVideo key={video.id || `${video.url}-${index}`} video={video} lessonId={id} assignmentId={assignmentId} videoStep={stepForVideo(video, videoSteps)} onReconciled={(updated: any) => {
         if (updated.pathway || updated.steps) queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated);
-        else if (updated.step) queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => previous ? ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }) : previous);
+        else if (updated.step) queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => previous ? ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition, videoEvidence: updated.step.videoEvidence ?? step.videoEvidence } : step) }) : previous);
       }} />)}</div>
         : videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
         : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label="Video bài giảng" />
@@ -150,46 +154,151 @@ export function LessonDetail() {
   </div>;
 }
 
-function AttachedVideo({ video, lessonId, videoStep, onReconciled }: { video: { title?: string; url: string; transcript?: string; captionUrl?: string }; lessonId: string; videoStep?: any; onReconciled: (updated: any) => void }) {
+type AttachedVideoValue = { id?: string; title?: string; url: string; provider?: "YOUTUBE" | "DIRECT"; providerVideoId?: string; transcript?: string; captionUrl?: string };
+
+function AttachedVideo({ video, lessonId, assignmentId, videoStep, onReconciled }: { video: AttachedVideoValue; lessonId: string; assignmentId?: string; videoStep?: any; onReconciled: (updated: any) => void }) {
   const playerHost = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<any>(null);
-  const lastSentRef = useRef(0);
-  const [saved, setSaved] = useState(videoStep?.state === "COMPLETED");
+  const sessionRef = useRef<{ id: string; sequence: number } | null>(null);
+  const continuousRef = useRef<{ from: number; position: number; wallAt: number; rate: number } | null>(null);
+  const sendingRef = useRef(false);
+  const [coverage, setCoverage] = useState(videoStep?.videoEvidence?.coveragePercent ?? videoStep?.progressValue ?? 0);
+  const [saveError, setSaveError] = useState("");
   const embed = youtubeEmbedUrl(video.url);
+
+  const startSession = async (durationSeconds: number) => {
+    if (!videoStep || sessionRef.current) return sessionRef.current;
+    const query = assignmentId ? `?assignmentId=${encodeURIComponent(assignmentId)}` : "";
+    const providerVideoId = video.providerVideoId || youtubeVideoId(video.url) || video.id || videoStep.resource?.providerVideoId;
+    const result = await api<any>(`/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(videoStep.id)}/video-sessions${query}`, "POST", {
+      clientSessionId: crypto.randomUUID(),
+      provider: video.provider || (embed ? "YOUTUBE" : "DIRECT"),
+      providerVideoId,
+      durationSeconds: Math.max(1, Math.floor(durationSeconds)),
+    });
+    sessionRef.current = { id: result.sessionId, sequence: 0 };
+    setCoverage(result.coveragePercent ?? 0);
+    return sessionRef.current;
+  };
+
+  const flushObservation = async (position: number, state: "PLAYING" | "PAUSED" | "ENDED") => {
+    const continuous = continuousRef.current;
+    const session = sessionRef.current;
+    if (!continuous || !session || sendingRef.current) return;
+    const fromSecond = Math.floor(continuous.from);
+    const toSecond = Math.floor(position);
+    continuousRef.current = state === "PLAYING" ? { ...continuous, from: position, position, wallAt: Date.now() } : null;
+    if (toSecond <= fromSecond) return;
+    sendingRef.current = true;
+    try {
+      const result = await api<any>(`/video-sessions/${encodeURIComponent(session.id)}/observations`, "PUT", {
+        sequence: ++session.sequence,
+        fromSecond,
+        toSecond,
+        observedMediaSeconds: Math.min(30, toSecond - fromSecond),
+        playbackRate: continuous.rate,
+        playerState: state,
+        clientObservedAt: new Date().toISOString(),
+      });
+      setCoverage(result.coveragePercent ?? 0);
+      setSaveError("");
+      onReconciled({
+        step: {
+          id: videoStep.id,
+          state: result.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS",
+          progressValue: result.coveragePercent ?? 0,
+          lastPosition: result.lastPosition ?? toSecond,
+          videoEvidence: result,
+        },
+      });
+    } catch (error) {
+      session.sequence -= 1;
+      setSaveError(error instanceof Error ? error.message : "Không lưu được tiến độ video");
+    } finally {
+      sendingRef.current = false;
+    }
+  };
+
+  const sampleContinuous = (position: number, rate: number, playing: boolean) => {
+    const now = Date.now();
+    const previous = continuousRef.current;
+    if (!playing) {
+      if (previous) void flushObservation(position, "PAUSED");
+      return;
+    }
+    if (!previous) {
+      continuousRef.current = { from: position, position, wallAt: now, rate };
+      return;
+    }
+    const elapsed = (now - previous.wallAt) / 1000;
+    const advance = position - previous.position;
+    if (!isCredibleContinuousAdvance(previous.position, position, elapsed, Math.max(rate, previous.rate))) {
+      continuousRef.current = { from: position, position, wallAt: now, rate };
+      return;
+    }
+    continuousRef.current = { ...previous, position, wallAt: now, rate };
+    if (position - previous.from >= 10) void flushObservation(position, "PLAYING");
+  };
+
   useEffect(() => {
     const id = youtubeVideoId(video.url);
     if (!embed || !id || !videoStep || !playerHost.current) return;
     let active = true;
     let interval: number | undefined;
-    const send = async (ended = false) => {
-      const player = playerRef.current;
-      if (!player || !active) return;
-      const positionSeconds = Math.floor(player.getCurrentTime?.() ?? 0);
-      const durationSeconds = Math.floor(player.getDuration?.() ?? 0);
-      if (!durationSeconds || positionSeconds - lastSentRef.current < 10 && !ended) return;
-      lastSentRef.current = positionSeconds;
-      const updated = await api<any>(`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/steps/${encodeURIComponent(videoStep.id)}/progress`, "PUT", { action: ended ? "ended" : "heartbeat", positionSeconds, durationSeconds });
-      if (updated?.step?.state === "COMPLETED") setSaved(true);
-      onReconciled(updated);
-    };
     loadYoutubeApi().then((YT) => {
       if (!active || !playerHost.current) return;
       playerRef.current = new YT.Player(playerHost.current, {
         videoId: id,
         playerVars: { origin: window.location.origin, rel: 0 },
         events: {
-          onReady: (event: any) => {
-            const resumeAt = videoStep.lastPosition ?? 0;
-            if (resumeAt > 0) event.target.seekTo(resumeAt, true);
-            interval = window.setInterval(() => void send(), 5000);
+          onReady: async (event: any) => {
+            try {
+              const started = await startSession(event.target.getDuration?.() ?? 0);
+              const resumeAt = videoStep.videoEvidence?.lastPosition ?? videoStep.lastPosition ?? 0;
+              if (started && resumeAt > 0) event.target.seekTo(resumeAt, true);
+              interval = window.setInterval(() => {
+                const state = event.target.getPlayerState?.();
+                sampleContinuous(event.target.getCurrentTime?.() ?? 0, event.target.getPlaybackRate?.() ?? 1, state === YT.PlayerState.PLAYING);
+              }, 1000);
+            } catch (error) { setSaveError(error instanceof Error ? error.message : "Không tạo được phiên xem video"); }
           },
-          onStateChange: (event: any) => { if (event.data === YT.PlayerState.ENDED) void send(true); },
+          onStateChange: (event: any) => {
+            const position = event.target.getCurrentTime?.() ?? 0;
+            if (event.data === YT.PlayerState.PAUSED) void flushObservation(position, "PAUSED");
+            if (event.data === YT.PlayerState.ENDED) void flushObservation(position, "ENDED");
+          },
         },
       });
     });
-    return () => { active = false; if (interval) window.clearInterval(interval); playerRef.current?.destroy?.(); playerRef.current = null; };
-  }, [embed, lessonId, video.url, videoStep, onReconciled]);
-  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{embed ? <div className="video-embed" ref={playerHost} aria-label={video.title || "Video bài học"} /> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} />}{videoStep && saved && <p className="notice" role="status">Đã lưu tiến độ xem video.</p>}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
+    const onVisibility = () => { if (document.hidden && playerRef.current) void flushObservation(playerRef.current.getCurrentTime?.() ?? 0, "PAUSED"); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { active = false; document.removeEventListener("visibilitychange", onVisibility); if (interval) window.clearInterval(interval); if (playerRef.current) void flushObservation(playerRef.current.getCurrentTime?.() ?? 0, "PAUSED"); playerRef.current?.destroy?.(); playerRef.current = null; sessionRef.current = null; };
+  }, [embed, lessonId, video.url, videoStep?.id]);
+
+  const directEvents = embed || !videoStep ? {} : {
+    onLoadedMetadata: async (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      try {
+        const started = await startSession(event.currentTarget.duration);
+        const resumeAt = videoStep.videoEvidence?.lastPosition ?? videoStep.lastPosition ?? 0;
+        if (started && resumeAt > 0 && resumeAt < event.currentTarget.duration) event.currentTarget.currentTime = resumeAt;
+      } catch (error) { setSaveError(error instanceof Error ? error.message : "Không tạo được phiên xem video"); }
+    },
+    onTimeUpdate: (event: React.SyntheticEvent<HTMLVideoElement>) => sampleContinuous(event.currentTarget.currentTime, event.currentTarget.playbackRate, !event.currentTarget.paused),
+    onSeeking: (event: React.SyntheticEvent<HTMLVideoElement>) => { continuousRef.current = { from: event.currentTarget.currentTime, position: event.currentTarget.currentTime, wallAt: Date.now(), rate: event.currentTarget.playbackRate }; },
+    onPause: (event: React.SyntheticEvent<HTMLVideoElement>) => void flushObservation(event.currentTarget.currentTime, "PAUSED"),
+    onEnded: (event: React.SyntheticEvent<HTMLVideoElement>) => void flushObservation(event.currentTarget.currentTime, "ENDED"),
+  };
+  return <article className="attached-video"><h3>{video.title || "Video bài học"}</h3>{embed ? <div className="video-embed" ref={playerHost} aria-label={video.title || "Video bài học"} /> : <video className="video-player" controls preload="metadata" src={httpsUrl(video.url) ?? video.url} aria-label={video.title || "Video bài học"} {...directEvents} />}{videoStep && <p className="muted" role="status">Đã xem {coverage}% theo dữ liệu phát liên tục được máy chủ xác nhận.</p>}{!videoStep && <p className="notice">Video này chưa có bước học độc lập nên chưa thể lưu tiến độ.</p>}{saveError && <p className="notice" role="alert">{saveError}</p>}{video.transcript && <details className="video-transcript"><summary>Transcript / phụ đề</summary><p>{video.transcript}</p></details>}{video.captionUrl && <a href={httpsUrl(video.captionUrl) ?? video.captionUrl} target="_blank" rel="noopener noreferrer">Mở phụ đề WebVTT</a>}</article>;
+}
+
+function SgkReference({ value }: { value: any }) {
+  const pdf = value.pdfPageRange;
+  const printed = value.printedPageRange;
+  return <aside className="lesson-sgk-reference" aria-label="Đối chiếu sách giáo khoa">
+    <strong>Đối chiếu SGK</strong>
+    <p>{value.bookTitle || value.bookKey || "Sách giáo khoa"}{value.bookVersion || value.version ? ` · ${value.bookVersion || value.version}` : ""}</p>
+    <small>{value.chapterTitle || value.chapterId || value.sourceLessonTitle || value.sourceLessonId}{printed?.start ? ` · trang in ${printed.start}${printed.end && printed.end !== printed.start ? `–${printed.end}` : ""}` : ""}{pdf?.start ? ` · PDF ${pdf.start}${pdf.end && pdf.end !== pdf.start ? `–${pdf.end}` : ""}` : ""}</small>
+  </aside>;
 }
 
 function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
