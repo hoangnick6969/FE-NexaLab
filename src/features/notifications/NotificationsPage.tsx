@@ -1,9 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Empty, ErrorBox, InlineLoader } from "../../components/ui";
-import { UNREAD_KEY } from "./NotificationBell";
+import { useNoticeActions, type NoticeList } from "./notices";
 import { defineText, formatDateTime } from "../../i18n";
 
 const text = defineText({
@@ -31,24 +30,11 @@ const text = defineText({
   },
 });
 
-type Notice = { id: string; type: string; title: string; body: string | null; link: string | null; readAt: string | null; createdAt: string };
-
 /** Notification list (acc-3): newest first; opening one marks it read and follows its link. */
 export function NotificationsPage() {
   const t = text();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const list = useQuery<{ items: Notice[]; unreadCount: number }>({ queryKey: ["notifications"], queryFn: () => api("/me/notifications"), refetchInterval: 30_000 });
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    void queryClient.invalidateQueries({ queryKey: UNREAD_KEY });
-  };
-  const read = useMutation({ mutationFn: (id: string) => api(`/me/notifications/${id}/read`, "POST"), onSuccess: refresh });
-  const readAll = useMutation({ mutationFn: () => api("/me/notifications/read-all", "POST"), onSuccess: refresh });
-  const open = async (notice: Notice) => {
-    if (!notice.readAt) await read.mutateAsync(notice.id).catch(() => undefined);
-    if (notice.link) navigate(notice.link);
-  };
+  const list = useQuery<NoticeList>({ queryKey: ["notifications"], queryFn: () => api("/me/notifications"), refetchInterval: 30_000 });
+  const { read, readAll, open } = useNoticeActions();
   return (
     <>
       <PageHeading title={t.title} description={t.description} />

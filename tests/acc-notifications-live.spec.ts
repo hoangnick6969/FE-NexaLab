@@ -17,12 +17,21 @@ test("assignment, submission and deadline revision reach the right people", asyn
   const testId = await publishedTest(PILOT_CLASS, token, `${prefix} đề`, cleanup);
   const aid = await assignTest(PILOT_CLASS, token, testId, `${prefix} bài giao`, new Date(Date.now() + 3 * 86400000), [learner.id], cleanup);
 
-  // Student: the assignment notice is in the list and opening it marks it read.
+  // Student: the bell opens a dropdown in place; opening the notice from it marks it read and follows the link.
   const student = await studentLogin(browser);
-  await student.goto("/notifications");
-  const assigned = student.getByRole("button", { name: new RegExp(`Bài mới: ${prefix} bài giao`) });
+  const bell = student.getByRole("button", { name: /Thông báo, \d+ chưa đọc/ });
+  await expect(bell).toBeVisible();
+  const before = student.url();
+  await bell.click();
+  await expect(bell).toHaveAttribute("aria-expanded", "true");
+  expect(student.url()).toBe(before);
+  const panel = student.getByRole("region", { name: "Thông báo", exact: true });
+  const assigned = panel.getByRole("button", { name: new RegExp(`Bài mới: ${prefix} bài giao`) });
   await expect(assigned).toContainText("Chưa đọc");
-  await expect(student.getByRole("link", { name: /Thông báo, \d+ chưa đọc/ })).toBeVisible();
+  await student.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(bell).toBeFocused();
+  await bell.click();
   await assigned.click();
   await expect(student).toHaveURL(new RegExp(`/assignments/${aid}`));
 
@@ -43,7 +52,7 @@ test("assignment, submission and deadline revision reach the right people", asyn
   await student.goto("/notifications");
   await student.getByRole("button", { name: "Đánh dấu tất cả đã đọc" }).click();
   await expect(student.getByRole("heading", { name: "Đã đọc hết" })).toBeVisible();
-  await expect(student.getByRole("link", { name: "Thông báo", exact: true })).toBeVisible();
+  await expect(student.getByRole("button", { name: "Thông báo", exact: true })).toBeVisible();
 
   // Nobody else reads these notices.
   const outsider = await call("/me/notifications", "GET", undefined, await adultToken(accounts.outsiderTeacher));

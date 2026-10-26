@@ -620,3 +620,12 @@
   --text-green: #acc9be;
   --text-muted: #9caec0;
 }
+
+/* Motion (notifications dropdown + toasts): enters ease out, exits run ~65% of the enter and ease in. */
+:root {
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
