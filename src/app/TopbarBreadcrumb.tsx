@@ -13,6 +13,7 @@ const text = defineText({
     subjectIndex: "Mục lục môn học",
     lessonDetail: "Chi tiết bài học",
     teachingDetail: "Chi tiết bài giảng",
+    ebookLibrary: "Thư viện Ebook",
     ebookReader: "Trình đọc ebook",
     labs: "Phòng thí nghiệm",
     practice: "Thực hành",
@@ -41,6 +42,7 @@ const text = defineText({
     subjectIndex: "Subject index",
     lessonDetail: "Lesson details",
     teachingDetail: "Lesson details",
+    ebookLibrary: "Ebook library",
     ebookReader: "Ebook reader",
     labs: "Labs",
     practice: "Practice",
@@ -98,10 +100,17 @@ export function TopbarBreadcrumb({
         { label: isStudent ? t.lessonDetail : t.teachingDetail, isCurrent: true },
       ];
     }
-    if (pathname.startsWith("/ebooks/")) {
+    if (pathname === "/ebooks") {
       return [
         { label: homeLabel, to: "/" },
         { label: t.lessons, to: "/lessons" },
+        { label: t.ebookLibrary, isCurrent: true },
+      ];
+    }
+    if (pathname.startsWith("/ebooks/")) {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: t.ebookLibrary, to: "/ebooks" },
         { label: t.ebookReader, isCurrent: true },
       ];
     }

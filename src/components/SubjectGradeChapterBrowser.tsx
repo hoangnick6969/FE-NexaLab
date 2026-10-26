@@ -1,5 +1,5 @@
-import { useMemo, type ReactNode } from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { defineText } from "../i18n";
 import { commonText } from "../i18n/common";
@@ -11,12 +11,17 @@ const text = defineText({
     backToCatalog: "Quay lại danh mục",
     catalogPath: "Đường dẫn danh mục",
     chapterNotFound: "Không tìm thấy chương này trong danh mục hiện có.",
-    subjectsAndGrades: "Môn và khối",
+    subjectsAndGrades: "Mục lục môn học",
     grade: (grade: number | string) => `Khối ${grade}`,
-    items: (n: number) => `${n} nội dung`,
+    items: (n: number) => `${n} bài học`,
     chapterIndex: "Mục lục chương",
     chapterIndexLabel: "Mục lục chương",
     emptyChapter: "Chương này chưa có nội dung.",
+    startLearning: "Bắt đầu học",
+    prevChapter: "Chương trước",
+    nextChapter: "Chương sau",
+    expandChapter: "Xem danh sách bài",
+    collapseChapter: "Thu gọn",
   },
   en: {
     lessons: "lessons",
@@ -26,10 +31,15 @@ const text = defineText({
     chapterNotFound: "This chapter is not in the current catalogue.",
     subjectsAndGrades: "Subjects and grades",
     grade: (grade: number | string) => `Grade ${grade}`,
-    items: (n: number) => `${n} ${n === 1 ? "item" : "items"}`,
+    items: (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`,
     chapterIndex: "Chapter index",
     chapterIndexLabel: "Chapter index",
     emptyChapter: "This chapter has no content yet.",
+    startLearning: "Start learning",
+    prevChapter: "Previous chapter",
+    nextChapter: "Next chapter",
+    expandChapter: "View lessons",
+    collapseChapter: "Collapse",
   },
 });
 
@@ -72,6 +82,8 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
   const t = text();
   const path = pathname.replace(/\/$/, "");
   const isRoot = path === basePath.replace(/\/$/, "") || path === rootPath;
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+
   const subjectGrades = useMemo(() => {
     const groups = new Map<string, { subjectId: string; subjectName: string; grade: number; count: number }>();
     for (const item of items) {
@@ -109,6 +121,16 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
     .sort((a, b) => compareOrder(a.itemOrder, b.itemOrder) || a.title.localeCompare(b.title, "vi", { numeric: true })) : [];
   const selectionPath = selected ? `${basePath}/grades/${selected.grade}/subjects/${encodeURIComponent(selected.subjectId)}` : basePath;
 
+  const toggleChapter = (key: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   if (!items.length) return <div className={className}><p className="hierarchy-empty">{emptyCopy}</p></div>;
   if (!isRoot && !selected) return <div className={`hierarchy-browser ${className}`}>
     <p className="hierarchy-empty">{t.notFound}</p><Link to={basePath}>{t.backToCatalog}</Link>
@@ -135,13 +157,114 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
     </div> : !selectedChapter ? <>
       <header className="hierarchy-screen-heading"><span className="eyebrow">{t.grade(selected.grade).toLocaleUpperCase()}</span><h2>{selected.subjectName}</h2><p>{t.chapterIndex} · {scopedItems.length} {itemLabel}</p></header>
       {chapters.length ? <ol className="hierarchy-chapter-list" aria-label={t.chapterIndexLabel}>
-        {chapters.map(([key, chapter], index) => <li key={key}><Link className="hierarchy-chapter" to={`${selectionPath}/chapters/${chapterPath(chapter.title)}`}>
-          <span className="hierarchy-chapter-number">{index + 1}</span><span><b>{chapter.title}</b><small>{chapter.count} {itemLabel}</small></span><ArrowRight size={18} aria-hidden="true" />
-        </Link></li>)}
+        {chapters.map(([key, chapter], index) => {
+          const isExpanded = expandedKeys.has(key);
+          const lessonsInChapter = isExpanded ? scopedItems
+            .filter((item) => (item.chapter || commonText().noChapter).toLocaleLowerCase("vi") === key)
+            .sort((a, b) => compareOrder(a.itemOrder, b.itemOrder) || a.title.localeCompare(b.title, "vi", { numeric: true })) : [];
+          return (
+            <li key={key} className={`hierarchy-chapter-item${isExpanded ? " is-expanded" : ""}`}>
+              <div className="hierarchy-chapter-row">
+                <button
+                  type="button"
+                  className="hierarchy-chapter-toggle"
+                  onClick={(e) => toggleChapter(key, e)}
+                  aria-expanded={isExpanded}
+                  title={isExpanded ? t.collapseChapter : t.expandChapter}
+                >
+                  <span className="hierarchy-chapter-number">{index + 1}</span>
+                  <span className="hierarchy-chapter-info">
+                    <b>{chapter.title}</b>
+                    <small>{chapter.count} {itemLabel}</small>
+                  </span>
+                  <span className="hierarchy-chapter-chevron" aria-hidden="true">
+                    {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </span>
+                </button>
+                <Link
+                  className="hierarchy-chapter-direct-link"
+                  to={`${selectionPath}/chapters/${chapterPath(chapter.title)}`}
+                  title={chapter.title}
+                  aria-label={`${chapter.title} - ${t.expandChapter}`}
+                >
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+              {isExpanded && (
+                <div className="hierarchy-accordion-body">
+                  {lessonsInChapter.length ? (
+                    <div className="hierarchy-accordion-lessons">
+                      {lessonsInChapter.map((item) => (
+                        <div key={item.id} className="hierarchy-accordion-lesson-wrap">
+                          {renderItem(item)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="hierarchy-empty-inline">{emptyCopy}</p>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ol> : <p className="hierarchy-empty">{emptyCopy}</p>}
-    </> : <>
-      <header className="hierarchy-screen-heading"><span className="eyebrow">{selected.subjectName} · {t.grade(selected.grade).toLocaleUpperCase()}</span><h2>{selectedChapter[1].title}</h2><p>{chapterItems.length} {itemLabel}</p></header>
-      {chapterItems.length ? <div className="hierarchy-content-list">{chapterItems.map((item) => <div key={item.id}>{renderItem(item)}</div>)}</div> : <p className="hierarchy-empty">{t.emptyChapter}</p>}
-    </>}
+    </> : (() => {
+      const currentIdx = chapters.findIndex(([k]) => k === selectedChapter[0]);
+      const prevChap = currentIdx > 0 ? chapters[currentIdx - 1] : null;
+      const nextChap = currentIdx >= 0 && currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
+      const firstLessonId = chapterItems[0]?.id;
+      return (
+        <>
+          <header className="hierarchy-screen-heading chapter-view-heading">
+            <div className="chapter-heading-meta">
+              <span className="eyebrow">{selected.subjectName} · {t.grade(selected.grade).toLocaleUpperCase()}</span>
+              <h2>{selectedChapter[1].title}</h2>
+              <p>{chapterItems.length} {itemLabel}</p>
+            </div>
+            {firstLessonId && (
+              <Link className="primary chapter-start-cta" to={`/lessons/${encodeURIComponent(firstLessonId)}`}>
+                {t.startLearning} <ArrowRight size={16} />
+              </Link>
+            )}
+          </header>
+          {(prevChap || nextChap) && (
+            <nav className="hierarchy-chapter-nav" aria-label="Điều hướng chương">
+              {prevChap ? (
+                <Link className="hierarchy-nav-prev" to={`${selectionPath}/chapters/${chapterPath(prevChap[1].title)}`}>
+                  ← {t.prevChapter}: {prevChap[1].title}
+                </Link>
+              ) : <span />}
+              {nextChap && (
+                <Link className="hierarchy-nav-next" to={`${selectionPath}/chapters/${chapterPath(nextChap[1].title)}`}>
+                  {t.nextChapter}: {nextChap[1].title} →
+                </Link>
+              )}
+            </nav>
+          )}
+          {chapterItems.length ? (
+            <div className="hierarchy-content-list">
+              {chapterItems.map((item) => <div key={item.id}>{renderItem(item)}</div>)}
+            </div>
+          ) : (
+            <p className="hierarchy-empty">{t.emptyChapter}</p>
+          )}
+          {(prevChap || nextChap) && (
+            <nav className="hierarchy-chapter-nav bottom" aria-label="Điều hướng chương cuối trang">
+              {prevChap ? (
+                <Link className="hierarchy-nav-prev" to={`${selectionPath}/chapters/${chapterPath(prevChap[1].title)}`}>
+                  ← {t.prevChapter}: {prevChap[1].title}
+                </Link>
+              ) : <span />}
+              {nextChap && (
+                <Link className="hierarchy-nav-next" to={`${selectionPath}/chapters/${chapterPath(nextChap[1].title)}`}>
+                  {t.nextChapter}: {nextChap[1].title} →
+                </Link>
+              )}
+            </nav>
+          )}
+        </>
+      );
+    })()}
   </div>;
 }

@@ -41,6 +41,10 @@ const EbookReader = lazy(() =>
   import("../features/ebook/EbookReader").then((m) => ({ default: m.EbookReader }))
 );
 
+const EbookLibraryPage = lazy(() =>
+  import("../features/ebook/EbookLibraryPage").then((m) => ({ default: m.EbookLibraryPage }))
+);
+
 const Classes = lazy(() =>
   import("../features/classes/Classes").then((m) => ({ default: m.Classes }))
 );
@@ -287,6 +291,7 @@ export default function App() {
               <Route path="/lessons" element={user.role === "PARENT" ? <Navigate to="/" replace /> : <Lessons />} />
               <Route path="/lessons/catalog/*" element={user.role === "PARENT" ? <Navigate to="/" replace /> : <Lessons />} />
               <Route path="/lessons/:id" element={user.role === "PARENT" ? <Navigate to="/" replace /> : <LessonDetail />} />
+              <Route path="/ebooks" element={<EbookLibraryPage />} />
               <Route path="/ebooks/:subjectId" element={<EbookReader />} />
               <Route path="/assignments" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/catalog/*" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
