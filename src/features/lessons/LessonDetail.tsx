@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,6 +16,7 @@ import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 import { defineText } from "../../i18n";
+import SourcePdfViewer from "../ebook/SourcePdfViewer";
 
 const text = defineText({
   vi: {
@@ -109,6 +110,8 @@ export function LessonDetail() {
   const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((state) => state.user)!;
   const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "materials">("reading");
+  const [sourcePage, setSourcePage] = useState<number | null>(null);
+  useEffect(() => { setSourcePage(null); }, [id, activeTab]);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const queryClient = useQueryClient();
   const lessons = useQuery({
@@ -179,10 +182,10 @@ export function LessonDetail() {
         return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label={t.completed} />}</button>;
       })}
     </div>
-    {activeTab === "reading" && <section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
+    {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
       <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
         {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} sourceAvailable={Boolean(lesson.sourceDocument)} onOpenSource={setSourcePage} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
       {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
       </div>
       {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
@@ -190,7 +193,7 @@ export function LessonDetail() {
         <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
       </div>}
       {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
-    </section>}
+    </section>{sourcePage && lesson.sourceDocument && <SourcePdfViewer assetVersionId={lesson.sourceDocument.assetVersionId} sourceDigest={lesson.sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
     {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
       <h2 className="lesson-tab-title">{t.video}</h2>
       {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
@@ -265,7 +268,7 @@ function LessonMarkdown({ value, displayMath = false }: { value: string; display
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: false }]]}>{markdown}</ReactMarkdown>;
 }
 
-function StructuredLessonBody({ value }: { value: any }) {
+function StructuredLessonBody({ value, sourceAvailable, onOpenSource }: { value: any; sourceAvailable: boolean; onOpenSource: (page: number) => void }) {
   const content = value.learningContent ?? {};
   const pageByBlock = new Map<string, { pdfPage?: number; printedPageLabel?: string }>();
   for (const block of value.sourceBlocks ?? []) {
@@ -284,9 +287,9 @@ function StructuredLessonBody({ value }: { value: any }) {
       const label = reference.pdfPage ? `PDF trang ${reference.pdfPage}` : "";
       const printed = reference.printedPageLabel ? `trang in ${reference.printedPageLabel}` : "";
       const text = [label, printed].filter(Boolean).join(" · ");
-      return text ? [[text, text] as const] : [];
-    })).keys()];
-    return <small className="lesson-structured-source">{references.length ? `Nguồn ${references.join("; ")}` : "Nguồn sách giáo khoa"}</small>;
+      return text ? [[`${reference.pdfPage ?? "printed"}:${reference.printedPageLabel ?? ""}`, { text, page: reference.pdfPage }] as const] : [];
+    })).values()];
+    return <span className="lesson-structured-sources">{references.length ? references.map((reference) => <small className="lesson-structured-source" key={`${reference.page}:${reference.text}`}><span>Nguồn {reference.text}</span>{reference.page && <>{sourceAvailable ? <button type="button" onClick={() => onOpenSource(reference.page!)}><BookOpen size={14} /> Xem trong SGK</button> : <><button type="button" disabled title="Bản PDF nguồn hiện chưa khả dụng"><BookOpen size={14} /> Xem trong SGK</button><span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span></>}</>}</small>) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}</span>;
   };
   const textOf = (item: any) => typeof item === "string" ? item : item?.text ?? item?.content ?? item?.prompt ?? "";
   const coveredBlocks = new Set<string>();

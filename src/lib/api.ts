@@ -439,6 +439,33 @@ export async function openMaterial(url: string) {
   }
 }
 
+export type AssetAccess = {
+  url: string;
+  expiresAt: string;
+  mime: string;
+  fileName: string;
+  bytes: number | null;
+};
+
+/** Returns ephemeral access metadata only; callers must never persist the signed URL. */
+export function getAssetAccess(assetVersionId: string) {
+  return api<AssetAccess>(`/assets/versions/${encodeURIComponent(assetVersionId)}/access`);
+}
+
+export async function fetchAssetVersionRange(assetVersionId: string, range: string, signal: AbortSignal) {
+  const request = () => fetch(`${base}/assets/versions/${encodeURIComponent(assetVersionId)}/content`, {
+    credentials: "include",
+    headers: {
+      Range: range,
+      ...(useAuth.getState().token ? { Authorization: `Bearer ${useAuth.getState().token}` } : {}),
+    },
+    signal,
+  });
+  let response = await request();
+  if (response.status === 401 && await restore()) response = await request();
+  return response;
+}
+
 export type InlineMaterial = { src: string; revoke: () => void };
 
 export async function inlineMaterial(url: string): Promise<InlineMaterial> {

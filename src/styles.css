@@ -5637,6 +5637,32 @@ td small {
 .app-shell-student .lesson-detail-page .lesson-detail-tabs button.active { border-bottom-color: var(--line-sky-50); background: var(--fill-neutral-97); color: var(--ink-sky-43); }
 .app-shell-student .lesson-tab-panel { min-height: 240px; padding: clamp(18px, 3vw, 30px); border-radius: 18px; }
 .app-shell-student .lesson-detail-reading.lesson-tab-panel { max-width: 960px; }
+.app-shell-student .lesson-source-layout { display: grid; grid-template-columns: minmax(0, 960px); gap: 16px; align-items: stretch; }
+.app-shell-student .lesson-source-layout.is-open { grid-template-columns: minmax(420px, 1fr) minmax(360px, .8fr); max-width: 1440px; }
+.app-shell-student .lesson-source-layout .lesson-detail-reading.lesson-tab-panel { box-sizing: border-box; width: 100%; max-width: none; }
+.lesson-structured-sources { display: grid; justify-items: start; gap: 6px; margin-top: 8px; }
+.lesson-structured-source { display: inline-flex; align-items: center; gap: 9px; color: var(--ink-sky-49); }
+.lesson-structured-source button { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line-sky-82); border-radius: 9px; color: var(--ink-sky-43); background: var(--fill-neutral-99); font-size: 12px; font-weight: 700; }
+.lesson-structured-source button:hover:not(:disabled) { background: var(--fill-neutral-96); }
+.lesson-structured-source button:disabled { cursor: not-allowed; opacity: .55; }
+.source-pdf-viewer { display: flex; min-width: 0; height: min(720px, calc(100vh - 300px)); min-height: 380px; flex-direction: column; overflow: hidden; border: 1px solid var(--line-neutral-92); border-radius: 18px; background: var(--surface); box-shadow: 0 16px 38px var(--shadow-sky-31-a13); }
+.source-pdf-header { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px 9px 16px; border-bottom: 1px solid var(--line-neutral-93-2); }
+.source-pdf-header > div { display: grid; min-width: 0; }
+.source-pdf-header small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.source-pdf-header button, .source-pdf-toolbar button { display: inline-grid; width: 40px; height: 40px; place-items: center; border-radius: 9px; color: var(--ink-sky-43); background: transparent; }
+.source-pdf-header button:hover, .source-pdf-toolbar button:hover:not(:disabled) { background: var(--fill-neutral-96); }
+.source-pdf-toolbar { display: flex; min-height: 48px; align-items: center; justify-content: center; gap: 5px; padding: 4px 10px; border-bottom: 1px solid var(--line-neutral-93-2); color: var(--ink-sky-49); font-size: 12px; }
+.source-pdf-toolbar label { display: flex; align-items: center; gap: 6px; }
+.source-pdf-toolbar input { box-sizing: border-box; width: 54px; height: 34px; padding: 5px; border: 1px solid var(--line-neutral-90-2); border-radius: 8px; text-align: center; }
+.source-pdf-toolbar button:disabled { opacity: .35; }
+.source-pdf-viewport { position: relative; display: flex; min-height: 0; flex: 1; align-items: flex-start; justify-content: center; overflow: auto; padding: 16px; background: var(--fill-neutral-96); }
+.source-pdf-viewport canvas { display: block; background: white; box-shadow: 0 8px 22px var(--shadow-sky-31-a13); }
+.source-pdf-viewport canvas[hidden] { display: none; }
+.source-pdf-loading { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; color: var(--ink-sky-43); background: var(--fill-neutral-100-a93); box-shadow: 0 6px 18px var(--shadow-sky-31-a9); }
+.source-pdf-error { display: grid; max-width: 360px; place-items: center; gap: 12px; margin: auto; text-align: center; }
+.source-pdf-error button { display: inline-flex; align-items: center; gap: 7px; }
+.source-pdf-viewport { overscroll-behavior: contain; }
+.lesson-source-unavailable { color: var(--muted); font-size: 12px; }
 .app-shell-student .lesson-detail-reading.lesson-tab-panel {
   display: flex;
   flex-direction: column;
@@ -5696,6 +5722,12 @@ td small {
     overflow: visible;
   }
   .app-shell-student .lesson-reading-scroll { overflow: visible; padding: 0; }
+  .app-shell-student .lesson-source-layout, .app-shell-student .lesson-source-layout.is-open { display: block; max-width: none; }
+  .source-pdf-viewer { position: fixed; inset: 0; z-index: 1000; width: 100vw; height: 100dvh; min-height: 0; border: 0; border-radius: 0; }
+  body:has(.source-pdf-viewer) { overflow: hidden; }
+  .source-pdf-header { padding-top: max(9px, env(safe-area-inset-top)); }
+  .source-pdf-viewport { padding: 12px; }
+  .lesson-structured-source { align-items: flex-start; flex-direction: column; }
 }
 .app-shell-student .student-lessons-page > .page-heading {
   align-items: center;

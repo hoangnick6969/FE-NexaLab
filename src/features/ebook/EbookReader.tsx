@@ -4,7 +4,7 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Columns2, ExternalLink, Highlighter, LoaderCircle, Maximize2, Minimize2, Minus, Plus, StickyNote, Underline, X } from "lucide-react";
-import { api, useAuth } from "../../lib/api";
+import { api, getAssetAccess, useAuth } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { httpsUrl } from "../../lib/urls";
 import { defineText } from "../../i18n";
@@ -22,6 +22,7 @@ const text = defineText({
     opening: "Đang mở ebook…",
     backToLesson: "Quay lại bài học",
     noEbook: "Chưa có ebook cho môn học này",
+    sourceUnavailable: "Không tìm được tài liệu SGK riêng tư được cấp quyền từ bài học nguồn.",
     unsafeLink: "Liên kết ebook chưa được cấu hình hoặc không an toàn.",
     noFingerprint: "Tài liệu chưa cung cấp mã phiên bản; các tính năng đồng bộ ghi chú đang tạm khóa.",
     toolbar: "Công cụ đọc ebook",
@@ -96,6 +97,7 @@ const text = defineText({
     opening: "Opening the ebook…",
     backToLesson: "Back to the lesson",
     noEbook: "No ebook for this subject yet",
+    sourceUnavailable: "No authorized private textbook was found for the source lesson.",
     unsafeLink: "The ebook link is not configured or not safe.",
     noFingerprint: "The document has no version id; note syncing is paused.",
     toolbar: "Ebook reading tools",
@@ -160,6 +162,7 @@ const text = defineText({
   },
 });
 const t = text();
+const RANGE_CHUNK_SIZE = 1_048_576;
 
 type Annotation = {
   id: string;
@@ -221,16 +224,38 @@ export function EbookReader() {
   const user = useAuth((state) => state.user)!;
   const queryClient = useQueryClient();
   const routeState = location.state as { fromLessonId?: string; initialPhysicalPage?: number; ebookUrl?: string } | null;
+  const searchParams = new URLSearchParams(location.search);
+  const sourceLessonId = searchParams.get("sourceLessonId");
+  const editionId = searchParams.get("edition");
+  const [reloadKey, setReloadKey] = useState(0);
   const [pdfjs, setPdfjs] = useState<typeof import("pdfjs-dist") | null>(null);
   const subjectQuery = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
-  const url = httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
+  const sourceLessonQuery = useQuery({
+    queryKey: ["ebook-source-lesson", sourceLessonId],
+    queryFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(sourceLessonId!)}`),
+    enabled: Boolean(sourceLessonId),
+    retry: false,
+  });
+  const sourceAssetVersionId = sourceLessonQuery.data?.sourceDocument?.assetVersionId as string | undefined;
+  const sourceAccessQuery = useQuery({
+    queryKey: ["ebook-source-access", sourceAssetVersionId, reloadKey],
+    queryFn: () => getAssetAccess(sourceAssetVersionId!),
+    enabled: Boolean(sourceAssetVersionId),
+    retry: false,
+  });
+  const sourceByteLength = sourceAccessQuery.data?.bytes ?? null;
+  const edition = subject?.ebookEditions?.find((item: any) => item.id === editionId);
+  const url = sourceLessonId
+    ? sourceAccessQuery.data?.url ?? null
+    : editionId
+      ? httpsUrl(edition?.url)
+      : httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
   const [fingerprint, setFingerprint] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [reloadKey, setReloadKey] = useState(0);
   const [renderError, setRenderError] = useState("");
   const [renderRetry, setRenderRetry] = useState(0);
   const [renderedPage, setRenderedPage] = useState(0);
@@ -298,15 +323,20 @@ export function EbookReader() {
     setLoadError(""); setDocument(null); setFingerprint(""); setPageNumber(1); setPageCount(0);
     const load = async () => {
       try {
-        let length = 0;
+        let length = Number.isSafeInteger(sourceByteLength) && sourceByteLength! > 0 ? sourceByteLength! : 0;
         let firstRange: Response | null = null;
-        try {
-          const head = await fetch(url, { method: "HEAD", signal: loadController.signal });
-          length = Number(head.headers.get("content-length"));
-          if (!head.ok || !Number.isSafeInteger(length) || length <= 0) length = 0;
-          if (length) firstRange = await fetch(url, { headers: { Range: "bytes=0-262143" }, signal: loadController.signal });
-        } catch {
-          // Fall back to PDF.js URL loading when storage does not support range metadata.
+        if (sourceLessonId) {
+          if (!length) throw new Error(t.partialFailed);
+          firstRange = await fetch(url, { headers: { Range: `bytes=0-${RANGE_CHUNK_SIZE - 1}` }, signal: loadController.signal });
+        } else {
+          try {
+            const head = await fetch(url, { method: "HEAD", signal: loadController.signal });
+            length = Number(head.headers.get("content-length"));
+            if (!head.ok || !Number.isSafeInteger(length) || length <= 0) length = 0;
+            if (length) firstRange = await fetch(url, { headers: { Range: `bytes=0-${RANGE_CHUNK_SIZE - 1}` }, signal: loadController.signal });
+          } catch {
+            // External ebook links may not support range metadata.
+          }
         }
         if (!active) return;
         if (length && firstRange?.status === 206) {
@@ -331,14 +361,16 @@ export function EbookReader() {
               .finally(() => rangeControllers.delete(controller));
           };
           rangeTransport.abort = () => { rangeControllers.forEach((controller) => controller.abort()); rangeControllers.clear(); };
-          task = pdfjs.getDocument({ range: rangeTransport, rangeChunkSize: 262144, disableStream: true, disableAutoFetch: true });
+          task = pdfjs.getDocument({ range: rangeTransport, rangeChunkSize: RANGE_CHUNK_SIZE, disableStream: true, disableAutoFetch: true });
         } else {
           await firstRange?.body?.cancel();
+          if (sourceLessonId) throw new Error(t.partialFailed);
         }
         task ??= pdfjs.getDocument({ url, withCredentials: false });
         const loaded = await task.promise;
         if (!active) return;
-        const initial = Number.isInteger(routeState?.initialPhysicalPage) ? routeState!.initialPhysicalPage! : 1;
+        const configuredPage = editionId ? edition?.fallbackPhysicalPage : routeState?.initialPhysicalPage;
+        const initial = Number.isInteger(configuredPage) ? configuredPage : 1;
         const startPage = Math.min(loaded.numPages, Math.max(1, initial));
         setDocument(loaded); setPageCount(loaded.numPages); setPageNumber(startPage); setPageInput(String(startPage));
         setFingerprint(loaded.fingerprints.find((value): value is string => Boolean(value)) ?? "");
@@ -348,7 +380,7 @@ export function EbookReader() {
     };
     void load();
     return () => { active = false; loadController.abort(); rangeTransport?.abort(); void task?.destroy(); };
-  }, [pdfjs, url, reloadKey, routeState?.initialPhysicalPage]);
+  }, [edition?.fallbackPhysicalPage, editionId, pdfjs, url, reloadKey, routeState?.initialPhysicalPage, sourceByteLength, sourceLessonId]);
 
   useEffect(() => {
     const updateFullscreen = () => setIsFullscreen(window.document.fullscreenElement === readerRef.current);
@@ -505,8 +537,10 @@ export function EbookReader() {
     if (Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy) * 1.25) turnPage(dx < 0 ? "next" : "previous");
   };
 
-  if (subjectQuery.isLoading) return <PageLoader message={t.opening} />;
+  if (subjectQuery.isLoading || (sourceLessonId && (sourceLessonQuery.isLoading || sourceAccessQuery.isLoading))) return <PageLoader message={t.opening} />;
   if (subjectQuery.error) return <><ErrorBox error={subjectQuery.error} /><Link to="/lessons">{t.backToLesson}</Link></>;
+  if (sourceLessonId && (sourceLessonQuery.error || sourceAccessQuery.error || (sourceLessonQuery.data && !sourceAssetVersionId)))
+    return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.noEbook}</h1><p>{t.sourceUnavailable}</p><ErrorBox error={sourceLessonQuery.error || sourceAccessQuery.error} /><Link className="primary" to="/lessons">{t.backToLesson}</Link></section>;
   if (!subject || !url) return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.noEbook}</h1><p>{t.unsafeLink}</p><Link className="primary" to="/lessons">{t.backToLesson}</Link></section>;
   const annotations = annotationsQuery.data?.pages.flat() ?? [];
   const companionPage = useSpread

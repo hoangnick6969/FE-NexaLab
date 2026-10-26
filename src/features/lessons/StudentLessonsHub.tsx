@@ -40,6 +40,9 @@ const text = defineText({
     noAssigned: "Hiện chưa có bài học nào được giao có thể mở.",
     noShared: "Chưa có bài học chung được phát hành phù hợp với tìm kiếm này.",
     noMatch: "Chưa có nội dung phù hợp. Hãy thử lại sau.",
+    ebookLibrary: "Thư viện Ebook",
+    ebookLibraryIntro: "Mở sách giáo khoa theo môn và khối lớp.",
+    ebookLabel: (subject: string, grade: string | null) => grade ? `${subject} lớp ${grade}` : subject,
   },
   en: {
     assignedKind: "Assigned",
@@ -70,11 +73,15 @@ const text = defineText({
     noAssigned: "No assigned lessons can be opened right now.",
     noShared: "No published shared lessons match this search.",
     noMatch: "Nothing matches yet. Please try again later.",
+    ebookLibrary: "Ebook library",
+    ebookLibraryIntro: "Open textbooks by subject and grade.",
+    ebookLabel: (subject: string, grade: string | null) => grade ? `${subject} grade ${grade}` : subject,
   },
 });
 
 type AssignmentRead = { lessons: any[]; assignments: StudentLessonAssignment[] };
 type Filter = "all" | "assigned" | "shared";
+type EbookEdition = { id: string; version: string; url: string; fallbackPhysicalPage: number };
 
 async function readAssignments(): Promise<AssignmentRead> {
   const [lessons, assignments] = await Promise.all([
@@ -147,7 +154,7 @@ export function StudentLessonsHub() {
   const catalogRoute = pathname.startsWith("/lessons/catalog");
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
-  const curriculum = useQuery({ queryKey: ["student-open-curriculum"], queryFn: () => api<{ subjects?: any[] }>("/open-curriculum") });
+  const curriculum = useQuery({ queryKey: ["student-open-curriculum"], queryFn: () => api<{ subjects?: Array<{ id: string; name: string; ebookEditions?: EbookEdition[]; grades?: any[] }> }>("/open-curriculum") });
   const assigned = useQuery<AssignmentRead>({ queryKey: ["student-assigned-lessons"], queryFn: readAssignments });
 
   const catalog = useMemo(() => buildStudentLessonCatalog(
@@ -155,6 +162,9 @@ export function StudentLessonsHub() {
     assigned.data?.lessons ?? [],
     assigned.data?.assignments ?? [],
   ), [curriculum.data, assigned.data]);
+  const ebooks = (curriculum.data?.subjects ?? []).flatMap((subject) =>
+    (subject.ebookEditions ?? []).map((edition) => ({ ...edition, subjectId: subject.id, subjectName: subject.name })),
+  );
   const matching = filterStudentLessonCatalog(catalog, filter, "all", "all", search);
   const openLessons = matching.filter((lesson) => lesson.assignments.length === 0);
   const assignedLessons = matching.filter((lesson) => lesson.assignments.length > 0);
@@ -165,7 +175,16 @@ export function StudentLessonsHub() {
 
   return (
     <div className="student-lessons-page">
-      <PageHeading eyebrow={t.eyebrow} title={t.title} description={t.description} />
+      <PageHeading eyebrow={t.eyebrow} title={t.title} description={t.description} action={ebooks.length ? <a className="secondary" href="#ebooks"><BookOpen size={17} /> {t.ebookLibrary}</a> : null} />
+
+      {!catalogRoute && ebooks.length > 0 && <section id="ebooks" className="subject-ebook-links" aria-labelledby="ebook-library-title">
+        <h2 id="ebook-library-title">{t.ebookLibrary}</h2>
+        <p>{t.ebookLibraryIntro}</p>
+        <div>{ebooks.map((edition) => {
+          const grade = edition.version.match(/(?:khtn|grade)[-_ ]?(\d{1,2})/i)?.[1] ?? null;
+          return <Link key={edition.id} to={`/ebooks/${encodeURIComponent(edition.subjectId)}?edition=${encodeURIComponent(edition.id)}`}><BookOpen size={18} /> {t.ebookLabel(edition.subjectName, grade)} <ArrowUpRight size={14} aria-hidden="true" /></Link>;
+        })}</div>
+      </section>}
 
       {!catalogRoute && <div className="filter-bar student-lesson-filters">
         <div className="tabs" role="group" aria-label={t.filterLabel}>
