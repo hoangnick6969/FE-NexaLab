@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { api, inlineMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
+import { api, streamMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 import { defineText } from "../../i18n";
 
 const text = defineText({
@@ -74,6 +74,10 @@ export function VideoLearningStep({
   const pendingRef = useRef(false);
   const flushRequestedRef = useRef(false);
   const failedActionRef = useRef<"video" | "fallback" | null>(null);
+  // A signed source expires (R2_READ_TTL_SECONDS); on a media error it is re-signed up to twice and playback resumes.
+  const signedRef = useRef(false);
+  const refreshesRef = useRef(0);
+  const resumeRef = useRef<{ at: number; play: boolean } | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(Boolean(step.resource?.url));
   const [mediaUnavailable, setMediaUnavailable] = useState(!step.resource?.url);
@@ -100,10 +104,12 @@ export function VideoLearningStep({
     setSource(null);
     setSourceLoading(true);
     setMediaUnavailable(false);
-    inlineMaterial(step.resource.url)
+    streamMaterial(step.resource.url)
       .then((material) => {
         revoke = material.revoke;
         if (!active) return material.revoke();
+        signedRef.current = material.signed;
+        refreshesRef.current = 0;
         setSource(material.src);
         setSourceLoading(false);
       })
@@ -222,14 +228,23 @@ export function VideoLearningStep({
           preload="metadata"
           src={source}
           onLoadedMetadata={(event) => {
-            const resumeAt = step.lastPosition ?? 0;
+            const resume = resumeRef.current;
+            resumeRef.current = null;
+            const resumeAt = resume?.at ?? step.lastPosition ?? 0;
             if (resumeAt > 0 && resumeAt < event.currentTarget.duration)
               event.currentTarget.currentTime = resumeAt;
+            if (resume?.play) void event.currentTarget.play().catch(() => undefined);
           }}
           onTimeUpdate={(event) => observe(event.currentTarget)}
           onPause={(event) => observe(event.currentTarget, true)}
           onEnded={(event) => observe(event.currentTarget, true, true)}
-          onError={() => setMediaUnavailable(true)}
+          onError={(event) => {
+            const url = step.resource?.url;
+            if (!signedRef.current || !url || refreshesRef.current >= 2) return setMediaUnavailable(true);
+            refreshesRef.current += 1;
+            resumeRef.current = { at: event.currentTarget.currentTime, play: !event.currentTarget.paused };
+            streamMaterial(url).then((material) => setSource(material.src)).catch(() => setMediaUnavailable(true));
+          }}
         >
           {t.unsupported}
         </video>
