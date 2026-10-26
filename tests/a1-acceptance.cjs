@@ -16,7 +16,8 @@ const assert = require('node:assert/strict');
   assert.equal(assignment.status,201);
   const duplicate = await request('/classes/class-pilot-a/assignments',{title:'Invalid duplicate',contentId:'lesson-circuit',contentType:'lesson',dueDate:new Date().toISOString(),studentIds:[student.data.user.id,student.data.user.id]},owner.data.accessToken);
   assert.equal(duplicate.status,400);
-  const browser = await chromium.launch({headless:true,executablePath:'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'});
+  // CHROME_PATH pins a specific binary; otherwise use the installed Google Chrome on any OS.
+  const browser = await chromium.launch({headless:true,...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {channel:'chrome'})});
   try {
     const page=await browser.newPage(); const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
