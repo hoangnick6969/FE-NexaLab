@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -34,7 +34,7 @@ const text = defineText({
     sample: "Dữ liệu mẫu",
     contentTabs: "Nội dung bài học",
     completed: "Đã hoàn thành",
-    readingRegion: "Nội dung bài đọc có thể cuộn",
+    readingRegion: "Nội dung bài đọc",
     objective: "MỤC TIÊU BÀI HỌC",
     prerequisites: "Kiến thức nền",
     loadingContent: "Đang tải nội dung và tiến độ bài học…",
@@ -59,6 +59,9 @@ const text = defineText({
     needs: (n: number) => `cần ${n}%`,
     grading: "Đang chấm…",
     submitExercise: "Nộp bài luyện tập",
+    prevLesson: "Bài trước",
+    nextLesson: "Bài sau",
+    chapterLessons: "Mục lục chương",
   },
   en: {
     opening: "Opening the lesson…",
@@ -75,7 +78,7 @@ const text = defineText({
     sample: "Sample data",
     contentTabs: "Lesson content",
     completed: "Completed",
-    readingRegion: "Scrollable reading content",
+    readingRegion: "Reading content",
     objective: "LESSON OBJECTIVE",
     prerequisites: "Prerequisites",
     loadingContent: "Loading the lesson content and progress…",
@@ -100,6 +103,9 @@ const text = defineText({
     needs: (n: number) => `needs ${n}%`,
     grading: "Grading…",
     submitExercise: "Submit the exercise",
+    prevLesson: "Previous lesson",
+    nextLesson: "Next lesson",
+    chapterLessons: "Chapter lessons",
   },
 });
 const t = text();
@@ -118,6 +124,11 @@ export function LessonDetail() {
     queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
     queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
     enabled: Boolean(id) && !(user.role === "STUDENT" && assignmentId),
+  });
+  const curriculum = useQuery({
+    queryKey: ["student-open-curriculum"],
+    queryFn: () => api<{ subjects?: Array<{ id: string; name: string; grades?: any[] }> }>("/open-curriculum"),
+    enabled: user.role === "STUDENT",
   });
   const canViewAttribution = ["TEACHER", "ADMIN"].includes(user.role);
   const library = useQuery({
@@ -139,6 +150,29 @@ export function LessonDetail() {
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
   const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO"].includes(step.type)) ?? [];
   const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
+
+  const chapterLessons = useMemo(() => {
+    if (!curriculum.data?.subjects || !lesson) return [];
+    for (const subject of curriculum.data.subjects) {
+      for (const grade of subject.grades ?? []) {
+        for (const chapter of grade.chapters ?? []) {
+          const list = [
+            ...(chapter.lessons ?? []),
+            ...(chapter.topics ?? []).flatMap((top: any) => top.lessons ?? []),
+          ];
+          if (list.some((l: any) => l.id === id)) {
+            return list;
+          }
+        }
+      }
+    }
+    return [];
+  }, [curriculum.data, lesson, id]);
+
+  const currentLessonIndex = chapterLessons.findIndex((l: any) => l.id === id);
+  const prevLesson = currentLessonIndex > 0 ? chapterLessons[currentLessonIndex - 1] : null;
+  const nextLesson = currentLessonIndex >= 0 && currentLessonIndex < chapterLessons.length - 1 ? chapterLessons[currentLessonIndex + 1] : null;
+
   const completeReading = useMutation({
     mutationFn: () => api(assignmentId
       ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${readingStep!.id}/progress`, assignmentId)
@@ -175,47 +209,163 @@ export function LessonDetail() {
   const materialsTab = tabs.some((tab) => tab.id === "materials");
 
   return <div className="lesson-detail-page">
+    {/* 1. Breadcrumb: Bài học › Khối › Môn › Chương › Bài */}
+    <nav className="lesson-detail-breadcrumb" aria-label="Đường dẫn bài học">
+      <Link to="/lessons">Bài học</Link>
+      <span aria-hidden="true" className="breadcrumb-sep">›</span>
+      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}`}>
+        Khối {lesson.grade}
+      </Link>
+      <span aria-hidden="true" className="breadcrumb-sep">›</span>
+      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}`}>
+        {lesson.subject.name}
+      </Link>
+      <span aria-hidden="true" className="breadcrumb-sep">›</span>
+      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}/chapters/${encodeURIComponent(lesson.chapter)}`}>
+        {lesson.chapter}
+      </Link>
+      <span aria-hidden="true" className="breadcrumb-sep">›</span>
+      <span aria-current="page" className="breadcrumb-current">{lesson.title}</span>
+    </nav>
+
     <PageHeading eyebrow={`${lesson.subject.name} · ${t.grade(lesson.grade)}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
+
     <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
-        {tabs.map((tab, index) => {
+      {tabs.map((tab, index) => {
         const Icon = tab.icon;
         return <button key={tab.id} ref={(element) => { tabRefs.current[index] = element; }} type="button" role="tab" id={`lesson-tab-${tab.id}`} aria-selected={activeTab === tab.id} aria-controls={`lesson-panel-${tab.id}`} tabIndex={activeTab === tab.id ? 0 : -1} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)} onKeyDown={(event) => changeTabByKeyboard(event, index)}><Icon size={16} />{tab.label}{((tab.id === "reading" && readingStep?.state === "COMPLETED") || (tab.id === "video" && videoStep?.state === "COMPLETED")) && <Check size={15} aria-label={t.completed} />}</button>;
       })}
     </div>
-    {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
-      <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
-        {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-        {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} sourceAvailable={Boolean(lesson.sourceDocument)} onOpenSource={setSourcePage} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
-      {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
+
+    {/* Two-column layout container for Student */}
+    <div className="lesson-detail-two-col">
+      {/* Left column: chapter TOC sidebar */}
+      {user.role === "STUDENT" && chapterLessons.length > 1 && (
+        <aside className="lesson-chapter-toc-sidebar" aria-label={t.chapterLessons}>
+          <div className="toc-sidebar-header">
+            <span className="eyebrow">{lesson.chapter}</span>
+            <h3>{t.chapterLessons}</h3>
+            <small>{chapterLessons.length} bài học</small>
+          </div>
+          <ol className="toc-sidebar-list">
+            {chapterLessons.map((item: any, index: number) => {
+              const isCurrent = item.id === id;
+              const linkUrl = assignmentId
+                ? `/lessons/${encodeURIComponent(item.id)}?assignmentId=${encodeURIComponent(assignmentId)}`
+                : `/lessons/${encodeURIComponent(item.id)}`;
+              return (
+                <li key={item.id}>
+                  <Link
+                    to={linkUrl}
+                    className={`toc-sidebar-link${isCurrent ? " is-current" : ""}`}
+                    aria-current={isCurrent ? "page" : undefined}
+                  >
+                    <span className="toc-item-num">{index + 1}</span>
+                    <span className="toc-item-title">{item.title}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
+      )}
+
+      {/* Right column: Main reading or media content */}
+      <div className="lesson-detail-main-col">
+        {/* Top navigation for prev/next lesson */}
+        {user.role === "STUDENT" && (prevLesson || nextLesson) && (
+          <nav className="lesson-prev-next-nav top" aria-label="Điều hướng bài học">
+            {prevLesson ? (
+              <Link
+                className="lesson-nav-btn prev"
+                to={assignmentId ? `/lessons/${encodeURIComponent(prevLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(prevLesson.id)}`}
+              >
+                ← {t.prevLesson}: {prevLesson.title}
+              </Link>
+            ) : <span />}
+            {nextLesson && (
+              <Link
+                className="lesson-nav-btn next"
+                to={assignmentId ? `/lessons/${encodeURIComponent(nextLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(nextLesson.id)}`}
+              >
+                {t.nextLesson}: {nextLesson.title} →
+              </Link>
+            )}
+          </nav>
+        )}
+
+        {/* Thin progress bar */}
+        {user.role === "STUDENT" && (
+          <div className="lesson-reading-progress-bar" role="progressbar" aria-valuenow={readingStep?.state === "COMPLETED" ? 100 : (readingStep?.progressValue ?? 0)} aria-valuemin={0} aria-valuemax={100}>
+            <div
+              className="lesson-progress-indicator"
+              style={{ width: `${readingStep?.state === "COMPLETED" ? 100 : (readingStep?.progressValue ?? 0)}%` }}
+            />
+          </div>
+        )}
+
+        {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
+          <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
+            {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
+            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} sourceAvailable={Boolean(lesson.sourceDocument)} onOpenSource={setSourcePage} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+            {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
+          </div>
+          {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
+            {completeReading.error && <ErrorBox error={completeReading.error} />}
+            <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
+          </div>}
+          {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
+        </section>{sourcePage && lesson.sourceDocument && <SourcePdfViewer assetVersionId={lesson.sourceDocument.assetVersionId} sourceDigest={lesson.sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
+
+        {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
+          <h2 className="lesson-tab-title">{t.video}</h2>
+          {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
+            : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label={t.video} />
+              : videoPathway.isLoading ? <p className="video-placeholder" role="status">{t.loadingVideo}</p>
+                : assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} />
+                  : <p className="notice">{t.videoUnavailable}</p>}
+        </section>}
+
+        {activeTab === "exercise" && basicExerciseStep && <section id="lesson-panel-exercise" role="tabpanel" aria-labelledby="lesson-tab-exercise" className="panel lesson-tab-panel">
+          <h2 className="lesson-tab-title">{t.exercise}</h2>
+          <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
+        </section>}
+
+        {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
+          <h2>{t.lessonMaterials}</h2>
+          {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>{t.textbook} · {lesson.subject.name}</b><small>{t.externalNote}</small></span><ArrowRight size={18} /></Link>}
+          {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => isAssetUrl(material.url) ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || t.material(index + 1)} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || t.material(index + 1)} <ExternalLink size={14} /></a>)}
+          <ErrorBox error={materialOpen.error} />
+          {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
+        </section>}
+
+        {/* Bottom navigation for prev/next lesson */}
+        {user.role === "STUDENT" && (prevLesson || nextLesson) && (
+          <nav className="lesson-prev-next-nav bottom" aria-label="Điều hướng bài học cuối bài">
+            {prevLesson ? (
+              <Link
+                className="lesson-nav-btn prev"
+                to={assignmentId ? `/lessons/${encodeURIComponent(prevLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(prevLesson.id)}`}
+              >
+                ← {t.prevLesson}: {prevLesson.title}
+              </Link>
+            ) : <span />}
+            {nextLesson && (
+              <Link
+                className="lesson-nav-btn next"
+                to={assignmentId ? `/lessons/${encodeURIComponent(nextLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(nextLesson.id)}`}
+              >
+                {t.nextLesson}: {nextLesson.title} →
+              </Link>
+            )}
+          </nav>
+        )}
+
+        {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">{t.nextHint}</p>}
+        {user.role === "STUDENT" && studyCardsStep && assignmentId && <p><Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignmentId)}`}>{t.openCards}</Link></p>}
+        {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>{t.lessonDone}</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>{t.continueAssignment} <ArrowRight size={16} /></Link>}</div>}
       </div>
-      {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
-        {completeReading.error && <ErrorBox error={completeReading.error} />}
-        <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
-      </div>}
-      {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
-    </section>{sourcePage && lesson.sourceDocument && <SourcePdfViewer assetVersionId={lesson.sourceDocument.assetVersionId} sourceDigest={lesson.sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
-    {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
-      <h2 className="lesson-tab-title">{t.video}</h2>
-      {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
-        : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label={t.video} />
-          : videoPathway.isLoading ? <p className="video-placeholder" role="status">{t.loadingVideo}</p>
-            : assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} />
-              : <p className="notice">{t.videoUnavailable}</p>}
-    </section>}
-    {activeTab === "exercise" && basicExerciseStep && <section id="lesson-panel-exercise" role="tabpanel" aria-labelledby="lesson-tab-exercise" className="panel lesson-tab-panel">
-      <h2 className="lesson-tab-title">{t.exercise}</h2>
-      <BasicExercise lessonId={id} step={basicExerciseStep} onSubmitted={(result) => queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === basicExerciseStep.id ? { ...step, state: result.passed ? "COMPLETED" : "IN_PROGRESS", exercise: result } : step) }))} />
-    </section>}
-    {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
-      <h2>{t.lessonMaterials}</h2>
-      {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>{t.textbook} · {lesson.subject.name}</b><small>{t.externalNote}</small></span><ArrowRight size={18} /></Link>}
-      {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => isAssetUrl(material.url) ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || t.material(index + 1)} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || t.material(index + 1)} <ExternalLink size={14} /></a>)}
-      <ErrorBox error={materialOpen.error} />
-      {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
-    </section>}
-    {activeTab === "reading" && user.role === "STUDENT" && studyCardsStep && <p className="lesson-reading-next-hint">{t.nextHint}</p>}
-    {user.role === "STUDENT" && studyCardsStep && assignmentId && <p><Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignmentId)}`}>{t.openCards}</Link></p>}
-    {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>{t.lessonDone}</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>{t.continueAssignment} <ArrowRight size={16} /></Link>}</div>}
+    </div>
   </div>;
 }
 
@@ -289,7 +439,7 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource }: { value:
       const text = [label, printed].filter(Boolean).join(" · ");
       return text ? [[`${reference.pdfPage ?? "printed"}:${reference.printedPageLabel ?? ""}`, { text, page: reference.pdfPage }] as const] : [];
     })).values()];
-    return <span className="lesson-structured-sources">{references.length ? references.map((reference) => <small className="lesson-structured-source" key={`${reference.page}:${reference.text}`}><span>Nguồn {reference.text}</span>{reference.page && <>{sourceAvailable ? <button type="button" onClick={() => onOpenSource(reference.page!)}><BookOpen size={14} /> Xem trong SGK</button> : <><button type="button" disabled title="Bản PDF nguồn hiện chưa khả dụng"><BookOpen size={14} /> Xem trong SGK</button><span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span></>}</>}</small>) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}</span>;
+    return <span className="lesson-structured-sources">{references.length ? references.map((reference) => <small className="lesson-structured-source" key={`${reference.page}:${reference.text}`}><span>Nguồn {reference.text}</span>{reference.page && <>{sourceAvailable ? <button type="button" className="source-sgk-light-btn" onClick={() => onOpenSource(reference.page!)}><BookOpen size={13} /> Xem trong SGK</button> : <><button type="button" className="source-sgk-light-btn is-disabled" disabled title="Bản PDF nguồn hiện chưa khả dụng"><BookOpen size={13} /> Xem trong SGK</button><span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span></>}</>}</small>) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}</span>;
   };
   const textOf = (item: any) => typeof item === "string" ? item : item?.text ?? item?.content ?? item?.prompt ?? "";
   const coveredBlocks = new Set<string>();
@@ -338,8 +488,10 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource }: { value:
         const texts = [body, typeof section.heading === "string" ? section.heading : ""].filter(Boolean);
         sectionTextByBlock.set(id, [...(sectionTextByBlock.get(id) ?? []), ...texts]);
       });
+      const rawHeading = typeof section.heading === "string" ? section.heading.trim() : "";
+      const displayHeading = rawHeading === "?" ? "Câu hỏi & Thảo luận" : rawHeading;
       return <section key={section.id ?? index}>
-      {section.heading && (/^#{1,6}\s/.test(section.heading) ? <LessonMarkdown value={section.heading} /> : <h2>{section.heading}</h2>)}{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
+      {displayHeading && (/^#{1,6}\s/.test(displayHeading) ? <LessonMarkdown value={displayHeading} /> : <h2>{displayHeading}</h2>)}{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
     </section>;
     })}
     {(content.knowledgeUnits ?? []).map((unit: any, index: number) => {
@@ -466,6 +618,11 @@ function LessonBody({ content, title, chapter }: { content: string; title: strin
     if (line.length <= 60 && line === line.toLocaleUpperCase("vi") && /\p{L}/u.test(line)) {
       flushParagraph();
       blocks.push(<p className="lesson-ocr-fragment" key={`fragment-${blocks.length}`}>{line}</p>);
+      continue;
+    }
+    if (line.trim() === "?") {
+      flushParagraph();
+      blocks.push(<h3 key={`h3-q-${blocks.length}`} className="lesson-section-question">Câu hỏi & Thảo luận</h3>);
       continue;
     }
     if (/\?\s*$/.test(line)) {
