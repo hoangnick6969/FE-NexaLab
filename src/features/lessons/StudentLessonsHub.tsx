@@ -54,8 +54,6 @@ const text = defineText({
     noShared: "Chưa có bài học chung được phát hành phù hợp với tìm kiếm này.",
     noMatch: "Chưa có nội dung phù hợp. Hãy thử lại sau.",
     ebookLibrary: "Thư viện Ebook",
-    ebookLibraryIntro: "Mở sách giáo khoa theo môn và khối lớp.",
-    ebookLabel: (subject: string, grade: string | null) => grade ? `${subject} lớp ${grade}` : subject,
     allGrades: "Tất cả khối",
     allSubjects: "Tất cả môn",
     gradeShort: (g: number) => `Khối ${g}`,
@@ -103,8 +101,6 @@ const text = defineText({
     noShared: "No published shared lessons match this search.",
     noMatch: "Nothing matches yet. Please try again later.",
     ebookLibrary: "Ebook library",
-    ebookLibraryIntro: "Open textbooks by subject and grade.",
-    ebookLabel: (subject: string, grade: string | null) => grade ? `${subject} grade ${grade}` : subject,
     allGrades: "All grades",
     allSubjects: "All subjects",
     gradeShort: (g: number) => `Grade ${g}`,
@@ -113,7 +109,6 @@ const text = defineText({
 
 type AssignmentRead = { lessons: any[]; assignments: StudentLessonAssignment[] };
 type Filter = "all" | "assigned" | "shared";
-type EbookEdition = { id: string; version: string; url: string; fallbackPhysicalPage: number };
 
 async function readAssignments(): Promise<AssignmentRead> {
   const [lessons, assignments] = await Promise.all([
@@ -308,7 +303,7 @@ export function StudentLessonsHub() {
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const curriculum = useQuery({ queryKey: ["student-open-curriculum"], queryFn: () => api<{ subjects?: Array<{ id: string; name: string; ebookEditions?: EbookEdition[]; grades?: any[] }> }>("/open-curriculum") });
+  const curriculum = useQuery({ queryKey: ["student-open-curriculum"], queryFn: () => api<{ subjects?: Array<{ id: string; name: string; grades?: any[] }> }>("/open-curriculum") });
   const assigned = useQuery<AssignmentRead>({ queryKey: ["student-assigned-lessons"], queryFn: readAssignments });
 
   const catalog = useMemo(() => buildStudentLessonCatalog(
@@ -316,10 +311,6 @@ export function StudentLessonsHub() {
     assigned.data?.lessons ?? [],
     assigned.data?.assignments ?? [],
   ), [curriculum.data, assigned.data]);
-
-  const ebooks = (curriculum.data?.subjects ?? []).flatMap((subject) =>
-    (subject.ebookEditions ?? []).map((edition) => ({ ...edition, subjectId: subject.id, subjectName: subject.name })),
-  );
 
   const allGrades = [6, 7, 8, 9];
   const gradesWithData = useMemo(() => new Set(catalog.map((l) => l.grade)), [catalog]);
@@ -372,19 +363,8 @@ export function StudentLessonsHub() {
         eyebrow={t.eyebrow}
         title={t.title}
         description={t.description}
-        action={ebooks.length ? <a className="secondary" href="#ebooks"><BookOpen size={17} /> {t.ebookLibrary}</a> : null}
+        action={<Link className="secondary" to="/ebooks"><BookOpen size={17} /> {t.ebookLibrary}</Link>}
       />
-
-      {!catalogRoute && ebooks.length > 0 && (
-        <section id="ebooks" className="subject-ebook-links" aria-labelledby="ebook-library-title">
-          <h2 id="ebook-library-title">{t.ebookLibrary}</h2>
-          <p>{t.ebookLibraryIntro}</p>
-          <div>{ebooks.map((edition) => {
-            const grade = edition.version.match(/(?:khtn|grade)[-_ ]?(\d{1,2})/i)?.[1] ?? null;
-            return <Link key={edition.id} to={`/ebooks/${encodeURIComponent(edition.subjectId)}?edition=${encodeURIComponent(edition.id)}`}><BookOpen size={18} /> {t.ebookLabel(edition.subjectName, grade)} <ArrowUpRight size={14} aria-hidden="true" /></Link>;
-          })}</div>
-        </section>
-      )}
 
       {/* Apple-style minimalist Callout container for assigned coursework */}
       {!catalogRoute && filter !== "assigned" && totalAssignedTasks > 0 && (
