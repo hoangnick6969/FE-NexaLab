@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { defineText } from "../../i18n";
-import { fetchRecent, RECENT_KEY, useNoticeActions, type Notice } from "./notices";
+import { fetchRecent, isPriority, RECENT_KEY, toneOf, useNoticeActions, type Notice } from "./notices";
+import { NoticeIcon } from "./NoticeItem";
 
 const text = defineText({
   vi: {
@@ -21,6 +22,8 @@ const text = defineText({
 });
 
 const DWELL_MS = 6000;
+/** Overdue, rejected, due-soon and needs-review notices stay longer so they are not missed. */
+const PRIORITY_DWELL_MS = 12000;
 const EXIT_MS = 280;
 const MAX_VISIBLE = 3;
 
@@ -88,14 +91,14 @@ function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
       return () => window.clearTimeout(timer);
     }
     if (paused) return;
-    const timer = window.setTimeout(() => setLeaving(true), DWELL_MS);
+    const timer = window.setTimeout(() => setLeaving(true), toast.notice && isPriority(toast.notice) ? PRIORITY_DWELL_MS : DWELL_MS);
     return () => window.clearTimeout(timer);
-  }, [leaving, paused]);
+  }, [leaving, paused, toast.notice]);
 
   const close = () => setLeaving(true);
   return (
     <div
-      className={`notification-toast${leaving ? " leaving" : ""}`}
+      className={`notification-toast tone-${toast.notice ? toneOf(toast.notice) : "task"}${leaving ? " leaving" : ""}`}
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -112,13 +115,19 @@ function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
             void actions.open(toast.notice!);
           }}
         >
-          <b>{toast.notice.title}</b>
-          {toast.notice.body && <span>{toast.notice.body}</span>}
+          <NoticeIcon notice={toast.notice} />
+          <span className="notification-toast-text">
+            <b>{toast.notice.title}</b>
+            {toast.notice.body && <span>{toast.notice.body}</span>}
+          </span>
         </button>
       ) : (
         <Link to="/notifications" className="notification-toast-body" onClick={close}>
-          <b>{t.many(toast.many ?? 0)}</b>
-          <span>{t.seeAll}</span>
+          <NoticeIcon notice={{ type: "ASSIGNMENT_CREATED" }} />
+          <span className="notification-toast-text">
+            <b>{t.many(toast.many ?? 0)}</b>
+            <span>{t.seeAll}</span>
+          </span>
         </Link>
       )}
       <button type="button" className="notification-toast-close" aria-label={t.close} onClick={close}>

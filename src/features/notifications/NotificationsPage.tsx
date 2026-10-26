@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Empty, ErrorBox, InlineLoader } from "../../components/ui";
-import { useNoticeActions, type NoticeList } from "./notices";
-import { defineText, formatDateTime } from "../../i18n";
+import { splitByPriority, useNoticeActions, type NoticeList } from "./notices";
+import { NoticeGroup } from "./NoticeItem";
+import { defineText } from "../../i18n";
 
 const text = defineText({
   vi: {
@@ -15,7 +16,8 @@ const text = defineText({
     markAll: "Đánh dấu tất cả đã đọc",
     loading: "Đang tải thông báo…",
     empty: "Chưa có thông báo nào.",
-    unreadSuffix: " · Chưa đọc",
+    priority: "Cần chú ý",
+    latest: "Mới nhất",
   },
   en: {
     title: "Notifications",
@@ -26,7 +28,8 @@ const text = defineText({
     markAll: "Mark all as read",
     loading: "Loading notifications…",
     empty: "No notifications yet.",
-    unreadSuffix: " · Unread",
+    priority: "Needs attention",
+    latest: "Latest",
   },
 });
 
@@ -35,6 +38,7 @@ export function NotificationsPage() {
   const t = text();
   const list = useQuery<NoticeList>({ queryKey: ["notifications"], queryFn: () => api("/me/notifications"), refetchInterval: 30_000 });
   const { read, readAll, open } = useNoticeActions();
+  const { priority, rest } = splitByPriority(list.data?.items ?? []);
   return (
     <>
       <PageHeading title={t.title} description={t.description} />
@@ -50,20 +54,8 @@ export function NotificationsPage() {
         {list.isLoading && <InlineLoader message={t.loading} />}
         <ErrorBox error={list.error || read.error || readAll.error} />
         {list.data && !list.data.items.length && <Empty>{t.empty}</Empty>}
-        <ul className="notification-list">
-          {list.data?.items.map((notice) => (
-            <li key={notice.id}>
-              <button type="button" className={`notification-item${notice.readAt ? "" : " unread"}`} onClick={() => void open(notice)}>
-                <b>{notice.title}</b>
-                {notice.body && <span>{notice.body}</span>}
-                <small>
-                  {formatDateTime(notice.createdAt)}
-                  {notice.readAt ? "" : t.unreadSuffix}
-                </small>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {priority.length > 0 && <NoticeGroup title={t.priority} notices={priority} onOpen={(notice) => void open(notice)} />}
+        {rest.length > 0 && <NoticeGroup title={priority.length ? t.latest : undefined} notices={rest} onOpen={(notice) => void open(notice)} />}
       </section>
     </>
   );

@@ -4,8 +4,9 @@ import { Bell } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import { ErrorBox, InlineLoader } from "../../components/ui";
-import { defineText, formatDateTime } from "../../i18n";
-import { fetchRecent, RECENT_KEY, UNREAD_KEY, useNoticeActions, type NoticeList } from "./notices";
+import { defineText } from "../../i18n";
+import { fetchRecent, RECENT_KEY, RECENT_SHOWN, splitByPriority, UNREAD_KEY, useNoticeActions, type Notice, type NoticeList } from "./notices";
+import { NoticeGroup } from "./NoticeItem";
 import { NotificationToasts } from "./NotificationToasts";
 
 export { UNREAD_KEY } from "./notices";
@@ -18,7 +19,8 @@ const text = defineText({
     loading: "Đang tải thông báo…",
     empty: "Chưa có thông báo nào.",
     emptyHint: "Bài được giao, bài nộp và hạn nộp sẽ hiện ở đây.",
-    unreadSuffix: "Chưa đọc",
+    priority: "Cần chú ý",
+    latest: "Mới nhất",
     seeAll: "Xem tất cả thông báo",
   },
   en: {
@@ -28,7 +30,8 @@ const text = defineText({
     loading: "Loading notifications…",
     empty: "No notifications yet.",
     emptyHint: "Assigned work, submissions and due dates will show up here.",
-    unreadSuffix: "Unread",
+    priority: "Needs attention",
+    latest: "Latest",
     seeAll: "See all notifications",
   },
 });
@@ -70,6 +73,12 @@ export function NotificationBell() {
   }, [open]);
 
   const unreadInList = recent.data?.unreadCount ?? count;
+  const { priority, rest: others } = splitByPriority(recent.data?.items ?? []);
+  const rest = others.slice(0, Math.max(RECENT_SHOWN - priority.length, 3));
+  const openNotice = (notice: Notice) => {
+    setOpen(false);
+    void actions.open(notice);
+  };
   return (
     <div className="notification-menu" ref={rootRef}>
       <button
@@ -103,27 +112,10 @@ export function NotificationBell() {
             </div>
           )}
           {Boolean(recent.data?.items.length) && (
-            <ul className="notification-panel-list">
-              {recent.data!.items.map((notice) => (
-                <li key={notice.id}>
-                  <button
-                    type="button"
-                    className={`notification-panel-item${notice.readAt ? "" : " unread"}`}
-                    onClick={() => {
-                      setOpen(false);
-                      void actions.open(notice);
-                    }}
-                  >
-                    <b>{notice.title}</b>
-                    {notice.body && <span>{notice.body}</span>}
-                    <small>
-                      {formatDateTime(notice.createdAt)}
-                      {!notice.readAt && <em>{t.unreadSuffix}</em>}
-                    </small>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="notification-panel-scroll">
+              {priority.length > 0 && <NoticeGroup title={t.priority} notices={priority} onOpen={openNotice} />}
+              {rest.length > 0 && <NoticeGroup title={priority.length ? t.latest : undefined} notices={rest} onOpen={openNotice} />}
+            </div>
           )}
           <Link to="/notifications" className="notification-panel-all">
             {t.seeAll}
