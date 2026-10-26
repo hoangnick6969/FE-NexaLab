@@ -479,3 +479,17 @@ export async function inlineMaterial(url: string): Promise<InlineMaterial> {
   const src = URL.createObjectURL(await response.blob());
   return { src, revoke: () => URL.revokeObjectURL(src) };
 }
+
+export type StreamMaterial = InlineMaterial & { signed: boolean };
+
+/**
+ * Media the player can stream. A pinned version (`assetv:`) gets a short-lived signed storage URL, so the
+ * browser fetches only the ranges it plays; `signed` tells the caller to ask again once that URL expires.
+ * Legacy disk files (`asset:`) need the bearer header and fall back to a full blob download.
+ */
+export async function streamMaterial(url: string): Promise<StreamMaterial> {
+  const version = /^assetv:(.+)$/.exec(url)?.[1];
+  if (!version) return { ...(await inlineMaterial(url)), signed: false };
+  const access = await api<{ url: string }>(`/assets/versions/${encodeURIComponent(version)}/access`);
+  return { src: access.url, revoke: () => undefined, signed: true };
+}

@@ -87,4 +87,17 @@ export const formatDateTime = (value: string | number | Date, options?: Intl.Dat
   new Date(value).toLocaleString(intlLocale(), options);
 export const formatTime = (value: string | number | Date, options?: Intl.DateTimeFormatOptions) =>
   new Date(value).toLocaleTimeString(intlLocale(), options);
+/** "5 phút trước" / "5 minutes ago"; under a minute reads "now". */
+export const formatRelative = (value: string | number | Date, now = Date.now()) => {
+  const seconds = Math.round((new Date(value).getTime() - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(), { numeric: "auto" });
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [["second", 60], ["minute", 60], ["hour", 24], ["day", 7], ["week", 4.35], ["month", 12], ["year", Infinity]];
+  let amount = seconds;
+  for (const [unit, size] of steps) {
+    if (unit === "second" && Math.abs(amount) < 60) return rtf.format(0, "second");
+    if (Math.abs(amount) < size) return rtf.format(Math.round(amount), unit);
+    amount /= size;
+  }
+  return rtf.format(Math.round(amount), "year");
+};
 export const formatNumber = (value: number, options?: Intl.NumberFormatOptions) => value.toLocaleString(intlLocale(), options);

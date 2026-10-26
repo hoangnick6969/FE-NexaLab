@@ -1,222 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { PDFDataRangeTransport, PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, Columns2, ExternalLink, Highlighter, LoaderCircle, Maximize2, Minimize2, Minus, Plus, StickyNote, Underline, X } from "lucide-react";
-import { api, getAssetAccess, useAuth } from "../../lib/api";
+import { ArrowLeft, ArrowRight, BookOpen, Columns2, ExternalLink, Highlighter, LoaderCircle, Maximize2, Minimize2, Minus, Plus, StickyNote, Underline } from "lucide-react";
+import { api, useAuth } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { httpsUrl } from "../../lib/urls";
-import { defineText } from "../../i18n";
-
-const text = defineText({
-  vi: {
-    choosePage: (n: number) => `Chọn trang ${n}`,
-    readerFailed: "Không tải được bộ đọc ebook",
-    partialFailed: "Máy chủ không trả được một phần trang PDF",
-    pageDataFailed: "Không tải được dữ liệu trang PDF",
-    ebookFailed: "Không tải được ebook",
-    noCanvas: "Trình duyệt không hỗ trợ hiển thị trang PDF",
-    renderFailed: "Không hiển thị được trang ebook",
-    noFullscreen: "Trình duyệt này chưa hỗ trợ chế độ toàn màn hình.",
-    opening: "Đang mở ebook…",
-    backToLesson: "Quay lại bài học",
-    noEbook: "Chưa có ebook cho môn học này",
-    sourceUnavailable: "Không tìm được tài liệu SGK riêng tư được cấp quyền từ bài học nguồn.",
-    unsafeLink: "Liên kết ebook chưa được cấu hình hoặc không an toàn.",
-    noFingerprint: "Tài liệu chưa cung cấp mã phiên bản; các tính năng đồng bộ ghi chú đang tạm khóa.",
-    toolbar: "Công cụ đọc ebook",
-    backToLibrary: "Quay lại thư viện",
-    textbookShort: (subject: string) => `SGK ${subject}`,
-    digitalTextbook: "Sách giáo khoa điện tử",
-    firstPage: "Về trang đầu",
-    previousPage: "Trang trước",
-    currentPage: "Trang hiện tại",
-    pageNumber: "Số trang",
-    lastPage: "Về trang cuối",
-    zoomOut: "Thu nhỏ",
-    zoomIn: "Phóng to",
-    toSingle: "Chuyển sang một trang",
-    toDouble: "Chuyển sang hai trang",
-    single: "Một trang",
-    double: "Hai trang",
-    openNotes: "Mở ghi chú",
-    openOriginalLabel: "Mở PDF gốc",
-    exitFullscreen: "Thoát toàn màn hình",
-    fullscreen: "Toàn màn hình",
-    markTools: "Công cụ đánh dấu",
-    read: "Đọc",
-    highlight: "Tô sáng",
-    underline: "Gạch chân",
-    note: "Ghi chú",
-    loadInReaderFailed: "Không tải được sách trong trình đọc",
-    checkConnection: "Kiểm tra kết nối rồi thử lại, hoặc mở PDF gốc trong tab mới.",
-    reload: "Thử tải lại",
-    openOriginal: "Mở PDF gốc",
-    notShown: "Trang chưa hiển thị",
-    renderAgain: "Thử hiển thị lại",
-    loadingPage: "Đang tải trang…",
-    pageOf: (n: number, subject: string) => `Trang ${n} của ${subject}`,
-    readingProgress: "Tiến độ đọc sách",
-    swipeHint: "Vuốt hoặc dùng phím ← →",
-    dragHint: "Kéo chọn nội dung trên trang",
-    closeNotes: "Đóng ghi chú",
-    yourNotes: "GHI CHÚ CỦA EM",
-    marksAndNotes: "Đánh dấu & ghi chú",
-    selected: "Đoạn đã chọn",
-    noteFor: "Ghi chú cho đoạn này",
-    notePlaceholder: "Viết điều em muốn nhớ…",
-    chooseTool: "Chọn một công cụ để lưu đoạn này.",
-    saving: "Đang lưu…",
-    saveNote: "Lưu ghi chú",
-    underlineThis: "Gạch chân đoạn này",
-    highlightThis: "Tô sáng đoạn này",
-    loadingNotes: "Đang tải ghi chú…",
-    noNotes: "Chưa có ghi chú. Chọn một đoạn để đánh dấu hoặc ghi lại điều cần nhớ.",
-    pageCaps: (n: number) => `TRANG ${n}`,
-    kindHighlight: "TÔ SÁNG",
-    kindUnderline: "GẠCH CHÂN",
-    kindNote: "GHI CHÚ",
-    save: "Lưu",
-    cancel: "Hủy",
-    editNote: "Sửa ghi chú",
-    delete: "Xóa",
-    loading: "Đang tải…",
-    olderNotes: "Tải ghi chú cũ hơn",
-    privacy: "Ghi chú chỉ hiển thị với tài khoản của em và được đồng bộ theo phiên bản sách.",
-  },
-  en: {
-    choosePage: (n: number) => `Choose page ${n}`,
-    readerFailed: "The ebook reader could not be loaded",
-    partialFailed: "The server could not return part of the PDF page",
-    pageDataFailed: "The PDF page data could not be loaded",
-    ebookFailed: "The ebook could not be loaded",
-    noCanvas: "This browser cannot display PDF pages",
-    renderFailed: "The ebook page could not be displayed",
-    noFullscreen: "This browser does not support full screen.",
-    opening: "Opening the ebook…",
-    backToLesson: "Back to the lesson",
-    noEbook: "No ebook for this subject yet",
-    sourceUnavailable: "No authorized private textbook was found for the source lesson.",
-    unsafeLink: "The ebook link is not configured or not safe.",
-    noFingerprint: "The document has no version id; note syncing is paused.",
-    toolbar: "Ebook reading tools",
-    backToLibrary: "Back to the library",
-    textbookShort: (subject: string) => `${subject} textbook`,
-    digitalTextbook: "Digital textbook",
-    firstPage: "First page",
-    previousPage: "Previous page",
-    currentPage: "Current page",
-    pageNumber: "Page number",
-    lastPage: "Last page",
-    zoomOut: "Zoom out",
-    zoomIn: "Zoom in",
-    toSingle: "Switch to one page",
-    toDouble: "Switch to two pages",
-    single: "One page",
-    double: "Two pages",
-    openNotes: "Open notes",
-    openOriginalLabel: "Open the original PDF",
-    exitFullscreen: "Exit full screen",
-    fullscreen: "Full screen",
-    markTools: "Marking tools",
-    read: "Read",
-    highlight: "Highlight",
-    underline: "Underline",
-    note: "Note",
-    loadInReaderFailed: "The book could not load in the reader",
-    checkConnection: "Check your connection and try again, or open the original PDF in a new tab.",
-    reload: "Reload",
-    openOriginal: "Open the original PDF",
-    notShown: "The page is not shown",
-    renderAgain: "Try displaying again",
-    loadingPage: "Loading the page…",
-    pageOf: (n: number, subject: string) => `Page ${n} of ${subject}`,
-    readingProgress: "Reading progress",
-    swipeHint: "Swipe or use the ← → keys",
-    dragHint: "Drag to select text on the page",
-    closeNotes: "Close notes",
-    yourNotes: "YOUR NOTES",
-    marksAndNotes: "Marks & notes",
-    selected: "Selected text",
-    noteFor: "Note for this passage",
-    notePlaceholder: "Write what you want to remember…",
-    chooseTool: "Choose a tool to save this passage.",
-    saving: "Saving…",
-    saveNote: "Save note",
-    underlineThis: "Underline this passage",
-    highlightThis: "Highlight this passage",
-    loadingNotes: "Loading notes…",
-    noNotes: "No notes yet. Select a passage to mark it or note what to remember.",
-    pageCaps: (n: number) => `PAGE ${n}`,
-    kindHighlight: "HIGHLIGHT",
-    kindUnderline: "UNDERLINE",
-    kindNote: "NOTE",
-    save: "Save",
-    cancel: "Cancel",
-    editNote: "Edit note",
-    delete: "Delete",
-    loading: "Loading…",
-    olderNotes: "Load older notes",
-    privacy: "Notes are visible only to your account and sync with the book version.",
-  },
-});
-const t = text();
-const RANGE_CHUNK_SIZE = 1_048_576;
-
-type Annotation = {
-  id: string;
-  pageNumber: number;
-  kind: "HIGHLIGHT" | "UNDERLINE" | "NOTE";
-  startOffset: number;
-  endOffset: number;
-  selectedText: string;
-  prefix: string | null;
-  suffix: string | null;
-  noteText: string | null;
-};
-
-type FallbackMark = { id: string; kind: Annotation["kind"]; left: number; top: number; width: number; height: number };
-
-function EbookCompanionPage({ document, pageNumber, zoom, onActivate }: { document: PDFDocumentProxy; pageNumber: number; zoom: number; onActivate: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let active = true;
-    let renderTask: RenderTask | undefined;
-    setReady(false);
-    void document.getPage(pageNumber).then((page) => {
-      if (!active) return;
-      const base = page.getViewport({ scale: 1 });
-      const host = canvas.closest(".ebook-page-viewport") as HTMLElement | null;
-      const maxWidth = ((host?.clientWidth || 760) - 76) / 2;
-      const viewportHeight = Math.max(260, window.innerHeight - (window.document.fullscreenElement ? 150 : 300));
-      const maxHeight = Math.min((host?.clientHeight || 520) - 34, viewportHeight);
-      const scale = Math.min(1.45, Math.max(0.02, Math.min(maxWidth / base.width, maxHeight / base.height))) * zoom;
-      const viewport = page.getViewport({ scale });
-      const outputScale = Math.min(window.devicePixelRatio || 1, 2);
-      const context = canvas.getContext("2d");
-      if (!context) return;
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
-      renderTask = page.render({ canvas, canvasContext: context, viewport, ...(outputScale === 1 ? {} : { transform: [outputScale, 0, 0, outputScale, 0, 0] }) });
-      return renderTask.promise;
-    }).then(() => { if (active) setReady(true); }).catch((error: unknown) => {
-      if (active && !(error instanceof Error && error.name === "RenderingCancelledException")) setReady(false);
-    });
-    return () => { active = false; renderTask?.cancel(); };
-  }, [document, pageNumber, zoom]);
-
-  return <div className={`ebook-pdf-page companion-page${ready ? " is-ready" : ""}`} role="button" tabIndex={0} aria-label={t.choosePage(pageNumber)} onClick={onActivate} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onActivate(); } }}>
-    {!ready && <LoaderCircle className="spin companion-loader" aria-hidden="true" />}
-    <canvas ref={canvasRef} />
-  </div>;
-}
+import { t } from "./ebookText";
+import { rangeForOffsets, type Annotation, type FallbackMark } from "./annotations";
+import { EbookCompanionPage } from "./EbookCompanionPage";
+import { EbookAnnotationPanel } from "./EbookAnnotationPanel";
+import { usePdfDocument } from "./usePdfDocument";
+import "./ebook.css";
 
 export function EbookReader() {
   const { subjectId = "" } = useParams();
@@ -224,47 +19,18 @@ export function EbookReader() {
   const user = useAuth((state) => state.user)!;
   const queryClient = useQueryClient();
   const routeState = location.state as { fromLessonId?: string; initialPhysicalPage?: number; ebookUrl?: string } | null;
-  const searchParams = new URLSearchParams(location.search);
-  const sourceLessonId = searchParams.get("sourceLessonId");
-  const editionId = searchParams.get("edition");
-  const [reloadKey, setReloadKey] = useState(0);
-  const [pdfjs, setPdfjs] = useState<typeof import("pdfjs-dist") | null>(null);
   const subjectQuery = useQuery({ queryKey: ["subjects"], queryFn: () => api<any[]>("/subjects") });
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
-  const sourceLessonQuery = useQuery({
-    queryKey: ["ebook-source-lesson", sourceLessonId],
-    queryFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(sourceLessonId!)}`),
-    enabled: Boolean(sourceLessonId),
-    retry: false,
-  });
-  const sourceAssetVersionId = sourceLessonQuery.data?.sourceDocument?.assetVersionId as string | undefined;
-  const sourceAccessQuery = useQuery({
-    queryKey: ["ebook-source-access", sourceAssetVersionId, reloadKey],
-    queryFn: () => getAssetAccess(sourceAssetVersionId!),
-    enabled: Boolean(sourceAssetVersionId),
-    retry: false,
-  });
-  const sourceByteLength = sourceAccessQuery.data?.bytes ?? null;
-  const edition = subject?.ebookEditions?.find((item: any) => item.id === editionId);
-  const url = sourceLessonId
-    ? sourceAccessQuery.data?.url ?? null
-    : editionId
-      ? httpsUrl(edition?.url)
-      : httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
-  const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
+  const url = httpsUrl(routeState?.ebookUrl) ?? httpsUrl(subject?.ebookUrl);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageCount, setPageCount] = useState(0);
-  const [fingerprint, setFingerprint] = useState("");
-  const [loadError, setLoadError] = useState("");
+  const [pageInput, setPageInput] = useState("1");
+  const { pdfjs, document, pageCount, fingerprint, loadError, reload } = usePdfDocument(url, routeState?.initialPhysicalPage, (page) => { setPageNumber(page); setPageInput(String(page)); });
   const [renderError, setRenderError] = useState("");
   const [renderRetry, setRenderRetry] = useState(0);
   const [renderedPage, setRenderedPage] = useState(0);
   const [mode, setMode] = useState<"read" | "highlight" | "underline" | "note">("read");
   const [selection, setSelection] = useState<{ text: string; start: number; end: number; prefix: string; suffix: string } | null>(null);
   const [noteText, setNoteText] = useState("");
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [pageInput, setPageInput] = useState("1");
   const [zoom, setZoom] = useState(1);
   const [fallbackMarks, setFallbackMarks] = useState<FallbackMark[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -289,99 +55,11 @@ export function EbookReader() {
     getNextPageParam: (lastPage, pages) => lastPage.length === 500 ? pages.length * 500 : undefined,
     enabled: Boolean(fingerprint && url),
   });
+  const refreshAnnotations = () => queryClient.invalidateQueries({ queryKey: ["ebook-annotations", user.id, subjectId, fingerprint] });
   const saveAnnotation = useMutation({
     mutationFn: (body: Record<string, unknown>) => api<Annotation>(`/subjects/${encodeURIComponent(subjectId)}/ebook-annotations`, "POST", body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ebook-annotations", user.id, subjectId, fingerprint] }),
+    onSuccess: refreshAnnotations,
   });
-  const updateAnnotation = useMutation({
-    mutationFn: ({ id, noteText: text }: { id: string; noteText: string }) => api(`/ebook-annotations/${encodeURIComponent(id)}`, "PUT", { kind: "NOTE", noteText: text }),
-    onSuccess: () => { setEditId(null); queryClient.invalidateQueries({ queryKey: ["ebook-annotations", user.id, subjectId, fingerprint] }); },
-  });
-  const deleteAnnotation = useMutation({
-    mutationFn: (id: string) => api(`/ebook-annotations/${encodeURIComponent(id)}`, "DELETE"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ebook-annotations", user.id, subjectId, fingerprint] }),
-  });
-
-  useEffect(() => {
-    let active = true;
-    void import("pdfjs-dist").then((module) => {
-      module.GlobalWorkerOptions.workerSrc = workerUrl;
-      if (active) setPdfjs(module);
-    }).catch((error: unknown) => {
-      if (active) setLoadError(error instanceof Error ? error.message : t.readerFailed);
-    });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!url || !pdfjs) return;
-    let active = true;
-    let task: PDFDocumentLoadingTask | undefined;
-    let rangeTransport: PDFDataRangeTransport | undefined;
-    const rangeControllers = new Set<AbortController>();
-    const loadController = new AbortController();
-    setLoadError(""); setDocument(null); setFingerprint(""); setPageNumber(1); setPageCount(0);
-    const load = async () => {
-      try {
-        let length = Number.isSafeInteger(sourceByteLength) && sourceByteLength! > 0 ? sourceByteLength! : 0;
-        let firstRange: Response | null = null;
-        if (sourceLessonId) {
-          if (!length) throw new Error(t.partialFailed);
-          firstRange = await fetch(url, { headers: { Range: `bytes=0-${RANGE_CHUNK_SIZE - 1}` }, signal: loadController.signal });
-        } else {
-          try {
-            const head = await fetch(url, { method: "HEAD", signal: loadController.signal });
-            length = Number(head.headers.get("content-length"));
-            if (!head.ok || !Number.isSafeInteger(length) || length <= 0) length = 0;
-            if (length) firstRange = await fetch(url, { headers: { Range: `bytes=0-${RANGE_CHUNK_SIZE - 1}` }, signal: loadController.signal });
-          } catch {
-            // External ebook links may not support range metadata.
-          }
-        }
-        if (!active) return;
-        if (length && firstRange?.status === 206) {
-          const initialData = new Uint8Array(await firstRange.arrayBuffer());
-          if (!active) return;
-          rangeTransport = new pdfjs.PDFDataRangeTransport(length, initialData);
-          rangeTransport.requestDataRange = (begin, end) => {
-            const controller = new AbortController();
-            rangeControllers.add(controller);
-            void fetch(url, { headers: { Range: `bytes=${begin}-${end - 1}` }, signal: controller.signal })
-              .then(async (response) => {
-                if (response.status !== 206) throw new Error(t.partialFailed);
-                return new Uint8Array(await response.arrayBuffer());
-              })
-              .then((data) => { if (active) rangeTransport?.onDataRange(begin, data); })
-              .catch((error: unknown) => {
-                if (active && !(error instanceof Error && error.name === "AbortError")) {
-                  setLoadError(error instanceof Error ? error.message : t.pageDataFailed);
-                  void task?.destroy();
-                }
-              })
-              .finally(() => rangeControllers.delete(controller));
-          };
-          rangeTransport.abort = () => { rangeControllers.forEach((controller) => controller.abort()); rangeControllers.clear(); };
-          task = pdfjs.getDocument({ range: rangeTransport, rangeChunkSize: RANGE_CHUNK_SIZE, disableStream: true, disableAutoFetch: true });
-        } else {
-          await firstRange?.body?.cancel();
-          if (sourceLessonId) throw new Error(t.partialFailed);
-        }
-        task ??= pdfjs.getDocument({ url, withCredentials: false });
-        const loaded = await task.promise;
-        if (!active) return;
-        const configuredPage = editionId ? edition?.fallbackPhysicalPage : routeState?.initialPhysicalPage;
-        const initial = Number.isInteger(configuredPage) ? configuredPage : 1;
-        const startPage = Math.min(loaded.numPages, Math.max(1, initial));
-        setDocument(loaded); setPageCount(loaded.numPages); setPageNumber(startPage); setPageInput(String(startPage));
-        setFingerprint(loaded.fingerprints.find((value): value is string => Boolean(value)) ?? "");
-      } catch (error) {
-        if (active) setLoadError(error instanceof Error ? error.message : t.ebookFailed);
-      }
-    };
-    void load();
-    return () => { active = false; loadController.abort(); rangeTransport?.abort(); void task?.destroy(); };
-  }, [edition?.fallbackPhysicalPage, editionId, pdfjs, url, reloadKey, routeState?.initialPhysicalPage, sourceByteLength, sourceLessonId]);
-
   useEffect(() => {
     const updateFullscreen = () => setIsFullscreen(window.document.fullscreenElement === readerRef.current);
     window.document.addEventListener("fullscreenchange", updateFullscreen);
@@ -537,10 +215,8 @@ export function EbookReader() {
     if (Math.abs(dx) >= 56 && Math.abs(dx) > Math.abs(dy) * 1.25) turnPage(dx < 0 ? "next" : "previous");
   };
 
-  if (subjectQuery.isLoading || (sourceLessonId && (sourceLessonQuery.isLoading || sourceAccessQuery.isLoading))) return <PageLoader message={t.opening} />;
+  if (subjectQuery.isLoading) return <PageLoader message={t.opening} />;
   if (subjectQuery.error) return <><ErrorBox error={subjectQuery.error} /><Link to="/lessons">{t.backToLesson}</Link></>;
-  if (sourceLessonId && (sourceLessonQuery.error || sourceAccessQuery.error || (sourceLessonQuery.data && !sourceAssetVersionId)))
-    return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.noEbook}</h1><p>{t.sourceUnavailable}</p><ErrorBox error={sourceLessonQuery.error || sourceAccessQuery.error} /><Link className="primary" to="/lessons">{t.backToLesson}</Link></section>;
   if (!subject || !url) return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.noEbook}</h1><p>{t.unsafeLink}</p><Link className="primary" to="/lessons">{t.backToLesson}</Link></section>;
   const annotations = annotationsQuery.data?.pages.flat() ?? [];
   const companionPage = useSpread
@@ -582,7 +258,7 @@ export function EbookReader() {
           </div>
         </div>
         {fullscreenError && <p className="notice" role="status">{fullscreenError}</p>}
-        {loadError ? <div className="ebook-load-error" role="alert"><BookOpen /><h2>{t.loadInReaderFailed}</h2><p>{t.checkConnection}</p><button className="primary" type="button" onClick={() => setReloadKey((value) => value + 1)}>{t.reload}</button> <a href={url} target="_blank" rel="noopener noreferrer">{t.openOriginal} <ExternalLink size={14} /></a><small>{loadError}</small></div> : <div className="ebook-page-viewport" ref={pageHostRef} onPointerDown={(event) => { swipeStartRef.current = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null; }} onPointerUp={finishPageSwipe} onPointerCancel={() => { swipeStartRef.current = null; }}>
+        {loadError ? <div className="ebook-load-error" role="alert"><BookOpen /><h2>{t.loadInReaderFailed}</h2><p>{t.checkConnection}</p><button className="primary" type="button" onClick={reload}>{t.reload}</button> <a href={url} target="_blank" rel="noopener noreferrer">{t.openOriginal} <ExternalLink size={14} /></a><small>{loadError}</small></div> : <div className="ebook-page-viewport" ref={pageHostRef} onPointerDown={(event) => { swipeStartRef.current = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null; }} onPointerUp={finishPageSwipe} onPointerCancel={() => { swipeStartRef.current = null; }}>
           <button className="ebook-edge-control previous" type="button" aria-label={t.previousPage} disabled={pageNumber <= 1} onClick={() => turnPage("previous")}><ArrowLeft size={22} /></button>
           {(!document || renderError) && <div className="ebook-page-loading" role="status">{renderError ? <><b>{t.notShown}</b><span>{renderError}</span><button className="secondary" type="button" onClick={() => setRenderRetry((value) => value + 1)}>{t.renderAgain}</button></> : <><LoaderCircle className="spin" /><span>{t.loadingPage}</span></>}</div>}
           <div key={turnKey} className={`ebook-book${companionPage ? " is-spread" : " is-single"} turn-${turnDirection}`}>
@@ -602,43 +278,21 @@ export function EbookReader() {
           <span>{mode === "read" ? t.swipeHint : t.dragHint}</span>
         </div>
       </section>
-      {notesOpen && <button className="ebook-notes-scrim" type="button" aria-label={t.closeNotes} onClick={() => setNotesOpen(false)} />}
-      <aside id="ebook-notes-panel" className={`panel ebook-annotation-panel${notesOpen ? " is-open" : ""}`} aria-hidden={!notesOpen}>
-        <button className="ebook-notes-close" type="button" aria-label={t.closeNotes} onClick={() => setNotesOpen(false)}><X size={19} /></button>
-        <div className="annotation-panel-heading"><div><span className="eyebrow">{t.yourNotes}</span><h2>{t.marksAndNotes}</h2></div><span className="badge outline">{annotations.length}</span></div>
-        {selection && <div className="ebook-selection-card"><small>{t.selected}</small><blockquote>{selection.text}</blockquote>{mode === "note" && <label className="field"><span>{t.noteFor}</span><textarea rows={3} value={noteText} onChange={(event) => setNoteText(event.target.value)} placeholder={t.notePlaceholder} /></label>}{mode === "read" ? <p>{t.chooseTool}</p> : <button className="primary" type="button" disabled={saveAnnotation.isPending || (mode === "note" && !noteText.trim())} onClick={() => saveSelected(mode === "note" ? "NOTE" : mode === "underline" ? "UNDERLINE" : "HIGHLIGHT")}>{saveAnnotation.isPending ? t.saving : mode === "note" ? t.saveNote : mode === "underline" ? t.underlineThis : t.highlightThis}</button>}</div>}
-        <ErrorBox error={annotationsQuery.error || saveAnnotation.error || updateAnnotation.error || deleteAnnotation.error} />
-        {annotationsQuery.isLoading ? <p className="muted">{t.loadingNotes}</p> : annotations.length === 0 ? <p className="muted">{t.noNotes}</p> : <div className="ebook-annotation-list">{annotations.map((annotation) => <article className={`ebook-annotation-item ${annotation.kind.toLowerCase()}`} key={annotation.id}>
-          <button className="annotation-quote" type="button" onClick={() => goToPage(annotation.pageNumber)}><small>{t.pageCaps(annotation.pageNumber)} · {annotation.kind === "HIGHLIGHT" ? t.kindHighlight : annotation.kind === "UNDERLINE" ? t.kindUnderline : t.kindNote}</small><span>{annotation.selectedText}</span></button>
-          {editId === annotation.id ? <div className="annotation-edit"><textarea rows={3} value={editText} onChange={(event) => setEditText(event.target.value)} /><button type="button" className="primary" disabled={!editText.trim() || updateAnnotation.isPending} onClick={() => updateAnnotation.mutate({ id: annotation.id, noteText: editText.trim() })}>{t.save}</button><button type="button" className="text-button" onClick={() => setEditId(null)}>{t.cancel}</button></div> : annotation.noteText && <p>{annotation.noteText}</p>}
-          {annotation.kind === "NOTE" && editId !== annotation.id && <button type="button" className="text-button" onClick={() => { setEditId(annotation.id); setEditText(annotation.noteText ?? ""); }}>{t.editNote}</button>}
-          <button type="button" className="text-button" disabled={deleteAnnotation.isPending} onClick={() => deleteAnnotation.mutate(annotation.id)}>{t.delete}</button>
-        </article>)}</div>}
-        {annotationsQuery.hasNextPage && <button className="secondary" type="button" disabled={annotationsQuery.isFetchingNextPage} onClick={() => annotationsQuery.fetchNextPage()}>{annotationsQuery.isFetchingNextPage ? t.loading : t.olderNotes}</button>}
-        <p className="tiny muted">{t.privacy}</p>
-      </aside>
+      <EbookAnnotationPanel
+        open={notesOpen}
+        onClose={() => setNotesOpen(false)}
+        annotationsQuery={annotationsQuery}
+        annotations={annotations}
+        selection={selection}
+        mode={mode}
+        noteText={noteText}
+        setNoteText={setNoteText}
+        onSave={saveSelected}
+        savePending={saveAnnotation.isPending}
+        saveError={saveAnnotation.error}
+        onChanged={refreshAnnotations}
+        goToPage={goToPage}
+      />
     </div>
   </div>;
-}
-
-function rangeForOffsets(container: HTMLElement, startOffset: number, endOffset: number): Range | null {
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  const range = document.createRange();
-  let node = walker.nextNode() as Text | null;
-  let cursor = 0;
-  let started = false;
-  while (node) {
-    const end = cursor + node.length;
-    if (!started && startOffset >= cursor && startOffset <= end) {
-      range.setStart(node, Math.min(node.length, startOffset - cursor));
-      started = true;
-    }
-    if (started && endOffset <= end) {
-      range.setEnd(node, Math.min(node.length, endOffset - cursor));
-      return range;
-    }
-    cursor = end;
-    node = walker.nextNode() as Text | null;
-  }
-  return null;
 }

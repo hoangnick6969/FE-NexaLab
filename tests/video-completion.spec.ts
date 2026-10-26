@@ -267,3 +267,36 @@ test("asset video refreshes authentication, creates a blob URL, and revokes it o
   await page.getByRole("complementary").getByRole("link", { name: "Bài học", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__objectUrlCalls.revoked)).toContain(created);
 });
+
+test("versioned asset video streams from a signed URL and re-signs it when playback fails", async ({ page }) => {
+  const versionId = "cmvideoversion000000001";
+  let basePathway: any;
+  let accessCalls = 0;
+  let fileRequests = 0;
+  await page.route("**/api/lessons/*/pathway*", async (route) => {
+    const response = await route.fetch();
+    basePathway = await response.json();
+    await route.fulfill({ response, json: currentVideoPathway(basePathway, { title: "Video phiên bản", url: `assetv:${versionId}` }, false, 0, 0) });
+  });
+  await page.route(`**/api/assets/versions/${versionId}/access`, async (route) => {
+    accessCalls++;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ url: `https://media.example.test/signed-${accessCalls}.mp4`, expiresAt: new Date(Date.now() + 300000).toISOString(), mime: "video/mp4" }) });
+  });
+  await page.route("**/api/files/**", (route) => {
+    fileRequests++;
+    return route.abort();
+  });
+  // Every signed URL "expires": the player asks for a fresh one twice, then shows the unavailable notice.
+  await page.route("https://media.example.test/signed-*.mp4", (route) => route.abort());
+
+  await login(page);
+  await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
+  await page.getByRole("tab", { name: /Video bài giảng/ }).click();
+  const region = page.getByRole("region", { name: "Nội dung video" });
+  await expect(region.getByRole("status").filter({ hasText: "Video hiện không phát được" })).toBeVisible();
+  // One initial signing (twice under React StrictMode in dev) plus exactly two re-signs, never a blob download.
+  expect(accessCalls).toBeGreaterThanOrEqual(3);
+  expect(accessCalls).toBeLessThanOrEqual(4);
+  expect(fileRequests).toBe(0);
+  await expect(region.locator("video")).toHaveAttribute("src", `https://media.example.test/signed-${accessCalls}.mp4`);
+});
