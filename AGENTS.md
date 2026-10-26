@@ -38,23 +38,7 @@ Seeded fixtures: `class-pilot-a`, `class-pilot-b`, `demo-class`, `lesson-circuit
 
 ## Known bugs / open TODOs for future agents
 
-### 🐛 [A1-BUG-001] `tests/a1-acceptance.cjs` hardcode sai password teacher-owner
-- **File:** `FE-NexaLab/tests/a1-acceptance.cjs` line 9
-- **Symptom:** Test login `teacher.owner@nexalab.local` với password `AcceptanceOnly-2026!` → 401 Unauthorized
-- **Root cause:** Password hardcode không khớp `SEED_FIXTURE_PASSWORD`. Seed upsert fixture users với `SEED_FIXTURE_PASSWORD` (default `ReplaceFixturePassword123!`), nhưng test script dùng giá trị cũ `AcceptanceOnly-2026!`.
-- **Fix cần làm:** Thay `AcceptanceOnly-2026!` ở line 9 bằng `process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD`. **Giao cho dev A1 fix trước khi chạy browser acceptance.**
-- **Assign to:** Dev A1
+None open. Resolved test bugs, kept for history:
 
-### 🐛 [A1-BUG-002] `tests/flagship.spec.ts` dùng email login cho student
-- **File:** `FE-NexaLab/tests/flagship.spec.ts` line 6
-- **Symptom:** `getByLabel('Email', { exact: true })` không tìm thấy field → timeout 60s
-- **Root cause:** Login form của student dùng label `"Tên đăng nhập học sinh"` (username), không phải `"Email"`. Test dùng `student@nexalab.local` (email không tồn tại).
-- **Fix cần làm:** Đổi selector sang `getByLabel('Tên đăng nhập học sinh')` và dùng username `nguyenan.8a` với password từ env. **Giao cho dev A1 fix.**
-- **Assign to:** Dev A1
-
-### 🔵 [A1-BUG-003] `tests/a1-acceptance.cjs` hardcode port 4409 và 5199
-- **File:** `FE-NexaLab/tests/a1-acceptance.cjs` lines 4, 22
-- **Symptom:** Test connect sai port (dev chạy trên 4000/5173)
-- **Fix:** Dùng `process.env.TEST_API ?? 'http://127.0.0.1:4000/api'` và `process.env.TEST_WEB ?? 'http://127.0.0.1:5173'`. **Giao cho dev A1 fix.**
-- **Assign to:** Dev A1
-
+- A1-BUG-001 (`tests/a1-acceptance.cjs` hardcoded teacher-owner password) and A1-BUG-003 (hardcoded ports 4409/5199): fixed in `eb63182`; the script reads `SEED_FIXTURE_PASSWORD ?? SEED_PASSWORD`, `TEST_API` (default `http://127.0.0.1:4000/api`) and `TEST_WEB` (default `http://127.0.0.1:5173`). It also launched a Windows-only Chrome path; it now uses `CHROME_PATH` or the installed Chrome channel.
+- A1-BUG-002 (`tests/flagship.spec.ts` used an email login for the student): fixed in `eb63182`; it signs in `nguyenan.8a` through "Tên đăng nhập học sinh" with `SEED_PASSWORD`. Run 2026-10-26: 2 passed, 3 skipped (labs not released to students in the dev database).
