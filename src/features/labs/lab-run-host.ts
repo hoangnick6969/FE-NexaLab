@@ -24,6 +24,7 @@ export type LabLaunch = {
 
 const renderers = {
   circuit: { labId: "circuit", modelRefs: ["circuit@1.0.0"] },
+  "circuit-bulb": { labId: "circuit", modelRefs: ["circuit-bulb@1.0.0"] },
   chemistry: { labId: "chemistry", modelRefs: ["chemistry@1.0.0"] },
   eye: { labId: "eye", modelRefs: ["eye@1.0.0"] },
 } as const;
@@ -166,11 +167,13 @@ export function useLabRunHost(input: HostInput) {
 
   useEffect(() => {
     if (!input.enabled || !launch || !draftKey || attempt) return;
+    const initialState = launch.initialState ?? input.initialState;
+    if (JSON.stringify(input.state) === JSON.stringify(initialState)) return;
     const timer = window.setTimeout(() => {
       void saveDraft(draftFor(launch, input.state)).catch(() => undefined);
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [attempt, draftKey, input.enabled, input.state, launch]);
+  }, [attempt, draftKey, input.enabled, input.initialState, input.state, launch]);
 
   useEffect(() => {
     setLaunch(null);
@@ -227,13 +230,16 @@ export function useLabRunHost(input: HostInput) {
     const currentDraft = draftFor(launch, input.state);
     try {
       await saveDraft(currentDraft).catch(() => undefined);
+      const bulbEvidence = input.state as { checkpoints?: unknown; explanation?: unknown } | null;
       const response = await api<any>("/attempts", "POST", {
         contract: launch.contract,
         runId: launch.runId,
         idempotencyKey: idempotencyKey.current,
         stateSchemaVersion: launch.stateSchemaVersion,
         evidenceSchemaVersion: launch.evidenceSchemaVersion,
-        labState: input.state,
+        ...(launch.rubricVersion === "circuit-bulb-checkpoints@1.0.0"
+          ? { checkpoints: bulbEvidence?.checkpoints, explanation: bulbEvidence?.explanation }
+          : { labState: input.state }),
         durationMs: Math.max(0, Date.now() - startedAt.current),
       });
       const saved = response.attempt

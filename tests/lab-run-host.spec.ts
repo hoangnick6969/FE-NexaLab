@@ -93,3 +93,50 @@ test("P3.2b refuses a model without an explicitly compatible renderer", async ({
   await expect(page.getByText("Chưa cài giao diện tương thích với circuit@2.0.0.")).toBeVisible();
   await expect(page.getByTestId("lab-run-submit")).toHaveCount(0);
 });
+
+test("bulb activity restores its predictions and sends checkpoint evidence to the pinned run", async ({ page }) => {
+  await mockShell(page);
+  let launches = 0;
+  const submissions: any[] = [];
+  await page.route("**/api/labs/circuit/runs", (route) => route.fulfill({ json: {
+    ...launch(`bulb-run-${++launches}`, "circuit-bulb@1.0.0"),
+    rendererKey: "circuit-bulb", rubricVersion: "circuit-bulb-checkpoints@1.0.0",
+  } }));
+  await page.route("**/api/attempts", async (route) => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({ status: 201, json: { attempt: {
+      id: "bulb-attempt", verdict: "passed", simulationResult: {
+        observations: [
+          { id: "CLOSED", scientificObservation: { bulbState: "ON" }, predictionCorrect: true },
+          { id: "OPEN", scientificObservation: { bulbState: "OFF" }, predictionCorrect: true },
+        ], assessment: { score: 3, maximumScore: 3, unmetCriteria: [] },
+      },
+    } } });
+  });
+  await page.goto("/labs/circuit?assignmentId=assignment-lab");
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByTestId("lab-run-submit")).toBeDisabled();
+  await page.getByLabel("Sáng", { exact: true }).click();
+  await page.getByTestId("bulb-diagram-switch").press("Space");
+  await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn sáng");
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.getByTestId("lab-session-start").click();
+  await page.getByRole("button", { name: "Khôi phục", exact: true }).click();
+  await expect(page.locator(".bulb-step-count")).toHaveText("3 / 6");
+  await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn sáng");
+  await expect(page.getByTestId("bulb-diagram-switch")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("bulb-prediction-open").locator("input:checked")).toHaveCount(0);
+  await page.getByLabel("Tắt", { exact: true }).click();
+  await page.getByTestId("bulb-diagram-switch").press("Space");
+  await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn tắt");
+  await page.getByRole("radio", { name: /Công tắc mở làm ngắt đường đi/ }).click();
+  await page.getByTestId("lab-run-submit").click();
+  await expect(page.getByText("Công tắc đóng: Bóng đèn sáng", { exact: false })).toBeVisible();
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0]).toMatchObject({ runId: "bulb-run-2", explanation: "A", checkpoints: [
+    { id: "CLOSED", prediction: "ON", state: { nodes: expect.arrayContaining([{ id: "switch", type: "switch", closed: true }]) } },
+    { id: "OPEN", prediction: "OFF", state: { nodes: expect.arrayContaining([{ id: "switch", type: "switch", closed: false }]) } },
+  ] });
+  expect(submissions[0]).not.toHaveProperty("labState");
+});

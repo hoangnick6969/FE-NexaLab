@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
 import { Circuit, defaultCircuit } from "./Circuit";
+import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./CircuitBulbActivity";
 import { Chemistry } from "./Chemistry";
 import { useLabRunHost } from "./lab-run-host";
 import { defineText } from "../../i18n";
@@ -52,6 +53,14 @@ const text = defineText({
     run: "Chạy thí nghiệm",
     challenge: "THỬ THÁCH 01",
     circuitGoal: "LED sáng, dòng điện an toàn",
+    bulbGoal: "Quan sát mạch điện đóng và mở",
+    bulbTask: "Dự đoán trạng thái bóng đèn khi đóng và mở công tắc, rồi giải thích kết quả.",
+    bulbPredict: "Dự đoán trước khi xem kết quả", bulbSubmit: "Nộp kết quả",
+    bulbClosed: "Công tắc đóng", bulbOpen: "Công tắc mở", bulbOn: "Bóng đèn sáng", bulbOff: "Bóng đèn tắt",
+    bulbCorrect: "Dự đoán đúng", bulbIncorrect: "Dự đoán chưa đúng", bulbExplanation: "Xem lại câu giải thích",
+    bulbPassed: "Em đã hoàn thành tốt hoạt động này.", bulbNeedsPractice: "Hãy xem lại phản hồi rồi thử lại từ đầu.",
+    bulbAssessment: "Kết quả được chấm trên máy chủ", bulbWaiting: "Hoàn thành các bước trong sơ đồ để nộp bài.",
+    bulbResult: "Kết quả bài làm",
     eyeGoal: "Em hiểu đôi mắt đến đâu?",
     chemGoal: "Cân bằng lượng chất",
     circuitTask: "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA.",
@@ -112,6 +121,14 @@ const text = defineText({
     run: "Run the experiment",
     challenge: "CHALLENGE 01",
     circuitGoal: "LED on, safe current",
+    bulbGoal: "Observe open and closed circuits",
+    bulbTask: "Predict the bulb state with the switch closed and open, then explain the result.",
+    bulbPredict: "Predict before seeing the result", bulbSubmit: "Submit results",
+    bulbClosed: "Switch closed", bulbOpen: "Switch open", bulbOn: "Bulb on", bulbOff: "Bulb off",
+    bulbCorrect: "Correct prediction", bulbIncorrect: "Incorrect prediction", bulbExplanation: "Review the explanation",
+    bulbPassed: "You completed this activity successfully.", bulbNeedsPractice: "Review the feedback, then try the activity again.",
+    bulbAssessment: "Result assessed by the server", bulbWaiting: "Complete the diagram steps to submit your work.",
+    bulbResult: "Activity feedback",
     eyeGoal: "How well do you know the eye?",
     chemGoal: "Balance the amounts",
     circuitTask: "Build a closed circuit with a source, LED and resistor. Keep the current through each LED between 1 and 20 mA.",
@@ -192,6 +209,7 @@ export default function Lab() {
     initialState: fallbackState,
     onStateChange: setState,
   });
+  const isBulb = labRun.rendererKey === "circuit-bulb";
   const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
     setState(fallbackState);
@@ -259,7 +277,7 @@ export default function Lab() {
         </Badge>
       </div>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {preview && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      {runtimeReady && preview && !isBulb && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           {runtimeReady && <div className="workspace-toolbar">
@@ -267,7 +285,7 @@ export default function Lab() {
             <button
               className="text-button"
               onClick={() => {
-                const next = initialLabState(id);
+                const next = isBulb ? defaultBulbEvidence() : initialLabState(id);
                 if (user.role === "STUDENT") labRun.reset(next);
                 else change(next);
                 setResetKey((k) => k + 1);
@@ -301,7 +319,9 @@ export default function Lab() {
               </div>
             </div>
           )}
-          {runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
+          {runtimeReady && isBulb ? (
+            <CircuitBulbActivity state={state} onChange={change} />
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
             <Circuit
               key={resetKey}
               initial={state.nodes ? state : defaultCircuit()}
@@ -315,17 +335,17 @@ export default function Lab() {
             </Suspense>
           ) : null}
           {runtimeReady && <div className="lab-actions">
-            <span>{labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+            <span>{isBulb ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
               data-testid="lab-run-submit"
               onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
-              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt)}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (isBulb && !bulbEvidenceReady(state))}
             >
               <Play size={15} />
               {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
                 ? t.computing
-                : id === "eye"
+                : isBulb ? t.bulbSubmit : id === "eye"
                   ? t.gradeParts
                   : t.run}
             </button>
@@ -333,17 +353,17 @@ export default function Lab() {
           <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
         <aside className="lab-aside">
-          <section className="panel challenge-panel">
+          {runtimeReady && !isBulb && <section className="panel challenge-panel">
             <Badge tone="gold">{t.challenge}</Badge>
             <h3>
-              {id === "circuit"
+              {isBulb ? t.bulbGoal : id === "circuit"
                 ? t.circuitGoal
                 : id === "eye"
                   ? t.eyeGoal
                   : t.chemGoal}
             </h3>
             <p>
-              {id === "circuit"
+              {isBulb ? t.bulbTask : id === "circuit"
                 ? t.circuitTask
                 : id === "eye"
                   ? t.eyeTask
@@ -352,7 +372,7 @@ export default function Lab() {
             <ul className="checklist">
               <li>
                 <CheckCircle2 size={15} />
-                {t.observe}
+                {isBulb ? t.bulbPredict : t.observe}
               </li>
               <li>
                 <CheckCircle2 size={15} />
@@ -363,15 +383,28 @@ export default function Lab() {
                 {t.tryAgain}
               </li>
             </ul>
-          </section>
+          </section>}
           <section className="panel result-panel">
-            <h3>{t.result}</h3>
+            <h3>{isBulb ? t.bulbResult : t.result}</h3>
             {result ? (
               <>
                 <Badge tone={attempt.verdict}>
                   {verdictLabel(attempt.verdict)}
                 </Badge>
-                {id === "circuit" ? (
+                {isBulb ? (
+                  <>
+                    <p className="bulb-result-message">{attempt.verdict === "passed" ? t.bulbPassed : t.bulbNeedsPractice}</p>
+                    <p className="bulb-result-score">{result.assessment?.score} / {result.assessment?.maximumScore}<small>{t.bulbAssessment}</small></p>
+                    <ul>
+                      {result.observations?.map((item: any) => (
+                        <li key={item.id}>
+                          {item.id === "CLOSED" ? t.bulbClosed : t.bulbOpen}: {item.scientificObservation?.bulbState === "ON" ? t.bulbOn : t.bulbOff} · {item.predictionCorrect ? t.bulbCorrect : t.bulbIncorrect}
+                        </li>
+                      ))}
+                      {result.assessment?.unmetCriteria?.includes("explanation") && <li>{t.bulbExplanation}</li>}
+                    </ul>
+                  </>
+                ) : id === "circuit" ? (
                   <>
                     <div className="result-value">
                       {result.currentMa ?? "∞"}
@@ -413,18 +446,18 @@ export default function Lab() {
                 )}
                 <ErrorBox error={save.error} />
                 {user.role === "STUDENT" && attempt.verdict !== "passed" && (
-                  <button type="button" className="secondary wide" onClick={labRun.retry}>
+                  <button type="button" className="secondary wide" onClick={() => isBulb ? labRun.reset(defaultBulbEvidence()) : labRun.retry()}>
                     <RotateCcw size={15} /> {t.tryAgain}
                   </button>
                 )}
               </>
             ) : (
               <p className="muted">
-                {t.resultAfterRun}
+                {isBulb ? t.bulbWaiting : t.resultAfterRun}
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && (
+          {user.role === "STUDENT" && runtimeReady && !isBulb && (
             <section className="panel tutor-panel">
               <h3>
                 <Sparkles size={19} />
@@ -458,9 +491,7 @@ export default function Lab() {
           )}
         </aside>
       </div>
-      <p className="tiny muted">
-        {t.disclaimer}
-      </p>
+      {!isBulb && <p className="tiny muted">{t.disclaimer}</p>}
     </>
   );
 }
