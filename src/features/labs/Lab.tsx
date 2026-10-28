@@ -66,6 +66,9 @@ const text = defineText({
     circuitTask: "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA.",
     eyeTask: "Chuyển sang kiểm tra, nhập tên của 8 bộ phận rồi chấm.",
     chemTask: "Chọn một phản ứng và điều chỉnh số mol để hai chất phản ứng vừa đủ.",
+    sampleLabel: (n: number) => `Lọ ${n}`,
+    acid: "Axit", neutral: "Trung tính", base: "Bazơ", unclassified: "Chưa phân loại",
+    sampleCorrect: "Xác định đúng", sampleIncorrect: "Cần xem lại",
     observe: "Quan sát trước khi thay đổi",
     runToCheck: "Chạy để kiểm chứng dự đoán",
     tryAgain: "Thử lại để hiểu rõ hơn",
@@ -134,6 +137,9 @@ const text = defineText({
     circuitTask: "Build a closed circuit with a source, LED and resistor. Keep the current through each LED between 1 and 20 mA.",
     eyeTask: "Switch to the check, type the names of the 8 parts, then grade.",
     chemTask: "Choose a reaction and adjust the moles so both reactants are used up exactly.",
+    sampleLabel: (n: number) => `Jar ${n}`,
+    acid: "Acid", neutral: "Neutral", base: "Base", unclassified: "Unclassified",
+    sampleCorrect: "Correctly identified", sampleIncorrect: "Review this answer",
     observe: "Observe before changing",
     runToCheck: "Run to test your prediction",
     tryAgain: "Try again to understand better",
@@ -416,6 +422,18 @@ export default function Lab() {
                     <p className="tiny muted">
                       {t.branchNote}
                     </p>
+                  </>
+                ) : id === "chemistry" && result.experiment === "ph" ? (
+                  <>
+                    <p>{result.phenomenon}</p>
+                    <ul>
+                      {result.samples?.map((sample: any, index: number) => (
+                        <li key={sample.id}>
+                          {t.sampleLabel(index + 1)}: {sample.type === "acid" ? t.acid : sample.type === "neutral" ? t.neutral : sample.type === "base" ? t.base : t.unclassified}
+                          {" · "}{sample.correct ? t.sampleCorrect : t.sampleIncorrect}
+                        </li>
+                      ))}
+                    </ul>
                   </>
                 ) : id === "chemistry" ? (
                   <>

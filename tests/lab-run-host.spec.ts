@@ -5,7 +5,7 @@ const student = {
   role: "STUDENT", grade: 8, mustChangePassword: false,
 };
 
-async function mockShell(page: Page) {
+async function mockShell(page: Page, labId = "circuit") {
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: { user: student, accessToken: "test-token" } }));
   await page.route("**/api/me/profile", (route) => route.fulfill({ json: {
     ...student, emailVerifiedAt: null, createdAt: new Date().toISOString(), avatarUpdatedAt: null,
@@ -18,8 +18,11 @@ async function mockShell(page: Page) {
     id: "assignment-lab", title: "Lab mạch điện", contentType: "lab", dueDate: null, overdue: false,
     classroom: { id: "class-1", name: "8A" },
     content: {
-      id: "circuit", title: "Mạch điện", subject: { id: "science", name: "KHTN" }, grade: 8,
-      topic: "Điện", learningObjective: "Lắp mạch điện", prerequisites: "", challengeId: "circuit_001",
+      id: labId, title: labId === "chemistry" ? "Thí nghiệm hoá học" : "Mạch điện",
+      subject: { id: "science", name: "KHTN" }, grade: 8,
+      topic: labId === "chemistry" ? "Chất và sự biến đổi" : "Điện",
+      learningObjective: labId === "chemistry" ? "Nhận biết các mẫu dung dịch" : "Lắp mạch điện",
+      prerequisites: "", challengeId: labId === "chemistry" ? "chemistry_001" : "circuit_001",
     },
   } }));
 }
@@ -139,4 +142,43 @@ test("bulb activity restores its predictions and sends checkpoint evidence to th
     { id: "OPEN", prediction: "OFF", state: { nodes: expect.arrayContaining([{ id: "switch", type: "switch", closed: false }]) } },
   ] });
   expect(submissions[0]).not.toHaveProperty("labState");
+});
+
+test("P3.5 chemistry model uses its own renderer and submits its distinct state contract", async ({ page }) => {
+  await mockShell(page, "chemistry");
+  const submissions: any[] = [];
+  await page.route("**/api/labs/chemistry/runs", (route) => route.fulfill({ json: {
+    ...launch("chemistry-run", "chemistry@1.0.0"), labId: "chemistry", challengeId: "chemistry_001",
+    rendererKey: "chemistry", initialState: { samples: {} },
+  } }));
+  await page.route("**/api/attempts", async (route) => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({ status: 201, json: { attempt: {
+      id: "chemistry-attempt", verdict: "passed", simulationResult: {
+        experiment: "ph", verdict: "passed", samples: [
+          { id: "jar1", type: "acid", correct: true },
+          { id: "jar2", type: "neutral", correct: true },
+          { id: "jar3", type: "base", correct: true },
+        ],
+      },
+    } } });
+  });
+
+  await page.goto("/labs/chemistry?assignmentId=assignment-lab");
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByRole("button", { name: "Nhúng giấy quỳ tím vào lọ 1" })).toBeVisible();
+  for (const jar of [1, 2, 3]) {
+    await page.getByRole("button", { name: `Nhúng giấy quỳ tím vào lọ ${jar}` }).click();
+    await page.getByRole("combobox").nth(jar - 1).selectOption(["acid", "neutral", "base"][jar - 1]);
+  }
+  await page.getByTestId("lab-run-submit").click();
+  await expect(page.getByText(/Lọ 1: Axit/)).toBeVisible();
+  await page.screenshot({ path: "output/playwright/p35-chemistry-compatibility.png", fullPage: true });
+
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0]).toMatchObject({
+    contract: "lab-contract/1", runId: "chemistry-run", stateSchemaVersion: 1, evidenceSchemaVersion: 1,
+    labState: { samples: { jar1: "acid", jar2: "neutral", jar3: "base" } },
+  });
+  expect(submissions[0]).not.toHaveProperty("checkpoints");
 });
