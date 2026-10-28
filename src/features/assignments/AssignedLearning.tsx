@@ -191,7 +191,7 @@ export function AssignedLearning() {
           </div>
           </>
         ) : (
-          <Link className="primary" to={"/labs/" + content.id}>
+          <Link className="primary" to={`/labs/${encodeURIComponent(content.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>
             {t.openLab} <ArrowUpRight size={16} />
           </Link>
         )}

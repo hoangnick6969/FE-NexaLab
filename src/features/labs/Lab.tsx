@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, useMemo } from "react";
 import { simulate } from "@nexalab/sim";
-import { Link, useParams, useLocation } from "react-router-dom";
+import { Link, useParams, useLocation, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Play,
@@ -14,6 +14,7 @@ import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
 import { Circuit, defaultCircuit } from "./Circuit";
 import { Chemistry } from "./Chemistry";
+import { useLabRunHost } from "./lab-run-host";
 import { defineText } from "../../i18n";
 
 const text = defineText({
@@ -30,6 +31,14 @@ const text = defineText({
     discoveryRoom: "Phòng khám phá",
     teacherPreview: "Giáo viên · Xem trước",
     freePractice: "Thực hành tự do",
+    assignedPractice: "Bài thực hành được giao",
+    startSession: "Bắt đầu phiên thực hành",
+    startingSession: "Đang mở phiên thực hành…",
+    sessionHelp: "Phiên này cố định phiên bản mô hình và cách chấm trên máy chủ.",
+    restoreTitle: "Khôi phục bản nháp?",
+    restoreBody: "Có một bản ráp dở tương thích từ lần mở trước. Bản nháp chưa được tính là kết quả học tập.",
+    restore: "Khôi phục",
+    discard: "Bỏ bản nháp",
     devicePreview: "Xem trước trên thiết bị:",
     product: (n: number) => `${n} mol sản phẩm`,
     runToSave: "Chạy thí nghiệm để lưu và chấm chính thức trên server.",
@@ -82,6 +91,14 @@ const text = defineText({
     discoveryRoom: "Discovery room",
     teacherPreview: "Teacher · Preview",
     freePractice: "Free practice",
+    assignedPractice: "Assigned practice",
+    startSession: "Start practice session",
+    startingSession: "Opening practice session…",
+    sessionHelp: "This session pins the server model and assessment versions.",
+    restoreTitle: "Restore draft?",
+    restoreBody: "A compatible unfinished setup is available. A draft is not learning evidence.",
+    restore: "Restore",
+    discard: "Discard draft",
     devicePreview: "On-device preview:",
     product: (n: number) => `${n} mol of product`,
     runToSave: "Run the experiment to save it and get the official result from the server.",
@@ -124,18 +141,25 @@ const text = defineText({
 });
 const t = text();
 const Eye = lazy(() => import("./Eye"));
+const initialLabState = (id: string) => id === "circuit"
+  ? defaultCircuit()
+  : id === "chemistry"
+    ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
+    : { answers: {} };
+
 export default function Lab() {
   const { id = "circuit" } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((s) => s.user)!;
   const qc = useQueryClient();
   const [state, setState] = useState<any>({});
   const preview = useMemo(() => {
     try { return simulate(id, state) as any; } catch { return null; }
   }, [id, state]);
-  const [attempt, setAttempt] = useState<any>(null);
+  const [teacherAttempt, setTeacherAttempt] = useState<any>(null);
   const [hint, setHint] = useState<any>(null);
-  const [started, setStarted] = useState(Date.now());
   const [resetKey, setResetKey] = useState(0);
   const [saved, setSaved] = useState(false);
   const tutorStatus = useQuery({
@@ -143,37 +167,42 @@ export default function Lab() {
     queryFn: () => api("/tutor/status"),
   });
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api("/labs") });
-  const lab = labs.data?.find((l: any) => l.id === id);
+  const assignment = useQuery({
+    queryKey: ["assignment", assignmentId],
+    queryFn: () => api(`/assignments/${encodeURIComponent(assignmentId!)}`),
+    enabled: user.role === "STUDENT" && Boolean(assignmentId),
+  });
+  const publicLab = labs.data?.find((item: any) => item.id === id);
+  const assignedLab = assignment.data?.contentType === "lab" && assignment.data.content?.id === id
+    ? assignment.data.content
+    : null;
+  const lab = assignedLab ?? publicLab;
+  const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
+  const fallbackState = useMemo(
+    () => location.state?.labState ?? initialLabState(id),
+    [id, location.key, location.state?.labState],
+  );
+  const labRun = useLabRunHost({
+    enabled: user.role === "STUDENT" && Boolean(lab),
+    userId: user.id,
+    labId: id,
+    challengeId,
+    assignmentId,
+    state,
+    initialState: fallbackState,
+    onStateChange: setState,
+  });
+  const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
-    setState(
-      location.state?.labState ??
-        (id === "circuit"
-          ? defaultCircuit()
-          : id === "chemistry"
-            ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-            : { answers: {} }),
-    );
-    setAttempt(null);
+    setState(fallbackState);
+    setTeacherAttempt(null);
     setHint(null);
     setSaved(false);
-    setStarted(Date.now());
     setResetKey((k) => k + 1);
-  }, [id, location.key]);
-  const run = useAction(async () => {
-    const r = await api(
-      user.role === "STUDENT" ? "/attempts" : "/simulate/" + id,
-      "POST",
-      user.role === "STUDENT"
-        ? {
-            challengeId: id + "_001",
-            labState: state,
-            durationMs: Date.now() - started,
-          }
-        : state,
-    );
-    setAttempt(
-      user.role === "STUDENT" ? r : { simulationResult: r, verdict: r.verdict },
-    );
+  }, [fallbackState]);
+  const teacherRun = useAction(async () => {
+    const r = await api("/simulate/" + id, "POST", state);
+    setTeacherAttempt({ simulationResult: r, verdict: r.verdict });
     setHint(null);
     setSaved(false);
     return r;
@@ -191,15 +220,21 @@ export default function Lab() {
     setSaved(true);
   });
   const result = attempt?.simulationResult;
+  const runtimeReady = user.role === "TEACHER" || Boolean(labRun.launch && labRun.rendererKey);
   const change = (next: any) => {
-    setState(next);
-    setAttempt(null);
+    if (user.role === "STUDENT") labRun.change(next);
+    else {
+      setState(next);
+      setTeacherAttempt(null);
+    }
     setHint(null);
     setSaved(false);
   };
   if (!["circuit", "eye", "chemistry"].includes(id))
     return <p>{t.notFound}</p>;
-  if (user.role === "STUDENT" && labs.isSuccess && !lab)
+  if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
+    return <section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>;
+  if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
     return <section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>;
   return (
     <>
@@ -220,64 +255,82 @@ export default function Lab() {
           <p className="muted">{lab?.learningObjective}</p>
         </div>
         <Badge tone="outline">
-          {user.role === "TEACHER"
-            ? t.teacherPreview
-            : t.freePractice}
+          {user.role === "TEACHER" ? t.teacherPreview : assignmentId ? t.assignedPractice : t.freePractice}
         </Badge>
       </div>
-      <ErrorBox error={labs.error} />
+      <ErrorBox error={assignmentId ? assignment.error : labs.error} />
       {preview && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
-          <div className="workspace-toolbar">
+          {runtimeReady && <div className="workspace-toolbar">
             <b>{id === "eye" ? t.eyeModel : t.bench}</b>
             <button
               className="text-button"
               onClick={() => {
-                change(
-                  id === "circuit"
-                    ? defaultCircuit()
-                    : id === "chemistry"
-                      ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-                      : { answers: {} },
-                );
+                const next = initialLabState(id);
+                if (user.role === "STUDENT") labRun.reset(next);
+                else change(next);
                 setResetKey((k) => k + 1);
-                setStarted(Date.now());
               }}
             >
               <RotateCcw size={14} />
               {t.reset}
             </button>
-          </div>
-          {id === "circuit" ? (
+          </div>}
+          {user.role === "STUDENT" && !runtimeReady ? (
+            <div className="panel" role="status">
+              <p>{t.sessionHelp}</p>
+              <button
+                type="button"
+                className="primary"
+                data-testid="lab-session-start"
+                onClick={() => void labRun.open()}
+                disabled={labRun.pending || !lab || !challengeId}
+              >
+                <Play size={15} /> {labRun.pending ? t.startingSession : t.startSession}
+              </button>
+            </div>
+          ) : null}
+          {runtimeReady && labRun.restoreCandidate && (
+            <div className="notice" role="status" data-testid="lab-draft-restore">
+              <b>{t.restoreTitle}</b>
+              <p>{t.restoreBody}</p>
+              <div className="lab-actions">
+                <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
+                <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
+              </div>
+            </div>
+          )}
+          {runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
             <Circuit
               key={resetKey}
               initial={state.nodes ? state : defaultCircuit()}
               onChange={change}
             />
-          ) : id === "chemistry" ? (
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "chemistry" ? (
             <Chemistry state={state} onChange={change} result={result} />
-          ) : (
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "eye" ? (
             <Suspense fallback={<InlineLoader message={t.loadingEye} />}>
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
-          )}
-          <div className="lab-actions">
-            <span>{t.engine}</span>
+          ) : null}
+          {runtimeReady && <div className="lab-actions">
+            <span>{labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
-              onClick={() => run.mutate(null)}
-              disabled={run.isPending || !lab}
+              data-testid="lab-run-submit"
+              onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt)}
             >
               <Play size={15} />
-              {run.isPending
+              {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
                 ? t.computing
                 : id === "eye"
                   ? t.gradeParts
                   : t.run}
             </button>
-          </div>
-          <ErrorBox error={run.error} />
+          </div>}
+          <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
         <aside className="lab-aside">
           <section className="panel challenge-panel">
@@ -359,6 +412,11 @@ export default function Lab() {
                   </button>
                 )}
                 <ErrorBox error={save.error} />
+                {user.role === "STUDENT" && attempt.verdict !== "passed" && (
+                  <button type="button" className="secondary wide" onClick={labRun.retry}>
+                    <RotateCcw size={15} /> {t.tryAgain}
+                  </button>
+                )}
               </>
             ) : (
               <p className="muted">
