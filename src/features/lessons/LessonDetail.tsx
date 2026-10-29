@@ -125,6 +125,11 @@ export function LessonDetail() {
     queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
     enabled: Boolean(id) && !(user.role === "STUDENT" && assignmentId),
   });
+  const foundationalLabs = useQuery({
+    queryKey: ["lesson-foundational-labs", id],
+    queryFn: () => api<Array<{ labId: string; title: string; releaseId: string; version: number }>>(`/lessons/${encodeURIComponent(id)}/foundational-labs`),
+    enabled: user.role === "STUDENT" && Boolean(id) && !assignmentId,
+  });
   const curriculum = useQuery({
     queryKey: ["student-open-curriculum"],
     queryFn: () => api<{ subjects?: Array<{ id: string; name: string; grades?: any[] }> }>("/open-curriculum"),
@@ -229,6 +234,8 @@ export function LessonDetail() {
     </nav>
 
     <PageHeading eyebrow={`${lesson.subject.name} · ${t.grade(lesson.grade)}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
+
+    {foundationalLabs.data?.map((lab) => <p key={lab.releaseId}><Link className="primary" to={`/labs/${encodeURIComponent(lab.labId)}?releaseId=${encodeURIComponent(lab.releaseId)}`}>Thực hành: {lab.title} · v{lab.version}</Link></p>)}
 
     <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
       {tabs.map((tab, index) => {

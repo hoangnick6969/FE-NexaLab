@@ -211,6 +211,7 @@ export default function Lab() {
     labId: id,
     challengeId,
     assignmentId,
+    releaseId: searchParams.get("releaseId") || undefined,
     state,
     initialState: fallbackState,
     onStateChange: setState,

@@ -129,6 +129,7 @@ type HostInput = {
   labId: string;
   challengeId: string | null;
   assignmentId?: string;
+  releaseId?: string;
   state: unknown;
   initialState: unknown;
   onStateChange: (state: any) => void;
@@ -191,6 +192,7 @@ export function useLabRunHost(input: HostInput) {
     try {
       const next = await api<LabLaunch>(`/labs/${encodeURIComponent(input.labId)}/runs`, "POST", {
         challengeId: input.challengeId,
+        ...(input.releaseId ? { releaseId: input.releaseId } : {}),
         ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
       });
       if (next.contract !== "lab-contract/1") throw new Error("Phiên thực hành dùng hợp đồng không được hỗ trợ.");
