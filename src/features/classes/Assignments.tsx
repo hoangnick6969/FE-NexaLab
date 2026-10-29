@@ -36,6 +36,9 @@ const text = defineText({
     labPractice: "Bài thực hành (lab)",
     test: "Bài kiểm tra",
     published: "Nội dung đã xuất bản",
+    chooseLabChallenge: "Hoạt động đã duyệt trong Foundational Release",
+    labReleaseNote: (version: number, digest: string) => `Dùng cấu hình bất biến của Foundational Release v${version} · ${digest.slice(0, 12)}. Giáo viên chọn hoạt động, không sửa mô hình hoặc tham số khoa học.`,
+    noLabChallenges: "Release này chưa có hoạt động được phép giao.",
     testOption: (title: string, version: string | number, n: number) => `${title} · phiên bản ${version} · ${n} câu`,
     lessonOption: (title: string, grade: number) => `${title} · Khối ${grade}`,
     sampleSuffix: " · dữ liệu mẫu",
@@ -82,6 +85,9 @@ const text = defineText({
     labPractice: "Practice (lab)",
     test: "Test",
     published: "Published content",
+    chooseLabChallenge: "Approved activity in the Foundational release",
+    labReleaseNote: (version: number, digest: string) => `Uses the immutable Foundational Release v${version} configuration · ${digest.slice(0, 12)}. Teachers choose an activity; they cannot change the model or scientific parameters.`,
+    noLabChallenges: "This release has no assignable activity.",
     testOption: (title: string, version: string | number, n: number) => `${title} · version ${version} · ${n} ${n === 1 ? "question" : "questions"}`,
     lessonOption: (title: string, grade: number) => `${title} · Grade ${grade}`,
     sampleSuffix: " · sample data",
@@ -237,6 +243,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
   const [scope, setScope] = useState<"CLASS" | "SUBSET">("CLASS");
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [contentId, setContentId] = useState("");
+  const [labChallengeId, setLabChallengeId] = useState("");
   const [validation, setValidation] = useState("");
   const key = useRef(idempotencyKey());
   const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[] }>({
@@ -250,6 +257,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
   const approved = roster.data?.filter((e) => e.status === "approved") ?? [];
   const act = useMutate<{ recipientCount: number; message: string }>();
   const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : content.data?.tests ?? [];
+  const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
   const isTest = contentType === "test";
   return (
     <Modal title={t.assign} onClose={onClose}>
@@ -271,6 +279,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
               body: {
                 contentType,
                 contentId,
+                ...(contentType === "lab" && selectedLab ? { labReleaseId: selectedLab.release.id, labChallengeId } : {}),
                 audience: scope,
                 ...(title ? { title } : {}),
                 dueDate: due ? new Date(due).toISOString() : null,
@@ -281,7 +290,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
           );
         }}
       >
-        <fieldset className="segmented" onChange={() => setContentId("")}>
+        <fieldset className="segmented" onChange={() => { setContentId(""); setLabChallengeId(""); }}>
           <legend>{t.contentType}</legend>
           <label className="check">
             <input type="radio" name="contentType" checked={contentType === "lesson"} onChange={() => setContentType("lesson")} />
@@ -298,17 +307,33 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         </fieldset>
         <label className="field">
           <span>{t.published}</span>
-          <select name="contentId" required value={contentId} onChange={(e) => setContentId(e.target.value)}>
+          <select name="contentId" required value={contentId} onChange={(e) => {
+            const nextId = e.target.value;
+            setContentId(nextId);
+            const nextLab = content.data?.labs?.find((item: any) => item.id === nextId);
+            setLabChallengeId(nextLab?.challenges?.[0]?.id ?? "");
+          }}>
             <option value="">{t.chooseContent}</option>
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
-                {isTest ? t.testOption(item.title, item.version, item.questionCount) : t.lessonOption(item.title, item.grade)}
+                {isTest ? t.testOption(item.title, item.version, item.questionCount) : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
                 {item.synthetic ? t.sampleSuffix : ""}
                 {item.scope === "TEACHER_PRIVATE" ? t.privateSuffix : ""}
               </option>
             ))}
           </select>
         </label>
+        {contentType === "lab" && selectedLab && <>
+          <label className="field">
+            <span>{t.chooseLabChallenge}</span>
+            <select required value={labChallengeId} onChange={(event) => setLabChallengeId(event.target.value)}>
+              <option value="">{t.chooseContent}</option>
+              {selectedLab.challenges.map((challenge: any) => <option key={challenge.id} value={challenge.id}>{challenge.objective || challenge.id}</option>)}
+            </select>
+          </label>
+          <p className="tiny muted">{t.labReleaseNote(selectedLab.release.version, selectedLab.release.digest)}</p>
+        </>}
+        {contentType === "lab" && selectedLab?.challenges?.length === 0 && <p className="notice">{t.noLabChallenges}</p>}
         <LoadError query={content} what={t.assignable} />
         {content.data && options.length === 0 && (
           <p className="notice">
