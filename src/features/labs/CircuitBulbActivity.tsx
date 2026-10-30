@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Check, CircleHelp, Lightbulb, Zap } from "lucide-react";
 import { defineText } from "../../i18n";
+import { CircuitBulb3DStage } from "./CircuitBulb3DStage";
 import "./CircuitBulbActivity.css";
 
 const text = defineText({
@@ -147,6 +149,7 @@ const phaseIndex: Record<Phase, number> = {
 };
 
 export function CircuitBulbActivity({ state, onChange }: { state: unknown; onChange: (value: BulbEvidence) => void }) {
+  const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
   const evidence = evidenceFrom(state);
   const phase = phaseOf(evidence);
   const checkpointIndex = phase === "predict-closed" || phase === "switch-closed" ? 0 : 1;
@@ -232,46 +235,90 @@ export function CircuitBulbActivity({ state, onChange }: { state: unknown; onCha
               <b>{t.steps[checkpointIndex === 0 ? 1 : 3]}</b>
               <span>{closed ? t.switchClosed : t.switchOpen}</span>
             </div>
+            <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-lg border border-slate-700/60 text-xs" role="tablist" aria-label="Chế độ hiển thị">
+              <button
+                type="button"
+                onClick={() => setViewMode("3d")}
+                className={`px-2.5 py-1 rounded-md font-medium text-xs transition-all ${
+                  viewMode === "3d" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                🪐 3D Bàn Lab
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("2d")}
+                className={`px-2.5 py-1 rounded-md font-medium text-xs transition-all ${
+                  viewMode === "2d" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                📐 2D Sơ đồ
+              </button>
+            </div>
             <span className="bulb-live-state" data-state={showObservation ? (closed ? "on" : "off") : "hidden"}>
               {showObservation ? <><Lightbulb size={17} aria-hidden="true" /><b>{closed ? t.bulbOn : t.bulbOff}</b></> : t.bulb}
             </span>
           </div>
-          <div className="bulb-diagram" data-switch={closed ? "closed" : "open"}>
-            <svg viewBox="0 0 760 360" aria-label={t.diagram} role="img" className="bulb-circuit-art">
-              <title>{t.diagram}</title>
-              <path className="bulb-wire bulb-wire-positive" d="M158 132 V76 H575 V120" />
-              <path className="bulb-wire bulb-wire-return" d="M575 244 V282 H432 M328 282 H158 V238" />
-              <g className="bulb-battery" aria-hidden="true">
-                <rect x="105" y="135" width="72" height="100" rx="17" />
-                <rect className="battery-cap" x="122" y="125" width="38" height="13" rx="5" />
-                <text x="141" y="176" textAnchor="middle">+</text>
-                <text x="141" y="211" textAnchor="middle">−</text>
-                <text className="part-label" x="196" y="203" textAnchor="start">{t.battery}</text>
-              </g>
-              <g className={`bulb-lamp ${showObservation && closed ? "is-lit" : ""}`} aria-hidden="true">
-                <path className="lamp-glass" d="M575 116 C540 116 522 143 527 173 C530 193 544 200 549 214 L601 214 C606 200 620 193 623 173 C628 143 610 116 575 116 Z" />
-                <path className="lamp-filament" d="M558 178 L570 166 L582 178 L594 166" />
-                <path className="lamp-neck" d="M550 214 H600 M553 224 H597 M557 234 H593" />
-                <path className="lamp-base" d="M558 244 H592 V255 H558 Z" />
-                <text className="part-label" x="575" y="312" textAnchor="middle">{t.bulb}</text>
-              </g>
-              <circle className="switch-contact" cx="328" cy="282" r="8" />
-              <circle className="switch-contact" cx="432" cy="282" r="8" />
-            </svg>
-            <button
-              className={`bulb-switch-control ${closed ? "is-closed" : "is-open"}`}
-              type="button"
-              aria-label={`${closed ? t.switchClosed : t.switchOpen}. ${closed ? t.openSwitch : t.closeSwitch}.`}
-              aria-pressed={closed}
-              aria-disabled={!switchIsActive}
-              disabled={!switchIsActive}
-              onClick={toggleDiagramSwitch}
-              data-testid="bulb-diagram-switch"
-            >
-              <span className="switch-bridge" aria-hidden="true" />
-              <span className="switch-caption">{closed ? t.closedShort : t.openShort}</span>
-            </button>
-          </div>
+          {viewMode === "3d" ? (
+            <div className="bulb-3d-wrapper relative" data-switch={closed ? "closed" : "open"}>
+              <CircuitBulb3DStage
+                closed={closed}
+                switchIsActive={switchIsActive}
+                onToggleSwitch={toggleDiagramSwitch}
+                isLit={showObservation && closed}
+              />
+              {/* Preserved invisible semantic control for accessibility & Playwright testing */}
+              <button
+                className="sr-only"
+                type="button"
+                aria-label={`${closed ? t.switchClosed : t.switchOpen}. ${closed ? t.openSwitch : t.closeSwitch}.`}
+                aria-pressed={closed}
+                aria-disabled={!switchIsActive}
+                disabled={!switchIsActive}
+                onClick={toggleDiagramSwitch}
+                data-testid="bulb-diagram-switch"
+              >
+                {closed ? t.closedShort : t.openShort}
+              </button>
+            </div>
+          ) : (
+            <div className="bulb-diagram" data-switch={closed ? "closed" : "open"}>
+              <svg viewBox="0 0 760 360" aria-label={t.diagram} role="img" className="bulb-circuit-art">
+                <title>{t.diagram}</title>
+                <path className="bulb-wire bulb-wire-positive" d="M158 132 V76 H575 V120" />
+                <path className="bulb-wire bulb-wire-return" d="M575 244 V282 H432 M328 282 H158 V238" />
+                <g className="bulb-battery" aria-hidden="true">
+                  <rect x="105" y="135" width="72" height="100" rx="17" />
+                  <rect className="battery-cap" x="122" y="125" width="38" height="13" rx="5" />
+                  <text x="141" y="176" textAnchor="middle">+</text>
+                  <text x="141" y="211" textAnchor="middle">−</text>
+                  <text className="part-label" x="196" y="203" textAnchor="start">{t.battery}</text>
+                </g>
+                <g className={`bulb-lamp ${showObservation && closed ? "is-lit" : ""}`} aria-hidden="true">
+                  <path className="lamp-glass" d="M575 116 C540 116 522 143 527 173 C530 193 544 200 549 214 L601 214 C606 200 620 193 623 173 C628 143 610 116 575 116 Z" />
+                  <path className="lamp-filament" d="M558 178 L570 166 L582 178 L594 166" />
+                  <path className="lamp-neck" d="M550 214 H600 M553 224 H597 M557 234 H593" />
+                  <path className="lamp-base" d="M558 244 H592 V255 H558 Z" />
+                  <text className="part-label" x="575" y="312" textAnchor="middle">{t.bulb}</text>
+                </g>
+                <circle className="switch-contact" cx="328" cy="282" r="8" />
+                <circle className="switch-contact" cx="432" cy="282" r="8" />
+              </svg>
+              <button
+                className={`bulb-switch-control ${closed ? "is-closed" : "is-open"}`}
+                type="button"
+                aria-label={`${closed ? t.switchClosed : t.switchOpen}. ${closed ? t.openSwitch : t.closeSwitch}.`}
+                aria-pressed={closed}
+                aria-disabled={!switchIsActive}
+                disabled={!switchIsActive}
+                onClick={toggleDiagramSwitch}
+                data-testid="bulb-diagram-switch"
+              >
+                <span className="switch-bridge" aria-hidden="true" />
+                <span className="switch-caption">{closed ? t.closedShort : t.openShort}</span>
+              </button>
+            </div>
+          )}
           <div className={`bulb-observation ${showObservation ? "is-visible" : ""}`} role="status" aria-live="polite" data-testid="bulb-observation">
             {showObservation ? (
               <>
