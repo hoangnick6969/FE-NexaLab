@@ -6,8 +6,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowRight, BookOpen, Check, ExternalLink, FileText, Play } from "lucide-react";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { ArrowRight, BookOpen, Check, ExternalLink, FileText, FlaskConical, Play } from "lucide-react";
 import { api, idempotencyKey, isAssetUrl, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -17,6 +17,7 @@ import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
+import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
 
 const text = defineText({
   vi: {
@@ -30,6 +31,13 @@ const text = defineText({
     exercise: "Bài tập luyện tập",
     cards: "Thẻ ôn tập",
     materials: "Tài liệu",
+    practiceLabs: "Thực hành Lab",
+    supplementaryLab: "LAB BỔ TRỢ BÀI HỌC",
+    labIntro: "Vận dụng kiến thức vừa học qua dự đoán, quan sát và giải thích trong mô phỏng.",
+    openLab: "Mở hoạt động Lab",
+    viewLabLibrary: "Xem Lab trong thư viện",
+    relatedSection: "Phần kiến thức liên quan",
+    readSection: "Xem phần kiến thức",
     grade: (grade: number) => `LỚP ${grade}`,
     sample: "Dữ liệu mẫu",
     contentTabs: "Nội dung bài học",
@@ -74,6 +82,13 @@ const text = defineText({
     exercise: "Practice exercise",
     cards: "Review cards",
     materials: "Materials",
+    practiceLabs: "Lab practice",
+    supplementaryLab: "LESSON LAB ACTIVITY",
+    labIntro: "Apply what you have learned through prediction, observation and explanation in a simulation.",
+    openLab: "Open Lab activity",
+    viewLabLibrary: "View Lab in the library",
+    relatedSection: "Related lesson section",
+    readSection: "Read the related section",
     grade: (grade: number) => `GRADE ${grade}`,
     sample: "Sample data",
     contentTabs: "Lesson content",
@@ -112,18 +127,36 @@ const t = text();
 
 export function LessonDetail() {
   const { id = "" } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((state) => state.user)!;
-  const [activeTab, setActiveTab] = useState<"reading" | "video" | "exercise" | "materials">("reading");
+  type LessonTab = "reading" | "video" | "exercise" | "labs" | "materials";
+  const requestedTab = searchParams.get("tab");
+  const selectedTab: LessonTab = ["reading", "video", "exercise", "labs", "materials"].includes(requestedTab ?? "") ? requestedTab as LessonTab : "reading";
+  const setActiveTab = (tab: LessonTab) => setSearchParams((previous) => {
+    const next = new URLSearchParams(previous); next.set("tab", tab); return next;
+  }, { replace: true });
   const [sourcePage, setSourcePage] = useState<number | null>(null);
-  useEffect(() => { setSourcePage(null); }, [id, activeTab]);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const queryClient = useQueryClient();
   const lessons = useQuery({
     queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
     queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
     enabled: Boolean(id) && !(user.role === "STUDENT" && assignmentId),
+    staleTime: 5 * 60 * 1000,
+  });
+  const foundationalLabs = useQuery({
+    queryKey: ["lesson-foundational-labs", id],
+    queryFn: () => api<LessonLab[]>(`/lessons/${encodeURIComponent(id)}/foundational-labs`),
+    enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(user.role) && Boolean(id),
+    staleTime: 5 * 60 * 1000,
+  });
+  const linkedPublicLesson = useQuery({
+    queryKey: ["open-curriculum-lesson", id],
+    queryFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`),
+    enabled: Boolean(foundationalLabs.data?.length) && (user.role !== "STUDENT" || Boolean(assignmentId)),
+    staleTime: 5 * 60 * 1000,
   });
   const curriculum = useQuery({
     queryKey: ["student-open-curriculum"],
@@ -143,11 +176,31 @@ export function LessonDetail() {
     enabled: user.role === "STUDENT" && Boolean(id) && Boolean(assignmentId),
   });
   const lesson = user.role === "STUDENT" ? (assignmentId ? videoPathway.data?.lesson : lessons.data) : lessons.data?.find((item: any) => item.id === id);
+  const publicLesson = linkedPublicLesson.data?.id === id ? linkedPublicLesson.data : undefined;
+  const structuredContent = lesson?.structuredContent ?? publicLesson?.structuredContent;
+  const sourceDocument = lesson?.sourceDocument ?? publicLesson?.sourceDocument;
   const videoMaterial = lesson?.materials?.find((item: any) => item.type === "video" && typeof item.url === "string");
   const readingStep = videoPathway.data?.steps.find((step) => step.type === "READING") ?? lesson?.steps?.find((step: any) => step.type === "READING");
   const videoStep = videoPathway.data?.steps.find((step) => step.type === "VIDEO") ?? lesson?.steps?.find((step: any) => step.type === "VIDEO");
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
+  const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
+  const hasMaterials = Boolean(httpsUrl(lesson?.subject?.ebookUrl) || lesson?.materials?.length || canViewAttribution);
+  const hasLabs = Boolean(foundationalLabs.data?.length || (selectedTab === "labs" && foundationalLabs.isPending));
+  const available = { reading: true, video: hasVideo, exercise: Boolean(basicExerciseStep), labs: hasLabs, materials: hasMaterials };
+  const activeTab = !lesson || available[selectedTab] ? selectedTab : "reading";
+  useEffect(() => { setSourcePage(null); }, [id, activeTab]);
+  useEffect(() => {
+    if (activeTab !== "reading" || !lesson?.id || !location.hash) return;
+    let target: string;
+    try { target = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+    const frame = requestAnimationFrame(() => {
+      const section = document.getElementById(target);
+      section?.scrollIntoView({ block: "start" });
+      section?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeTab, lesson?.id, location.hash, structuredContent]);
   const lessonSteps = videoPathway.data?.steps.filter((step) => ["READING", "VIDEO"].includes(step.type)) ?? [];
   const lessonComplete = lessonSteps.length > 0 && lessonSteps.every((step) => step.state === "COMPLETED");
 
@@ -189,14 +242,13 @@ export function LessonDetail() {
   if ((assignmentId ? videoPathway.error : lessons.error) && !lesson) return <><ErrorBox error={assignmentId ? videoPathway.error : lessons.error} /><Link className="text-button" to="/lessons">{t.backToLibrary}</Link></>;
   if (!lesson) return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.cannotOpen}</h1><p>{t.notPublished}</p><Link className="primary" to="/lessons">{t.backToLessons}</Link></section>;
 
-  const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
-  const hasMaterials = Boolean(ebookUrl || lesson.materials?.length || canViewAttribution);
   const learningObjective = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.learningObjective ?? "") ? "" : lesson.learningObjective;
   const prerequisites = /dữ liệu|kiểm thử|thử nghiệm|placeholder|sample/i.test(lesson.prerequisites ?? "") ? "" : lesson.prerequisites;
   const tabs = [
     { id: "reading" as const, label: t.reading, icon: BookOpen },
     ...(hasVideo ? [{ id: "video" as const, label: t.video, icon: Play }] : []),
     ...(basicExerciseStep ? [{ id: "exercise" as const, label: t.exercise, icon: Check }] : []),
+    ...(hasLabs ? [{ id: "labs" as const, label: t.practiceLabs, icon: FlaskConical }] : []),
     ...(hasMaterials ? [{ id: "materials" as const, label: t.materials, icon: FileText }] : []),
   ];
   const changeTabByKeyboard = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -207,6 +259,26 @@ export function LessonDetail() {
     tabRefs.current[nextIndex]?.focus();
   };
   const materialsTab = tabs.some((tab) => tab.id === "materials");
+  const sections = structuredContent?.learningContent?.sections ?? [];
+  const waitingForSection = !structuredContent && linkedPublicLesson.isFetching;
+  const sectionFor = (lab: LessonLab) => {
+    const sectionId = lessonLabSection(id, lab.labId);
+    if (!sectionId) return undefined;
+    return sections.find((section: any) => section.id === sectionId);
+  };
+  const labCard = (lab: LessonLab, inline = false) => {
+    const section = sectionFor(lab);
+    return <article className={`lesson-lab-card${inline ? " is-inline" : ""}`} key={lab.releaseId}>
+      <span className="eyebrow"><FlaskConical size={15} /> {t.supplementaryLab}</span>
+      <h3>{lab.title}</h3>
+      {lab.objective && <p>{lab.objective}</p>}
+      {section && <p className="lesson-lab-section-label">{t.relatedSection}: <strong>{section.heading}</strong></p>}
+      <div className="button-row">
+        {waitingForSection ? <button className="primary" type="button" disabled aria-busy="true">{t.loadingContent}</button> : <Link className="primary" to={user.role === "ADMIN" ? `/labs#lab-${encodeURIComponent(lab.labId)}` : lessonLabHref(lab, id, assignmentId, section?.id)}>{user.role === "ADMIN" ? t.viewLabLibrary : t.openLab}<ArrowRight size={15} /></Link>}
+        {!inline && section && <Link className="secondary" to={relatedLessonHref(id, "reading", assignmentId, section.id)}>{t.readSection}</Link>}
+      </div>
+    </article>;
+  };
 
   return <div className="lesson-detail-page">
     {/* 1. Breadcrumb: Bài học › Khối › Môn › Chương › Bài */}
@@ -229,6 +301,9 @@ export function LessonDetail() {
     </nav>
 
     <PageHeading eyebrow={`${lesson.subject.name} · ${t.grade(lesson.grade)}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
+
+    <ErrorBox error={foundationalLabs.error} />
+    <ErrorBox error={linkedPublicLesson.error} />
 
     <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
       {tabs.map((tab, index) => {
@@ -307,7 +382,7 @@ export function LessonDetail() {
         {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
           <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
             {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : lesson.structuredContent?.learningContent ? <StructuredLessonBody value={lesson.structuredContent} sourceAvailable={Boolean(lesson.sourceDocument)} onOpenSource={setSourcePage} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : structuredContent?.learningContent ? <StructuredLessonBody value={structuredContent} sourceAvailable={Boolean(sourceDocument)} onOpenSource={setSourcePage} renderSectionLabs={(sectionId) => foundationalLabs.data?.filter((lab) => sectionFor(lab)?.id === sectionId).map((lab) => labCard(lab, true))} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
             {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
           </div>
           {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
@@ -315,7 +390,13 @@ export function LessonDetail() {
             <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
           </div>}
           {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
-        </section>{sourcePage && lesson.sourceDocument && <SourcePdfViewer assetVersionId={lesson.sourceDocument.assetVersionId} sourceDigest={lesson.sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
+        </section>{sourcePage && sourceDocument && <SourcePdfViewer assetVersionId={sourceDocument.assetVersionId} sourceDigest={sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
+
+        {activeTab === "labs" && <section id="lesson-panel-labs" role="tabpanel" aria-labelledby="lesson-tab-labs" className="panel lesson-tab-panel lesson-labs-panel">
+          <h2 className="lesson-tab-title"><FlaskConical size={21} /> {t.practiceLabs}</h2>
+          <p className="muted">{t.labIntro}</p>
+          {foundationalLabs.data?.map((lab) => labCard(lab))}
+        </section>}
 
         {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
           <h2 className="lesson-tab-title">{t.video}</h2>
@@ -418,7 +499,7 @@ function LessonMarkdown({ value, displayMath = false }: { value: string; display
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: false }]]}>{markdown}</ReactMarkdown>;
 }
 
-function StructuredLessonBody({ value, sourceAvailable, onOpenSource }: { value: any; sourceAvailable: boolean; onOpenSource: (page: number) => void }) {
+function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSectionLabs }: { value: any; sourceAvailable: boolean; onOpenSource: (page: number) => void; renderSectionLabs?: (sectionId: string) => React.ReactNode }) {
   const content = value.learningContent ?? {};
   const pageByBlock = new Map<string, { pdfPage?: number; printedPageLabel?: string }>();
   for (const block of value.sourceBlocks ?? []) {
@@ -490,8 +571,9 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource }: { value:
       });
       const rawHeading = typeof section.heading === "string" ? section.heading.trim() : "";
       const displayHeading = rawHeading === "?" ? "Câu hỏi & Thảo luận" : rawHeading;
-      return <section key={section.id ?? index}>
+      return <section key={section.id ?? index} id={section.id ?? `lesson-section-${index}`} tabIndex={-1}>
       {displayHeading && (/^#{1,6}\s/.test(displayHeading) ? <LessonMarkdown value={displayHeading} /> : <h2>{displayHeading}</h2>)}{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
+      {typeof section.id === "string" && renderSectionLabs?.(section.id)}
     </section>;
     })}
     {(content.knowledgeUnits ?? []).map((unit: any, index: number) => {

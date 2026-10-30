@@ -1,9 +1,21 @@
 node_modules/
 dist/
+.local/
 .env
 *.tsbuildinfo
 test-results/
 playwright-report/
+output/
+*.log
 
 .env.*
 !.env.example
+
+# Impeccable & agent tools
+.agents/skills/impeccable/
+.github/skills/impeccable/
+.github/agents/
+.github/hooks/
+.codex/
+*.exe
+

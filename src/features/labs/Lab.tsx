@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useState, useMemo } from "react";
 import { simulate } from "@nexalab/sim";
-import { Link, useParams, useLocation } from "react-router-dom";
+import { Link, useParams, useLocation, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft,
   Play,
   RotateCcw,
   Bookmark,
@@ -12,9 +11,13 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
-import { Circuit, defaultCircuit } from "./Circuit";
-import { Chemistry } from "./Chemistry";
+import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
+import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./physics/electricity/CircuitBulbActivity";
+import { Chemistry } from "./chemistry/Chemistry";
+import { useLabRunHost } from "./runtime/lab-run-host";
 import { defineText } from "../../i18n";
+import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
+import { LabSpace } from "./shared/LabSpace";
 
 const text = defineText({
   vi: {
@@ -23,6 +26,8 @@ const text = defineText({
     notInCurriculum: "Nội dung này chưa có trong chương trình nền tảng đã duyệt.",
     backToList: "Quay lại danh sách",
     labs: "Phòng thí nghiệm",
+    relatedLesson: "Bài học liên quan",
+    backToLesson: "Quay lại phần bài học",
     physics: "VẬT LÝ",
     biology: "SINH HỌC",
     chemistry: "HÓA HỌC",
@@ -30,6 +35,14 @@ const text = defineText({
     discoveryRoom: "Phòng khám phá",
     teacherPreview: "Giáo viên · Xem trước",
     freePractice: "Thực hành tự do",
+    assignedPractice: "Bài thực hành được giao",
+    startSession: "Bắt đầu phiên thực hành",
+    startingSession: "Đang mở phiên thực hành…",
+    sessionHelp: "Phiên này cố định phiên bản mô hình và cách chấm trên máy chủ.",
+    restoreTitle: "Khôi phục bản nháp?",
+    restoreBody: "Có một bản ráp dở tương thích từ lần mở trước. Bản nháp chưa được tính là kết quả học tập.",
+    restore: "Khôi phục",
+    discard: "Bỏ bản nháp",
     devicePreview: "Xem trước trên thiết bị:",
     product: (n: number) => `${n} mol sản phẩm`,
     runToSave: "Chạy thí nghiệm để lưu và chấm chính thức trên server.",
@@ -43,11 +56,22 @@ const text = defineText({
     run: "Chạy thí nghiệm",
     challenge: "THỬ THÁCH 01",
     circuitGoal: "LED sáng, dòng điện an toàn",
+    bulbGoal: "Quan sát mạch điện đóng và mở",
+    bulbTask: "Dự đoán trạng thái bóng đèn khi đóng và mở công tắc, rồi giải thích kết quả.",
+    bulbPredict: "Dự đoán trước khi xem kết quả", bulbSubmit: "Nộp kết quả",
+    bulbClosed: "Công tắc đóng", bulbOpen: "Công tắc mở", bulbOn: "Bóng đèn sáng", bulbOff: "Bóng đèn tắt",
+    bulbCorrect: "Dự đoán đúng", bulbIncorrect: "Dự đoán chưa đúng", bulbExplanation: "Xem lại câu giải thích",
+    bulbPassed: "Em đã hoàn thành tốt hoạt động này.", bulbNeedsPractice: "Hãy xem lại phản hồi rồi thử lại từ đầu.",
+    bulbAssessment: "Kết quả được chấm trên máy chủ", bulbWaiting: "Hoàn thành các bước trong sơ đồ để nộp bài.",
+    bulbResult: "Kết quả bài làm",
     eyeGoal: "Em hiểu đôi mắt đến đâu?",
     chemGoal: "Cân bằng lượng chất",
     circuitTask: "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA.",
     eyeTask: "Chuyển sang kiểm tra, nhập tên của 8 bộ phận rồi chấm.",
     chemTask: "Chọn một phản ứng và điều chỉnh số mol để hai chất phản ứng vừa đủ.",
+    sampleLabel: (n: number) => `Lọ ${n}`,
+    acid: "Axit", neutral: "Trung tính", base: "Bazơ", unclassified: "Chưa phân loại",
+    sampleCorrect: "Xác định đúng", sampleIncorrect: "Cần xem lại",
     observe: "Quan sát trước khi thay đổi",
     runToCheck: "Chạy để kiểm chứng dự đoán",
     tryAgain: "Thử lại để hiểu rõ hơn",
@@ -75,6 +99,8 @@ const text = defineText({
     notInCurriculum: "This content is not in the approved foundation curriculum yet.",
     backToList: "Back to the list",
     labs: "Labs",
+    relatedLesson: "Related lesson",
+    backToLesson: "Back to the lesson section",
     physics: "PHYSICS",
     biology: "BIOLOGY",
     chemistry: "CHEMISTRY",
@@ -82,6 +108,14 @@ const text = defineText({
     discoveryRoom: "Discovery room",
     teacherPreview: "Teacher · Preview",
     freePractice: "Free practice",
+    assignedPractice: "Assigned practice",
+    startSession: "Start practice session",
+    startingSession: "Opening practice session…",
+    sessionHelp: "This session pins the server model and assessment versions.",
+    restoreTitle: "Restore draft?",
+    restoreBody: "A compatible unfinished setup is available. A draft is not learning evidence.",
+    restore: "Restore",
+    discard: "Discard draft",
     devicePreview: "On-device preview:",
     product: (n: number) => `${n} mol of product`,
     runToSave: "Run the experiment to save it and get the official result from the server.",
@@ -95,11 +129,22 @@ const text = defineText({
     run: "Run the experiment",
     challenge: "CHALLENGE 01",
     circuitGoal: "LED on, safe current",
+    bulbGoal: "Observe open and closed circuits",
+    bulbTask: "Predict the bulb state with the switch closed and open, then explain the result.",
+    bulbPredict: "Predict before seeing the result", bulbSubmit: "Submit results",
+    bulbClosed: "Switch closed", bulbOpen: "Switch open", bulbOn: "Bulb on", bulbOff: "Bulb off",
+    bulbCorrect: "Correct prediction", bulbIncorrect: "Incorrect prediction", bulbExplanation: "Review the explanation",
+    bulbPassed: "You completed this activity successfully.", bulbNeedsPractice: "Review the feedback, then try the activity again.",
+    bulbAssessment: "Result assessed by the server", bulbWaiting: "Complete the diagram steps to submit your work.",
+    bulbResult: "Activity feedback",
     eyeGoal: "How well do you know the eye?",
     chemGoal: "Balance the amounts",
     circuitTask: "Build a closed circuit with a source, LED and resistor. Keep the current through each LED between 1 and 20 mA.",
     eyeTask: "Switch to the check, type the names of the 8 parts, then grade.",
     chemTask: "Choose a reaction and adjust the moles so both reactants are used up exactly.",
+    sampleLabel: (n: number) => `Jar ${n}`,
+    acid: "Acid", neutral: "Neutral", base: "Base", unclassified: "Unclassified",
+    sampleCorrect: "Correctly identified", sampleIncorrect: "Review this answer",
     observe: "Observe before changing",
     runToCheck: "Run to test your prediction",
     tryAgain: "Try again to understand better",
@@ -123,19 +168,26 @@ const text = defineText({
   },
 });
 const t = text();
-const Eye = lazy(() => import("./Eye"));
+const Eye = lazy(() => import("./biology/anatomy/Eye"));
+const initialLabState = (id: string) => id === "circuit"
+  ? defaultCircuit()
+  : id === "chemistry"
+    ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
+    : { answers: {} };
+
 export default function Lab() {
   const { id = "circuit" } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const assignmentId = searchParams.get("assignmentId") || undefined;
   const user = useAuth((s) => s.user)!;
   const qc = useQueryClient();
   const [state, setState] = useState<any>({});
   const preview = useMemo(() => {
     try { return simulate(id, state) as any; } catch { return null; }
   }, [id, state]);
-  const [attempt, setAttempt] = useState<any>(null);
+  const [teacherAttempt, setTeacherAttempt] = useState<any>(null);
   const [hint, setHint] = useState<any>(null);
-  const [started, setStarted] = useState(Date.now());
   const [resetKey, setResetKey] = useState(0);
   const [saved, setSaved] = useState(false);
   const tutorStatus = useQuery({
@@ -143,37 +195,52 @@ export default function Lab() {
     queryFn: () => api("/tutor/status"),
   });
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api("/labs") });
-  const lab = labs.data?.find((l: any) => l.id === id);
+  const assignment = useQuery({
+    queryKey: ["assignment", assignmentId],
+    queryFn: () => api(`/assignments/${encodeURIComponent(assignmentId!)}`),
+    enabled: user.role === "STUDENT" && Boolean(assignmentId),
+  });
+  const publicLab = labs.data?.find((item: any) => item.id === id);
+  const assignedLab = assignment.data?.contentType === "lab" && assignment.data.content?.id === id
+    ? assignment.data.content
+    : null;
+  const lab = assignedLab ?? publicLab;
+  const relatedLessons: RelatedLesson[] = publicLab?.lessonLinks ?? [];
+  const originLessonId = searchParams.get("lessonId");
+  const originLesson = originLessonId ? relatedLessons.find((lesson) => lesson.lessonId === originLessonId) : relatedLessons[0];
+  const requestedSection = searchParams.get("sectionId");
+  const mappedSection = originLesson ? lessonLabSection(originLesson.lessonId, id) : undefined;
+  const returnSection = originLessonId === originLesson?.lessonId && requestedSection === mappedSection ? mappedSection : undefined;
+  const returnAssignment = originLessonId === originLesson?.lessonId ? searchParams.get("lessonAssignmentId") || undefined : undefined;
+  const returnToLesson = originLesson ? relatedLessonHref(originLesson.lessonId, returnSection ? "reading" : "labs", returnAssignment, returnSection) : undefined;
+  const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
+  const fallbackState = useMemo(
+    () => location.state?.labState ?? (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0" ? defaultBulbEvidence() : initialLabState(id)),
+    [id, location.key, location.state?.labState, user.role, lab?.simulationModelRef],
+  );
+  const labRun = useLabRunHost({
+    enabled: user.role === "STUDENT" && Boolean(lab),
+    userId: user.id,
+    labId: id,
+    challengeId,
+    assignmentId,
+    releaseId: searchParams.get("releaseId") || undefined,
+    state,
+    initialState: fallbackState,
+    onStateChange: setState,
+  });
+  const isBulb = labRun.rendererKey === "circuit-bulb" || (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0");
+  const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
-    setState(
-      location.state?.labState ??
-        (id === "circuit"
-          ? defaultCircuit()
-          : id === "chemistry"
-            ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-            : { answers: {} }),
-    );
-    setAttempt(null);
+    setState(fallbackState);
+    setTeacherAttempt(null);
     setHint(null);
     setSaved(false);
-    setStarted(Date.now());
     setResetKey((k) => k + 1);
-  }, [id, location.key]);
-  const run = useAction(async () => {
-    const r = await api(
-      user.role === "STUDENT" ? "/attempts" : "/simulate/" + id,
-      "POST",
-      user.role === "STUDENT"
-        ? {
-            challengeId: id + "_001",
-            labState: state,
-            durationMs: Date.now() - started,
-          }
-        : state,
-    );
-    setAttempt(
-      user.role === "STUDENT" ? r : { simulationResult: r, verdict: r.verdict },
-    );
+  }, [fallbackState]);
+  const teacherRun = useAction(async () => {
+    const r = await api("/simulate/" + id, "POST", state);
+    setTeacherAttempt({ simulationResult: r, verdict: r.verdict });
     setHint(null);
     setSaved(false);
     return r;
@@ -191,106 +258,120 @@ export default function Lab() {
     setSaved(true);
   });
   const result = attempt?.simulationResult;
+  const runtimeReady = user.role === "TEACHER" || Boolean(labRun.launch && labRun.rendererKey);
   const change = (next: any) => {
-    setState(next);
-    setAttempt(null);
+    if (user.role === "STUDENT") labRun.change(next);
+    else {
+      setState(next);
+      setTeacherAttempt(null);
+    }
     setHint(null);
     setSaved(false);
   };
+  const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
+  const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
   if (!["circuit", "eye", "chemistry"].includes(id))
-    return <p>{t.notFound}</p>;
-  if (user.role === "STUDENT" && labs.isSuccess && !lab)
-    return <section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>;
-  return (
+    return space(<p>{t.notFound}</p>);
+  if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
+    return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
+  if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
+    return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
+  return space(
     <>
-      <Link className="back-link" to="/labs">
-        <ArrowLeft size={15} /> {t.labs}
-      </Link>
-      <div className="page-heading lab-heading">
-        <div>
-          <Badge>
-            {id === "circuit"
-              ? t.physics
-              : id === "eye"
-                ? t.biology
-                : t.chemistry}{" "}
-            · {t.grades}
-          </Badge>
-          <h1>{lab?.title ?? t.discoveryRoom}</h1>
-          <p className="muted">{lab?.learningObjective}</p>
-        </div>
-        <Badge tone="outline">
-          {user.role === "TEACHER"
-            ? t.teacherPreview
-            : t.freePractice}
-        </Badge>
-      </div>
-      <ErrorBox error={labs.error} />
-      {preview && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      <ErrorBox error={assignmentId ? assignment.error : labs.error} />
+      {runtimeReady && preview && !isBulb && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
-          <div className="workspace-toolbar">
+          {runtimeReady && <div className="workspace-toolbar">
             <b>{id === "eye" ? t.eyeModel : t.bench}</b>
             <button
               className="text-button"
               onClick={() => {
-                change(
-                  id === "circuit"
-                    ? defaultCircuit()
-                    : id === "chemistry"
-                      ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-                      : { answers: {} },
-                );
+                const next = isBulb ? defaultBulbEvidence() : initialLabState(id);
+                if (user.role === "STUDENT") labRun.reset(next);
+                else change(next);
                 setResetKey((k) => k + 1);
-                setStarted(Date.now());
               }}
             >
               <RotateCcw size={14} />
               {t.reset}
             </button>
-          </div>
-          {id === "circuit" ? (
+          </div>}
+          {user.role === "STUDENT" && !runtimeReady ? (
+            <div className="lab-session-gate" role="status" data-testid="lab-session-gate">
+              <div className="lab-session-card">
+                <div className="lab-session-meta">
+                  <span className="lab-session-dot" aria-hidden="true" />
+                  <span className="lab-session-help">{t.sessionHelp}</span>
+                </div>
+                <button
+                  type="button"
+                  className="primary lab-session-btn"
+                  data-testid="lab-session-start"
+                  onClick={() => void labRun.open()}
+                  disabled={labRun.pending || !lab || !challengeId}
+                >
+                  <Play size={16} /> {labRun.pending ? t.startingSession : t.startSession}
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {runtimeReady && labRun.restoreCandidate && (
+            <div className="lab-draft-backdrop" role="dialog" aria-modal="true" aria-labelledby="lab-draft-restore-title">
+              <div className="notice lab-draft-modal" role="status" data-testid="lab-draft-restore">
+                <b id="lab-draft-restore-title">{t.restoreTitle}</b>
+                <p>{t.restoreBody}</p>
+                <div className="lab-actions">
+                  <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
+                  <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {runtimeReady && isBulb ? (
+            <CircuitBulbActivity state={state} onChange={change} />
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
             <Circuit
               key={resetKey}
               initial={state.nodes ? state : defaultCircuit()}
               onChange={change}
             />
-          ) : id === "chemistry" ? (
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "chemistry" ? (
             <Chemistry state={state} onChange={change} result={result} />
-          ) : (
+          ) : runtimeReady && (labRun.rendererKey ?? id) === "eye" ? (
             <Suspense fallback={<InlineLoader message={t.loadingEye} />}>
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
-          )}
-          <div className="lab-actions">
-            <span>{t.engine}</span>
+          ) : null}
+          {runtimeReady && !(isBulb && user.role === "TEACHER") && <div className="lab-actions">
+            <span>{isBulb ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
-              onClick={() => run.mutate(null)}
-              disabled={run.isPending || !lab}
+              data-testid="lab-run-submit"
+              onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (isBulb && !bulbEvidenceReady(state))}
             >
               <Play size={15} />
-              {run.isPending
+              {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
                 ? t.computing
-                : id === "eye"
+                : isBulb ? t.bulbSubmit : id === "eye"
                   ? t.gradeParts
                   : t.run}
             </button>
-          </div>
-          <ErrorBox error={run.error} />
+          </div>}
+          <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
-        <aside className="lab-aside">
-          <section className="panel challenge-panel">
-            <Badge tone="gold">{t.challenge}</Badge>
+        <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{isBulb ? t.bulbResult : t.result}</summary>
+          {runtimeReady && !isBulb && <section className="panel challenge-panel">
+            <span className="eyebrow">{t.challenge}</span>
             <h3>
-              {id === "circuit"
+              {isBulb ? t.bulbGoal : id === "circuit"
                 ? t.circuitGoal
                 : id === "eye"
                   ? t.eyeGoal
-                  : t.chemGoal}
-            </h3>
+                  : t.chemGoal}</h3>
             <p>
-              {id === "circuit"
+              {isBulb ? t.bulbTask : id === "circuit"
                 ? t.circuitTask
                 : id === "eye"
                   ? t.eyeTask
@@ -299,7 +380,7 @@ export default function Lab() {
             <ul className="checklist">
               <li>
                 <CheckCircle2 size={15} />
-                {t.observe}
+                {isBulb ? t.bulbPredict : t.observe}
               </li>
               <li>
                 <CheckCircle2 size={15} />
@@ -310,15 +391,28 @@ export default function Lab() {
                 {t.tryAgain}
               </li>
             </ul>
-          </section>
+          </section>}
           <section className="panel result-panel">
-            <h3>{t.result}</h3>
+            <h3>{isBulb ? t.bulbResult : t.result}</h3>
             {result ? (
               <>
                 <Badge tone={attempt.verdict}>
                   {verdictLabel(attempt.verdict)}
                 </Badge>
-                {id === "circuit" ? (
+                {isBulb ? (
+                  <>
+                    <p className="bulb-result-message">{attempt.verdict === "passed" ? t.bulbPassed : t.bulbNeedsPractice}</p>
+                    <p className="bulb-result-score">{result.assessment?.score} / {result.assessment?.maximumScore}<small>{t.bulbAssessment}</small></p>
+                    <ul>
+                      {result.observations?.map((item: any) => (
+                        <li key={item.id}>
+                          {item.id === "CLOSED" ? t.bulbClosed : t.bulbOpen}: {item.scientificObservation?.bulbState === "ON" ? t.bulbOn : t.bulbOff} · {item.predictionCorrect ? t.bulbCorrect : t.bulbIncorrect}
+                        </li>
+                      ))}
+                      {result.assessment?.unmetCriteria?.includes("explanation") && <li>{t.bulbExplanation}</li>}
+                    </ul>
+                  </>
+                ) : id === "circuit" ? (
                   <>
                     <div className="result-value">
                       {result.currentMa ?? "∞"}
@@ -330,6 +424,18 @@ export default function Lab() {
                     <p className="tiny muted">
                       {t.branchNote}
                     </p>
+                  </>
+                ) : id === "chemistry" && result.experiment === "ph" ? (
+                  <>
+                    <p>{result.phenomenon}</p>
+                    <ul>
+                      {result.samples?.map((sample: any, index: number) => (
+                        <li key={sample.id}>
+                          {t.sampleLabel(index + 1)}: {sample.type === "acid" ? t.acid : sample.type === "neutral" ? t.neutral : sample.type === "base" ? t.base : t.unclassified}
+                          {" · "}{sample.correct ? t.sampleCorrect : t.sampleIncorrect}
+                        </li>
+                      ))}
+                    </ul>
                   </>
                 ) : id === "chemistry" ? (
                   <>
@@ -359,14 +465,19 @@ export default function Lab() {
                   </button>
                 )}
                 <ErrorBox error={save.error} />
+                {user.role === "STUDENT" && attempt.verdict !== "passed" && (
+                  <button type="button" className="secondary wide" onClick={() => isBulb ? labRun.reset(defaultBulbEvidence()) : labRun.retry()}>
+                    <RotateCcw size={15} /> {t.tryAgain}
+                  </button>
+                )}
               </>
             ) : (
               <p className="muted">
-                {t.resultAfterRun}
+                {isBulb ? t.bulbWaiting : t.resultAfterRun}
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && (
+          {user.role === "STUDENT" && runtimeReady && !isBulb && (
             <section className="panel tutor-panel">
               <h3>
                 <Sparkles size={19} />
@@ -398,11 +509,9 @@ export default function Lab() {
               </small>
             </section>
           )}
-        </aside>
+        </details></aside>
       </div>
-      <p className="tiny muted">
-        {t.disclaimer}
-      </p>
+      {!isBulb && <p className="tiny muted">{t.disclaimer}</p>}
     </>
   );
 }

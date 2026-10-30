@@ -5,7 +5,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { api, type StudentPathway } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, PageLoader } from "../../components/ui";
-import { PracticalPathwayStep } from "../labs/PracticalPathwayStep";
+import { PracticalPathwayStep } from "../labs/pathways/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
 import { AssignedTest } from "./AssignedTest";
 import { QuizLearningStep } from "./QuizLearningStep";
@@ -191,7 +191,7 @@ export function AssignedLearning() {
           </div>
           </>
         ) : (
-          <Link className="primary" to={"/labs/" + content.id}>
+          <Link className="primary" to={`/labs/${encodeURIComponent(content.id)}?assignmentId=${encodeURIComponent(assignment.id)}`}>
             {t.openLab} <ArrowUpRight size={16} />
           </Link>
         )}

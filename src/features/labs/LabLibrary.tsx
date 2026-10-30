@@ -5,12 +5,15 @@ import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { labInfo } from "./lab-info";
 import { defineText } from "../../i18n";
+import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
+import { labCurriculumLabel } from "./lab-curriculum-label";
 
 const text = defineText({
   vi: {
     grades: "Lớp 8–9",
     basicsFirst: "Học kiến thức nền trước",
     explore: "Khám phá phòng lab",
+    relatedLesson: "Bài học liên quan",
     nonePublished: "Chưa có phòng thực hành nền tảng nào được phát hành.",
     eyebrow: "HỌC QUA TRẢI NGHIỆM",
     title: "Phòng thí nghiệm",
@@ -21,6 +24,7 @@ const text = defineText({
     grades: "Grades 8–9",
     basicsFirst: "Learn the basics first",
     explore: "Explore the lab",
+    relatedLesson: "Related lesson",
     nonePublished: "No foundation labs are published yet.",
     eyebrow: "LEARN BY EXPERIENCE",
     title: "Labs",
@@ -32,14 +36,20 @@ const t = text();
 
 export function LabCards({ guided = false }: { guided?: boolean } = {}) {
   const role = useAuth((s) => s.user!.role);
-  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: role === "STUDENT" });
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(role) });
   const cards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
     const visual = labInfo.find((item) => item.id === lab.id);
-    return visual ? [{ ...visual, title: lab.title, description: lab.learningObjective, subject: lab.subject?.name ?? visual.subject }] : [];
-  }) : labInfo;
+    const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
+    return visual ? [{ ...visual, title: lab.title, description: lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
+  }) : labInfo.map((visual) => {
+    const lab = labs.data?.find((item) => item.id === visual.id);
+    const label = labCurriculumLabel(lab, visual.subject, t.grades);
+    return { ...visual, title: lab?.title ?? visual.title, description: lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
+  });
   return (
     <div className="lab-grid">
       {cards.map((l) => (
+        <article key={l.id} id={`lab-${l.id}`} className="lab-library-item">
         <Link
           to={guided && role === "STUDENT" ? "/lessons" : ["STUDENT", "TEACHER"].includes(role) ? "/labs/" + l.id : "/labs"}
           className="lab-card"
@@ -56,7 +66,7 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
           <div className="lab-copy">
             <div className="lab-meta">
               <span>{l.tag}</span>
-              <span>{t.grades}</span>
+              <span>{l.gradeLabel}</span>
             </div>
             <h3>{l.title}</h3>
             <p>{l.description}</p>
@@ -68,6 +78,8 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
             </div>
           </div>
         </Link>
+        {l.lessonLinks?.map((lesson) => <Link className="lab-library-lesson" key={lesson.lessonId} to={relatedLessonHref(lesson.lessonId)}>{t.relatedLesson}: {lesson.title}<ArrowUpRight size={15} /></Link>)}
+        </article>
       ))}
       {role === "STUDENT" && labs.isSuccess && cards.length === 0 && <p className="notice">{t.nonePublished}</p>}
     </div>

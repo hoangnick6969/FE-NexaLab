@@ -1,11 +1,12 @@
+import { AssignedLabSpace } from "../shared/LabSpace";
 import { lazy, Suspense, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Play, RotateCcw } from "lucide-react";
-import { api } from "../../lib/api";
-import { Badge, ErrorBox, InlineLoader, verdictLabel } from "../../components/ui";
-import { CircuitPathwayStep } from "./CircuitPathwayStep";
-import { Chemistry } from "./Chemistry";
-import { defineText } from "../../i18n";
+import { api } from "../../../lib/api";
+import { Badge, ErrorBox, InlineLoader, verdictLabel } from "../../../components/ui";
+import { CircuitPathwayStep } from "../physics/electricity/CircuitPathwayStep";
+import { Chemistry } from "../chemistry/Chemistry";
+import { defineText } from "../../../i18n";
 
 const text = defineText({
   vi: {
@@ -49,7 +50,7 @@ const text = defineText({
 });
 const t = text();
 
-const Eye = lazy(() => import("./Eye"));
+const Eye = lazy(() => import("../biology/anatomy/Eye"));
 
 type Props = { lessonId: string; assignmentId: string; step: any; onReconciled?: (pathway: any) => void };
 
@@ -133,6 +134,7 @@ function ModelPracticalStep({ lessonId, assignmentId, step, onReconciled, labId,
   const passed = attempt ? attempt.verdict === "passed" : step.state === "COMPLETED" && !newRun;
 
   return (
+    <AssignedLabSpace title={workspace.title}>
     <section className="practical-step" aria-label={labId === "chemistry" ? t.phArea : t.eyeArea}>
       <div className="circuit-challenge-card practical-card">
         <div className="practical-card-head">
@@ -198,5 +200,6 @@ function ModelPracticalStep({ lessonId, assignmentId, step, onReconciled, labId,
         </div>
       )}
     </section>
+    </AssignedLabSpace>
   );
 }

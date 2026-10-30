@@ -1,308 +1,395 @@
-import { motion, useReducedMotion } from "motion/react";
+import {
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "motion/react";
 import {
   ArrowDown,
   ArrowRight,
   Atom,
   BookOpen,
+  CheckCircle2,
+  Eye,
   FlaskConical,
-  Lightbulb,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { chooseLocaleBeforeSignIn, defineText, getLocale } from "../../i18n";
+import { Hero3DStage } from "./Hero3DStage";
 
 const text = defineText({
   vi: {
-    steps: [{ title: "Bắt đầu từ điều em muốn biết", copy: "Đọc nội dung ngắn, xem hình ảnh và video để hiểu hiện tượng trước khi bắt tay vào thử." }, { title: "Kiểm tra cách em hiểu", copy: "Thẻ ghi nhớ và câu hỏi nhỏ giúp em ôn lại kiến thức theo nhịp học của mình." }, { title: "Thử trong mô phỏng 3D", copy: "Điều chỉnh thông số, quan sát kết quả rồi thử lại để tìm ra điều làm nên khác biệt." }],
-    subjects: [{ name: "Vật lý", detail: "Mạch điện và ánh sáng" }, { name: "Hóa học", detail: "Chất và phản ứng" }, { name: "Sinh học", detail: "Cơ thể và sự sống" }],
     home: "NexaLab, trang chủ",
     nav: "Điều hướng trang giới thiệu",
     how: "Cách học",
-    sims: "Mô phỏng 3D",
+    sims: "Phòng lab",
     subjectsNav: "Môn học",
     signIn: "Đăng nhập",
-    enter: "Vào học",
-    eyebrow: "KHOA HỌC TỰ NHIÊN · LỚP 8–9",
-    heroLine: "Đừng chỉ học về khoa học.",
-    heroEmphasis: "Hãy tự mình khám phá.",
-    heroBody: "Đọc, quan sát, đặt câu hỏi rồi bước vào mô phỏng 3D. Mỗi lần thử giúp em hiểu thêm một điều về thế giới quanh mình.",
+    enter: "Vào phòng lab",
+    heroLine: "Khoa học không nằm trên trang sách.",
+    heroEmphasis: "Khoa học nằm ở lần em tự tay thử.",
+    heroBody: "Phòng thí nghiệm ảo và mô hình 3D môn Khoa học tự nhiên THCS (Lớp 8–9). Nơi học sinh tự do đóng mạch điện, bóc tách mô hình mắt và thử nghiệm phản ứng hóa học mà không sợ làm sai.",
     start: "Bắt đầu khám phá",
-    seeHow: "Xem cách học",
-    stepByStep: "Học theo từng bước",
-    stepByStepDetail: "Nội dung · Quiz · Mô phỏng · Thử lại",
-    visual: "Minh họa mô phỏng khoa học ba chiều",
-    running: "MÔ PHỎNG ĐANG CHẠY",
-    observeModel: "Quan sát mô hình",
-    observeDetail: "Thử thay đổi · Xem điều xảy ra",
-    try: "THỬ",
-    observe: "QUAN SÁT",
-    understand: "HIỂU",
-    journeyEyebrow: "MỘT HÀNH TRÌNH RÕ RÀNG",
-    journey1: "Từ câu hỏi đầu tiên",
-    journey2: "đến lúc",
-    journeyEmphasis: "tự tìm ra câu trả lời.",
-    journeyBody: "Em luôn có nền tảng kiến thức trước khi bước vào mô phỏng và thử thách.",
-    labEyebrow: "PHÒNG THÍ NGHIỆM CỦA EM",
-    see1: "Thấy điều sách vở",
-    see2: "khó diễn tả.",
-    labBody: "Quan sát mạch điện hoạt động, khám phá cách mắt tiếp nhận ánh sáng, hay thử thay đổi điều kiện của một phản ứng. Mô phỏng giúp em học bằng cách nhìn thấy và tự tay điều chỉnh.",
-    exploreNexaLab: "Khám phá NexaLab",
-    model3d: "MÔ HÌNH 3D",
-    live: "ĐANG HOẠT ĐỘNG",
-    doorsEyebrow: "BA CÁNH CỬA KHOA HỌC",
-    curious: "Điều gì làm em tò mò?",
-    curiousBody: "Bắt đầu từ một câu hỏi, rồi theo đuổi nó đến khi em hiểu.",
-    ctaEyebrow: "SẴN SÀNG CHO CÂU HỎI ĐẦU TIÊN?",
-    cta1: "Khám phá khoa học",
-    cta2: "theo cách của em.",
-    enterSpace: "Vào không gian học tập",
-    footerMotto: "Quan sát. Thử nghiệm. Thấu hiểu.",
-    footerScope: "Khoa học tự nhiên · THCS",
+    seeHow: "Xem các phòng lab",
+    circuitDemoTitle: "Bàn thực hành trực tiếp",
+    switchClose: "Đang đóng công tắc",
+    switchOpen: "Đang mở công tắc",
+    circuitOn: "Mạch kín: Đèn LED 20 mA sáng an toàn (9V · 350Ω)",
+    circuitOff: "Mạch hở: Không có dòng điện chạy qua",
+    circuitHint: "Chạm hoặc click vào công tắc để đóng mạch",
+    labsTitle: "Ba câu hỏi khơi gợi tò mò",
+    labsSubtitle: "Mỗi phòng lab bắt đầu bằng một hiện tượng thực tế mà sách giáo khoa khó diễn tả hết.",
+    labs: [
+      {
+        subject: "Vật lý",
+        question: "Làm sao để thắp sáng một bóng đèn an toàn?",
+        desc: "Tự tay nối nguồn pin 9V, chọn điện trở 350Ω, đo dòng 20 mA và kiểm chứng định luật Ôm.",
+        tag: "Mạch điện 2D",
+        action: "Khám phá phòng Vật lý",
+      },
+      {
+        subject: "Sinh học",
+        question: "Ánh sáng đi vào mắt em như thế nào?",
+        desc: "Mô hình giải phẫu 3D xoay 360°, bóc tách củng mạc, giác mạc và quan sát đường đi của ánh sáng.",
+        tag: "Mô hình mắt 3D",
+        action: "Khám phá phòng Sinh học",
+      },
+      {
+        subject: "Hóa học",
+        question: "Tại sao hai chất trong suốt lại đổi màu xanh?",
+        desc: "Thay đổi số mol, quan sát biến đổi màu sắc và kết tủa tức thì trong môi trường phản ứng an toàn.",
+        tag: "Phản ứng hóa học",
+        action: "Khám phá phòng Hóa học",
+      },
+    ],
+    howTitle: "Học qua từng lần thử",
+    howSubtitle: "Học sinh hiểu sâu bản chất khi được tự tay quan sát, làm thử và rút kinh nghiệm.",
+    steps: [
+      {
+        num: "01",
+        title: "Quan sát hiện tượng",
+        desc: "Nắm vững lý thuyết cốt lõi qua bài đọc ngắn, video và hình ảnh trực quan trước khi bắt đầu.",
+      },
+      {
+        num: "02",
+        title: "Tự tay thử & sửa",
+        desc: "Kéo thả linh kiện, điều chỉnh thông số và quan sát kết quả tức thì. Sai sót là một phần của khám phá.",
+      },
+      {
+        num: "03",
+        title: "Thấu hiểu thực chất",
+        desc: "Server tính toán kết quả khoa học chính thức, gợi ý từng mức để em tự tìm ra câu trả lời.",
+      },
+    ],
+    ctaTitle: "Sẵn sàng cho thí nghiệm đầu tiên?",
+    ctaBody: "Miễn phí cho mọi học sinh THCS. Không cần cài đặt, không lo rủi ro hóa chất, chạy mượt mà ngay trên trình duyệt.",
+    ctaAction: "Bắt đầu học ngay",
+    footerMotto: "Chạm vào khoa học. Học qua từng lần thử.",
+    footerScope: "Khoa học tự nhiên THCS · Lớp 8–9",
   },
   en: {
-    steps: [{ title: "Start from what you want to know", copy: "Read short content and look at images and video to understand a phenomenon before you try it." }, { title: "Check what you understand", copy: "Study cards and short questions help you review at your own pace." }, { title: "Try it in a 3D simulation", copy: "Adjust settings, watch what happens, then try again to find what makes the difference." }],
-    subjects: [{ name: "Physics", detail: "Circuits and light" }, { name: "Chemistry", detail: "Substances and reactions" }, { name: "Biology", detail: "The body and life" }],
     home: "NexaLab, home",
     nav: "Welcome page navigation",
     how: "How it works",
-    sims: "3D simulations",
+    sims: "Virtual Labs",
     subjectsNav: "Subjects",
     signIn: "Sign in",
-    enter: "Start learning",
-    eyebrow: "NATURAL SCIENCE · GRADES 8–9",
-    heroLine: "Don't just learn about science.",
-    heroEmphasis: "Discover it yourself.",
-    heroBody: "Read, observe, ask questions, then step into a 3D simulation. Every attempt teaches you something new about the world around you.",
+    enter: "Enter Lab",
+    heroLine: "Science is not just on the page.",
+    heroEmphasis: "It starts the moment you try.",
+    heroBody: "Interactive virtual labs and 3D models for Lower Secondary Natural Sciences (Grades 8–9). Where students build circuits, explore eye anatomy, and run chemical reactions safely.",
     start: "Start exploring",
-    seeHow: "See how it works",
-    stepByStep: "Learn step by step",
-    stepByStepDetail: "Content · Quiz · Simulation · Try again",
-    visual: "Illustration of a 3D science simulation",
-    running: "SIMULATION RUNNING",
-    observeModel: "Observe the model",
-    observeDetail: "Change something · See what happens",
-    try: "TRY",
-    observe: "OBSERVE",
-    understand: "UNDERSTAND",
-    journeyEyebrow: "A CLEAR JOURNEY",
-    journey1: "From the first question",
-    journey2: "to the moment you",
-    journeyEmphasis: "find the answer yourself.",
-    journeyBody: "You always have the basics before you step into simulations and challenges.",
-    labEyebrow: "YOUR LAB",
-    see1: "See what books",
-    see2: "struggle to show.",
-    labBody: "Watch a circuit work, explore how the eye takes in light, or change the conditions of a reaction. Simulations help you learn by seeing and adjusting things yourself.",
-    exploreNexaLab: "Explore NexaLab",
-    model3d: "3D MODEL",
-    live: "LIVE",
-    doorsEyebrow: "THREE DOORS TO SCIENCE",
-    curious: "What makes you curious?",
-    curiousBody: "Start with a question and follow it until you understand.",
-    ctaEyebrow: "READY FOR YOUR FIRST QUESTION?",
-    cta1: "Explore science",
-    cta2: "your way.",
-    enterSpace: "Enter the learning space",
-    footerMotto: "Observe. Experiment. Understand.",
+    seeHow: "Explore labs",
+    circuitDemoTitle: "Live Workbench Demo",
+    switchClose: "Switch is closed",
+    switchOpen: "Switch is open",
+    circuitOn: "Closed circuit: 20 mA LED lights safely (9V · 350Ω)",
+    circuitOff: "Open circuit: No current flowing",
+    circuitHint: "Click or tap the switch to close the circuit",
+    labsTitle: "Three Questions Sparking Curiosity",
+    labsSubtitle: "Every lab starts with a real-world phenomenon that textbooks struggle to capture.",
+    labs: [
+      {
+        subject: "Physics",
+        question: "How do you light a bulb without burning it?",
+        desc: "Connect a 9V battery, select a 350Ω resistor, measure 20 mA, and discover Ohm's law.",
+        tag: "2D Circuit Lab",
+        action: "Enter Physics Lab",
+      },
+      {
+        subject: "Biology",
+        question: "How does light enter the human eye?",
+        desc: "Rotate a 360° 3D anatomy model, dissect the sclera and cornea, and trace light rays to the retina.",
+        tag: "3D Eye Model",
+        action: "Enter Biology Lab",
+      },
+      {
+        subject: "Chemistry",
+        question: "Why do two clear liquids turn deep blue?",
+        desc: "Adjust molar quantities, observe color transitions and precipitates in a safe reaction engine.",
+        tag: "Reaction Engine",
+        action: "Enter Chemistry Lab",
+      },
+    ],
+    howTitle: "Learn Through Every Attempt",
+    howSubtitle: "Students truly understand when they observe, experiment, and adjust on their own.",
+    steps: [
+      {
+        num: "01",
+        title: "Observe the Phenomenon",
+        desc: "Grasp core principles through concise reading, video, and visual guides before experimenting.",
+      },
+      {
+        num: "02",
+        title: "Experiment & Adjust",
+        desc: "Drag components, tune parameters, and see instant reactions. Making mistakes is how you learn.",
+      },
+      {
+        num: "03",
+        title: "Deep Understanding",
+        desc: "The server computes authentic scientific outcomes with progressive hints to guide discovery.",
+      },
+    ],
+    ctaTitle: "Ready for your first experiment?",
+    ctaBody: "Free for lower secondary students. Zero setup, zero chemical risks, runs smoothly in your browser.",
+    ctaAction: "Start Learning Now",
+    footerMotto: "Touch science. Learn through every attempt.",
     footerScope: "Natural science · Lower secondary",
   },
 });
 const t = text();
 
-const steps = [
-  {
-    number: "01",
-    icon: BookOpen,
-    ...t.steps[0],
-  },
-  {
-    number: "02",
-    icon: Lightbulb,
-    ...t.steps[1],
-  },
-  {
-    number: "03",
-    icon: FlaskConical,
-    ...t.steps[2],
-  },
-];
+/* ---------- motion helpers ---------- */
 
-const subjects = [
-  { ...t.subjects[0], className: "physics" },
-  { ...t.subjects[1], className: "chemistry" },
-  { ...t.subjects[2], className: "biology" },
-];
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-export function PublicLanding() {
-  const reduceMotion = useReducedMotion();
-  const reveal = {
-    initial: reduceMotion ? false : { opacity: 0, y: 24 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, amount: 0.2 },
-    transition: { duration: reduceMotion ? 0 : 0.65, ease: "easeOut" as const },
-  };
+const stagger = (delay = 0) => ({
+  hidden: {},
+  show: { transition: { staggerChildren: 0.055, delayChildren: delay } },
+});
+const wordVariant = {
+  hidden: { y: "112%" },
+  show: { y: 0, transition: { duration: 0.95, ease: EASE } },
+};
 
+/** Word-by-word masked reveal. Splits on spaces only, so Vietnamese diacritics are never broken. */
+function Words({ text: value }: { text: string }) {
+  const words = value.split(" ");
   return (
-    <div className="public-site">
-      <header className="site-nav">
-        <Link className="site-brand" to="/" aria-label={t.home}>
-          <span><Atom size={23} /></span>
-          NexaLab<span className="site-brand-dot">.</span>
-        </Link>
-        <nav aria-label={t.nav}>
-          <a href="#cach-hoc">{t.how}</a>
-          <a href="#mo-phong">{t.sims}</a>
-          <a href="#mon-hoc">{t.subjectsNav}</a>
-        </nav>
-        <div className="site-nav-actions">
-          <Link className="site-login" to="/login">{t.signIn}</Link>
-          <Link className="site-nav-cta" to="/login">{t.enter} <ArrowRight size={16} /></Link>
-          <button type="button" className="site-language" lang={getLocale() === "vi" ? "en" : "vi"} onClick={() => chooseLocaleBeforeSignIn(getLocale() === "vi" ? "en" : "vi")}>{getLocale() === "vi" ? "EN" : "VI"}</button>
-        </div>
-      </header>
-
-      <main>
-        <section className="landing-hero">
-          <div className="landing-hero-copy">
-            <motion.div {...reveal}>
-              <span className="landing-eyebrow"><span /> {t.eyebrow}</span>
-              <h1>{t.heroLine}<br /><em>{t.heroEmphasis}</em></h1>
-              <p>{t.heroBody}</p>
-              <div className="landing-actions">
-                <Link className="landing-primary" to="/login">{t.start} <ArrowRight size={18} /></Link>
-                <a className="landing-secondary" href="#cach-hoc">{t.seeHow} <ArrowDown size={16} /></a>
-              </div>
-              <div className="landing-note"><span className="landing-note-mark"><BookOpen size={17} /></span><span><b>{t.stepByStep}</b><small>{t.stepByStepDetail}</small></span></div>
-            </motion.div>
-          </div>
-
-          <div className="landing-visual" aria-label={t.visual}>
-            <div className="visual-label visual-label-top"><span className="visual-live-dot" /> {t.running}</div>
-            <div className="science-scene">
-              <div className="scene-grid" />
-              <div className="scene-glow" />
-              <div className="atom-orbit orbit-one">
-                <motion.div
-                className="orbit-spinner"
-                animate={reduceMotion ? undefined : { rotate: 360 }}
-                transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
-                ><span className="electron electron-one" /></motion.div>
-              </div>
-              <div className="atom-orbit orbit-two">
-                <motion.div
-                className="orbit-spinner"
-                animate={reduceMotion ? undefined : { rotate: -360 }}
-                transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
-                ><span className="electron electron-two" /></motion.div>
-              </div>
-              <div className="atom-orbit orbit-three">
-                <motion.div
-                className="orbit-spinner"
-                animate={reduceMotion ? undefined : { rotate: 360 }}
-                transition={{ duration: 39, repeat: Infinity, ease: "linear" }}
-                ><span className="electron electron-three" /></motion.div>
-              </div>
-              <motion.div
-                className="atom-nucleus"
-                animate={reduceMotion ? undefined : { scale: [1, 1.06, 1] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-              ><Atom size={48} strokeWidth={1.25} /></motion.div>
-              <div className="scene-coordinate coordinate-a">e⁻ <span>−1.2</span></div>
-              <div className="scene-coordinate coordinate-b">E <span>+2.4</span></div>
-              <svg className="scene-trace" viewBox="0 0 420 90" aria-hidden="true">
-                <path d="M8 66 H112 L148 30 H251 L289 66 H412" />
-                <motion.circle
-                  r="5"
-                  fill="currentColor"
-                  initial={false}
-                  animate={reduceMotion ? undefined : { cx: [8, 112, 148, 251, 289, 412], cy: [66, 66, 30, 30, 66, 66] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                />
-              </svg>
-            </div>
-            <motion.div
-              className="visual-caption"
-              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduceMotion ? 0 : 0.55, duration: reduceMotion ? 0 : 0.5 }}
-            ><span className="caption-icon"><FlaskConical size={18} /></span><span><b>{t.observeModel}</b><small>{t.observeDetail}</small></span><span className="caption-pulse" /></motion.div>
-            <div className="visual-label visual-label-bottom">{t.try} <i /> {t.observe} <i /> {t.understand}</div>
-          </div>
-        </section>
-
-        <section className="landing-learning" id="cach-hoc">
-          <motion.div className="landing-section-heading" {...reveal}>
-            <span className="landing-eyebrow">{t.journeyEyebrow}</span>
-            <h2>{t.journey1}<br />{t.journey2} <em>{t.journeyEmphasis}</em></h2>
-            <p>{t.journeyBody}</p>
-          </motion.div>
-          <div className="learning-steps">
-            {steps.map(({ number, icon: Icon, title, copy }, index) => (
-              <motion.article
-                className="learning-step"
-                key={number}
-                initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: reduceMotion ? 0 : 0.5, delay: reduceMotion ? 0 : index * 0.13 }}
-              >
-                <div className="step-top"><span>{number}</span><Icon size={22} strokeWidth={1.8} /></div>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </motion.article>
-            ))}
-          </div>
-        </section>
-
-        <motion.section className="landing-simulation" id="mo-phong" {...reveal}>
-          <div className="simulation-copy">
-            <span className="landing-eyebrow">{t.labEyebrow}</span>
-            <h2>{t.see1}<br />{t.see2}</h2>
-            <p>{t.labBody}</p>
-            <Link className="simulation-link" to="/login">{t.exploreNexaLab} <ArrowRight size={17} /></Link>
-          </div>
-          <div className="simulation-art" aria-hidden="true">
-            <div className="simulation-ring ring-a" />
-            <div className="simulation-ring ring-b" />
-            <motion.div className="simulation-core" animate={reduceMotion ? undefined : { rotateY: [0, 14, 0, -14, 0], rotateX: [0, -7, 0, 7, 0] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}>
-              <Atom size={82} strokeWidth={1} />
-            </motion.div>
-            <motion.span className="simulation-particle particle-a" animate={reduceMotion ? undefined : { y: [0, -14, 0], x: [0, 8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} />
-            <motion.span className="simulation-particle particle-b" animate={reduceMotion ? undefined : { y: [0, 12, 0], x: [0, -7, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} />
-            <div className="simulation-tag">{t.model3d} <span>● {t.live}</span></div>
-          </div>
-        </motion.section>
-
-        <section className="landing-subjects" id="mon-hoc">
-          <motion.div className="subject-heading" {...reveal}>
-            <div><span className="landing-eyebrow">{t.doorsEyebrow}</span><h2>{t.curious}</h2></div>
-            <p>{t.curiousBody}</p>
-          </motion.div>
-          <div className="subject-cards">
-            {subjects.map((subject, index) => (
-              <motion.div
-                className={`subject-card ${subject.className}`}
-                key={subject.name}
-                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                whileHover={reduceMotion ? undefined : { y: -6, transition: { duration: 0.2 } }}
-                transition={{ duration: reduceMotion ? 0 : 0.45, delay: reduceMotion ? 0 : index * 0.1 }}
-              >
-                <span className="subject-symbol">{subject.className === "physics" ? <Atom /> : subject.className === "chemistry" ? <FlaskConical /> : <Lightbulb />}</span>
-                <span className="subject-card-copy"><b>{subject.name}</b><small>{subject.detail}</small></span>
-                <ArrowRight size={18} />
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        <motion.section className="landing-final-cta" {...reveal}>
-          <div><span className="landing-eyebrow">{t.ctaEyebrow}</span><h2>{t.cta1}<br />{t.cta2}</h2></div>
-          <Link className="landing-primary" to="/login">{t.enterSpace} <ArrowRight size={18} /></Link>
-        </motion.section>
-      </main>
-
-      <footer className="site-footer"><Link className="site-brand" to="/"><span><Atom size={20} /></span>NexaLab<span className="site-brand-dot">.</span></Link><span>{t.footerMotto}</span><span>{t.footerScope}</span></footer>
-    </div>
+    <>
+      {words.map((word, i) => (
+        <span key={i}>
+          <span className="word-mask">
+            <m.span className="word" variants={wordVariant}>{word}</m.span>
+          </span>
+          {i < words.length - 1 ? " " : null}
+        </span>
+      ))}
+    </>
   );
 }
+
+function useFinePointer() {
+  const ref = useRef(false);
+  useEffect(() => {
+    ref.current = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  }, []);
+  return ref;
+}
+
+function Magnetic({ children, disabled }: { children: ReactNode; disabled?: boolean | null }) {
+  const fine = useFinePointer();
+  const x = useSpring(0, { stiffness: 220, damping: 16, mass: 0.35 });
+  const y = useSpring(0, { stiffness: 220, damping: 16, mass: 0.35 });
+  const onMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    if (disabled || !fine.current) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    x.set((e.clientX - (r.left + r.width / 2)) * 0.28);
+    y.set((e.clientY - (r.top + r.height / 2)) * 0.28);
+  };
+  const onLeave = () => { x.set(0); y.set(0); };
+  return (
+    <m.span className="magnetic" style={{ x, y }} onPointerMove={onMove} onPointerLeave={onLeave}>
+      {children}
+    </m.span>
+  );
+}
+
+/* ---------- page ---------- */
+
+export function PublicLanding() {
+  const reduce = useReducedMotion();
+  const locale = getLocale();
+  const otherLocale = locale === "vi" ? "en" : "vi";
+
+  const heroRef = useRef<HTMLElement>(null);
+
+  /* header: glass + progress */
+  const { scrollY, scrollYProgress: pageProgress } = useScroll();
+  const navBg = useTransform(scrollY, [0, 72], [0, 1]);
+  const progressX = useSpring(pageProgress, { stiffness: 140, damping: 28, restDelta: 0.001 });
+
+  /* hero: scroll exit */
+  const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+  const heroCopyY = useTransform(heroP, [0, 1], [0, reduce ? 0 : -36]);
+  const heroCopyOpacity = useTransform(heroP, [0, 0.75], [1, reduce ? 1 : 0.2]);
+
+  const rise = (delay = 0) =>
+    reduce ? {} : {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: { duration: 0.85, ease: EASE, delay },
+    };
+  const reveal = reduce ? {} : {
+    initial: { opacity: 0, y: 28 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.25 },
+    transition: { duration: 0.8, ease: EASE },
+  };
+  const headingProps = (delay = 0) => ({
+    variants: stagger(delay),
+    initial: reduce ? (false as const) : ("hidden" as const),
+    whileInView: "show" as const,
+    viewport: { once: true, amount: 0.6 },
+  });
+
+  return (
+    <LazyMotion features={domAnimation} strict>
+      <div className="public-site">
+        <header className="site-header">
+          <m.i className="site-header-bg" aria-hidden="true" style={{ opacity: navBg }} />
+          <div className="site-nav">
+            <Link className="site-brand" to="/" aria-label={t.home}>
+              <span><Atom size={22} /></span>
+              NexaLab<span className="site-brand-dot">.</span>
+            </Link>
+            <nav aria-label={t.nav}>
+              <a href="#phong-lab">{t.sims}</a>
+              <a href="#cach-hoc">{t.how}</a>
+            </nav>
+            <div className="site-nav-actions">
+              <Link className="site-login" to="/login">{t.signIn}</Link>
+              <Link className="site-nav-cta" to="/login">{t.enter} <ArrowRight size={15} /></Link>
+              <button type="button" className="site-language" lang={otherLocale} onClick={() => chooseLocaleBeforeSignIn(otherLocale)}>
+                {locale === "vi" ? "EN" : "VI"}
+              </button>
+            </div>
+          </div>
+          <m.i className="site-progress" aria-hidden="true" style={{ scaleX: progressX }} />
+        </header>
+
+        <main>
+          {/* ---------------- HERO ---------------- */}
+          <section className="landing-hero" ref={heroRef}>
+            <div className="landing-hero-copy">
+              <m.div style={{ y: heroCopyY, opacity: heroCopyOpacity }}>
+                <m.h1 variants={stagger(0.12)} initial={reduce ? false : "hidden"} animate="show">
+                  <Words text={t.heroLine} /><br />
+                  <em><Words text={t.heroEmphasis} /></em>
+                </m.h1>
+                <m.p {...rise(0.4)}>{t.heroBody}</m.p>
+                <m.div className="landing-actions" {...rise(0.55)}>
+                  <Magnetic disabled={reduce}>
+                    <Link className="landing-primary" to="/login">{t.start} <ArrowRight size={18} /></Link>
+                  </Magnetic>
+                  <a className="landing-secondary" href="#phong-lab">{t.seeHow} <ArrowDown size={16} /></a>
+                </m.div>
+              </m.div>
+            </div>
+
+            {/* Interactive 3D Lab Stage (Physics, Biology, Chemistry + Floating Relics) */}
+            <Hero3DStage />
+          </section>
+
+          {/* ---------------- 3 LABS: CURIOSITY SHOWCASE ---------------- */}
+          <section className="landing-apple-labs" id="phong-lab">
+            <div className="apple-section-header">
+              <h2 {...headingProps(0.05)}>
+                <Words text={t.labsTitle} />
+              </h2>
+              <p {...reveal}>{t.labsSubtitle}</p>
+            </div>
+
+            <div className="apple-labs-grid">
+              {t.labs.map((lab: any, idx: number) => {
+                const LabIcon = idx === 0 ? Zap : idx === 1 ? Eye : FlaskConical;
+                const labClass = idx === 0 ? "theme-physics" : idx === 1 ? "theme-biology" : "theme-chemistry";
+                return (
+                  <m.div key={lab.subject} className={`apple-lab-card ${labClass}`} {...reveal}>
+                    <div className="apple-card-top">
+                      <span className="lab-discipline-pill">{lab.tag}</span>
+                      <span className="lab-icon-circle"><LabIcon size={20} /></span>
+                    </div>
+                    <div className="apple-card-main">
+                      <span className="apple-lab-subject">{lab.subject}</span>
+                      <h3 className="apple-lab-question">{lab.question}</h3>
+                      <p className="apple-lab-desc">{lab.desc}</p>
+                    </div>
+                    <div className="apple-card-bottom">
+                      <Link to="/login" className="apple-lab-cta">
+                        <span>{lab.action}</span>
+                        <ArrowRight size={16} />
+                      </Link>
+                    </div>
+                  </m.div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ---------------- HOW IT WORKS ---------------- */}
+          <section className="landing-how-apple" id="cach-hoc">
+            <div className="apple-section-header">
+              <h2 {...headingProps(0.05)}>
+                <Words text={t.howTitle} />
+              </h2>
+              <p {...reveal}>{t.howSubtitle}</p>
+            </div>
+
+            <div className="how-cards-row">
+              {t.steps.map((step: any, i: number) => {
+                const StepIcon = i === 0 ? BookOpen : i === 1 ? Sparkles : CheckCircle2;
+                return (
+                  <m.div key={step.num} className="how-apple-card" {...reveal}>
+                    <div className="how-step-header">
+                      <span className="how-index">{step.num}</span>
+                      <span className="how-icon-wrapper"><StepIcon size={20} /></span>
+                    </div>
+                    <h3 className="how-step-title">{step.title}</h3>
+                    <p className="how-step-desc">{step.desc}</p>
+                  </m.div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ---------------- FINAL CTA ---------------- */}
+          <m.section className="landing-apple-final" {...reveal}>
+            <div className="apple-final-box">
+              <h2 {...headingProps(0.05)}><Words text={t.ctaTitle} /></h2>
+              <p>{t.ctaBody}</p>
+              <Magnetic disabled={reduce}>
+                <Link className="landing-apple-btn" to="/login">
+                  {t.ctaAction} <ArrowRight size={18} />
+                </Link>
+              </Magnetic>
+            </div>
+          </m.section>
+        </main>
+
+        <footer className="site-footer">
+          <Link className="site-brand" to="/"><span><Atom size={20} /></span>NexaLab<span className="site-brand-dot">.</span></Link>
+          <span>{t.footerMotto}</span>
+          <span>{t.footerScope}</span>
+        </footer>
+      </div>
+    </LazyMotion>
+  );
+}
+
