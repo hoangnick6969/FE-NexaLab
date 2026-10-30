@@ -1,7 +1,7 @@
 # Lab frontend layout
 
 The catalog is the source of truth for Lab IDs and shared-kit membership:
-`../../../../nexalab-be/_bmad-output/specs/spec-lab-pipeline/lab-catalog-khtn8-9.md` §6A.3 and §6A.6.
+`../../../../nexalab-be/_bmad-output/specs/spec-lab-pipeline/lab-catalog-and-shared-kits-khtn8-9.md` §6A.3 and §6A.6.
 The 20 entries below are provisional implementation slots, not approved releases.
 
 ## Implemented code groups
