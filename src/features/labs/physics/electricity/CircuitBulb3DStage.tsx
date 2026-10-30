@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, ContactShadows } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { PhysicsStage } from "../shared/PhysicsStage";
 import * as THREE from "three";
 
 interface CircuitBulb3DStageProps {
@@ -13,7 +13,7 @@ interface CircuitBulb3DStageProps {
 // -------------------------------------------------------------
 // Procedural High-Fidelity Cable with Catenary Physics Sag
 // -------------------------------------------------------------
-function Wire({
+export function Wire({
   start,
   end,
   color = "#ef4444",
@@ -31,12 +31,12 @@ function Wire({
     const effectiveSag = Math.max(sag, dist * 0.18);
     const p1 = new THREE.Vector3(
       p0.x * 0.65 + p3.x * 0.35,
-      Math.min(p0.y, p3.y) - effectiveSag,
+      Math.max(.07, Math.min(p0.y, p3.y) - effectiveSag),
       p0.z * 0.65 + p3.z * 0.35
     );
     const p2 = new THREE.Vector3(
       p0.x * 0.35 + p3.x * 0.65,
-      Math.min(p0.y, p3.y) - effectiveSag,
+      Math.max(.07, Math.min(p0.y, p3.y) - effectiveSag),
       p0.z * 0.35 + p3.z * 0.65
     );
     return new THREE.CubicBezierCurve3(p0, p1, p2, p3);
@@ -65,7 +65,7 @@ function Wire({
 // -------------------------------------------------------------
 // Detailed 3D DC Battery Power Cell
 // -------------------------------------------------------------
-function Battery3D() {
+export function Battery3D() {
   return (
     <group position={[-1.4, 0.36, 0]}>
       {/* Battery Heavy Cell Body */}
@@ -160,8 +160,8 @@ function LightBulb3D({ isLit }: { isLit: boolean }) {
         <meshPhysicalMaterial
           ref={glassMatRef}
           color="#ffffff"
-          transmission={0.96}
-          opacity={1}
+          transmission={0}
+          opacity={0.28}
           transparent
           roughness={0.05}
           metalness={0.02}
@@ -176,7 +176,7 @@ function LightBulb3D({ isLit }: { isLit: boolean }) {
         <cylinderGeometry args={[0.045, 0.075, 0.18, 16]} />
         <meshPhysicalMaterial
           color="#ffffff"
-          transmission={0.9}
+          transmission={0} opacity={0.3}
           transparent
           roughness={0.1}
           ior={1.5}
@@ -222,7 +222,7 @@ function LightBulb3D({ isLit }: { isLit: boolean }) {
 // -------------------------------------------------------------
 // Snappy Mechanical Knife Switch with Smooth Kinetic Action
 // -------------------------------------------------------------
-function Switch3D({
+export function Switch3D({
   closed,
   active,
   onClick,
@@ -298,106 +298,13 @@ export function CircuitBulb3DStage({
   onToggleSwitch,
   isLit,
 }: CircuitBulb3DStageProps) {
-  return (
-    <div className="relative w-full h-[380px] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl">
-      <Canvas
-        camera={{ position: [0, 2.2, 3.4], fov: 42 }}
-        shadows
-        gl={{
-          antialias: true,
-          powerPreference: "high-performance",
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.15,
-        }}
-      >
-        <color attach="background" args={["#080c14"]} />
-
-        {/* Ambient & Primary Directional Sunlight */}
-        <ambientLight intensity={0.45} />
-        <directionalLight
-          position={[4, 6, 3]}
-          intensity={1.5}
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-bias={-0.0001}
-        />
-        <pointLight position={[-3, 4, 2]} intensity={0.3} color="#93c5fd" />
-
-        {/* Realistic Polished Wooden Tabletop */}
-        <mesh position={[0, -0.06, 0]} receiveShadow>
-          <boxGeometry args={[4.4, 0.18, 2.6]} />
-          <meshPhysicalMaterial
-            color="#854d27"
-            roughness={0.28}
-            metalness={0.08}
-            clearcoat={0.7}
-            clearcoatRoughness={0.15}
-          />
-        </mesh>
-        {/* Beveled Rim */}
-        <mesh position={[0, -0.17, 0]} receiveShadow>
-          <boxGeometry args={[4.3, 0.06, 2.5]} />
-          <meshStandardMaterial color="#451a03" roughness={0.6} />
-        </mesh>
-
-        {/* 3D Lab Apparatus */}
-        <Battery3D />
-        <LightBulb3D isLit={isLit} />
-        <Switch3D
-          closed={closed}
-          active={switchIsActive}
-          onClick={onToggleSwitch}
-        />
-
-        {/* Procedural Wires with Catenary Gravity Curve */}
-        {/* Wire 1: Battery (+) to Bulb */}
-        <Wire
-          start={[-1.4, 0.4, 0]}
-          end={[-0.16, 0.18, 0]}
-          color="#ef4444"
-          sag={0.26}
-        />
-        {/* Wire 2: Bulb to Switch */}
-        <Wire
-          start={[0.16, 0.18, 0]}
-          end={[1.14, 0.18, 0]}
-          color="#ef4444"
-          sag={0.26}
-        />
-        {/* Wire 3: Return from Switch to Battery (-) */}
-        <Wire
-          start={[1.44, 0.18, 0]}
-          end={[-1.4, 0.14, 0.22]}
-          color="#0f172a"
-          sag={0.42}
-        />
-
-        <ContactShadows position={[0, 0.03, 0]} opacity={0.7} scale={4.5} blur={1.8} far={1.5} />
-
-        {/* POV Camera Orbit Constrained to Tabletop */}
-        <OrbitControls
-          target={[0, 0.32, 0]}
-          minDistance={1.8}
-          maxDistance={4.8}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2.3}
-          enablePan={false}
-        />
-      </Canvas>
-
-      {/* Cinematic HUD Helper Badges */}
-      <div className="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none text-[11px] text-slate-300">
-        <span className="bg-slate-900/85 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-700/80 pointer-events-auto shadow flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${switchIsActive ? "bg-emerald-400 animate-ping" : "bg-slate-500"}`} />
-          {switchIsActive ? "Bấm trực tiếp vào công tắc 3D để đóng/mở mạch" : "Quan sát phản hồi mô hình"}
-        </span>
-        <span className="bg-slate-900/85 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-700/80 shadow">
-          Góc nhìn POV 3D • Kéo chuột để xoay
-        </span>
-      </div>
-    </div>
-  );
+  return <PhysicsStage>
+    <Battery3D />
+    <LightBulb3D isLit={isLit} />
+    <Switch3D closed={closed} active={switchIsActive} onClick={onToggleSwitch} />
+    <Wire start={[-1.4,.7,0]} end={[-.16,.18,0]} color="#ef4444" sag={.1} />
+    <Wire start={[.16,.18,0]} end={[1.14,.18,0]} color="#ef4444" sag={.08} />
+    <Wire start={[1.44,.18,0]} end={[-1.4,.14,.22]} color="#273844" sag={.08} />
+  </PhysicsStage>;
 }
 export default CircuitBulb3DStage;
-
-

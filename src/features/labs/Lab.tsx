@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState, useMemo } from "react";
 import { simulate } from "@nexalab/sim";
 import { Link, useParams, useLocation, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft,
   Play,
   RotateCcw,
   Bookmark,
@@ -12,13 +11,13 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
-import { Circuit, defaultCircuit } from "./Circuit";
-import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./CircuitBulbActivity";
-import { Chemistry } from "./Chemistry";
-import { useLabRunHost } from "./lab-run-host";
+import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
+import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./physics/electricity/CircuitBulbActivity";
+import { Chemistry } from "./chemistry/Chemistry";
+import { useLabRunHost } from "./runtime/lab-run-host";
 import { defineText } from "../../i18n";
-import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./lesson-lab-navigation";
-import { labCurriculumLabel } from "./lab-curriculum-label";
+import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
+import { LabSpace } from "./shared/LabSpace";
 
 const text = defineText({
   vi: {
@@ -169,7 +168,7 @@ const text = defineText({
   },
 });
 const t = text();
-const Eye = lazy(() => import("./Eye"));
+const Eye = lazy(() => import("./biology/anatomy/Eye"));
 const initialLabState = (id: string) => id === "circuit"
   ? defaultCircuit()
   : id === "chemistry"
@@ -206,7 +205,6 @@ export default function Lab() {
     ? assignment.data.content
     : null;
   const lab = assignedLab ?? publicLab;
-  const curriculumLabel = labCurriculumLabel({ ...publicLab, ...lab }, id === "circuit" ? t.physics : id === "eye" ? t.biology : t.chemistry, t.grades);
   const relatedLessons: RelatedLesson[] = publicLab?.lessonLinks ?? [];
   const originLessonId = searchParams.get("lessonId");
   const originLesson = originLessonId ? relatedLessons.find((lesson) => lesson.lessonId === originLessonId) : relatedLessons[0];
@@ -270,35 +268,17 @@ export default function Lab() {
     setHint(null);
     setSaved(false);
   };
+  const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
+  const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
   if (!["circuit", "eye", "chemistry"].includes(id))
-    return <p>{t.notFound}</p>;
+    return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
-    return <section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>;
+    return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
   if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
-    return <section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>;
-  return (
+    return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
+  return space(
     <>
-      <div className="lab-context-navigation">
-        {returnToLesson && <Link className="back-link" to={returnToLesson}><ArrowLeft size={15} /> {t.backToLesson}</Link>}
-        <Link className="back-link" to="/labs">{t.labs}</Link>
-      </div>
-      <div className="page-heading lab-heading">
-        <div>
-          <Badge>
-            {curriculumLabel.subject} · {curriculumLabel.grade}
-          </Badge>
-          <h1>{lab?.title ?? t.discoveryRoom}</h1>
-          <p className="muted">{lab?.learningObjective}</p>
-        </div>
-        <Badge tone="outline">
-          {user.role === "TEACHER" ? t.teacherPreview : assignmentId ? t.assignedPractice : t.freePractice}
-        </Badge>
-      </div>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {originLesson && returnToLesson && <aside className="lab-lesson-context" aria-label={t.relatedLesson}>
-        <div><span className="eyebrow">{t.relatedLesson}</span><strong>{originLesson.title}</strong></div>
-        <Link className="secondary" to={returnToLesson}>{t.backToLesson}<ArrowLeft size={15} /></Link>
-      </aside>}
       {runtimeReady && preview && !isBulb && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
@@ -318,26 +298,33 @@ export default function Lab() {
             </button>
           </div>}
           {user.role === "STUDENT" && !runtimeReady ? (
-            <div className="panel" role="status">
-              <p>{t.sessionHelp}</p>
-              <button
-                type="button"
-                className="primary"
-                data-testid="lab-session-start"
-                onClick={() => void labRun.open()}
-                disabled={labRun.pending || !lab || !challengeId}
-              >
-                <Play size={15} /> {labRun.pending ? t.startingSession : t.startSession}
-              </button>
+            <div className="lab-session-gate" role="status" data-testid="lab-session-gate">
+              <div className="lab-session-card">
+                <div className="lab-session-meta">
+                  <span className="lab-session-dot" aria-hidden="true" />
+                  <span className="lab-session-help">{t.sessionHelp}</span>
+                </div>
+                <button
+                  type="button"
+                  className="primary lab-session-btn"
+                  data-testid="lab-session-start"
+                  onClick={() => void labRun.open()}
+                  disabled={labRun.pending || !lab || !challengeId}
+                >
+                  <Play size={16} /> {labRun.pending ? t.startingSession : t.startSession}
+                </button>
+              </div>
             </div>
           ) : null}
           {runtimeReady && labRun.restoreCandidate && (
-            <div className="notice" role="status" data-testid="lab-draft-restore">
-              <b>{t.restoreTitle}</b>
-              <p>{t.restoreBody}</p>
-              <div className="lab-actions">
-                <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
-                <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
+            <div className="lab-draft-backdrop" role="dialog" aria-modal="true" aria-labelledby="lab-draft-restore-title">
+              <div className="notice lab-draft-modal" role="status" data-testid="lab-draft-restore">
+                <b id="lab-draft-restore-title">{t.restoreTitle}</b>
+                <p>{t.restoreBody}</p>
+                <div className="lab-actions">
+                  <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
+                  <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
+                </div>
               </div>
             </div>
           )}
@@ -374,16 +361,15 @@ export default function Lab() {
           </div>}
           <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
-        <aside className="lab-aside">
+        <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{isBulb ? t.bulbResult : t.result}</summary>
           {runtimeReady && !isBulb && <section className="panel challenge-panel">
-            <Badge tone="gold">{t.challenge}</Badge>
+            <span className="eyebrow">{t.challenge}</span>
             <h3>
               {isBulb ? t.bulbGoal : id === "circuit"
                 ? t.circuitGoal
                 : id === "eye"
                   ? t.eyeGoal
-                  : t.chemGoal}
-            </h3>
+                  : t.chemGoal}</h3>
             <p>
               {isBulb ? t.bulbTask : id === "circuit"
                 ? t.circuitTask
@@ -523,7 +509,7 @@ export default function Lab() {
               </small>
             </section>
           )}
-        </aside>
+        </details></aside>
       </div>
       {!isBulb && <p className="tiny muted">{t.disclaimer}</p>}
     </>

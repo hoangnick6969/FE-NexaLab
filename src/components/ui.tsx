@@ -131,11 +131,11 @@ export function PageLoader({
       aria-busy="true"
     >
       <div className="loader-core">
-        <div className="loader-orbit-wrap" aria-hidden="true">
-          <span className="loader-ring loader-ring-1" />
-          <span className="loader-ring loader-ring-2" />
-          <span className="loader-ring loader-ring-3" />
-          <span className="loader-nucleus" />
+        <div className="loader-indicator" aria-hidden="true">
+          <svg className="apple-spinner" viewBox="0 0 36 36" width="34" height="34">
+            <circle className="apple-spinner-track" cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" />
+            <circle className="apple-spinner-blade" cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
         </div>
         <div className="loader-copy">
           <b className="loader-message">{message}</b>
@@ -158,7 +158,10 @@ export function InlineLoader({
 }) {
   return (
     <div className={`inline-loader is-${size}`} role="status" aria-live="polite">
-      <span className="inline-loader-spinner" aria-hidden="true" />
+      <svg className="inline-loader-spinner" viewBox="0 0 20 20" width={size === "sm" ? 13 : 16} height={size === "sm" ? 13 : 16} aria-hidden="true">
+        <circle className="spinner-track" cx="10" cy="10" r="7.5" fill="none" strokeWidth="2.2" />
+        <circle className="spinner-blade" cx="10" cy="10" r="7.5" fill="none" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
       <span>{message}</span>
     </div>
   );

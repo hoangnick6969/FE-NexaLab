@@ -3,7 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { HandControl } from "./HandControl";
-import { defineText } from "../../i18n";
+import { defineText } from "../../../../i18n";
 
 const text = defineText({
   vi: {

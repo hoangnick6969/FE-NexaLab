@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { defineText } from "../../i18n";
+import { defineText } from "../../../i18n";
 
 const text = defineText({
   vi: {

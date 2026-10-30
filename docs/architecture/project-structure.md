@@ -31,7 +31,7 @@ src/
 | `lessons` | `Lessons` (student hub and teacher library), `lesson-catalog.ts` (hub merge/filter), `LessonDetail` (student lesson page: reading, video, cards, basic exercise tabs), `VideoLearningStep`, `StudyCardsStep`, `LessonEditorFields`, `library.tsx` (library filters, coverage, review and attribution widgets) |
 | `assignments` | `/assignments` routes: `StudentAssignments`, `AssignedLearning` (assignment pathway), `QuizLearningStep`, `AssignedTest` (I3 scored test) |
 | `ebook` | `EbookReader` (textbook reader and annotations) |
-| `labs` | `LabLibrary`, `Lab`, the `Circuit`/`Chemistry`/`Eye` workspaces, `HandControl`, pathway steps (`PracticalPathwayStep`, `CircuitPathwayStep`), `lab-info.ts` |
+| `labs` | `Lab`/`LabLibrary` routes; `shared` fullscreen UI; `runtime` run host; `physics/<kit>` environments and models; `chemistry/<kit>`; `biology/<resource-or-kit>`; `pathways` lesson/assignment integration; discovery metadata |
 | `progress` | `ProgressPage` (student/parent), `StudentProgress`, `AssignmentProgress`, `ActivityList`, `EvidenceSheet`, `progress-format.ts` |
 | `classes` | `Classes` (role switch), `TeacherClasses`, `ClassDetail`, `Roster`, `Assignments` (assign/edit), `TestAssignments` (I3 late queue, reject, deadline revision, tracking), `ClassSpaceResources`, `PracticeAnalytics`, `StudentClasses`, `class-ui.tsx` (dialogs, mutation and load-error helpers), `class-types.ts` |
 | `admin` | `Admin` (tab shell) and one file per tab: `Overview`, `Users`, `Taxonomy`, `Content`, `Simulations`, `Assets`, `AuditExplorer`; `admin-ui.tsx` (labels, status, dialogs, paging) |
@@ -47,6 +47,7 @@ Conventions:
 - The API client lives in `lib/`, not an `api/` folder: in dev mode Vite serves modules by path, and a `/src/api/…` URL would
   collide with `/api` proxy rules and test mocks such as `**/api/**`.
 - Pages are lazy-loaded from `app/App.tsx`, so each feature builds into its own chunk.
+- Labs use subfolders where implementations share a discipline kit/environment. Cross-discipline presentation stays in `features/labs/shared/`; route hosts stay at the feature root; lesson assignment integration stays in `pathways/`. Create a kit folder with its first implementation rather than committing empty placeholders. The provisional 20-slot mapping and current FE status are indexed in `features/labs/README.md` and governed by the BE lab catalog.
 - Playwright scenarios stay in `tests/`; shared live-test helpers are in `tests/fixtures/live.ts`.
 
 ### Known follow-ups

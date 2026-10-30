@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff } from "lucide-react";
-import { ErrorBox } from "../../components/ui";
-import { defineText } from "../../i18n";
+import { ErrorBox } from "../../../../components/ui";
+import { defineText } from "../../../../i18n";
 
 const text = defineText({
   vi: {

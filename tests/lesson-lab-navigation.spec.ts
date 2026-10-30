@@ -67,7 +67,7 @@ test("assigned lesson keeps its return context without assigning the LabRun to t
   await page.getByTestId("lab-session-start").click();
   await expect(page.getByTestId("bulb-prediction-closed")).toBeVisible();
   expect(writes.find((request) => request.path.endsWith("/runs"))?.body).toEqual({ challengeId: "circuit_001", releaseId });
-  await page.getByRole("link", { name: "Quay lại phần bài học", exact: true }).first().click();
+  await page.getByRole("link", { name: "Thoát phòng thực hành", exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`assignmentId=lesson-assignment#${sectionId}$`));
   await expect(page.locator(`[id="${sectionId}"]`)).toBeFocused();
   expect(writes.filter((request) => request.path.includes("/progress"))).toHaveLength(0);
@@ -102,8 +102,7 @@ test("unbound lesson query cannot manufacture a return link", async ({ page }) =
   await mockApp(page);
   await page.goto("/labs/circuit?lessonId=not-a-bound-lesson&sectionId=arbitrary&lessonAssignmentId=other");
   await expect(page.getByTestId("lab-session-start")).toBeVisible();
-  await expect(page.locator(".lab-heading .badge").first()).toHaveText("KHTN · LỚP 8");
-  await expect(page.getByRole("link", { name: "Quay lại phần bài học", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Thoát phòng thực hành", exact: true })).toHaveAttribute("href", "/labs");
 });
 
 test("missing section placement retains the Lab tab without attaching it to another section", async ({ page }) => {
@@ -115,7 +114,7 @@ test("missing section placement retains the Lab tab without attaching it to anot
   await expect(page.getByRole("link", { name: "Mở hoạt động Lab", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Xem phần kiến thức", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "Mở hoạt động Lab", exact: true }).click();
-  const back = page.getByRole("link", { name: "Quay lại phần bài học", exact: true }).first();
+  const back = page.getByRole("link", { name: "Thoát phòng thực hành", exact: true }).first();
   await expect(back).toHaveAttribute("href", `/lessons/${lessonId}?tab=labs`);
 });
 
@@ -128,7 +127,7 @@ test("lesson Lab activity remains reachable on a narrow screen", async ({ page }
   expect(await page.locator(".lesson-detail-page").evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   await page.screenshot({ path: "test-results/lesson-lab-mobile.png", fullPage: true });
   await open.click();
-  await expect(page.getByRole("link", { name: "Quay lại phần bài học", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Thoát phòng thực hành", exact: true }).first()).toBeVisible();
 });
 
 for (const role of ["TEACHER", "ADMIN"]) {

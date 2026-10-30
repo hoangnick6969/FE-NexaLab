@@ -117,6 +117,10 @@ test("bulb activity restores its predictions and sends checkpoint evidence to th
     } } });
   });
   await page.goto("/labs/circuit?assignmentId=assignment-lab");
+  const rendererToggle = page.getByRole("group", { name: "Chế độ hiển thị mô phỏng" });
+  await expect(rendererToggle.getByRole("button", { name: "3D" })).toHaveAttribute("aria-pressed", "true");
+  await rendererToggle.getByRole("button", { name: "2D" }).click();
+  await expect(page.getByTestId("bulb-2d-stage")).toBeVisible();
   await page.getByTestId("lab-session-start").click();
   await expect(page.getByTestId("lab-run-submit")).toBeDisabled();
   await page.getByLabel("Sáng", { exact: true }).click();
@@ -125,6 +129,8 @@ test("bulb activity restores its predictions and sends checkpoint evidence to th
   await page.waitForTimeout(500);
   await page.reload();
   await page.getByTestId("lab-session-start").click();
+  await expect(page.getByTestId("bulb-2d-stage")).toBeVisible();
+  await rendererToggle.getByRole("button", { name: "3D" }).click();
   await page.getByRole("button", { name: "Khôi phục", exact: true }).click();
   await expect(page.locator(".bulb-step-count")).toHaveText("3 / 6");
   await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn sáng");
@@ -181,4 +187,98 @@ test("P3.5 chemistry model uses its own renderer and submits its distinct state 
     labState: { samples: { jar1: "acid", jar2: "neutral", jar3: "base" } },
   });
   expect(submissions[0]).not.toHaveProperty("checkpoints");
+});
+
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  test(`Lab Space pilot fills viewport and questions preserve evidence at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockShell(page);
+    await page.route("**/api/labs/circuit/runs", route => route.fulfill({ json: { ...launch("space-run", "circuit-bulb@1.0.0"), rendererKey: "circuit-bulb" } }));
+    await page.goto("/labs/circuit?assignmentId=assignment-lab");
+    const space = page.getByTestId("lab-space");
+    await expect(space).toHaveCSS("position", "fixed");
+    await expect(page.locator(".sidebar, .topbar, .footer")).toHaveCount(0);
+    await page.getByTestId("lab-session-start").click();
+    const stage = page.getByTestId("physics-stage");
+    await expect(stage).toBeVisible();
+    expect(await stage.boundingBox()).toMatchObject({ x: 0, y: 0, ...viewport });
+    await page.screenshot({ path: `output/playwright/lab-space-initial-${viewport.width}.png` });
+    await page.getByRole("button", { name: "Đóng câu hỏi", exact: true }).focus();
+    await page.keyboard.press("Escape");
+    const badge = page.getByRole("button", { name: "Câu hỏi · 1/6" });
+    await expect(badge).toBeFocused();
+    await expect(page.getByTestId("bulb-prediction-closed")).not.toBeVisible();
+    await expect(page.getByTestId("bulb-diagram-switch")).toBeDisabled();
+    await badge.click();
+    await expect(page.getByRole("button", { name: "Đóng câu hỏi", exact: true })).toBeFocused();
+    await expect(page.getByTestId("bulb-prediction-closed").locator("input:checked")).toHaveCount(0);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `output/playwright/lab-space-pilot-${viewport.width}.png` });
+    await page.getByRole("button", { name: "Đóng câu hỏi", exact: true }).click();
+    await expect(stage.locator("canvas")).toBeVisible();
+    expect(await page.evaluate(() => document.elementFromPoint(innerWidth/2, innerHeight*.35)?.tagName)).toBe("CANVAS");
+    await page.screenshot({ path: `output/playwright/lab-space-pilot-${viewport.width}-closed.png` });
+    await expect(page.getByRole("link", { name: "Thoát phòng thực hành" })).toHaveAttribute("href", "/assignments/assignment-lab");
+  });
+}
+
+test("Lab Space no WebGL shows honest recovery and retains visible experiment controls", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (...args: any[]) {
+      if (String(args[0]).includes("webgl") && !(window as any).allowLabWebgl) return null;
+      return original.apply(this, args as any);
+    } as any;
+  });
+  await mockShell(page);
+  await page.route("**/api/labs/circuit/runs", route => route.fulfill({ json: { ...launch("no-webgl", "circuit-bulb@1.0.0"), rendererKey: "circuit-bulb" } }));
+  await page.goto("/labs/circuit?assignmentId=assignment-lab");
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByText(/Không thể hiển thị không gian 3D/)).toBeVisible();
+  await page.getByLabel("Sáng", { exact: true }).click();
+  await page.getByTestId("bulb-diagram-switch").click();
+  await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn sáng");
+  await expect(page.getByTestId("lab-run-submit")).toBeDisabled();
+  await page.evaluate(() => { (window as any).allowLabWebgl = true; });
+  await page.getByRole("button", { name: "Thử tải lại 3D" }).click();
+  await expect(page.getByTestId("physics-stage").locator("canvas")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Thoát phòng thực hành" })).toBeVisible();
+});
+
+test("assigned lesson explicit Lab Space entry preserves arbitrary topology, values and attempt context", async ({ page }) => {
+  await mockShell(page);
+  const lesson = { id: "lesson-circuit", title: "Mạch điện", grade: 8, topic: "Điện", subject: { name: "KHTN" } };
+  const steps = [{ id: "step-lab", type: "LAB", state: "IN_PROGRESS", resource: { labId: "circuit", challengeId: "circuit_001" } }];
+  await page.route("**/api/assignments/lesson-assignment", route => route.fulfill({ json: { id: "lesson-assignment", contentType: "lesson", content: lesson, classroom: { name: "8A" } } }));
+  await page.route("**/api/lessons/lesson-circuit/pathway*", route => route.fulfill({ json: { lesson, steps, nextStepId: "step-lab" } }));
+  const submissions: any[] = [];
+  await page.route("**/api/attempts", async route => {
+    submissions.push(route.request().postDataJSON());
+    await route.fulfill({ json: { attempt: { id: "step-attempt", verdict: "passed", simulationResult: {} }, pathway: { lesson, steps: [{ ...steps[0], state: "COMPLETED" }], nextStepId: null } } });
+  });
+  await page.goto("/assignments/lesson-assignment");
+  await expect(page.getByTestId("lab-space")).toHaveCount(0);
+  await page.getByTestId("lab-space-enter").click();
+  const circuitViews = page.getByTestId("lab-renderer-toggle");
+  await circuitViews.getByRole("button", { name: "2D" }).click();
+  await expect(page.locator(".react-flow")).toBeVisible();
+  await circuitViews.getByRole("button", { name: "3D" }).click();
+  await page.getByLabel("Linh kiện", { exact: true }).selectOption("r1");
+  await page.getByLabel("Giá trị linh kiện").fill("470");
+  await page.getByLabel("Đầu dây nguồn").selectOption("b1");
+  await page.getByLabel("Đầu dây đích").selectOption("l1");
+  await page.getByRole("button", { name: "Nối dây", exact: true }).click();
+  await page.getByRole("button", { name: "Thoát phòng thực hành" }).click();
+  await expect(page.getByTestId("lab-space-enter")).toBeFocused();
+  await page.getByTestId("lab-space-enter").click();
+  await expect(page.getByLabel("Giá trị linh kiện")).toHaveValue("470");
+  await expect(page.getByRole("list", { name: "Dây nối", exact: true })).toContainText("1 → 3");
+  await page.getByTestId("circuit-submit-button").click();
+  await expect(page.getByTestId("circuit-verdict-banner")).toBeVisible();
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0]).toMatchObject({ assignmentId: "lesson-assignment", lessonStepId: "step-lab", challengeId: "circuit_001", labState: { nodes: expect.arrayContaining([{ id: "r1", type: "resistor", value: 470 }]), edges: [{ source: "b1", target: "l1" }] } });
+  expect(submissions[0]).not.toHaveProperty("runId");
+  await page.getByRole("button", { name: "Thoát phòng thực hành" }).click();
+  await expect(page.locator("#step-step-lab")).toHaveClass(/completed/);
 });

@@ -188,6 +188,9 @@ export default function App() {
     );
   }
   if (user.mustChangePassword) return <PasswordGate />;
+  if (/^\/labs\/[^/]+\/?$/.test(location.pathname)) return <Suspense fallback={<div className="lab-space"><Link className="secondary" to="/labs">{t.labsLabel}</Link><PageLoader fullScreen message={t.starting} /></div>}>
+    <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
+  </Suspense>;
   return (
     <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}`}>
       <aside className="sidebar">

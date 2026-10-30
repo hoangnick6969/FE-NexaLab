@@ -17,7 +17,7 @@ import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
-import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/lesson-lab-navigation";
+import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
 
 const text = defineText({
   vi: {
@@ -144,16 +144,19 @@ export function LessonDetail() {
     queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
     queryFn: () => user.role === "STUDENT" ? api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`) : api<any[]>("/lessons"),
     enabled: Boolean(id) && !(user.role === "STUDENT" && assignmentId),
+    staleTime: 5 * 60 * 1000,
   });
   const foundationalLabs = useQuery({
     queryKey: ["lesson-foundational-labs", id],
     queryFn: () => api<LessonLab[]>(`/lessons/${encodeURIComponent(id)}/foundational-labs`),
     enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(user.role) && Boolean(id),
+    staleTime: 5 * 60 * 1000,
   });
   const linkedPublicLesson = useQuery({
     queryKey: ["open-curriculum-lesson", id],
     queryFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(id)}`),
     enabled: Boolean(foundationalLabs.data?.length) && (user.role !== "STUDENT" || Boolean(assignmentId)),
+    staleTime: 5 * 60 * 1000,
   });
   const curriculum = useQuery({
     queryKey: ["student-open-curriculum"],

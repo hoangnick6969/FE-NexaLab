@@ -1,3 +1,4 @@
+import { AssignedLabSpace } from "../../shared/LabSpace";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { simulate } from "@nexalab/sim";
@@ -11,9 +12,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { Circuit, defaultCircuit } from "./Circuit";
-import { api } from "../../lib/api";
-import { Badge, ErrorBox } from "../../components/ui";
-import { defineText } from "../../i18n";
+import { api } from "../../../../lib/api";
+import { Badge, ErrorBox } from "../../../../components/ui";
+import { defineText } from "../../../../i18n";
 
 const text = defineText({
   vi: {
@@ -162,6 +163,7 @@ export function CircuitPathwayStep({
   const isPassed = verdict === "passed";
 
   return (
+    <AssignedLabSpace title={step.resource?.title ?? t.defaultTitle}>
     <section
       className="circuit-pathway-container"
       aria-label={t.area}
@@ -232,22 +234,7 @@ export function CircuitPathwayStep({
         )}
       </div>
 
-      {/* Circuit Interactive Workspace (>= 70vh) */}
-      <div
-        className="circuit-workspace-wrapper"
-        data-testid="circuit-workspace"
-        style={{
-          minHeight: "480px",
-          height: "70vh",
-          position: "relative",
-          borderRadius: "12px",
-          overflow: "hidden",
-          border: "1px solid var(--border, #2e3039)",
-          background: "#121316",
-        }}
-      >
-        <Circuit initial={labState} onChange={setLabState} />
-      </div>
+      <div className="circuit-workspace-wrapper" data-testid="circuit-workspace"><Circuit initial={labState} onChange={setLabState} /></div>
 
       {/* Error Box */}
       {error && <ErrorBox error={error} />}
@@ -367,5 +354,6 @@ export function CircuitPathwayStep({
         </div>
       )}
     </section>
+    </AssignedLabSpace>
   );
 }

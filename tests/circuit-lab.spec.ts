@@ -1,17 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
-
-const password = process.env.SEED_FIXTURE_PASSWORD ?? process.env.SEED_PASSWORD ?? "acceptance-pilot-2026";
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Tên đăng nhập học sinh").fill("student.active");
-  await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
-  const response = page.waitForResponse((item) =>
-    item.request().method() === "POST" && item.url().endsWith("/api/auth/student/login"),
-  );
-  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  expect((await response).ok()).toBeTruthy();
-}
+import { expect, test } from "@playwright/test";
 
 test("Epic A4: Circuit Lab workspace renders, verifies server verdicts, preserves state on retry, and unlocks challenge", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -184,18 +171,23 @@ test("Epic A4: Circuit Lab workspace renders, verifies server verdicts, preserve
     });
   });
 
-  // 1. Log in
-  await login(page);
+  // Isolated browser fixture: never depend on a seeded or shared database.
+  const student = { id: "student-active", username: "student.active", fullName: "An", role: "STUDENT", grade: 8, mustChangePassword: false };
+  await page.route("**/api/auth/refresh", route => route.fulfill({ json: { user: student, accessToken: "mock-token" } }));
+  await page.route("**/api/me/profile", route => route.fulfill({ json: { ...student, preferences: { theme: "system", locale: "vi" } } }));
+  await page.route("**/api/me/notifications/unread-count", route => route.fulfill({ json: { count: 0 } }));
 
   // 2. Navigate to assigned lesson pathway
   await page.goto("/assignments/pilot-a-lesson-assignment");
 
+  await page.getByTestId("lab-space-enter").first().click();
+
   // 3. Verify Circuit Workspace is mounted
-  const workspace = page.locator('[data-testid="circuit-workspace"]');
+  const workspace = page.getByTestId("physics-stage");
   await expect(workspace).toBeVisible();
 
   // Verify challenge title
-  await expect(page.getByText("Thử thách: Mạch điện thắp sáng đèn LED")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Thử thách: Mạch điện thắp sáng đèn LED" })).toBeVisible();
 
   // Verify CHALLENGE step is locked initially
   await expect(page.getByText("Hoàn thành phần thực hành để mở khóa thử thách.")).toBeVisible();

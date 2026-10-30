@@ -5,7 +5,7 @@ import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { labInfo } from "./lab-info";
 import { defineText } from "../../i18n";
-import { relatedLessonHref, type RelatedLesson } from "./lesson-lab-navigation";
+import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { labCurriculumLabel } from "./lab-curriculum-label";
 
 const text = defineText({

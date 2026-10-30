@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, isApiError } from "../../lib/api";
+import { api, isApiError } from "../../../lib/api";
 
 export type LabLaunch = {
   contract: "lab-contract/1";

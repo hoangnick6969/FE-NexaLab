@@ -2362,15 +2362,15 @@ td small {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 380px;
-  gap: 18px;
-  animation: loaderFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  max-width: 360px;
+  gap: 16px;
+  animation: loaderFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 @keyframes loaderFadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -2378,126 +2378,96 @@ td small {
   }
 }
 
-.loader-orbit-wrap {
+.loader-indicator {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
 }
 
-.loader-nucleus {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--fill-teal-43);
-  box-shadow: 0 0 16px var(--shadow-teal-43-a35);
-  animation: nucleusPulse 2s ease-in-out infinite;
+.apple-spinner {
+  animation: appleSpin 0.9s linear infinite;
+  transform-origin: center;
 }
 
-.loader-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid transparent;
-  pointer-events: none;
+.apple-spinner-track {
+  stroke: rgba(0, 0, 0, 0.08);
 }
 
-.loader-ring-1 {
-  border-top-color: var(--line-teal-43);
-  border-bottom-color: var(--line-teal-43-a20);
-  animation: orbitSpin 1.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+.apple-spinner-blade {
+  stroke: var(--brand-green, #287875);
+  stroke-dasharray: 60, 100;
+  stroke-dashoffset: 0;
+  animation: appleBladePulse 1.6s ease-in-out infinite;
 }
 
-.loader-ring-2 {
-  inset: 5px;
-  border-left-color: var(--line-amber-68);
-  border-right-color: var(--line-amber-68-a20);
-  transform: rotate(45deg);
-  animation: orbitSpinReverse 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-}
-
-.loader-ring-3 {
-  inset: 10px;
-  border-top-color: var(--line-green-57);
-  border-right-color: var(--line-green-57-a25);
-  transform: rotate(120deg);
-  animation: orbitSpin 3s linear infinite;
-}
-
-@keyframes orbitSpin {
+@keyframes appleSpin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes orbitSpinReverse {
-  to {
-    transform: rotate(-315deg);
-  }
-}
-
-@keyframes nucleusPulse {
+@keyframes appleBladePulse {
   0%, 100% {
-    transform: scale(0.92);
-    opacity: 0.85;
+    stroke-dashoffset: 0;
   }
   50% {
-    transform: scale(1.12);
-    opacity: 1;
-    background: var(--fill-teal-34);
+    stroke-dashoffset: -35;
   }
 }
 
 .loader-copy {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .loader-message {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-teal-34);
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-base);
   letter-spacing: -0.2px;
 }
 
 .loader-caption {
-  font-size: 11px;
-  color: var(--ink-neutral-60);
+  font-size: 12px;
+  color: var(--muted);
   line-height: 1.5;
+  margin: 0;
 }
 
 .loader-meter {
-  width: 140px;
-  height: 3px;
-  background: var(--fill-neutral-93);
-  border-radius: 99px;
+  width: 120px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
   overflow: hidden;
   position: relative;
+  margin-top: 2px;
 }
 
 .loader-meter-bar {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 45%;
-  background: linear-gradient(90deg, var(--fill-teal-43), var(--fill-amber-68));
-  border-radius: 99px;
-  animation: meterSlide 1.6s ease-in-out infinite;
+  width: 35%;
+  background: var(--brand-green, #287875);
+  border-radius: 999px;
+  animation: appleMeterSlide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes meterSlide {
+@keyframes appleMeterSlide {
   0% {
-    left: -45%;
+    left: -35%;
   }
   50% {
-    left: 45%;
-    width: 55%;
+    left: 40%;
+    width: 45%;
   }
   100% {
     left: 100%;
-    width: 30%;
+    width: 25%;
   }
 }
 
@@ -2505,29 +2475,37 @@ td small {
 .inline-loader {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--ink-green-57);
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--fill-neutral-96);
-  border: 1px solid var(--line-neutral-93);
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.035);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  letter-spacing: -0.1px;
 }
 
 .inline-loader.is-sm {
   font-size: 11px;
-  padding: 6px 10px;
-  gap: 7px;
+  padding: 4px 8px;
+  gap: 6px;
+  border-radius: 8px;
 }
 
 .inline-loader-spinner {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--line-olive-87);
-  border-top-color: var(--line-teal-43);
-  animation: orbitSpin 0.8s linear infinite;
+  animation: appleSpin 0.85s linear infinite;
+  transform-origin: center;
   flex-shrink: 0;
+}
+
+.inline-loader-spinner .spinner-track {
+  stroke: rgba(0, 0, 0, 0.1);
+}
+
+.inline-loader-spinner .spinner-blade {
+  stroke: var(--brand-green, #287875);
+  stroke-dasharray: 28, 50;
 }
 
 /* Skeletons */
@@ -7983,4 +7961,110 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .notification-toast.leaving { animation: notification-fade-out 150ms linear forwards; }
   @keyframes notification-fade { from { opacity: 0; } }
   @keyframes notification-fade-out { to { opacity: 0; } }
+}
+
+/* ─── Lesson Lab Card ─── */
+.lesson-lab-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lesson-lab-card .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ink-green-48, #287875);
+  margin-bottom: 0;
+}
+.lesson-lab-card h3 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+  line-height: 1.4;
+  color: var(--text-base);
+}
+.lesson-lab-card p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin: 0;
+}
+.lesson-lab-card .lesson-lab-section-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--fill-neutral-96, #f4f4f3);
+  border-radius: 8px;
+}
+.lesson-lab-card .button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.lesson-lab-card.is-inline {
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: var(--fill-neutral-97, #f8f8f7);
+  border: 1px solid var(--line-neutral-91);
+}
+
+/* ─── Lab Challenge Panel (aside): de-badge the heading ─── */
+.challenge-panel .badge.gold {
+  display: none;
+}
+.challenge-panel h3 {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.3px;
+  line-height: 1.45;
+}
+.challenge-panel p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.challenge-panel .eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-olive-65);
+}
+
+/* ─── AssignedLabSpace enter wrapper ─── */
+.lab-enter-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+.lab-enter-wrapper .primary {
+  min-height: 46px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 650;
+  border-radius: 12px;
+  letter-spacing: -0.2px;
+  gap: 10px;
+}
+
+/* ─── Mobile tweaks for session gate ─── */
+@media (max-width: 680px) {
+  .lab-session-card {
+    padding: 22px 20px;
+    gap: 16px;
+  }
+  .lab-session-btn {
+    font-size: 13px;
+    min-height: 44px;
+  }
 }
