@@ -17,6 +17,8 @@ import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./C
 import { Chemistry } from "./Chemistry";
 import { useLabRunHost } from "./lab-run-host";
 import { defineText } from "../../i18n";
+import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./lesson-lab-navigation";
+import { labCurriculumLabel } from "./lab-curriculum-label";
 
 const text = defineText({
   vi: {
@@ -25,6 +27,8 @@ const text = defineText({
     notInCurriculum: "Nội dung này chưa có trong chương trình nền tảng đã duyệt.",
     backToList: "Quay lại danh sách",
     labs: "Phòng thí nghiệm",
+    relatedLesson: "Bài học liên quan",
+    backToLesson: "Quay lại phần bài học",
     physics: "VẬT LÝ",
     biology: "SINH HỌC",
     chemistry: "HÓA HỌC",
@@ -96,6 +100,8 @@ const text = defineText({
     notInCurriculum: "This content is not in the approved foundation curriculum yet.",
     backToList: "Back to the list",
     labs: "Labs",
+    relatedLesson: "Related lesson",
+    backToLesson: "Back to the lesson section",
     physics: "PHYSICS",
     biology: "BIOLOGY",
     chemistry: "CHEMISTRY",
@@ -200,10 +206,19 @@ export default function Lab() {
     ? assignment.data.content
     : null;
   const lab = assignedLab ?? publicLab;
+  const curriculumLabel = labCurriculumLabel({ ...publicLab, ...lab }, id === "circuit" ? t.physics : id === "eye" ? t.biology : t.chemistry, t.grades);
+  const relatedLessons: RelatedLesson[] = publicLab?.lessonLinks ?? [];
+  const originLessonId = searchParams.get("lessonId");
+  const originLesson = originLessonId ? relatedLessons.find((lesson) => lesson.lessonId === originLessonId) : relatedLessons[0];
+  const requestedSection = searchParams.get("sectionId");
+  const mappedSection = originLesson ? lessonLabSection(originLesson.lessonId, id) : undefined;
+  const returnSection = originLessonId === originLesson?.lessonId && requestedSection === mappedSection ? mappedSection : undefined;
+  const returnAssignment = originLessonId === originLesson?.lessonId ? searchParams.get("lessonAssignmentId") || undefined : undefined;
+  const returnToLesson = originLesson ? relatedLessonHref(originLesson.lessonId, returnSection ? "reading" : "labs", returnAssignment, returnSection) : undefined;
   const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
   const fallbackState = useMemo(
-    () => location.state?.labState ?? initialLabState(id),
-    [id, location.key, location.state?.labState],
+    () => location.state?.labState ?? (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0" ? defaultBulbEvidence() : initialLabState(id)),
+    [id, location.key, location.state?.labState, user.role, lab?.simulationModelRef],
   );
   const labRun = useLabRunHost({
     enabled: user.role === "STUDENT" && Boolean(lab),
@@ -216,7 +231,7 @@ export default function Lab() {
     initialState: fallbackState,
     onStateChange: setState,
   });
-  const isBulb = labRun.rendererKey === "circuit-bulb";
+  const isBulb = labRun.rendererKey === "circuit-bulb" || (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0");
   const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
     setState(fallbackState);
@@ -263,18 +278,14 @@ export default function Lab() {
     return <section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>;
   return (
     <>
-      <Link className="back-link" to="/labs">
-        <ArrowLeft size={15} /> {t.labs}
-      </Link>
+      <div className="lab-context-navigation">
+        {returnToLesson && <Link className="back-link" to={returnToLesson}><ArrowLeft size={15} /> {t.backToLesson}</Link>}
+        <Link className="back-link" to="/labs">{t.labs}</Link>
+      </div>
       <div className="page-heading lab-heading">
         <div>
           <Badge>
-            {id === "circuit"
-              ? t.physics
-              : id === "eye"
-                ? t.biology
-                : t.chemistry}{" "}
-            · {t.grades}
+            {curriculumLabel.subject} · {curriculumLabel.grade}
           </Badge>
           <h1>{lab?.title ?? t.discoveryRoom}</h1>
           <p className="muted">{lab?.learningObjective}</p>
@@ -284,6 +295,10 @@ export default function Lab() {
         </Badge>
       </div>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
+      {originLesson && returnToLesson && <aside className="lab-lesson-context" aria-label={t.relatedLesson}>
+        <div><span className="eyebrow">{t.relatedLesson}</span><strong>{originLesson.title}</strong></div>
+        <Link className="secondary" to={returnToLesson}>{t.backToLesson}<ArrowLeft size={15} /></Link>
+      </aside>}
       {runtimeReady && preview && !isBulb && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
@@ -341,7 +356,7 @@ export default function Lab() {
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
           ) : null}
-          {runtimeReady && <div className="lab-actions">
+          {runtimeReady && !(isBulb && user.role === "TEACHER") && <div className="lab-actions">
             <span>{isBulb ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
