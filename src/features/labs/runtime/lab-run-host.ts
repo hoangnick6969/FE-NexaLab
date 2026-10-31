@@ -27,6 +27,7 @@ const renderers = {
   "circuit-bulb": { labId: "circuit", modelRefs: ["circuit-bulb@1.0.0"] },
   "em-induction": { labId: "em-induction", modelRefs: ["em-induction@1.0.0"] },
   chemistry: { labId: "chemistry", modelRefs: ["chemistry@1.0.0"] },
+  "mass-conservation": { labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"] },
   eye: { labId: "eye", modelRefs: ["eye@1.0.0"] },
 } as const;
 
@@ -240,8 +241,8 @@ export function useLabRunHost(input: HostInput) {
         idempotencyKey: idempotencyKey.current,
         stateSchemaVersion: launch.stateSchemaVersion,
         evidenceSchemaVersion: launch.evidenceSchemaVersion,
-        // Checkpoint rubrics send only their evidence; UI progress fields stay in the local draft.
-        ...(launch.rubricVersion !== "legacy-challenge@1.0.0"
+        // Checkpoint rubrics send only their evidence; FL-10 submits its structured activity state.
+        ...(launch.rubricVersion !== "legacy-challenge@1.0.0" && launch.rubricVersion !== "mass-conservation-poea@1.0.0"
           ? { checkpoints: checkpointEvidence?.checkpoints, explanation: checkpointEvidence?.explanation }
           : { labState: input.state }),
         durationMs: Math.max(0, Date.now() - startedAt.current),
