@@ -85,9 +85,13 @@ export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder
   const level = useRef(cylinderLevelMm(cylinder, volumeMl));
   const target = cylinderLevelMm(cylinder, volumeMl);
 
-  useEffect(() => invalidate(), [target, invalidate]);
+  // Ringing after each change: the surface tilts a little and settles within ~1 s.
+  // Reduced motion never starts it, so the surface simply stops at its level.
+  const ringing = useRef(0);
+  useEffect(() => { ringing.current = reduced ? 0 : 1; invalidate(); }, [target, reduced, invalidate]);
   useFrame((state, delta) => {
-    level.current = reduced ? target : THREE.MathUtils.damp(level.current, target, K3_MOTION.liquidLevelLambda, delta);
+    const step = Math.min(delta, 1 / 30);
+    level.current = reduced ? target : THREE.MathUtils.damp(level.current, target, K3_MOTION.liquidLevelLambda, step);
     if (Math.abs(level.current - target) < 0.005) level.current = target;
     const height = Math.max(level.current, 0.001);
     if (column.current) {
@@ -98,6 +102,11 @@ export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder
     if (cap.current) {
       cap.current.position.y = cylinder.baseMm + level.current;
       cap.current.visible = level.current > 0.01;
+      cap.current.rotation.z = ringing.current > 0.002 ? Math.sin(state.clock.elapsedTime * 16) * 0.035 * ringing.current : 0;
+    }
+    if (ringing.current > 0.002) {
+      ringing.current *= Math.exp(-step * 3.5);
+      state.invalidate();
     }
     if (level.current !== target) state.invalidate();
   });

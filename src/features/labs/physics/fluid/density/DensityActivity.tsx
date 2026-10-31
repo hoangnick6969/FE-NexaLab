@@ -4,7 +4,9 @@ import { K3Hud, formatReading, k3Material, k3Specimen } from "../kit";
 import { fl03DensityConfig as config } from "./fl03-density.config";
 import { densityText } from "./density-copy";
 import { BLOCK_IDS, EXPLORE_IDS, PEBBLE_IDS, STATION_IDS, defaultDensityEvidence, densityEvidenceFrom, densityEvidenceReady, stationDone, type DensityEvidence, type StationId } from "./density-evidence";
+import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
 import { Density2DStage, balanceReadingG, cylinderVolumeMl, initialBench, stationSpecimenId, type Bench } from "./Density2DStage";
+import { Density3DStage } from "./Density3DStage";
 import { DensityNotebook } from "./DensityNotebook";
 import "./density.css";
 
@@ -24,6 +26,7 @@ export function DensityActivity({ state, onChange, resetKey }: { state: unknown;
   const evidence = densityEvidenceFrom(state);
   const [station, setStation] = useState<StationId>("explore");
   const [bench, setBench] = useState<Bench>(initialBench);
+  const [viewMode, setViewMode] = useLabRendererMode("nexalab:lab-view:density-bench");
   useEffect(() => { setStation("explore"); setBench(initialBench()); }, [resetKey]);
 
   const patchBench = (change: Partial<Bench>) => setBench((current) => ({ ...current, ...change }));
@@ -104,7 +107,10 @@ export function DensityActivity({ state, onChange, resetKey }: { state: unknown;
 
   const measured = STATION_IDS.slice(0, 4).every((other) => stationDone(evidence, other));
   return <section className="density-activity" data-testid="density-activity" aria-label={t.title}>
-    <Density2DStage station={station} evidence={evidence} bench={bench} />
+    <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+    {viewMode === "3d"
+      ? <Density3DStage station={station} evidence={evidence} bench={bench} />
+      : <Density2DStage station={station} evidence={evidence} bench={bench} />}
     <K3Hud
       title={t.title}
       stations={STATION_IDS.map((id) => ({

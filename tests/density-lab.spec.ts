@@ -33,7 +33,10 @@ const launch = (runId: string) => ({
   assignmentId: "assignment-lab", versionBinding: "ASSIGNMENT_PINNED",
 });
 
-async function open(page: Page, runId = "density-run") {
+// Logic tests run on the 2D view: headless WebGL is slow and the 2D view is the low-end fallback.
+// The toggle test opts into 3D explicitly.
+async function open(page: Page, view: "2d" | "3d" = "2d", runId = "density-run") {
+  await page.addInitScript((mode) => window.localStorage.setItem("nexalab:lab-view:density-bench", mode), view);
   await mockShell(page);
   await page.route("**/api/labs/density/runs", (route) => route.fulfill({ json: launch(runId) }));
   await page.goto("/labs/density?assignmentId=assignment-lab");
@@ -146,4 +149,18 @@ test("submit stays disabled until every station is complete, then sends the evid
   });
   expect(submissions[0]).not.toHaveProperty("labState");
   expect(submissions[0]).not.toHaveProperty("checkpoints");
+});
+
+test("2D and 3D views share the same station state and the toggle remembers the choice", async ({ page }) => {
+  await open(page, "3d");
+  const toggle = page.getByRole("group", { name: "Chế độ hiển thị mô phỏng" });
+  await expect(toggle.getByRole("button", { name: "3D" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("density-balance-toggle").click();
+  await expect(reading(page)).toContainText("Cân: 78,0 g");
+  await toggle.getByRole("button", { name: "2D" }).click();
+  await expect(page.getByTestId("density-2d-stage")).toBeVisible();
+  await expect(reading(page)).toContainText("Cân: 78,0 g");
+  await toggle.getByRole("button", { name: "3D" }).click();
+  await expect(page.getByTestId("physics-stage")).toBeAttached();
+  await expect(reading(page)).toContainText("Cân: 78,0 g");
 });

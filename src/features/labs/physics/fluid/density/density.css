@@ -84,3 +84,10 @@
 /* Pressed toggles read as selected without relying on colour alone (the label changes too). */
 .k3-actions button[aria-pressed="true"], .fl03-segment button[aria-pressed="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
 .k3-actions button, .fl03-segment button { min-height: 44px; }
+
+/* View toggle: larger touch targets on phones (the 3D/2D choice must be easy to hit). */
+.lab-space:has(.density-activity) .lab-renderer-toggle button { min-width: 64px; min-height: 44px; }
+.lab-space:has(.density-activity) .lab-renderer-toggle button:focus-visible { outline: 3px solid var(--k3-selected); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .lab-space:has(.density-activity) .lab-renderer-toggle button { transition: none; }
+}
