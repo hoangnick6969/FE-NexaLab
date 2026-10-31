@@ -72,6 +72,11 @@ const renderers: readonly LabActivityRenderer[] = [
     guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
   },
   {
+    key: "mass-conservation", labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"], envelope: "labState",
+    defaultState: () => ({}),
+    Activity: () => null, // The run-bound FL-10 activity is rendered by Lab.
+  },
+  {
     key: "chemistry", labId: "chemistry", modelRefs: ["chemistry@1.0.0"], envelope: "labState",
     defaultState: () => ({ reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }),
     Activity: ({ state, onChange, result }) => <Chemistry state={state} onChange={onChange} result={result} />,

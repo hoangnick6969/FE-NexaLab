@@ -115,7 +115,7 @@ export function PhysicsStage({ children, view = DEFAULT_VIEW, reflections = fals
   const fallback = <div className="physics-unavailable" role="status"><p>{t.unavailable}</p><button type="button" className="secondary" onClick={() => { setLost(false); setGeneration(v => v+1); }}>{t.retry}</button></div>;
   const stage = <div className="physics-stage" data-testid="physics-stage">
     {lost ? fallback : <StageBoundary key={generation} fallback={fallback}><Canvas shadows frameloop={frameloop} gl={realism ? { alpha: false, toneMapping: THREE.AgXToneMapping } : { alpha: false }} camera={{ position: preset.wide.position, fov: FOV, near: realism ? .01 : .1 }} dpr={[1, 1.5]} fallback={fallback} onCreated={({ gl }) => { gl.domElement.addEventListener("webglcontextlost", event => { event.preventDefault(); setLost(true); }); }}>
-      <LabRoomEnvironment />{realism ? <StudioLighting /> : reflections && <BenchReflections />}{children}
+      <PhysicalLabEnvironment />{realism ? <StudioLighting /> : reflections && <BenchReflections />}{children}
       <BenchView preset={preset} resetSignal={viewResetSignal} />
       {frameloop === "demand" && <DemandWarmup />}
     </Canvas></StageBoundary>}
