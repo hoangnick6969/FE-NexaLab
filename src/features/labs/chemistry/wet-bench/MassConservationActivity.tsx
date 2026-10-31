@@ -30,7 +30,6 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
   const [mode, setMode] = useLabRendererMode("nexalab:lab-view:wet-bench");
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [safeRead, setSafeRead] = useState(false);
-  const [placedCount, setPlacedCount] = useState(0);
   const [reason, setReason] = useState("");
   const [activeAnswer, setActiveAnswer] = useState<keyof Answers | null>(null);
   const [pending, setPending] = useState(false);
@@ -76,8 +75,8 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
   };
   const step = snapshot?.events.length ?? 0;
   const mixed = step >= 3;
-  const cupsOnScale = step === 2 || step === 4 ? 2 : placedCount;
-  useEffect(() => { setPlacedCount(0); }, [step, runId]);
+  const visibleReading = step === 2 ? grams(snapshot?.readings.beforeScaleMilligrams ?? null)
+    : step === 4 ? grams(snapshot?.readings.afterScaleMilligrams ?? null) : null;
   const latestExplanation = answers.explanationAttempts?.at(-1);
   const ready = step === 4 && Boolean(answers.comparison && latestExplanation && answers.calculation && answers.applicationV1 && answers.applicationV2);
   const setAnswer = (name: keyof Answers, value: string) => { setActiveAnswer(name); onChange({ ...answers, [name]: value }); };
@@ -111,33 +110,22 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
       {mode === "3d" ? (
         <WetBenchStage
           mixed={mixed}
-          placedCount={cupsOnScale}
           pouring={pouring}
-          scaleReading={
-            cupsOnScale === 0
-              ? "0,0 g"
-              : cupsOnScale === 1
-              ? "— — —"
-              : step === 2
-              ? grams(snapshot?.readings.beforeScaleMilligrams ?? null) ?? "— — —"
-              : step === 4
-              ? grams(snapshot?.readings.afterScaleMilligrams ?? null) ?? "— — —"
-              : "— — —"
-          }
+          scaleReading={visibleReading ?? "— — —"}
           onContextLost={() => setMode("2d")}
         />
       ) : (
-        <div className={`k2-stage-2d ${pouring ? "mixing" : ""}`} role="img" aria-label={`Sơ đồ cân điện tử; ${cupsOnScale} cốc trên cân; số chỉ ${step === 2 ? grams(snapshot?.readings.beforeScaleMilligrams ?? null) ?? "chưa đọc" : step === 4 ? grams(snapshot?.readings.afterScaleMilligrams ?? null) ?? "chưa đọc" : "chưa đọc"}`}>
-          <div className={`k2-cup vessel-ba ${cupsOnScale < 1 ? "off-scale" : ""} ${mixed ? "emptied" : ""}`}>
+        <div className={`k2-stage-2d ${pouring ? "mixing" : ""}`} role="img" aria-label={`Sơ đồ cân điện tử; 2 cốc trên cân; số chỉ ${visibleReading ?? "chưa đọc"}`}>
+          <div className={`k2-cup vessel-ba ${mixed ? "emptied" : ""}`}>
             <span>BaCl₂ · Cốc 1</span>
             <i />
           </div>
-          <div className={`k2-cup vessel-na ${mixed ? "mixed" : ""} ${cupsOnScale < 2 ? "off-scale" : ""}`}>
+          <div className={`k2-cup vessel-na ${mixed ? "mixed" : ""}`}>
             <span>Na₂SO₄ · Cốc 2</span>
             <i />
           </div>
           <div className="k2-scale">
-            <b>{step === 2 ? grams(snapshot?.readings.beforeScaleMilligrams ?? null) : step === 4 ? grams(snapshot?.readings.afterScaleMilligrams ?? null) : "— — —"}</b>
+            <b>{visibleReading ?? "— — —"}</b>
             <small>g · CÂN ĐIỆN TỬ</small>
           </div>
         </div>
@@ -146,7 +134,7 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
         <span className="k2-response-symbol" aria-hidden="true">{responseEffect.symbol}</span>
         <span><strong>{responseEffect.title}</strong><small>{responseEffect.detail}</small></span>
       </div>}
-      <div className="k2-scale-readout" aria-live="polite"><small>{cupsOnScale === 2 && (step === 2 || step === 4) ? "Số liệu mô phỏng · Hai cốc trên cân" : "Phạm vi được cân"}</small><strong>{cupsOnScale === 0 ? "Trống" : cupsOnScale === 1 ? "Chưa đủ phạm vi cân" : step === 2 ? grams(snapshot?.readings.beforeScaleMilligrams ?? null) : step === 4 ? grams(snapshot?.readings.afterScaleMilligrams ?? null) : "Chờ đọc số"}</strong></div>
+      <div className="k2-scale-readout" aria-live="polite"><small>{visibleReading ? "Số liệu mô phỏng · Hai cốc trên cân" : "Phạm vi được cân · Hai cốc trên cân"}</small><strong>{visibleReading ?? "Chờ đọc số"}</strong></div>
       <span className="k2-scene-label">Dung dịch thực tế không màu · xanh nhạt chỉ làm rõ mực chất lỏng · kết tủa BaSO₄ màu trắng xuất hiện sau phản ứng</span>
     </div>
     <div className="k2-panel">
@@ -159,9 +147,9 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
       {snapshot && step === 0 && <section><h3>{safeRead ? "Dự đoán của em" : "Lưu ý an toàn"}</h3>
         {!safeRead ? <><p>Muối barium tan có độc tính. Đây là thí nghiệm mô phỏng; không tự làm tại nhà. Trong phòng thí nghiệm thật, chỉ thực hiện theo hướng dẫn của giáo viên, dùng kính và găng tay, không nếm hoặc chạm trực tiếp, xử lý hoá chất theo quy định.</p><button className="primary" onClick={() => setSafeRead(true)}>Em đã đọc</button></> : <><p>Khi đổ dung dịch cốc (1) vào cốc (2), lắc nhẹ rồi đặt cả hai cốc trở lại cân, số chỉ thay đổi thế nào?</p><label>Lý do của em (không bắt buộc)<textarea value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} /></label><div className="k2-options">{choices.map(([code, label]) => <button key={code} disabled={pending || Boolean(retry)} onClick={() => void send({ type: "PREDICTED", prediction: code, ...(reason.trim() ? { reason: reason.trim() } : {}) })}>{label}</button>)}</div></>}
       </section>}
-      {snapshot && step === 1 && <section><h3>Đọc cân trước phản ứng</h3><p>Đặt cả hai cốc lên cân. Cốc (1) chứa dung dịch barium chloride; cốc (2) chứa dung dịch sodium sulfate. Chỉ đọc số khi cả hai cốc nằm trên cân.</p>{placedCount < 2 ? <button className="primary" onClick={() => setPlacedCount((n) => n + 1)}>Đặt cốc {placedCount + 1} lên cân</button> : <button className="primary" disabled={pending || Boolean(retry)} onClick={() => void send({ type: "READ_BEFORE" })}>Đọc cân trước</button>}</section>}
+      {snapshot && step === 1 && <section><h3>Đọc cân trước phản ứng</h3><p>Hai cốc đã ở trên cân: cốc (1) chứa dung dịch barium chloride, cốc (2) chứa dung dịch sodium sulfate. Hãy đọc tổng khối lượng của cả hai cốc và dung dịch.</p><button className="primary" disabled={pending || Boolean(retry)} onClick={() => void send({ type: "READ_BEFORE" })}>Đọc cân trước</button></section>}
       {snapshot && step === 2 && <section><h3>Quan sát phản ứng</h3><p>Số trước: <b>{grams(snapshot.readings.beforeScaleMilligrams)} · Số liệu mô phỏng</b></p><p>Đổ cốc (1) vào cốc (2), lắc nhẹ. Chất rắn trắng xuất hiện trong mô phỏng.</p><button className="primary" disabled={pending || Boolean(retry)} onClick={() => void send({ type: "MIXED" })}>Rót, lắc và quan sát</button>{pouring && <button className="secondary" onClick={() => skipAnimation.current?.()}>Bỏ qua hoạt cảnh</button>}</section>}
-      {snapshot && step === 3 && <section><h3>Đọc cân sau phản ứng</h3><p>Đặt lại <b>cả hai cốc</b> lên cân, kể cả cốc vừa rót hết. Chất rắn vẫn nằm trong phạm vi được cân.</p>{placedCount < 2 ? <button className="primary" onClick={() => setPlacedCount((n) => n + 1)}>Đặt lại cốc {placedCount + 1}</button> : <button className="primary" disabled={pending || Boolean(retry)} onClick={() => void send({ type: "READ_AFTER" })}>Đọc cân sau</button>}</section>}
+      {snapshot && step === 3 && <section><h3>Đọc cân sau phản ứng</h3><p>Cốc vừa rót hết đã trở lại cân. <b>Cả hai cốc</b> và chất rắn đều nằm trong phạm vi được cân. Hãy đọc lại số chỉ.</p><button className="primary" disabled={pending || Boolean(retry)} onClick={() => void send({ type: "READ_AFTER" })}>Đọc cân sau</button></section>}
       {snapshot && step === 4 && <section><h3>Giải thích kết quả</h3><p>Trước: <b>{grams(snapshot.readings.beforeScaleMilligrams)}</b> · Sau: <b>{grams(snapshot.readings.afterScaleMilligrams)}</b> <small>Số liệu mô phỏng</small></p><p>Dự đoán ban đầu: {choices.find(([code]) => code === (snapshot.events[0] as any).prediction)?.[1]}</p>
         <label>So sánh hai số đo<select value={answers.comparison ?? ""} onChange={(e) => setAnswer("comparison", e.target.value)}><option value="">Chọn</option><option value="compare.increase">Sau lớn hơn</option><option value="compare.decrease">Sau nhỏ hơn</option><option value="compare.same">Bằng nhau</option></select></label>
         <p>Lời giải thích nào phù hợp?</p><div className="k2-options">{explain.map(([code, label]) => <button key={code} aria-pressed={latestExplanation === code} onClick={() => { setActiveAnswer("explanationAttempts"); onChange({ ...answers, explanationAttempts: [...(answers.explanationAttempts ?? []), code].slice(-10) }); }}>{label}</button>)}</div>{latestExplanation && <p role="status">{feedback[latestExplanation]}</p>}

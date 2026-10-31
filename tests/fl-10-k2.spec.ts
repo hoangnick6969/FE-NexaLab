@@ -59,15 +59,11 @@ test("FL-10 K2 records prediction before readings and keeps one state across 2D/
   await expect(page.getByRole("button", { name: "Số chỉ sẽ lớn hơn" })).toBeDisabled();
   await page.getByRole("button", { name: "Thử ghi lại bước" }).click();
   await expect(page.getByText("435,0 g")).toHaveCount(0);
-  await page.getByRole("button", { name: "Đặt cốc 1 lên cân" }).click();
-  await expect(page.getByText("Chưa đủ phạm vi cân")).toBeVisible();
-  await page.getByRole("button", { name: "Đặt cốc 2 lên cân" }).click();
+  await expect(page.locator(".k2-stage-2d")).toHaveAttribute("aria-label", /2 cốc trên cân/);
   await page.getByRole("button", { name: "Đọc cân trước" }).click();
   await expect(page.getByText("435,0 g").first()).toBeVisible();
   await page.getByRole("button", { name: "Rót, lắc và quan sát" }).click();
   await page.getByRole("button", { name: "Bỏ qua hoạt cảnh" }).click();
-  await page.getByRole("button", { name: "Đặt lại cốc 1" }).click();
-  await page.getByRole("button", { name: "Đặt lại cốc 2" }).click();
   await page.getByRole("button", { name: "Đọc cân sau" }).click();
   await page.getByLabel("So sánh hai số đo").selectOption("compare.same");
   await page.getByRole("button", { name: /Nguyên tử không mất đi/ }).click();

@@ -14,6 +14,7 @@ function Vessel({
   safetyTag,
   safetyColor,
   badgeColor,
+  labelOffsetX = 0,
 }: {
   x: number;
   mixed: boolean;
@@ -24,6 +25,7 @@ function Vessel({
   safetyTag?: string;
   safetyColor?: string;
   badgeColor?: string;
+  labelOffsetX?: number;
 }) {
   const group = useRef<Group>(null);
   useFrame((_, delta) => {
@@ -168,7 +170,7 @@ function Vessel({
       </>
     )}
     {/* High-contrast laboratory reagent label */}
-    <Html position={[0, 0.45, 0]} center distanceFactor={5.2}>
+    <Html position={[labelOffsetX, 0.45, 0]} center distanceFactor={5.2}>
       <div style={{
         display: "flex",
         flexDirection: "column",
@@ -207,13 +209,11 @@ function Vessel({
 /** Reusable K2 bench shell; FL-10 supplies its vessel state and scale reading. */
 export function WetBenchStage({
   mixed,
-  placedCount,
   pouring,
   scaleReading = "— — —",
   onContextLost,
 }: {
   mixed: boolean;
-  placedCount: number;
   pouring: boolean;
   scaleReading?: string;
   onContextLost: () => void;
@@ -338,7 +338,7 @@ export function WetBenchStage({
 
       {/* Reaction vessels with high-contrast labels and colorless solutions */}
       <Vessel
-        x={placedCount >= 1 ? -0.42 : -2.35}
+        x={-0.42}
         mixed={false}
         empty={mixed}
         pouring={pouring}
@@ -347,13 +347,15 @@ export function WetBenchStage({
         safetyTag="ĐỘC"
         safetyColor="#ef4444"
         badgeColor="#243e52"
+        labelOffsetX={-0.18}
       />
       <Vessel
-        x={placedCount >= 2 ? 0.42 : 2.35}
+        x={0.42}
         mixed={mixed}
         label="Na₂SO₄ · Cốc 2"
         chemicalName="Natri sulfat · 0,1 M"
         badgeColor="#344b45"
+        labelOffsetX={0.18}
       />
 
       {/* Aqueous liquid pouring stream */}

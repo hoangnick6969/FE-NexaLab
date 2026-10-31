@@ -279,7 +279,6 @@
   box-shadow: inset 0 -16px 0 #ffffff;
 }
 .k2-cup.emptied > i { display: none; }
-.k2-cup.off-scale { opacity: .55; transform: translateY(-30px) scale(.84); }
 .k2-stage-2d.mixing .vessel-ba { transform-origin: 100% 100%; animation: k2-pour 1.4s ease-in-out both; }
 .k2-scale {
   position: absolute;
