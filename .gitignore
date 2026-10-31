@@ -11,9 +11,7 @@ output/
 .env.*
 !.env.example
 
-# Impeccable & agent tools
-.agents/skills/impeccable/
-.github/skills/impeccable/
+# Local agent tooling
 .github/agents/
 .github/hooks/
 .codex/
