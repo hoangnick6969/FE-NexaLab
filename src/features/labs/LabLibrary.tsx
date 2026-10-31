@@ -55,7 +55,8 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
           className="lab-card"
           key={l.id}
         >
-          <div className={"lab-art " + l.className}>
+          <div className={"lab-art " + l.className + (l.thumbnail ? " has-thumbnail" : "")}>
+            {l.thumbnail && <img className="lab-thumbnail-image" src={l.thumbnail} alt="" aria-hidden="true" loading="lazy" decoding="async" width="1280" height="720" onError={(event) => event.currentTarget.parentElement?.classList.add("thumbnail-failed")} />}
             <span className="lab-subject">{l.subject}</span>
             <span className="art-number">{l.number}</span>
             <div className="art-symbol">
