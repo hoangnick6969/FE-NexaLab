@@ -76,7 +76,8 @@ const renderers: readonly LabActivityRenderer[] = [
     guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
   },
   {
-    // FL-27 gene-to-protein, private engineering prototype. Needs a pinned gene-expression pack and an active Lab to launch.
+    // FL-27 gene-to-protein, private engineering prototype. The server pins a gene variant per run (runtimeParams.variantId)
+    // and marks the evidence with rubric gene-protein-stations@1.0.0.
     key: "gene-expression", labId: "gene-protein", modelRefs: ["gene-expression@1.0.0"], envelope: "evidence",
     defaultState: defaultGeneEvidence,
     Activity: ({ state, onChange, resetKey, runtimeParams }) => <Suspense fallback={<InlineLoader message={text().loadingGene} />}>
