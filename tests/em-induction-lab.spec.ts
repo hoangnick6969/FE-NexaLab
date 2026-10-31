@@ -192,6 +192,7 @@ test("FL-25 3D scene mounts, acts from the DOM control and fits a phone viewport
     expect((await button.getAttribute("aria-label")) ?? (await button.innerText()).trim()).not.toBe("");
   await page.screenshot({ path: "test-results/em-induction-3d-390.png" });
   expect(errors.filter((message) => !/favicon|DevTools/.test(message))).toEqual([]);
+  if (process.env.FL25_KEEP_OPEN === "1") await page.pause();
 });
 
 test("FL-25 3D desktop: the needle, LED and current arrows respond during a push", async ({ page }) => {
