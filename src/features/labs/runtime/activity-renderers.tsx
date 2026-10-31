@@ -58,6 +58,20 @@ const renderers: readonly LabActivityRenderer[] = [
     },
   },
   {
+    // FL-20 ecology-tolerance, 2D only.
+    key: "ecology-tolerance", labId: "ecology-tolerance", modelRefs: ["ecology-tolerance@1.0.0"], envelope: "checkpoints",
+    defaultState: () => checkpointViewForRenderer("ecology-tolerance")!.defaultEvidence(),
+    Activity: ({ state, onChange }) => {
+      const view = checkpointViewForRenderer("ecology-tolerance")!;
+      return <view.Activity state={state} onChange={onChange} />;
+    },
+    guided: {
+      ready: (state) => checkpointViewForRenderer("ecology-tolerance")!.ready(state),
+      copy: circuitBulbCopy,
+      Result: ({ result, verdict }) => <CircuitBulbResult result={result} verdict={verdict} describeObservation={checkpointViewForRenderer("ecology-tolerance")!.describeResult} />,
+    },
+  },
+  {
     key: "circuit", labId: "circuit", modelRefs: ["circuit@1.0.0"], envelope: "labState",
     defaultState: defaultCircuit,
     Activity: ({ state, onChange, resetKey }) => <Circuit key={resetKey} initial={state.nodes ? state : defaultCircuit()} onChange={onChange} />,

@@ -15,6 +15,9 @@ output/
 .claude/
 .github/agents/
 .github/hooks/
+.github/skills/
+.agents/skills/
+skills-lock.json
 .codex/
 .codex-skills/
 *.exe

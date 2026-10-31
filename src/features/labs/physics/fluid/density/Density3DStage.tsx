@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LabSceneContext } from "../../../shared/LabSpace";
+import type { StageView } from "../../shared/PhysicsStage";
 import {
   DigitalBalance3D, FluidBench3D, GraduatedCylinder3D, K3Slot, Specimen3D, cylinderHeightMm,
   k3Material, k3Specimen, usePrefersReducedMotion,
@@ -33,7 +34,7 @@ function Settle({ from, to, children }: { from: number; to: number; children: Re
  * K3 apparatus. Motion only presents values the activity already holds; no
  * reading or score is computed here.
  */
-export function Density3DStage({ station, evidence, bench }: { station: StationId; evidence: DensityEvidence; bench: Bench }) {
+export function Density3DStage({ station, evidence, bench, view }: { station: StationId; evidence: DensityEvidence; bench: Bench; view?: StageView }) {
   const sceneRoot = useContext(LabSceneContext);
   useEffect(() => {
     // The canvas is decorative: every reading is also in the DOM controls and notebook.
@@ -53,7 +54,7 @@ export function Density3DStage({ station, evidence, bench }: { station: StationI
   // Load on the pan: the cup for the water station, otherwise the selected specimen (dropped pebbles sit in the cylinder).
   const panLoad = bench.onPan && !pebbleSunk ? <Settle from={70} to={0}><Specimen3D specimen={specimen} material={material} /></Settle> : null;
 
-  return <FluidBench3D>
+  return <FluidBench3D view={view}>
     {station === "water" ? <DensityWaterScene evidence={evidence} bench={bench} /> : <>
     <K3Slot at="balance">
       <DigitalBalance3D instrument={balance} readingG={reading}>{panLoad}</DigitalBalance3D>

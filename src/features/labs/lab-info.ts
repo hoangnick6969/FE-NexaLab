@@ -1,5 +1,15 @@
 import { defineText } from "../../i18n";
 
+const thumbnailAssets = import.meta.glob<string>("./assets/thumbnails/*.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+function thumbnailFor(labId: string) {
+  return thumbnailAssets[`./assets/thumbnails/${labId}.webp`];
+}
+
 const text = defineText({
   vi: {
     circuit: { subject: "VẬT LÝ", tag: "THỬ THÁCH", title: "Thắp sáng ý tưởng", description: "Tự lắp mạch điện và tìm cách làm LED sáng an toàn." },
@@ -8,6 +18,7 @@ const text = defineText({
     induction: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM 3D", title: "Cảm ứng điện từ", description: "Đẩy, kéo nam châm và quay máy phát để thấy khi nào có dòng điện cảm ứng." },
     density: { subject: "VẬT LÝ", tag: "THỰC HÀNH", title: "Xác định khối lượng riêng", description: "Cân, đo thể tích và tính khối lượng riêng của khối gỗ, nước và hòn sỏi." },
     geneProtein: { subject: "SINH HỌC", tag: "MÔ HÌNH 3D", title: "Từ gene đến protein", description: "Tái bản DNA, phiên mã, dịch mã và quan sát một đột biến điểm làm thay đổi protein." },
+    massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
   },
   en: {
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
@@ -16,12 +27,13 @@ const text = defineText({
     induction: { subject: "PHYSICS", tag: "3D EXPERIMENT", title: "Electromagnetic induction", description: "Push and pull a magnet and turn a generator to see when an induced current appears." },
     density: { subject: "PHYSICS", tag: "PRACTICAL", title: "Measuring density", description: "Weigh, measure volume and work out the density of a wooden block, water and a pebble." },
     geneProtein: { subject: "BIOLOGY", tag: "3D MODEL", title: "From gene to protein", description: "Replicate DNA, transcribe and translate a gene, and see how one point mutation changes the protein." },
+    massConservation: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Conservation of mass", description: "Observe a precipitation reaction and compare the mass before and after." },
   },
 });
 const t = text();
 
 
-export const labInfo = [
+const catalogEntries = [
   {
     id: "circuit",
     ...t.circuit,
@@ -58,4 +70,15 @@ export const labInfo = [
     className: "biology",
     number: "06",
   },
+  {
+    id: "mass-conservation",
+    ...t.massConservation,
+    className: "chemistry",
+    number: "07",
+  },
 ];
+
+export const labInfo = catalogEntries.map((entry) => ({
+  ...entry,
+  thumbnail: thumbnailFor(entry.id),
+}));
