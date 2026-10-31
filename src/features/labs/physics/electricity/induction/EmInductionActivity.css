@@ -1,0 +1,182 @@
+/* Hallmark · v2.0.0 · scope: app screen (FL-25 Lab panel) · system: existing Lab Space tokens, no theme dealt */
+/* critique: one action dock, one question panel, status in text; motion is transform/opacity only; reduced motion holds still frames */
+/* waive 29: the question panel keeps the translucent Lab Space surface shared with the Circuit bulb panel, so the two Labs read as one space */
+
+:root {
+  --em-panel-bg: rgb(255 255 255 / 92%);
+  --em-panel-shadow: 0 16px 44px rgb(18 38 30 / 10%), 0 2px 6px rgb(18 38 30 / 3%);
+  --em-track: rgb(0 0 0 / 8%);
+  --em-accent: var(--brand-green);
+  --em-accent-soft: rgb(36 91 71 / 9%);
+  --em-ink: var(--text-base);
+  --em-muted: var(--muted);
+  --em-focus: #287875;
+  --em-stage-from: #f9faf6;
+  --em-stage-to: #e4ebe6;
+  --em-wire: #3b4a45;
+  --em-bench: #b9c4bf;
+  --em-bobbin: #e9e3cf;
+  --em-loop: #b4602c;
+  --em-north: #b8322a;
+  --em-south: #2c5a8c;
+  --em-pole-ink: #ffffff;
+  --em-meter-face: #f6f2e6;
+  --em-needle: #b3261e;
+  --em-led-a: #e8463b;
+  --em-led-b: #2f9e58;
+  --em-field: #2f6fb0;
+  --em-arrow: #d08a12;
+  --em-font: inherit;
+  --em-on-accent: #f7faf6;
+  --em-tool-pressed: #e3eee8;
+  --em-panel-solid: #fbfcfa;
+  /* Side panel width; EmInduction3DStage frames the bench beside it with the same formula */
+  --em-panel-w: clamp(300px, 34vw, 380px);
+}
+:root[data-theme="dark"] {
+  --em-panel-bg: rgb(24 32 32 / 94%);
+  --em-panel-shadow: 0 16px 44px rgb(0 0 0 / 40%);
+  --em-track: rgb(255 255 255 / 12%);
+  --em-accent-soft: rgb(124 195 164 / 14%);
+  --em-focus: #7cc3a4;
+  --em-tool-pressed: #23362f;
+  --em-panel-solid: #182020;
+}
+
+.em-activity { color: var(--em-ink); font-family: var(--em-font); font-size: 14px; line-height: 1.5; }
+.em-loading { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); color: var(--em-muted); }
+
+/* 2D schematic view */
+.em-2d-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: clamp(16px, 5vw, 80px); background: radial-gradient(ellipse at 50% 48%, var(--em-stage-from) 0%, var(--em-stage-to) 100%); }
+.em-2d-stage svg { width: min(100%, 1040px); max-height: 74vh; overflow: visible; }
+.em-2d-bench { stroke: var(--em-bench); stroke-width: 4; fill: none; }
+.em-2d-wire { stroke: var(--em-wire); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.em-2d-arrow { fill: var(--em-arrow); }
+.em-2d-bobbin { fill: var(--em-bobbin); stroke: var(--em-wire); stroke-width: 2; }
+.em-2d-loop { fill: none; stroke: var(--em-loop); stroke-width: 5; }
+.em-2d-field path { fill: none; stroke: var(--em-field); stroke-width: 2; stroke-dasharray: 8 6; }
+.em-2d-north { fill: var(--em-north); }
+.em-2d-south { fill: var(--em-south); }
+.em-2d-pole { fill: var(--em-pole-ink); font-size: 22px; font-weight: 700; }
+.em-2d-rotor-ring { fill: none; stroke: var(--em-wire); stroke-width: 2; stroke-dasharray: 4 5; }
+.em-2d-meter { fill: var(--em-meter-face); stroke: var(--em-wire); stroke-width: 4; }
+.em-2d-meter-label { fill: var(--em-wire); font-size: 18px; font-weight: 700; }
+.em-2d-needle { stroke: var(--em-needle); stroke-width: 3; stroke-linecap: round; }
+.em-2d-led-a { fill: var(--em-led-a); stroke: var(--em-led-a); stroke-width: 3; }
+.em-2d-led-b { fill: var(--em-led-b); stroke: var(--em-led-b); stroke-width: 3; }
+.em-2d-small { fill: var(--em-wire); font-size: 16px; font-weight: 600; }
+
+/* Action dock: one primary action plus view tools */
+.em-dock { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 62px); z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; max-width: calc(100% - 36px); }
+.em-act, .em-tool { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--em-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform .14s ease-out; }
+.em-act:not(:disabled) { border-color: var(--em-accent); background: var(--em-accent); color: var(--em-on-accent); }
+.em-act:not(:disabled) .em-act-dot[data-active="true"] { background: var(--em-on-accent); }
+.em-act:active:not(:disabled), .em-tool:active { transform: scale(.97); }
+.em-act:disabled { cursor: not-allowed; color: var(--em-muted); }
+.em-act-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--em-track); }
+.em-act-dot[data-active="true"] { background: var(--em-accent); }
+.em-tool[aria-pressed="true"] { background: var(--em-tool-pressed); border-color: var(--em-accent); }
+.em-act:focus-visible, .em-tool:focus-visible, .em-question-badge:focus-visible, .em-close:focus-visible { outline: 3px solid var(--em-focus); outline-offset: 3px; transition: none; }
+
+/* Question panel */
+.em-question-badge { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 20; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--em-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.em-question-badge[aria-expanded="true"] { visibility: hidden; opacity: 0; pointer-events: none; }
+.lab-space .em-panel, .em-panel { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 25; display: flex; flex-direction: column; gap: 12px; width: min(var(--em-panel-w), calc(100% - 36px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 16px 20px; border: 0; border-radius: 20px; background: var(--em-panel-bg); box-shadow: var(--em-panel-shadow); backdrop-filter: blur(20px) saturate(180%); transform-origin: top right; transition: opacity .2s ease-out, transform .2s ease-out; }
+.em-panel[data-open="false"] { opacity: 0; transform: scale(.96) translateY(-4px); pointer-events: none; visibility: hidden; }
+/* The step stays visible when the panel scrolls on short screens */
+.em-panel-header { position: sticky; top: -16px; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: -16px -20px 0; padding: 16px 20px 8px; border-radius: 20px 20px 0 0; background: var(--em-panel-solid); color: var(--em-ink); }
+.em-discipline { margin: 0; color: var(--em-muted); font-size: 13px; }
+.em-step { margin: 0; color: var(--em-accent); font-size: 14px; font-weight: 650; }
+.em-close { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--em-muted); cursor: pointer; }
+.em-progress { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.em-progress span { height: 3px; border-radius: 999px; background: var(--em-track); transform-origin: center; transition: transform .25s ease-out; }
+.em-progress span[data-state="done"], .em-progress span[data-state="current"] { background: var(--em-accent); }
+.em-progress span[data-state="current"] { transform: scaleY(1.5); }
+.em-heading { margin: 0; color: var(--em-ink); font-size: 16px; font-weight: 650; line-height: 1.45; overflow-wrap: break-word; min-width: 0; }
+.em-choices { display: grid; gap: 8px; margin: 0; padding: 12px 0 0; border: 0; border-top: 1px dashed var(--line); }
+.em-choices legend { padding: 0 0 8px; color: var(--em-muted); font-size: 13px; font-weight: 600; }
+.em-choice { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.em-choice:has(input:checked) { border-color: var(--em-accent); background: var(--em-accent-soft); }
+.em-choice:has(input:focus-visible) { outline: 3px solid var(--em-focus); outline-offset: 2px; }
+.em-choice input, .em-segment-option input { flex: none; width: 18px; height: 18px; min-height: 0; padding: 0; margin: 2px 0 0; accent-color: var(--em-accent); }
+.em-choice { align-items: flex-start; }
+.em-choice span { min-width: 0; line-height: 1.5; }
+.em-letter { min-width: 18px; color: var(--em-accent); font-weight: 700; }
+.em-observation { padding: 12px; border-radius: 12px; background: var(--em-accent-soft); }
+.em-observation p { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
+.em-observation p > svg { flex: none; margin-top: 4px; }
+.em-observation p:has(small) { flex-direction: column; gap: 4px; }
+.em-observation small { display: block; }
+.em-observation small { color: var(--em-muted); }
+.em-hint { color: var(--em-muted); }
+.em-waveform { margin: 12px 0 0; }
+.em-waveform svg { display: block; width: 100%; height: auto; }
+.em-waveform-axis { stroke: var(--em-muted); stroke-width: 1; }
+.em-waveform-line { fill: none; stroke: var(--em-accent); stroke-width: 2; }
+.em-waveform-sample { fill: var(--em-accent); }
+.em-waveform figcaption { color: var(--em-muted); font-size: 12px; }
+.em-ready { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--em-accent); font-weight: 600; }
+.em-note { margin: 0; color: var(--em-muted); font-size: 12px; line-height: 1.5; }
+
+/* The view toggle sits left of the question panel, as in the Circuit bulb space */
+/* The view toggle lives in the action dock, so it never collides with the header or the panel */
+.lab-space .em-dock .lab-renderer-toggle { position: static; display: inline-flex; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: none; backdrop-filter: none; }
+.lab-space .em-dock .lab-renderer-toggle button { min-height: 36px; min-width: 52px; color: var(--em-muted); }
+.lab-space .em-dock .lab-renderer-toggle button[aria-pressed="true"] { background: var(--em-accent); color: var(--em-on-accent); }
+.lab-space .em-dock .lab-renderer-toggle button:focus-visible { outline: 3px solid var(--em-focus); outline-offset: 2px; }
+/* Dock and submit bar stay left of the question panel */
+@media (min-width: 721px) {
+  .em-dock, .lab-space:has(.em-activity) .lab-workspace > .lab-actions { max-width: calc(100% - var(--em-panel-w) - 72px); }
+}
+/* Tool labels collapse to icons until there is room; the name stays for assistive technology and as a tooltip */
+@media (max-width: 1279px) {
+  .em-dock > .em-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .em-dock > .em-tool { padding: 8px 12px; }
+}
+
+@media (max-width: 720px) {
+  .lab-space .em-panel, .em-panel { top: auto; bottom: 130px; right: 10px; width: calc(100% - 20px); max-height: 42dvh; }
+  .em-dock { flex-wrap: nowrap; }
+  .em-question-badge { top: auto; bottom: 150px; right: 10px; }
+  .em-tool { padding: 8px 12px; }
+  /* Icon-only tools on narrow screens; the label stays available to assistive technology */
+  .em-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .lab-space .em-dock .lab-renderer-toggle button { min-width: 40px; padding: 0 8px; }
+  .lab-space .em-dock .lab-renderer-toggle svg { display: none; }
+  .em-act { padding: 8px 12px; white-space: nowrap; }
+  .em-dock { gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-act, .em-tool, .em-panel, .em-progress span { transition: none; }
+  .em-act:active:not(:disabled), .em-tool:active { transform: none; }
+}
+
+/* Free explore: unlocked after the checkpoints; not scored, not saved */
+.em-explore { display: grid; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.em-explore-toggle { justify-self: start; }
+.em-explore-toggle:disabled, .em-explore-moves .em-tool:disabled { cursor: not-allowed; opacity: .6; }
+.em-explore-controls { display: grid; gap: 12px; }
+.em-explore-title { margin: 0; color: var(--em-ink); font-size: 15px; font-weight: 650; }
+.em-segment { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.em-segment legend { width: 100%; padding: 0 0 8px; color: var(--em-muted); font-size: 13px; font-weight: 600; }
+.em-segment-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.em-segment-option input { margin: 0; }
+.em-segment-option:has(input:checked) { border-color: var(--em-accent); background: var(--em-accent-soft); }
+.em-segment-option:has(input:focus-visible) { outline: 3px solid var(--em-focus); outline-offset: 2px; }
+.em-explore-moves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.em-explore-moves .em-tool { justify-content: center; text-align: center; }
+/* Why a pressed part did not move: sits above the action dock */
+.em-notice { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 120px); z-index: 11; max-width: min(420px, calc(100% - 36px)); margin: 0; padding: 8px 16px; border: 1px solid var(--em-accent); border-radius: 12px; background: var(--surface); color: var(--em-ink); font-size: 14px; }
+.em-notice:empty { display: none; }
+.em-2d-pressable { cursor: help; }
+/* Direct manipulation in the 2D view */
+.em-2d-draggable { cursor: grab; touch-action: none; }
+.em-2d-draggable:active { cursor: grabbing; }
+.em-2d-hit { fill: transparent; }
+.em-2d-knob { fill: var(--em-arrow); stroke: var(--em-wire); stroke-width: 2; }
+.em-2d-contact { fill: var(--em-meter-face); stroke: var(--em-wire); stroke-width: 3; }
+@media (max-width: 720px) {
+  /* Explore labels stay visible: they are the only names of these actions */
+  .em-explore .em-tool span, .em-explore-moves .em-tool { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
+}
