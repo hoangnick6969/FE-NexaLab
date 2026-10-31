@@ -25,6 +25,7 @@ export type LabLaunch = {
 const renderers = {
   circuit: { labId: "circuit", modelRefs: ["circuit@1.0.0"] },
   "circuit-bulb": { labId: "circuit", modelRefs: ["circuit-bulb@1.0.0"] },
+  "em-induction": { labId: "em-induction", modelRefs: ["em-induction@1.0.0"] },
   chemistry: { labId: "chemistry", modelRefs: ["chemistry@1.0.0"] },
   eye: { labId: "eye", modelRefs: ["eye@1.0.0"] },
 } as const;
@@ -232,15 +233,16 @@ export function useLabRunHost(input: HostInput) {
     const currentDraft = draftFor(launch, input.state);
     try {
       await saveDraft(currentDraft).catch(() => undefined);
-      const bulbEvidence = input.state as { checkpoints?: unknown; explanation?: unknown } | null;
+      const checkpointEvidence = input.state as { checkpoints?: unknown; explanation?: unknown } | null;
       const response = await api<any>("/attempts", "POST", {
         contract: launch.contract,
         runId: launch.runId,
         idempotencyKey: idempotencyKey.current,
         stateSchemaVersion: launch.stateSchemaVersion,
         evidenceSchemaVersion: launch.evidenceSchemaVersion,
-        ...(launch.rubricVersion === "circuit-bulb-checkpoints@1.0.0"
-          ? { checkpoints: bulbEvidence?.checkpoints, explanation: bulbEvidence?.explanation }
+        // Checkpoint rubrics send only their evidence; UI progress fields stay in the local draft.
+        ...(launch.rubricVersion !== "legacy-challenge@1.0.0"
+          ? { checkpoints: checkpointEvidence?.checkpoints, explanation: checkpointEvidence?.explanation }
           : { labState: input.state }),
         durationMs: Math.max(0, Date.now() - startedAt.current),
       });

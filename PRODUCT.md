@@ -62,7 +62,7 @@ Khác với các ứng dụng học tập thông thường dùng game hóa bề 
   - `nexalab-fe/README.md`, `nexalab-fe/AGENTS.md`.
   - `nexalab-fe/docs/design/08-STUDENT-P0-UX-DEFINITION.md`.
   - Backend specs & PRD tại `../BE-NexaLab`.
-- Asset: `public/vision/` (MediaPipe model/WASM), `vendor/nexalab-sim-1.1.0.tgz`.
+- Asset: `public/vision/` (MediaPipe model/WASM), `vendor/nexalab-sim-1.2.0.tgz`.
 
 ## Product Principles
 

@@ -14,7 +14,7 @@ labs/
   pathways/                      assigned lesson/pathway integration
   physics/
     shared/                      reusable physics room/stage
-    electricity/                 K1: FL-01 code; FL-25 reserved, not implemented
+    electricity/                 K1: FL-01 code; induction/ = FL-25 private prototype
     fluid/                        K3: FL-03–05 (planned)
     thermal/                      K4: FL-07–08 (planned)
     mechanics/                    K5: FL-06/24 (planned)
@@ -28,7 +28,7 @@ labs/
 ```
 
 - `physics/shared/PhysicsStage.tsx` owns the shared procedural physics room, Canvas lifecycle, camera and WebGL fallback. Kit-specific apparatus stays under its physics environment folder.
-- `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. This does not implement FL-25.
+- `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `physics/electricity/induction/` holds the FL-25 private engineering prototype (separate model and activity; not released).
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
 - `chemistry/Chemistry.tsx` remains `TECHNICAL_FIXTURE_ONLY`; it is not one of the approved/provisional released Lab experiences.
 - `biology/anatomy/` contains a Lesson resource, not a Foundational Lab implementation.
@@ -37,7 +37,7 @@ labs/
 
 | Shared environment / discipline | Catalog IDs | Code folder | Current FE evidence |
 |---|---|---|---|
-| K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit only; FL-25 is not implemented |
+| K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit; FL-25 private prototype in `induction/` (not released) |
 | K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Not implemented |
 | K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |

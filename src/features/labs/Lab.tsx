@@ -12,7 +12,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
 import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
-import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "./physics/electricity/CircuitBulbActivity";
+import { checkpointViewForModel, checkpointViewForRenderer } from "./runtime/checkpoint-views";
+import { defaultEmEvidence } from "./physics/electricity/induction/em-evidence";
 import { Chemistry } from "./chemistry/Chemistry";
 import { useLabRunHost } from "./runtime/lab-run-host";
 import { defineText } from "../../i18n";
@@ -59,8 +60,7 @@ const text = defineText({
     bulbGoal: "Quan sát mạch điện đóng và mở",
     bulbTask: "Dự đoán trạng thái bóng đèn khi đóng và mở công tắc, rồi giải thích kết quả.",
     bulbPredict: "Dự đoán trước khi xem kết quả", bulbSubmit: "Nộp kết quả",
-    bulbClosed: "Công tắc đóng", bulbOpen: "Công tắc mở", bulbOn: "Bóng đèn sáng", bulbOff: "Bóng đèn tắt",
-    bulbCorrect: "Dự đoán đúng", bulbIncorrect: "Dự đoán chưa đúng", bulbExplanation: "Xem lại câu giải thích",
+    bulbExplanation: "Xem lại câu giải thích",
     bulbPassed: "Em đã hoàn thành tốt hoạt động này.", bulbNeedsPractice: "Hãy xem lại phản hồi rồi thử lại từ đầu.",
     bulbAssessment: "Kết quả được chấm trên máy chủ", bulbWaiting: "Hoàn thành các bước trong sơ đồ để nộp bài.",
     bulbResult: "Kết quả bài làm",
@@ -132,8 +132,7 @@ const text = defineText({
     bulbGoal: "Observe open and closed circuits",
     bulbTask: "Predict the bulb state with the switch closed and open, then explain the result.",
     bulbPredict: "Predict before seeing the result", bulbSubmit: "Submit results",
-    bulbClosed: "Switch closed", bulbOpen: "Switch open", bulbOn: "Bulb on", bulbOff: "Bulb off",
-    bulbCorrect: "Correct prediction", bulbIncorrect: "Incorrect prediction", bulbExplanation: "Review the explanation",
+    bulbExplanation: "Review the explanation",
     bulbPassed: "You completed this activity successfully.", bulbNeedsPractice: "Review the feedback, then try the activity again.",
     bulbAssessment: "Result assessed by the server", bulbWaiting: "Complete the diagram steps to submit your work.",
     bulbResult: "Activity feedback",
@@ -173,7 +172,9 @@ const initialLabState = (id: string) => id === "circuit"
   ? defaultCircuit()
   : id === "chemistry"
     ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-    : { answers: {} };
+    : id === "em-induction"
+      ? defaultEmEvidence()
+      : { answers: {} };
 
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -215,7 +216,7 @@ export default function Lab() {
   const returnToLesson = originLesson ? relatedLessonHref(originLesson.lessonId, returnSection ? "reading" : "labs", returnAssignment, returnSection) : undefined;
   const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
   const fallbackState = useMemo(
-    () => location.state?.labState ?? (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0" ? defaultBulbEvidence() : initialLabState(id)),
+    () => location.state?.labState ?? (user.role === "TEACHER" && checkpointViewForModel(lab?.simulationModelRef) ? checkpointViewForModel(lab?.simulationModelRef)!.defaultEvidence() : initialLabState(id)),
     [id, location.key, location.state?.labState, user.role, lab?.simulationModelRef],
   );
   const labRun = useLabRunHost({
@@ -229,7 +230,8 @@ export default function Lab() {
     initialState: fallbackState,
     onStateChange: setState,
   });
-  const isBulb = labRun.rendererKey === "circuit-bulb" || (user.role === "TEACHER" && lab?.simulationModelRef === "circuit-bulb@1.0.0");
+  const checkpointView = checkpointViewForRenderer(labRun.rendererKey) ?? (user.role === "TEACHER" ? checkpointViewForModel(lab?.simulationModelRef) : null);
+  const isCheckpoint = Boolean(checkpointView);
   const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
     setState(fallbackState);
@@ -270,7 +272,7 @@ export default function Lab() {
   };
   const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
   const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
-  if (!["circuit", "eye", "chemistry"].includes(id))
+  if (!["circuit", "eye", "chemistry", "em-induction"].includes(id))
     return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
@@ -279,7 +281,7 @@ export default function Lab() {
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {runtimeReady && preview && !isBulb && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      {runtimeReady && preview && !isCheckpoint && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           {runtimeReady && <div className="workspace-toolbar">
@@ -287,7 +289,7 @@ export default function Lab() {
             <button
               className="text-button"
               onClick={() => {
-                const next = isBulb ? defaultBulbEvidence() : initialLabState(id);
+                const next = checkpointView ? checkpointView.defaultEvidence() : initialLabState(id);
                 if (user.role === "STUDENT") labRun.reset(next);
                 else change(next);
                 setResetKey((k) => k + 1);
@@ -328,8 +330,8 @@ export default function Lab() {
               </div>
             </div>
           )}
-          {runtimeReady && isBulb ? (
-            <CircuitBulbActivity state={state} onChange={change} />
+          {runtimeReady && checkpointView ? (
+            <checkpointView.Activity state={state} onChange={change} />
           ) : runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
             <Circuit
               key={resetKey}
@@ -343,35 +345,35 @@ export default function Lab() {
               <Eye key={resetKey} state={state} onChange={change} />
             </Suspense>
           ) : null}
-          {runtimeReady && !(isBulb && user.role === "TEACHER") && <div className="lab-actions">
-            <span>{isBulb ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+          {runtimeReady && !(isCheckpoint && user.role === "TEACHER") && <div className="lab-actions">
+            <span>{isCheckpoint ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
               data-testid="lab-run-submit"
               onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
-              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (isBulb && !bulbEvidenceReady(state))}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (checkpointView !== null && !checkpointView.ready(state))}
             >
               <Play size={15} />
               {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
                 ? t.computing
-                : isBulb ? t.bulbSubmit : id === "eye"
+                : isCheckpoint ? t.bulbSubmit : id === "eye"
                   ? t.gradeParts
                   : t.run}
             </button>
           </div>}
           <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
-        <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{isBulb ? t.bulbResult : t.result}</summary>
-          {runtimeReady && !isBulb && <section className="panel challenge-panel">
+        {runtimeReady && <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{isCheckpoint ? t.bulbResult : t.result}</summary>
+          {runtimeReady && !isCheckpoint && <section className="panel challenge-panel">
             <span className="eyebrow">{t.challenge}</span>
             <h3>
-              {isBulb ? t.bulbGoal : id === "circuit"
+              {isCheckpoint ? t.bulbGoal : id === "circuit"
                 ? t.circuitGoal
                 : id === "eye"
                   ? t.eyeGoal
                   : t.chemGoal}</h3>
             <p>
-              {isBulb ? t.bulbTask : id === "circuit"
+              {isCheckpoint ? t.bulbTask : id === "circuit"
                 ? t.circuitTask
                 : id === "eye"
                   ? t.eyeTask
@@ -380,7 +382,7 @@ export default function Lab() {
             <ul className="checklist">
               <li>
                 <CheckCircle2 size={15} />
-                {isBulb ? t.bulbPredict : t.observe}
+                {isCheckpoint ? t.bulbPredict : t.observe}
               </li>
               <li>
                 <CheckCircle2 size={15} />
@@ -393,20 +395,20 @@ export default function Lab() {
             </ul>
           </section>}
           <section className="panel result-panel">
-            <h3>{isBulb ? t.bulbResult : t.result}</h3>
+            <h3>{isCheckpoint ? t.bulbResult : t.result}</h3>
             {result ? (
               <>
                 <Badge tone={attempt.verdict}>
                   {verdictLabel(attempt.verdict)}
                 </Badge>
-                {isBulb ? (
+                {isCheckpoint ? (
                   <>
                     <p className="bulb-result-message">{attempt.verdict === "passed" ? t.bulbPassed : t.bulbNeedsPractice}</p>
                     <p className="bulb-result-score">{result.assessment?.score} / {result.assessment?.maximumScore}<small>{t.bulbAssessment}</small></p>
                     <ul>
                       {result.observations?.map((item: any) => (
                         <li key={item.id}>
-                          {item.id === "CLOSED" ? t.bulbClosed : t.bulbOpen}: {item.scientificObservation?.bulbState === "ON" ? t.bulbOn : t.bulbOff} · {item.predictionCorrect ? t.bulbCorrect : t.bulbIncorrect}
+                          {checkpointView!.describeResult(item)}
                         </li>
                       ))}
                       {result.assessment?.unmetCriteria?.includes("explanation") && <li>{t.bulbExplanation}</li>}
@@ -466,18 +468,18 @@ export default function Lab() {
                 )}
                 <ErrorBox error={save.error} />
                 {user.role === "STUDENT" && attempt.verdict !== "passed" && (
-                  <button type="button" className="secondary wide" onClick={() => isBulb ? labRun.reset(defaultBulbEvidence()) : labRun.retry()}>
+                  <button type="button" className="secondary wide" onClick={() => checkpointView ? labRun.reset(checkpointView.defaultEvidence()) : labRun.retry()}>
                     <RotateCcw size={15} /> {t.tryAgain}
                   </button>
                 )}
               </>
             ) : (
               <p className="muted">
-                {isBulb ? t.bulbWaiting : t.resultAfterRun}
+                {isCheckpoint ? t.bulbWaiting : t.resultAfterRun}
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && runtimeReady && !isBulb && (
+          {user.role === "STUDENT" && runtimeReady && !isCheckpoint && (
             <section className="panel tutor-panel">
               <h3>
                 <Sparkles size={19} />
@@ -509,9 +511,9 @@ export default function Lab() {
               </small>
             </section>
           )}
-        </details></aside>
+        </details></aside>}
       </div>
-      {!isBulb && <p className="tiny muted">{t.disclaimer}</p>}
+      {runtimeReady && !isCheckpoint && <p className="tiny muted">{t.disclaimer}</p>}
     </>
   );
 }
