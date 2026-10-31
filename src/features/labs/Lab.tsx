@@ -264,7 +264,7 @@ export default function Lab() {
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {runtimeReady && preview && !guided && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      {runtimeReady && preview && !guided && (id === "circuit" || typeof preview.extent === "number") && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           {runtimeReady && <div className="workspace-toolbar">

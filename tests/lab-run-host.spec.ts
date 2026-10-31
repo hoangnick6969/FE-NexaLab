@@ -188,8 +188,6 @@ test("P3.5 chemistry model uses its own renderer and submits its distinct state 
   });
   expect(submissions[0]).not.toHaveProperty("checkpoints");
 });
-
-
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
   test(`Lab Space pilot fills viewport and questions preserve evidence at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -219,7 +217,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(stage.locator("canvas")).toBeVisible();
     expect(await page.evaluate(() => document.elementFromPoint(innerWidth/2, innerHeight*.35)?.tagName)).toBe("CANVAS");
     await page.screenshot({ path: `output/playwright/lab-space-pilot-${viewport.width}-closed.png` });
-    await expect(page.getByRole("link", { name: "Thoát phòng thực hành" })).toHaveAttribute("href", "/assignments/assignment-lab");
+    await expect(page.getByRole("link", { name: "← Quay về" })).toHaveAttribute("href", "/assignments/assignment-lab");
   });
 }
 
@@ -243,7 +241,7 @@ test("Lab Space no WebGL shows honest recovery and retains visible experiment co
   await page.evaluate(() => { (window as any).allowLabWebgl = true; });
   await page.getByRole("button", { name: "Thử tải lại 3D" }).click();
   await expect(page.getByTestId("physics-stage").locator("canvas")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Thoát phòng thực hành" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "← Quay về" })).toBeVisible();
 });
 
 test("assigned lesson explicit Lab Space entry preserves arbitrary topology, values and attempt context", async ({ page }) => {
@@ -269,7 +267,7 @@ test("assigned lesson explicit Lab Space entry preserves arbitrary topology, val
   await page.getByLabel("Đầu dây nguồn").selectOption("b1");
   await page.getByLabel("Đầu dây đích").selectOption("l1");
   await page.getByRole("button", { name: "Nối dây", exact: true }).click();
-  await page.getByRole("button", { name: "Thoát phòng thực hành" }).click();
+  await page.getByRole("button", { name: "← Quay về" }).click();
   await expect(page.getByTestId("lab-space-enter")).toBeFocused();
   await page.getByTestId("lab-space-enter").click();
   await expect(page.getByLabel("Giá trị linh kiện")).toHaveValue("470");
@@ -279,6 +277,6 @@ test("assigned lesson explicit Lab Space entry preserves arbitrary topology, val
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toMatchObject({ assignmentId: "lesson-assignment", lessonStepId: "step-lab", challengeId: "circuit_001", labState: { nodes: expect.arrayContaining([{ id: "r1", type: "resistor", value: 470 }]), edges: [{ source: "b1", target: "l1" }] } });
   expect(submissions[0]).not.toHaveProperty("runId");
-  await page.getByRole("button", { name: "Thoát phòng thực hành" }).click();
+  await page.getByRole("button", { name: "← Quay về" }).click();
   await expect(page.locator("#step-step-lab")).toHaveClass(/completed/);
 });

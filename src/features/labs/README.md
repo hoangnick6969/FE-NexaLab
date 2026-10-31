@@ -25,11 +25,11 @@ labs/
   biology/anatomy/               existing Eye learning resource (FL-16 is NO LAB)
   biology/ecology/                K8: FL-20 tolerance (built, not released); FL-21 planned
   biology/genetics/               K8: FL-26 (planned)
-  biology/molecular/              K7: FL-27 (planned)
+  biology/molecular/              K7: kit/ (bench entry + molecular scene) + gene-protein/ = FL-27 technical candidate
 ```
 
 - `shared/PhysicalLabEnvironment.tsx` owns the common physical room shell (tiled floor, walls, sink, cabinets and brown worktable). K1 and the FL-10/K2 candidate both use it; kit-specific apparatus stays in its own folder. This source reuse avoids duplicate room geometry definitions; device-level memory and frame-time still require measurement.
-- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit and K2 FL-10) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
+- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit, K2 FL-10, K3 FL-03 and the K7 FL-27 bench) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
 - `physics/shared/PhysicsStage.tsx` owns the K1 Canvas lifecycle, responsive camera and WebGL fallback. `LabSpace` remains the fullscreen UI shell, separate from the 3D room environment.
 - `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `induction/` contains the FL-25 scene and uses the same room shell; release availability is controlled by the backend catalog.
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
@@ -48,7 +48,7 @@ labs/
 | K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | FL-20 built (2D, not released); FL-21 not implemented |
 | K6 Optics | FL-23 | `physics/optics/` | Not implemented |
 | K8 Genetics HUD | FL-26 | `biology/genetics/` | Not implemented |
-| K7 Molecular / gene-to-protein scene | FL-27 | `biology/molecular/` | Not implemented |
+| K7 Molecular / gene-to-protein scene | FL-27 (FL-28, FL-30 deferred) | `biology/molecular/` | Technical candidate: K7 kit (bench entry in the shared room with microscope, PCR machine and tube rack → `MolecularStage` without a room; schematic and ball-and-stick views; 2D read view) and FL-27 (`gene-protein/`) running through the lab run host against BE `gene-expression@1.0.0` / `gene-protein-stations@1.0.0`. Not released; previews `/dev/lab-kits/k7`, `/dev/lab-kits/gene-protein` |
 
 ## Catalog scene thumbnails
 

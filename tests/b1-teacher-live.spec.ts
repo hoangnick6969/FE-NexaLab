@@ -66,7 +66,7 @@ async function classWorkRow(page: Page, className: string, title: string) {
   await page.getByRole("link", { name: className, exact: true }).click();
   await expect(page).toHaveURL(/\/classes\/[^/]+\/catalog/);
   await page.locator(".hierarchy-choice").first().click();
-  await page.locator(".hierarchy-chapter").first().click();
+  await page.locator(".hierarchy-chapter-direct-link").first().click();
   return page.locator(".student-assignment-row", { hasText: title });
 }
 
