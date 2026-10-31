@@ -293,3 +293,5 @@
   .lab-space .bulb-question h3 { font-size: 14px; }
   .lab-space .bulb-choice { padding: 8px; min-height: 48px; }
 }
+
+.lab-space-header-actions:empty { display: none; }

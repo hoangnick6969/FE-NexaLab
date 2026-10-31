@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { K3Instruments } from "../k3-config";
 import { cylinderGraduations, cylinderHeightMm, cylinderLevelMm, MENISCUS_RISE_MM } from "../k3-geometry";
-import { K3_MOTION, usePrefersReducedMotion } from "../k3-motion";
+import { K3_MOTION, usePrefersReducedMotion, type LiquidSample } from "../k3-motion";
 
 type Cylinder = K3Instruments["cylinder"];
 const PX_PER_MM = 12;
@@ -70,7 +70,7 @@ function meniscusGeometry(radius: number) {
  * volume; the surface eases to its level and the scale is read at the bottom
  * of the meniscus.
  */
-export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder: Cylinder; volumeMl: number; children?: ReactNode }) {
+export function GraduatedCylinder3D({ cylinder, volumeMl, liquid, children }: { cylinder: Cylinder; volumeMl: number; liquid?: MutableRefObject<LiquidSample>; children?: ReactNode }) {
   const reduced = usePrefersReducedMotion();
   const invalidate = useThree((state) => state.invalidate);
   const scale = useScaleTexture(cylinder);
@@ -91,7 +91,8 @@ export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder
   useEffect(() => { ringing.current = reduced ? 0 : 1; invalidate(); }, [target, reduced, invalidate]);
   useFrame((state, delta) => {
     const step = Math.min(delta, 1 / 30);
-    level.current = reduced ? target : THREE.MathUtils.damp(level.current, target, K3_MOTION.liquidLevelLambda, step);
+    const frameTarget = liquid ? cylinderLevelMm(cylinder, liquid.current.volumeMl) : target;
+    level.current = liquid ? frameTarget : reduced ? target : THREE.MathUtils.damp(level.current, target, K3_MOTION.liquidLevelLambda, step);
     if (Math.abs(level.current - target) < 0.005) level.current = target;
     const height = Math.max(level.current, 0.001);
     if (column.current) {
@@ -102,13 +103,14 @@ export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder
     if (cap.current) {
       cap.current.position.y = cylinder.baseMm + level.current;
       cap.current.visible = level.current > 0.01;
+      if (liquid) ringing.current = liquid.current.ripple;
       cap.current.rotation.z = ringing.current > 0.002 ? Math.sin(state.clock.elapsedTime * 16) * 0.035 * ringing.current : 0;
     }
     if (ringing.current > 0.002) {
       ringing.current *= Math.exp(-step * 3.5);
       state.invalidate();
     }
-    if (level.current !== target) state.invalidate();
+    if (!liquid && level.current !== target) state.invalidate();
   });
 
   return <group>
@@ -125,11 +127,11 @@ export function GraduatedCylinder3D({ cylinder, volumeMl, children }: { cylinder
       <meshStandardMaterial map={scale} transparent alphaTest={0.4} roughness={0.5} side={THREE.FrontSide} />
     </mesh>
     {/* Water draws in the transparent pass so it stays visible through the transmissive glass. */}
-    <mesh ref={column} renderOrder={1}>
+    <mesh name="cylinder-water-column" ref={column} renderOrder={1}>
       <cylinderGeometry args={[inner - 0.15, inner - 0.15, 1, 64, 1, true]} />
       <meshPhysicalMaterial color="#8fcbe8" transparent opacity={0.62} roughness={0.05} ior={1.333} depthWrite={false} side={THREE.DoubleSide} />
     </mesh>
-    <mesh ref={cap} geometry={surface} renderOrder={1}>
+    <mesh name="cylinder-water-surface" ref={cap} geometry={surface} renderOrder={1}>
       <meshPhysicalMaterial color="#a8d8ef" transparent opacity={0.7} roughness={0.03} ior={1.333} clearcoat={1} depthWrite={false} side={THREE.DoubleSide} />
     </mesh>
     {children}

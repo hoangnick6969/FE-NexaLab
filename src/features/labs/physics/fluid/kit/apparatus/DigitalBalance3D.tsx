@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import type { K3Instruments } from "../k3-config";
 import { balanceSettleSequence, formatReading } from "../k3-geometry";
-import { K3_MOTION, usePrefersReducedMotion } from "../k3-motion";
+import { K3_MOTION, usePrefersReducedMotion, type BalanceSample } from "../k3-motion";
 
 const BODY: [number, number, number] = [180, 42, 200];
 const PAN_RADIUS = 60;
@@ -47,9 +47,10 @@ function drawLcd(canvas: HTMLCanvasElement, value: string, stable: boolean) {
  * Electronic balance. `readingG` is the model's reading (null = nothing
  * weighed yet); the display settles on exactly that value. Units are mm.
  */
-export function DigitalBalance3D({ instrument, readingG, onTare, children }: {
+export function DigitalBalance3D({ instrument, readingG, liveReading, onTare, children }: {
   instrument: K3Instruments["balance"];
   readingG: number | null;
+  liveReading?: MutableRefObject<BalanceSample>;
   onTare?: () => void;
   children?: ReactNode;
 }) {
@@ -73,7 +74,11 @@ export function DigitalBalance3D({ instrument, readingG, onTare, children }: {
     const { sequence } = m;
     let display: string;
     let stable = false;
-    if (!reduced && elapsed < K3_MOTION.balanceDashesMs && sequence.length > 1) display = "----";
+    if (liveReading) {
+      display = formatReading(liveReading.current.readingG, instrument.resolutionG, "en");
+      stable = !liveReading.current.flowing;
+    }
+    else if (!reduced && elapsed < K3_MOTION.balanceDashesMs && sequence.length > 1) display = "----";
     else {
       const progress = reduced ? 1 : Math.min(1, (elapsed - K3_MOTION.balanceDashesMs) / (K3_MOTION.balanceSettleMs - K3_MOTION.balanceDashesMs));
       const index = Math.min(sequence.length - 1, Math.floor(progress * sequence.length));
@@ -87,7 +92,7 @@ export function DigitalBalance3D({ instrument, readingG, onTare, children }: {
       lcd.texture.needsUpdate = true;
     }
     // Pan deflection grows with load (≤ 1.2 mm), on a damped spring.
-    const target = -1.2 * Math.min(1, (readingG ?? 0) / instrument.capacityG);
+    const target = -1.2 * Math.min(1, (liveReading?.current.readingG ?? readingG ?? 0) / instrument.capacityG);
     if (reduced) m.dip = target;
     else {
       const { stiffness, damping } = K3_MOTION.panSpring;
@@ -125,7 +130,7 @@ export function DigitalBalance3D({ instrument, readingG, onTare, children }: {
       <cylinderGeometry args={[10, 12, 8, 24]} />
       <meshStandardMaterial color="#9aa3a0" metalness={0.6} roughness={0.35} />
     </mesh>
-    <group ref={pan} position={[0, BALANCE_PAN_TOP_MM - 2, -12]}>
+    <group name="balance-pan" ref={pan} position={[0, BALANCE_PAN_TOP_MM - 2, -12]}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[PAN_RADIUS, PAN_RADIUS - 2, 3, 64]} />
         <meshStandardMaterial color="#e4e8eb" metalness={0.65} roughness={0.28} />

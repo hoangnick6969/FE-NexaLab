@@ -21,3 +21,7 @@ export function usePrefersReducedMotion() {
   }, []);
   return reduced;
 }
+
+/** Mutable presentation samples shared within the R3F frame, never evidence. */
+export type LiquidSample = { volumeMl: number; ripple: number };
+export type BalanceSample = { readingG: number; flowing: boolean };

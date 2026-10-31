@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { LabHeaderActionsContext } from "../../../shared/LabSpace";
+import { useContext, useEffect, useState } from "react";
 import { getLocale } from "../../../../../i18n";
 import { K3Hud, formatReading, k3Material, k3Specimen } from "../kit";
 import { fl03DensityConfig as config } from "./fl03-density.config";
@@ -22,6 +24,7 @@ const SPECIMEN_OPTIONS = { explore: EXPLORE_IDS, block: BLOCK_IDS, pebble: PEBBL
  */
 export function DensityActivity({ state, onChange, resetKey, runtimeParams = null }: { state: unknown; onChange: (next: DensityEvidence) => void; resetKey: number; runtimeParams?: Record<string, string | number> | null }) {
   const t = densityText();
+  const headerActions = useContext(LabHeaderActionsContext);
   const locale = getLocale();
   // Server-chosen specimens win over the local state; the preview has no run, so it keeps its own.
   const evidence = applyRunPins(densityEvidenceFrom(state), runtimeParams);
@@ -108,7 +111,7 @@ export function DensityActivity({ state, onChange, resetKey, runtimeParams = nul
 
   const measured = STATION_IDS.slice(0, 4).every((other) => stationDone(evidence, other));
   return <section className="density-activity" data-testid="density-activity" aria-label={t.title}>
-    <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+    {headerActions && createPortal(<LabRendererToggle mode={viewMode} onChange={setViewMode} />, headerActions)}
     {viewMode === "3d"
       ? <Density3DStage station={station} evidence={evidence} bench={bench} />
       : <Density2DStage station={station} evidence={evidence} bench={bench} />}

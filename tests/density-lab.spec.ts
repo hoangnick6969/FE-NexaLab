@@ -177,3 +177,175 @@ test("the server-pinned specimen pair replaces the local choice when a run launc
   await station(page, /^Sỏi/);
   await expect(page.getByTestId("density-specimen")).toHaveValue("pebble-b");
 });
+
+for (const width of [1280, 375]) {
+  test(`preview keeps the view toggle in the header at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(() => localStorage.setItem("nexalab:lab-view:density-bench", "3d"));
+    await page.goto("/dev/lab-kits/density");
+    const header = page.locator(".lab-space-header");
+    const toggle = header.getByTestId("lab-renderer-toggle");
+    for (const mode of ["3D", "2D", "3D"]) {
+      const button = toggle.getByRole("button", { name: mode, exact: true });
+      await button.click();
+      await expect(button).toHaveAttribute("aria-pressed", "true");
+      await expect(toggle).toBeVisible();
+      await expect(page.getByTestId(mode === "2D" ? "density-2d-stage" : "physics-stage")).toBeVisible();
+      const box = (await toggle.boundingBox())!;
+      const headerBox = (await header.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.x + box.width).toBeGreaterThan(width - 40);
+      expect(box.y).toBeGreaterThanOrEqual(headerBox.y);
+      expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height);
+      for (const target of await toggle.getByRole("button").all()) {
+        const targetBox = (await target.boundingBox())!;
+        expect(targetBox.width).toBeGreaterThanOrEqual(44);
+        expect(targetBox.height).toBeGreaterThanOrEqual(44);
+      }
+    }
+  });
+}
+
+// Inspect the actual R3F scene: these checks catch invisible streams, early level
+// jumps and geometry intersections that DOM-only instrument assertions miss.
+async function waterScene(page: Page) {
+  return page.evaluate(async () => {
+    const moduleUrl = "/node_modules/.vite/deps/@react-three_fiber.js";
+    const { _roots } = await import(moduleUrl);
+    const root = _roots.get(document.querySelector("canvas"));
+    if (!root) return null;
+    const scene = root.store.getState().scene;
+    const cylinder = scene.getObjectByName("pour-cylinder");
+    const cup = scene.getObjectByName("pour-cup");
+    const supply = scene.getObjectByName("pour-supply");
+    const stream = scene.getObjectByName("pour-stream");
+    if (!cylinder || !cup || !supply || !stream) return null;
+    const volume = (group: any, name: string, radius: number) => { const mesh = group.getObjectByName(name); return mesh.visible ? mesh.scale.y * Math.PI * radius ** 2 / 1000 : 0; };
+    return {
+      cylinder: volume(cylinder, "cylinder-water-column", 13.5),
+      cup: volume(cup, "beaker-water-column", 25),
+      supply: volume(supply, "beaker-water-column", 25),
+      stream: stream.visible,
+      tilt: 2 * Math.acos(Math.min(1, Math.abs(cylinder.quaternion.w))),
+      cylinderPosition: cylinder.position.toArray(),
+      cupPosition: cup.position.toArray(),
+    };
+  });
+}
+
+// Advance the presentation clock without spending wall time rendering every
+// intermediate software-WebGL frame; render before/after each phase boundary.
+async function advancePour(page: Page, milliseconds: number) {
+  await page.clock.runFor(32);
+  await page.clock.fastForward(milliseconds);
+  await page.clock.runFor(32);
+}
+
+async function waterPreview(page: Page, reduced = false) {
+  await page.setViewportSize({ width: 960, height: 640 });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await page.emulateMedia({ reducedMotion: reduced ? "reduce" : "no-preference" });
+  await page.addInitScript(() => localStorage.setItem("nexalab:lab-view:density-bench", "3d"));
+  await page.goto("/dev/lab-kits/density");
+  await page.getByRole("tab", { name: "Nước", exact: true }).click({ force: true });
+  await page.clock.runFor(300);
+  await expect.poll(() => waterScene(page)).not.toBeNull();
+}
+
+test("3D pouring lifts, tilts, streams, conserves water and returns; reverse and refill work", async ({ page }) => {
+  test.setTimeout(120000);
+  await waterPreview(page);
+  await page.getByTestId("density-balance-toggle").click({ force: true });
+  await advancePour(page, 1000);
+  await page.getByTestId("density-transfer").click({ force: true });
+  await advancePour(page, 1400);
+  await expect.poll(async () => (await waterScene(page))?.stream, { timeout: 30000, intervals: [50] }).toBe(true);
+  const during = (await waterScene(page))!;
+  expect(during.tilt).toBeGreaterThan(0.95);
+  expect(during.cylinderPosition[1]).toBeGreaterThan(20);
+  expect(during.cylinder).toBeGreaterThan(0);
+  expect(during.cup).toBeGreaterThan(0);
+  expect(during.cylinder + during.cup + during.supply).toBeCloseTo(100, 4);
+  await page.screenshot({ path: "test-results/density-water-pour.png" });
+  await advancePour(page, 3000);
+  await expect.poll(async () => (await waterScene(page))?.cylinderPosition, { timeout: 30000 }).toEqual([40, 0, -10]);
+  const after = (await waterScene(page))!;
+  expect(after.stream).toBe(false);
+  expect(after.tilt).toBe(0);
+  expect(after.cup).toBeCloseTo(50, 4);
+  expect(after.cylinder).toBeCloseTo(0, 4);
+  await expect(reading(page)).toContainText("98,6 g");
+  await page.getByTestId("density-transfer").click({ force: true });
+  await advancePour(page, 1400);
+  await expect.poll(async () => (await waterScene(page))?.stream, { timeout: 30000, intervals: [50] }).toBe(true);
+  await advancePour(page, 2200);
+  await expect.poll(async () => (await waterScene(page))?.cylinder, { timeout: 30000 }).toBeCloseTo(50, 4);
+  // Coalesce rapid consecutive edits into the next pour.
+  await page.getByRole("button", { name: "Rót thêm 5 mL" }).click({ force: true });
+  await expect(reading(page)).toContainText("ống đong: 55 mL");
+  await page.getByRole("button", { name: "Rót thêm 5 mL" }).click({ force: true });
+  await expect(reading(page)).toContainText("ống đong: 60 mL");
+  await advancePour(page, 1400);
+  await expect.poll(async () => (await waterScene(page))?.stream, { timeout: 30000, intervals: [50] }).toBe(true);
+  await advancePour(page, 3000);
+  await advancePour(page, 3000);
+  await expect.poll(async () => (await waterScene(page))?.cylinder, { timeout: 30000 }).toBeCloseTo(60, 4);
+  const refilled = (await waterScene(page))!;
+  expect(refilled.cup + refilled.cylinder + refilled.supply).toBeCloseTo(100, 4);
+});
+
+test("reduced motion snaps 3D water and balance state without a stream", async ({ page }) => {
+  await waterPreview(page, true);
+  await page.getByTestId("density-balance-toggle").click({ force: true });
+  await page.getByTestId("density-transfer").click({ force: true });
+  await page.clock.runFor(100);
+  await expect.poll(async () => (await waterScene(page))?.cup).toBeCloseTo(50, 4);
+  const sample = (await waterScene(page))!;
+  expect(sample.stream).toBe(false);
+  expect(sample.tilt).toBe(0);
+  expect(sample.cylinderPosition).toEqual([40, 0, -10]);
+  await page.getByTestId("density-transfer").click({ force: true });
+  await page.clock.runFor(100);
+  await expect.poll(async () => (await waterScene(page))?.cylinder).toBeCloseTo(50, 4);
+});
+
+test("both 3D pebbles stay within the bore throughout the drop and rest on the inner floor", async ({ page }) => {
+  test.setTimeout(180000);
+  await page.setViewportSize({ width: 960, height: 640 });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await page.addInitScript(() => localStorage.setItem("nexalab:lab-view:density-bench", "3d"));
+  await page.goto("/dev/lab-kits/density");
+  await page.getByRole("tab", { name: "Sỏi", exact: true }).click({ force: true });
+  for (const id of ["pebble-a", "pebble-b"]) {
+    await page.getByTestId("density-specimen").selectOption(id);
+    await expect(page.getByTestId("density-specimen")).toHaveValue(id);
+    await expect(page.getByTestId("density-drop")).toHaveText("Thả sỏi vào ống đong");
+    await page.getByTestId("density-drop").click({ force: true });
+    await page.clock.runFor(100);
+    const inspect = () => page.evaluate(async (specimenId) => {
+      const moduleUrl = "/node_modules/.vite/deps/@react-three_fiber.js";
+      const { _roots } = await import(moduleUrl);
+      const scene = _roots.get(document.querySelector("canvas"))?.store.getState().scene;
+      const mesh = scene?.getObjectByName(`specimen-${specimenId}`);
+      if (!mesh) return null;
+      const positions = mesh.geometry.getAttribute("position");
+      let radius = 0, bottom = Infinity;
+      for (let i = 0; i < positions.count; i++) {
+        radius = Math.max(radius, Math.hypot(positions.getX(i), positions.getZ(i)));
+        bottom = Math.min(bottom, positions.getY(i) + mesh.position.y + mesh.parent.position.y);
+      }
+      return { radius, bottom };
+    }, id);
+    await expect.poll(inspect, { timeout: 30000 }).not.toBeNull();
+    const dropping = (await inspect())!;
+    expect(dropping.radius).toBeLessThanOrEqual(0.78 * 13.5 + 0.00001);
+    expect(dropping.bottom).toBeGreaterThanOrEqual(8);
+    await page.clock.runFor(2000);
+    await expect.poll(async () => (await inspect())?.bottom, { timeout: 30000 }).toBeCloseTo(8, 1);
+    await page.screenshot({ path: `test-results/density-${id}-inside-cylinder.png` });
+    await page.getByTestId("density-drop").click({ force: true });
+    await expect(page.getByTestId("density-drop")).toHaveText("Thả sỏi vào ống đong");
+  }
+});

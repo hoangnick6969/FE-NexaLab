@@ -34,7 +34,7 @@ function meshVolume(geometry: THREE.BufferGeometry) {
  * Elongated, seeded pebble whose width fits the stated maximum and whose drawn
  * volume matches the specimen volume, so displacement looks right. Long axis is x.
  */
-function pebbleGeometry(specimen: Extract<K3Specimen, { shape: "irregular" }>) {
+function pebbleGeometry(specimen: Extract<K3Specimen, { shape: "irregular" }>, cylinderInnerRadiusMm?: number) {
   const random = mulberry32(specimen.seed);
   const geometry = new THREE.IcosahedronGeometry(1, 5);
   const position = geometry.getAttribute("position");
@@ -56,6 +56,21 @@ function pebbleGeometry(specimen: Extract<K3Specimen, { shape: "irregular" }>) {
   geometry.scale(1, radial, radial);
   const targetMm3 = specimen.volumeMl * 1000;
   geometry.scale(targetMm3 / meshVolume(geometry), 1, 1);
+  if (cylinderInnerRadiusMm !== undefined) {
+    // Align the long axis with the bore. Measure every vertex, not just its AABB:
+    // diagonal bumps must fit too. Reciprocal Y scaling preserves mesh volume.
+    geometry.rotateZ(Math.PI / 2);
+    geometry.computeBoundingBox();
+    const center = geometry.boundingBox!.getCenter(new THREE.Vector3());
+    geometry.translate(-center.x, 0, -center.z);
+    let radius = 0;
+    for (let i = 0; i < position.count; i++) radius = Math.max(radius, Math.hypot(position.getX(i), position.getZ(i)));
+    const fit = Math.min(1, 0.78 * cylinderInnerRadiusMm / radius);
+    geometry.scale(fit, 1 / (fit * fit), fit);
+  }
+  geometry.computeBoundingBox();
+  geometry.translate(0, -geometry.boundingBox!.min.y, 0);
+  geometry.computeBoundingBox();
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -89,14 +104,14 @@ function useWoodTexture(enabled: boolean, color: string) {
 }
 
 /** A specimen resting on its group origin (mm units). Pure presentation of the configured object. */
-export function Specimen3D({ specimen, material }: { specimen: K3Specimen; material: K3Material }) {
+export function Specimen3D({ specimen, material, cylinderInnerRadiusMm }: { specimen: K3Specimen; material: K3Material; cylinderInnerRadiusMm?: number }) {
   const wood = useWoodTexture(material.kind === "wood", material.appearance.color);
   const pebble = useMemo(() => {
     if (specimen.shape !== "irregular") return null;
-    const geometry = pebbleGeometry(specimen);
+    const geometry = pebbleGeometry(specimen, cylinderInnerRadiusMm);
     geometry.computeBoundingBox();
     return { geometry, lift: -geometry.boundingBox!.min.y };
-  }, [specimen]);
+  }, [specimen, cylinderInnerRadiusMm]);
   useEffect(() => () => pebble?.geometry.dispose(), [pebble]);
   const surface = <meshStandardMaterial
     color={wood ? "#ffffff" : material.appearance.color}
@@ -110,5 +125,5 @@ export function Specimen3D({ specimen, material }: { specimen: K3Specimen; mater
       {surface}
     </RoundedBox>;
   }
-  return <mesh geometry={pebble!.geometry} position={[0, pebble!.lift, 0]} castShadow receiveShadow>{surface}</mesh>;
+  return <mesh geometry={pebble!.geometry} position={[0, pebble!.lift, 0]} name={`specimen-${specimen.id}`} castShadow receiveShadow>{surface}</mesh>;
 }

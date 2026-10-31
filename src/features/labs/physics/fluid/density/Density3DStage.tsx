@@ -3,10 +3,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LabSceneContext } from "../../../shared/LabSpace";
 import {
-  Beaker3D, DigitalBalance3D, FluidBench3D, GraduatedCylinder3D, K3Slot, Specimen3D, cylinderHeightMm,
+  DigitalBalance3D, FluidBench3D, GraduatedCylinder3D, K3Slot, Specimen3D, cylinderHeightMm,
   k3Material, k3Specimen, usePrefersReducedMotion,
 } from "../kit";
 import { fl03DensityConfig as config } from "./fl03-density.config";
+import { DensityWaterScene } from "./DensityWaterScene";
 import type { DensityEvidence, StationId } from "./density-evidence";
 import { balanceReadingG, cylinderVolumeMl, stationSpecimenId, type Bench } from "./Density2DStage";
 
@@ -41,36 +42,32 @@ export function Density3DStage({ station, evidence, bench }: { station: StationI
     return () => sceneRoot.removeAttribute("aria-hidden");
   }, [sceneRoot]);
 
-  const { balance, cylinder, beaker } = config.instruments;
+  const { balance, cylinder } = config.instruments;
   const specimen = k3Specimen(config, stationSpecimenId(station, evidence, bench));
   const material = k3Material(config, specimen.materialId);
   const reading = balanceReadingG(station, evidence, bench);
   const cylinderMl = cylinderVolumeMl(station, evidence, bench);
-  const waterInBeaker = station === "water" && bench.transferred ? evidence.water.pouredMl : 0;
   const pebbleSunk = station === "pebble" && bench.dropped && specimen.shape === "irregular";
   const showCylinder = station === "water" || station === "pebble";
 
   // Load on the pan: the cup for the water station, otherwise the selected specimen (dropped pebbles sit in the cylinder).
-  const panLoad = station === "water"
-    ? bench.onPan ? <Beaker3D beaker={beaker} waterMl={waterInBeaker} /> : null
-    : bench.onPan && !pebbleSunk ? <Settle from={70} to={0}><Specimen3D specimen={specimen} material={material} /></Settle> : null;
+  const panLoad = bench.onPan && !pebbleSunk ? <Settle from={70} to={0}><Specimen3D specimen={specimen} material={material} /></Settle> : null;
 
   return <FluidBench3D>
+    {station === "water" ? <DensityWaterScene evidence={evidence} bench={bench} /> : <>
     <K3Slot at="balance">
       <DigitalBalance3D instrument={balance} readingG={reading}>{panLoad}</DigitalBalance3D>
     </K3Slot>
     {showCylinder && <K3Slot at="cylinder">
       <GraduatedCylinder3D cylinder={cylinder} volumeMl={cylinderMl}>
-        {pebbleSunk && <Settle from={cylinderHeightMm(cylinder) - 6} to={cylinder.baseMm}>
-          <Specimen3D specimen={specimen} material={material} />
+        {pebbleSunk && <Settle from={cylinderHeightMm(cylinder) + 8} to={cylinder.baseMm}>
+          <Specimen3D specimen={specimen} material={material} cylinderInnerRadiusMm={cylinder.innerDiameterMm / 2} />
         </Settle>}
       </GraduatedCylinder3D>
     </K3Slot>}
-    {station === "water" && !bench.onPan && <K3Slot at="beaker">
-      <Beaker3D beaker={beaker} waterMl={waterInBeaker} />
-    </K3Slot>}
-    {!bench.onPan && !pebbleSunk && station !== "water" && station !== "conclusion" && <K3Slot at="tray">
+    {!bench.onPan && !pebbleSunk && station !== "conclusion" && <K3Slot at="tray">
       <Specimen3D specimen={specimen} material={material} />
     </K3Slot>}
+    </>}
   </FluidBench3D>;
 }
