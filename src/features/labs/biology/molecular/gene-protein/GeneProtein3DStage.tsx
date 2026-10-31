@@ -26,7 +26,7 @@ const VIEWS: Record<StationId, MolecularView> = {
 };
 
 /** Free nucleotides around the scene where the station builds a strand from them. */
-const POOLS: Record<StationId, "dna" | "rna" | null> = { structure: "dna", replication: "dna", transcription: "rna", translation: null, mutation: null, conclusion: null };
+const POOLS: Record<StationId, "dna" | "rna" | null> = { structure: null, replication: "dna", transcription: "rna", translation: null, mutation: null, conclusion: null };
 
 const RNA_PAIR: Record<RnaBase, RnaBase> = { A: "U", U: "A", G: "C", C: "G" };
 const ENZYME = { helicase: "#7fc3dc", polymerase: "#f1b37c", rnaPolymerase: "#7db6e6" } as const;
@@ -214,7 +214,7 @@ function ConclusionScene({ evidence, molecules }: { evidence: GeneEvidence; mole
   const residues = chosenChain(evidence).filter((meaning): meaning is AminoAcid => meaning !== "Stop");
   return <group>
     <group position={[-8.2, 0, 0]} scale={0.8}>
-      <DnaDuplex3D structure={config.structure} upper={molecules.coding} lower={molecules.template} spin />
+      <DnaDuplex3D structure={config.structure} upper={molecules.coding} lower={molecules.template} />
       <TextLabel text={t.flowNames.dna} height={0.5} position={[0, 2.6, 0]} />
     </group>
     <Arrow from={-5.1} to={-3.2} />
@@ -239,7 +239,10 @@ function ConclusionScene({ evidence, molecules }: { evidence: GeneEvidence; mole
 export function GeneProtein3DStage({ station, evidence, bench, entering = false }: { station: StationId; evidence: GeneEvidence; bench: GeneBench; entering?: boolean }) {
   const molecules = useMemo(() => geneMolecules(evidence.variantId), [evidence.variantId]);
   const flankCoding = useMemo(() => [...molecules.coding, ...parseDna(config.helixFlank)], [molecules]);
-  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset} entering={entering} pool={POOLS[station]}>
+  const building = station === "replication"
+    ? bench.replicationPhase > 0 && bench.replicationPhase < 3
+    : station === "transcription" && evidence.transcription.mrna.some((base) => base === null);
+  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset} entering={entering} pool={building ? POOLS[station] : null}>
     {station === "structure" && <StructureScene bench={bench} flankCoding={flankCoding} />}
     {station === "replication" && <ReplicationScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}
     {station === "transcription" && <TranscriptionScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}

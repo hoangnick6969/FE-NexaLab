@@ -12,6 +12,7 @@ output/
 !.env.example
 
 # Local agent tooling
+.claude/
 .github/agents/
 .github/hooks/
 .codex/

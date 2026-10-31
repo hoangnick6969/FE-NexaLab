@@ -138,6 +138,12 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
   const sceneRoot = useContext(LabSceneContext);
   const reduced = usePrefersReducedMotion();
   const [tier, setTier] = useState<K7Tier>(initialK7Tier);
+  const [visible, setVisible] = useState(() => document.visibilityState !== "hidden");
+  useEffect(() => {
+    const update = () => setVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   const [generation, setGeneration] = useState(0);
   const [lost, setLost] = useState(false);
   const t = text();
@@ -148,12 +154,12 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
   }, [sceneRoot]);
   const settings = K7_TIERS[tier];
   // Drift needs continuous frames; reduced motion or the low tier keeps the scene still and on demand.
-  const continuous = !reduced && (ambient || (pool !== null && tier !== "low"));
+  const continuous = visible && !reduced && (ambient || (pool !== null && tier !== "low"));
   const fallback = <div className="physics-unavailable" role="status"><p>{t.unavailable}</p><button type="button" className="secondary" onClick={() => { setLost(false); setGeneration((value) => value + 1); }}>{t.retry}</button></div>;
-  const stage = <div className={`physics-stage k7-stage ${entering && !reduced ? "is-entering" : ""}`} data-testid="molecular-stage" data-tier={tier}>
+  const stage = <div className={`physics-stage k7-stage ${entering && !reduced ? "is-entering" : ""}`} data-testid="molecular-stage" data-tier={tier} data-frameloop={!visible ? "never" : continuous ? "always" : "demand"}>
     {lost ? fallback : <StageBoundary key={generation} fallback={fallback}>
       <Canvas
-        frameloop={continuous ? "always" : "demand"}
+        frameloop={!visible ? "never" : continuous ? "always" : "demand"}
         dpr={settings.dpr}
         gl={{ alpha: false, antialias: true, toneMapping: THREE.AgXToneMapping, toneMappingExposure: 1.05 }}
         camera={{ position: view.position, fov: FOV, near: 0.05, far: 200 }}
@@ -169,7 +175,7 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
           {pool && <NucleotidePool3D kind={pool} animate={continuous} />}
           {children}
           <CameraRig view={view} reset={viewResetSignal} />
-          {!continuous && <DemandWarmup />}
+          {visible && !continuous && <DemandWarmup />}
         </K7QualityContext.Provider>
       </Canvas>
     </StageBoundary>}

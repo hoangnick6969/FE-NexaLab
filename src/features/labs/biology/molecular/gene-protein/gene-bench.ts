@@ -21,7 +21,7 @@ export type GeneBench = {
 export const initialGeneBench = (station: StationId = "structure"): GeneBench => ({
   ruler: false,
   labels: true,
-  spin: station === "structure",
+  spin: false,
   replicationPhase: 0,
   mutated: false,
   activeSlot: null,
