@@ -41,7 +41,7 @@ labs/
 | Kit/apparatus family | Catalog IDs | Code folder | Current FE evidence |
 |---|---|---|---|
 | K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit; FL-25 private prototype in `induction/` (not released) |
-| K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Shared kit (bench, balance, cylinder, specimens, HUD) and FL-03 sample config; no Lab renderer yet |
+| K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Shared kit and FL-03 density 2D/3D renderer with server-pinned specimens; FL-04 and FL-05 not implemented |
 | K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
 | K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |

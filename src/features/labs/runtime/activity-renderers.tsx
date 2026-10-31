@@ -15,7 +15,7 @@ const Eye = lazy(() => import("../biology/anatomy/Eye"));
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
 
-export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number };
+export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null };
 
 export type GuidedActivity = {
   /** Submission is enabled only when the activity evidence is complete. */
@@ -68,7 +68,7 @@ const renderers: readonly LabActivityRenderer[] = [
     // FL-03 density, 2D pilot. Needs a pinned density-bench pack and an active Lab to launch.
     key: "density-bench", labId: "density", modelRefs: ["density-bench@1.0.0"], envelope: "evidence",
     defaultState: defaultDensityEvidence,
-    Activity: ({ state, onChange, resetKey }) => <DensityActivity state={state} onChange={onChange} resetKey={resetKey} />,
+    Activity: ({ state, onChange, resetKey, runtimeParams }) => <DensityActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />,
     guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
   },
   {

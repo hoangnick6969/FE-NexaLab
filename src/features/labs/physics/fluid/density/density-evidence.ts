@@ -65,6 +65,23 @@ export function densityEvidenceFrom(value: any): DensityEvidence {
   return ok ? value : defaultDensityEvidence();
 }
 
+/**
+ * Applies the specimen pins the server chose for this run. Without valid pins
+ * (preview, dev bench) the evidence keeps its own specimen choice.
+ */
+export function applyRunPins(evidence: DensityEvidence, runtimeParams: Record<string, string | number> | null | undefined): DensityEvidence {
+  const blockId = runtimeParams?.blockId;
+  const pebbleId = runtimeParams?.pebbleId;
+  const blockOk = (BLOCK_IDS as readonly unknown[]).includes(blockId);
+  const pebbleOk = (PEBBLE_IDS as readonly unknown[]).includes(pebbleId);
+  if (!blockOk && !pebbleOk) return evidence;
+  return {
+    ...evidence,
+    block: blockOk ? { ...evidence.block, specimenId: blockId as BlockId } : evidence.block,
+    pebble: pebbleOk ? { ...evidence.pebble, specimenId: pebbleId as PebbleId } : evidence.pebble,
+  };
+}
+
 const filled = (value: Num) => value !== null && value > 0;
 
 /** Keys of the entries still missing or impossible, grouped by station. */

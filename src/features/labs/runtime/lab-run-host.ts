@@ -21,6 +21,8 @@ export type LabLaunch = {
   context: "ASSIGNMENT" | "FOUNDATIONAL";
   assignmentId: string | null;
   versionBinding: "ASSIGNMENT_PINNED" | "LEGACY_UNPINNED_LAUNCH" | "FOUNDATIONAL_LAUNCH";
+  /** Server-chosen run parameters, e.g. FL-03 specimen pins. Absent for runs that have none. */
+  runtimeParams?: Record<string, string | number> | null;
 };
 
 type LabDraft = {

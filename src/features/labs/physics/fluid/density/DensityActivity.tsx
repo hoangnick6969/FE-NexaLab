@@ -3,7 +3,7 @@ import { getLocale } from "../../../../../i18n";
 import { K3Hud, formatReading, k3Material, k3Specimen } from "../kit";
 import { fl03DensityConfig as config } from "./fl03-density.config";
 import { densityText } from "./density-copy";
-import { BLOCK_IDS, EXPLORE_IDS, PEBBLE_IDS, STATION_IDS, defaultDensityEvidence, densityEvidenceFrom, densityEvidenceReady, stationDone, type DensityEvidence, type StationId } from "./density-evidence";
+import { BLOCK_IDS, EXPLORE_IDS, PEBBLE_IDS, STATION_IDS, applyRunPins, defaultDensityEvidence, densityEvidenceFrom, densityEvidenceReady, stationDone, type DensityEvidence, type StationId } from "./density-evidence";
 import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
 import { Density2DStage, balanceReadingG, cylinderVolumeMl, initialBench, stationSpecimenId, type Bench } from "./Density2DStage";
 import { Density3DStage } from "./Density3DStage";
@@ -20,10 +20,11 @@ const SPECIMEN_OPTIONS = { explore: EXPLORE_IDS, block: BLOCK_IDS, pebble: PEBBL
  * bench and records readings in the notebook; the draft is local until submitted and
  * the server recomputes every reading and the rubric (`density-stations@1`).
  */
-export function DensityActivity({ state, onChange, resetKey }: { state: unknown; onChange: (next: DensityEvidence) => void; resetKey: number }) {
+export function DensityActivity({ state, onChange, resetKey, runtimeParams = null }: { state: unknown; onChange: (next: DensityEvidence) => void; resetKey: number; runtimeParams?: Record<string, string | number> | null }) {
   const t = densityText();
   const locale = getLocale();
-  const evidence = densityEvidenceFrom(state);
+  // Server-chosen specimens win over the local state; the preview has no run, so it keeps its own.
+  const evidence = applyRunPins(densityEvidenceFrom(state), runtimeParams);
   const [station, setStation] = useState<StationId>("explore");
   const [bench, setBench] = useState<Bench>(initialBench);
   const [viewMode, setViewMode] = useLabRendererMode("nexalab:lab-view:density-bench");

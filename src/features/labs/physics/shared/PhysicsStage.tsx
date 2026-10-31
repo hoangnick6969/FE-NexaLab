@@ -105,26 +105,6 @@ function StudioLighting() {
   </>;
 }
 
-/**
- * Shared physics room. `realism` (studio IBL, AgX tone mapping, contact
- * shadows) and `frameloop="demand"` are opt-in so existing scenes are unchanged;
- * a demand scene must call `invalidate()` while it animates.
- */
-export function PhysicsStage({ children, realism = false, frameloop = "always", view = benchView }: { children: ReactNode; realism?: boolean; frameloop?: "always" | "demand"; view?: StageView }) {
-  const sceneRoot = useContext(LabSceneContext);
-  const [generation, setGeneration] = useState(0);
-  const [lost, setLost] = useState(false);
-  const t = text();
-  const fallback = <div className="physics-unavailable" role="status"><p>{t.unavailable}</p><button type="button" className="secondary" onClick={() => { setLost(false); setGeneration(v => v+1); }}>{t.retry}</button></div>;
-  const stage = <div className="physics-stage" data-testid="physics-stage">
-    {lost ? fallback : <StageBoundary key={generation} fallback={fallback}><Canvas shadows frameloop={frameloop} gl={realism ? { alpha: false, toneMapping: THREE.AgXToneMapping } : { alpha: false }} camera={{ position: view.position, fov: 45, near: realism ? .01 : .1 }} dpr={[1, 1.5]} fallback={fallback} onCreated={({ gl }) => { gl.domElement.addEventListener("webglcontextlost", event => { event.preventDefault(); setLost(true); }); }}>
-      <LabRoomEnvironment />{realism && <StudioLighting />}{children}
-      <BenchView view={view} />
-      {frameloop === "demand" && <DemandWarmup />}
-    </Canvas></StageBoundary>}
-  </div>;
-  return sceneRoot ? createPortal(stage, sceneRoot) : sceneRoot === null ? null : stage;
-}
 
 export function PhysicsStage({ children, view = DEFAULT_VIEW, reflections = false, viewResetSignal = 0, realism = false, frameloop = "always" }: { children: ReactNode; view?: BenchViewPreset | StageView; reflections?: boolean; viewResetSignal?: number; realism?: boolean; frameloop?: "always" | "demand" }) {
   const preset = useMemo<BenchViewPreset>(() => "wide" in view ? view : ({ wide: { position: view.position, target: view.target }, narrow: { position: view.narrowPosition, target: view.narrowTarget }, minDistance: view.minDistance, maxDistance: view.maxDistance }), [view]);

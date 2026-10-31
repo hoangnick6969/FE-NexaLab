@@ -164,3 +164,16 @@ test("2D and 3D views share the same station state and the toggle remembers the 
   await expect(page.getByTestId("physics-stage")).toBeAttached();
   await expect(reading(page)).toContainText("Cân: 78,0 g");
 });
+
+test("the server-pinned specimen pair replaces the local choice when a run launches", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("nexalab:lab-view:density-bench", "2d"));
+  await mockShell(page);
+  await page.route("**/api/labs/density/runs", (route) => route.fulfill({ json: { ...launch("pinned-run"), runtimeParams: { blockId: "wood-block-b", pebbleId: "pebble-b" } } }));
+  await page.goto("/labs/density?assignmentId=assignment-lab");
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByTestId("density-activity")).toBeVisible();
+  await station(page, /^Khối gỗ/);
+  await expect(page.getByTestId("density-specimen")).toHaveValue("wood-block-b");
+  await station(page, /^Sỏi/);
+  await expect(page.getByTestId("density-specimen")).toHaveValue("pebble-b");
+});
