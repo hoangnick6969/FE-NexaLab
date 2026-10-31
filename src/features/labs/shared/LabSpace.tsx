@@ -6,6 +6,8 @@ import "./LabSpace.css";
 
 const text = defineText({ vi: { enter: "Vào phòng thực hành", exit: "← Quay về", unavailable: "Không thể tải giao diện thí nghiệm. Bài làm vẫn được giữ trong phiên này.", retry: "Thử tải lại" }, en: { enter: "Enter lab space", exit: "← Back", unavailable: "The experiment view could not load. Your work is retained in this session.", retry: "Retry view" } });
 
+export const LabHeaderActionsContext = createContext<HTMLElement | null>(null);
+
 export const LabSceneContext = createContext<HTMLElement | null | undefined>(undefined);
 
 class LabViewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -16,6 +18,7 @@ class LabViewBoundary extends Component<{ children: ReactNode }, { failed: boole
 
 export function LabSpace({ title, exitTo, onExit, children, active = true }: { active?: boolean; title: string; exitTo?: string; onExit?: () => void; children: ReactNode }) {
   const exit = useRef<HTMLButtonElement>(null);
+  const [headerActions, setHeaderActions] = useState<HTMLDivElement | null>(null);
   const [sceneRoot, setSceneRoot] = useState<HTMLDivElement | null>(null);
   const t = text();
   useEffect(() => {
@@ -34,9 +37,9 @@ export function LabSpace({ title, exitTo, onExit, children, active = true }: { a
     };
   }, [active]);
   return createPortal(<section hidden={!active} className="lab-space" aria-label={title} data-testid="lab-space">
-    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1></header>
+    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1><div className="lab-space-header-actions" ref={setHeaderActions} /></header>
     <div className="lab-space-scene" ref={setSceneRoot} />
-    <LabSceneContext.Provider value={sceneRoot}><div className="lab-space-body"><LabViewBoundary>{children}</LabViewBoundary></div></LabSceneContext.Provider>
+    <LabHeaderActionsContext.Provider value={headerActions}><LabSceneContext.Provider value={sceneRoot}><div className="lab-space-body"><LabViewBoundary>{children}</LabViewBoundary></div></LabSceneContext.Provider></LabHeaderActionsContext.Provider>
   </section>, document.body);
 }
 

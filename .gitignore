@@ -14,6 +14,10 @@ output/
 # Local agent tooling
 .github/agents/
 .github/hooks/
+.github/skills/
+.agents/skills/
+skills-lock.json
 .codex/
+.codex-skills/
 *.exe
 
