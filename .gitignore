@@ -15,5 +15,6 @@ output/
 .github/agents/
 .github/hooks/
 .codex/
+.codex-skills/
 *.exe
 
