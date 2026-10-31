@@ -23,7 +23,7 @@ labs/
   chemistry/                     chemistry compatibility fixture renderer
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
   biology/anatomy/               existing Eye learning resource (FL-16 is NO LAB)
-  biology/ecology/                K8: FL-20/21 (planned)
+  biology/ecology/                K8: FL-20 tolerance (built, not released); FL-21 planned
   biology/genetics/               K8: FL-26 (planned)
   biology/molecular/              K7: FL-27 (planned)
 ```
@@ -45,7 +45,7 @@ labs/
 | K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
 | K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |
-| K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | Not implemented |
+| K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | FL-20 built (2D, not released); FL-21 not implemented |
 | K6 Optics | FL-23 | `physics/optics/` | Not implemented |
 | K8 Genetics HUD | FL-26 | `biology/genetics/` | Not implemented |
 | K7 Molecular / gene-to-protein scene | FL-27 | `biology/molecular/` | Not implemented |
