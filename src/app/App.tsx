@@ -17,6 +17,9 @@ import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
+// Development-only K3 apparatus bench; the branch is removed from production builds.
+const K3KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/kit/dev/K3KitPreview")) : null;
+
 const PublicLanding = lazy(() =>
   import("../features/landing/PublicLanding").then((m) => ({ default: m.PublicLanding }))
 );
@@ -167,6 +170,8 @@ export default function App() {
         caption={t.startingCaption}
       />
     );
+  if (K3KitPreview && location.pathname === "/dev/lab-kits/k3")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K3KitPreview /></Suspense>;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {
