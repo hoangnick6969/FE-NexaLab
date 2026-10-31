@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useContext, useEffect, useState } from "react";
 import { LabHeaderActionsContext } from "../../../shared/LabSpace";
 import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
-import { BasePicker, CODON_MEANINGS, DNA_BASES, K7Hud, RNA_BASES, SequenceTrack, type Base, type CodonMeaning, type DnaBase, type RnaBase } from "../kit";
+import { BasePicker, CODON_MEANINGS, DNA_BASES, GeneLabBench3D, K7Hud, RNA_BASES, SequenceTrack, type Base, type CodonMeaning, type DnaBase, type RnaBase } from "../kit";
 import { fl27GeneConfig as config } from "./fl27-gene.config";
 import { geneText } from "./gene-copy";
 import { STATION_IDS, applyRunPins, chosenChain, defaultGeneEvidence, filledCount, geneEvidenceFrom, geneEvidenceReady, geneMolecules, stationDone, type GeneEvidence, type StationId } from "./gene-evidence";
@@ -48,7 +48,9 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
   const [bench, setBench] = useState<GeneBench>(() => initialGeneBench());
   const [viewMode, setViewMode] = useLabRendererMode("nexalab:lab-view:gene-expression");
   const [pendingAmino, setPendingAmino] = useState<CodonMeaning | "">("");
-  useEffect(() => { setStation("structure"); setBench(initialGeneBench()); }, [resetKey]);
+  // 3D opens in the lab room; the microscope is the way into the molecular view (presentation only).
+  const [scene, setScene] = useState<"bench" | "zooming" | "molecule">("bench");
+  useEffect(() => { setStation("structure"); setBench(initialGeneBench()); setScene("bench"); }, [resetKey]);
 
   const patch = (change: (current: GeneEvidence) => GeneEvidence) => onChange(change(evidence));
   const patchBench = (change: Partial<GeneBench>) => setBench((current) => ({ ...current, ...change }));
@@ -159,7 +161,16 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
     }
   })();
 
+  const atBench = viewMode === "3d" && scene !== "molecule";
+  const sceneActions = atBench
+    ? <button type="button" className="primary" disabled={scene === "zooming"} onClick={() => setScene("zooming")} data-testid="gene-open-microscope">{t.openMicroscope}</button>
+    : viewMode === "3d" ? <>
+      <button type="button" className="secondary" onClick={() => setScene("bench")} data-testid="gene-back-to-bench">{t.backToBench}</button>
+      {actions}
+    </> : actions;
+
   const readout = (() => {
+    if (atBench) return t.readBench;
     switch (station) {
       case "structure": return t.readStructure(molecules.coding.length + config.helixFlank.length);
       case "replication": return t.readReplication(t.phases[bench.replicationPhase], filledCount(evidence.replication.newStrand), fillCount);
@@ -173,7 +184,9 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
   return <section className="gene-activity" data-testid="gene-activity" aria-label={t.title}>
     {headerActions && createPortal(<LabRendererToggle mode={viewMode} onChange={setViewMode} />, headerActions)}
     {viewMode === "3d"
-      ? <GeneProtein3DStage station={station} evidence={evidence} bench={bench} />
+      ? atBench
+        ? <GeneLabBench3D onOpenMicroscope={() => setScene("zooming")} zooming={scene === "zooming"} onZoomArrive={() => setScene("molecule")} microscopeLabel={t.microscopeLabel} />
+        : <GeneProtein3DStage station={station} evidence={evidence} bench={bench} entering />
       : <GeneProtein2DStage station={station} evidence={evidence} bench={bench} />}
     <K7Hud
       title={t.title}
@@ -181,9 +194,9 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
       current={station}
       onSelect={selectStation}
       step={{ index: STATION_IDS.indexOf(station), total: STATION_IDS.length }}
-      instruction={t.instruction[station]}
+      instruction={atBench ? t.benchInstruction : t.instruction[station]}
       readout={readout}
-      actions={actions}
+      actions={sceneActions}
       notice={`${t.notice} ${config.reviewStatus === "PROPOSED_UNAPPROVED" ? t.unreviewed : ""}`.trim()}
     >
       <GeneNotebook station={station} evidence={evidence} patch={patch} codonInFocus={codonInFocus} />

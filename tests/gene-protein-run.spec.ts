@@ -150,10 +150,15 @@ test("switching stations and 3D/2D views never changes the evidence (the scene o
   });
   await completeStations(page);
   const toggle = page.locator(".lab-space-header").getByTestId("lab-renderer-toggle");
-  for (const name of ["Tái bản", "Phiên mã", "Dịch mã", "Đột biến", "Cấu trúc DNA"]) {
+  for (const [index, name] of ["Tái bản", "Phiên mã", "Dịch mã", "Đột biến", "Cấu trúc DNA"].entries()) {
     await station(page, name);
     await toggle.getByRole("button", { name: "3D", exact: true }).click();
-    await expect(page.getByTestId("molecular-stage")).toBeVisible();
+    // The first 3D visit starts at the lab bench; the microscope opens the molecular view, which then stays open.
+    if (index === 0) {
+      await expect(page.getByTestId("physics-stage")).toBeVisible();
+      await page.getByTestId("gene-open-microscope").click();
+    }
+    await expect(page.getByTestId("molecular-stage")).toBeVisible({ timeout: 15000 });
     await toggle.getByRole("button", { name: "2D", exact: true }).click();
     await expect(page.getByTestId("k7-diagram-2d")).toBeVisible();
   }

@@ -93,11 +93,20 @@ test("the server-pinned variant replaces a draft made for another gene", async (
   await expect(page.locator(".k7-readout")).toContainText("vị trí 5 trên mạch mã hoá đổi A thành T");
 });
 
-test("3D molecular stage replaces the physical room and the 2D read view is equivalent", async ({ page }) => {
+test("3D opens in the lab room; the microscope leads into the molecular view and back", async ({ page }) => {
   test.setTimeout(90000);
   await open(page, "3d");
-  await expect(page.getByTestId("molecular-stage")).toBeVisible();
+  // Bench first: the shared room with the K7 microscope, PCR machine and tube rack.
+  await expect(page.getByTestId("physics-stage")).toBeVisible();
+  await expect(page.locator(".k7-instruction")).toContainText("Bấm vào kính hiển vi");
+  await page.getByTestId("gene-open-microscope").click();
+  await expect(page.getByTestId("molecular-stage")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".lab-space canvas")).toHaveCount(1);
+  await expect(page.locator(".k7-instruction")).toContainText("Xoay chuỗi xoắn kép");
+  await page.getByTestId("gene-back-to-bench").click();
+  await expect(page.getByTestId("physics-stage")).toBeVisible();
+  await page.getByTestId("gene-open-microscope").click();
+  await expect(page.getByTestId("molecular-stage")).toBeVisible({ timeout: 15000 });
   const toggle = page.locator(".lab-space-header").getByTestId("lab-renderer-toggle");
   await toggle.getByRole("button", { name: "2D", exact: true }).click();
   await expect(page.getByTestId("k7-diagram-2d")).toBeVisible();

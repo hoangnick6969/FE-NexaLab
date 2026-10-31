@@ -41,6 +41,12 @@
 
 .lab-space:has(.k7-stage) { background: #0a1822; }
 .lab-space .k7-stage { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
+/* Opening the molecular view reads as looking into the eyepiece: a lens circle widens from the centre. */
+.k7-stage.is-entering { animation: k7-eyepiece 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes k7-eyepiece {
+  from { clip-path: circle(6% at 50% 42%); opacity: 0.4; }
+  to { clip-path: circle(140% at 50% 42%); opacity: 1; }
+}
 
 .k7-hud {
   position: absolute;
@@ -148,4 +154,5 @@ button.k7-base { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   .k7-station, .k7-picker-base { transition: none; }
+  .k7-stage.is-entering { animation: none; }
 }

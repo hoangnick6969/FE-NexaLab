@@ -132,7 +132,7 @@ function MolecularLighting() {
  * lifecycle, quality tier, camera rig and the WebGL fallback; the canvas is
  * decorative (`aria-hidden`), every value is also in the DOM.
  */
-export function MolecularStage({ view, children, ambient = false, viewResetSignal = 0 }: { view: MolecularView; children: ReactNode; ambient?: boolean; viewResetSignal?: number }) {
+export function MolecularStage({ view, children, ambient = false, viewResetSignal = 0, entering = false }: { view: MolecularView; children: ReactNode; ambient?: boolean; viewResetSignal?: number; /** Opens like looking into an eyepiece (after the bench zoom). */ entering?: boolean }) {
   const sceneRoot = useContext(LabSceneContext);
   const reduced = usePrefersReducedMotion();
   const [tier, setTier] = useState<K7Tier>(initialK7Tier);
@@ -147,7 +147,7 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
   const settings = K7_TIERS[tier];
   const continuous = ambient && !reduced;
   const fallback = <div className="physics-unavailable" role="status"><p>{t.unavailable}</p><button type="button" className="secondary" onClick={() => { setLost(false); setGeneration((value) => value + 1); }}>{t.retry}</button></div>;
-  const stage = <div className="physics-stage k7-stage" data-testid="molecular-stage" data-tier={tier}>
+  const stage = <div className={`physics-stage k7-stage ${entering && !reduced ? "is-entering" : ""}`} data-testid="molecular-stage" data-tier={tier}>
     {lost ? fallback : <StageBoundary key={generation} fallback={fallback}>
       <Canvas
         frameloop={continuous ? "always" : "demand"}

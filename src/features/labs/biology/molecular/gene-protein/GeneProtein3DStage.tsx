@@ -232,10 +232,10 @@ function ConclusionScene({ evidence, molecules }: { evidence: GeneEvidence; mole
  * K7 molecules. Motion only presents what the learner has already chosen or
  * the pinned gene; no answer is checked here.
  */
-export function GeneProtein3DStage({ station, evidence, bench }: { station: StationId; evidence: GeneEvidence; bench: GeneBench }) {
+export function GeneProtein3DStage({ station, evidence, bench, entering = false }: { station: StationId; evidence: GeneEvidence; bench: GeneBench; entering?: boolean }) {
   const molecules = useMemo(() => geneMolecules(evidence.variantId), [evidence.variantId]);
   const flankCoding = useMemo(() => [...molecules.coding, ...parseDna(config.helixFlank)], [molecules]);
-  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset}>
+  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset} entering={entering}>
     {station === "structure" && <StructureScene bench={bench} flankCoding={flankCoding} />}
     {station === "replication" && <ReplicationScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}
     {station === "transcription" && <TranscriptionScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}

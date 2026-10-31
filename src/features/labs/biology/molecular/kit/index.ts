@@ -10,6 +10,9 @@ export { AMINO_GROUP_COLORS, BASE_COLORS, BASE_INK, STRAND_TINTS, aminoGroup, ty
 export { CLOSED, NM_PER_ANGSTROM, axisX, duplexPose, helixSpec, makePoses, strandAlongCurve, type NucleotidePose, type OpenSpan } from "./k7-geometry";
 export { K7_MOTION } from "./k7-motion";
 export { MolecularStage, type MolecularView } from "./MolecularStage";
+export { GeneLabBench3D, K7_BENCH_SLOTS } from "./bench/GeneLabBench3D";
+export { Microscope3D } from "./bench/Microscope3D";
+export { Thermocycler3D, TubeRack3D } from "./bench/Thermocycler3D";
 export { DnaDuplex3D, type DuplexHighlight } from "./molecules/DnaDuplex3D";
 export { NucleotideStrand3D, useEasedLayout } from "./molecules/NucleotideStrand3D";
 export { Enzyme3D } from "./molecules/Enzyme3D";
