@@ -59,7 +59,7 @@ export function LabCards({ guided = false }: { guided?: boolean } = {}) {
             <span className="lab-subject">{l.subject}</span>
             <span className="art-number">{l.number}</span>
             <div className="art-symbol">
-              {l.id === "circuit" ? <Zap size={44} strokeWidth={1.5} /> : l.id === "eye" ? <Eye size={44} strokeWidth={1.5} /> : l.id === "em-induction" ? <Magnet size={44} strokeWidth={1.5} /> : l.id === "density" ? <Scale size={44} strokeWidth={1.5} /> : <FlaskConical size={44} strokeWidth={1.5} />}
+              {l.id === "circuit" ? <Zap size={44} strokeWidth={1.5} /> : l.id === "eye" ? <Eye size={44} strokeWidth={1.5} /> : l.id === "em-induction" ? <Magnet size={44} strokeWidth={1.5} /> : l.id === "density" || l.id === "mass-conservation" ? <Scale size={44} strokeWidth={1.5} /> : <FlaskConical size={44} strokeWidth={1.5} />}
             </div>
             <span className="art-caption">NEXALAB / EXPERIMENT {l.number}</span>
           </div>
