@@ -14,6 +14,7 @@ import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../co
 import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
 import { checkpointViewForModel, checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { defaultEmEvidence } from "./physics/electricity/induction/em-evidence";
+import { defaultEcoEvidence } from "./biology/ecology/tolerance/eco-evidence";
 import { Chemistry } from "./chemistry/Chemistry";
 import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
 import { useLabRunHost } from "./runtime/lab-run-host";
@@ -177,7 +178,9 @@ const initialLabState = (id: string) => id === "circuit"
     ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
     : id === "em-induction"
       ? defaultEmEvidence()
-      : { answers: {} };
+      : id === "ecology-tolerance"
+        ? defaultEcoEvidence()
+        : { answers: {} };
 
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -275,7 +278,7 @@ export default function Lab() {
   };
   const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
   const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
-  if (!["circuit", "eye", "chemistry", "em-induction", "mass-conservation"].includes(id))
+  if (!["circuit", "eye", "chemistry", "em-induction", "ecology-tolerance", "mass-conservation"].includes(id))
     return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);

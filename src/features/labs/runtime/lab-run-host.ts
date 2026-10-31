@@ -26,6 +26,7 @@ const renderers = {
   circuit: { labId: "circuit", modelRefs: ["circuit@1.0.0"] },
   "circuit-bulb": { labId: "circuit", modelRefs: ["circuit-bulb@1.0.0"] },
   "em-induction": { labId: "em-induction", modelRefs: ["em-induction@1.0.0"] },
+  "ecology-tolerance": { labId: "ecology-tolerance", modelRefs: ["ecology-tolerance@1.0.0"] },
   chemistry: { labId: "chemistry", modelRefs: ["chemistry@1.0.0"] },
   "mass-conservation": { labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"] },
   eye: { labId: "eye", modelRefs: ["eye@1.0.0"] },

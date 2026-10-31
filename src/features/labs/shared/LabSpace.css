@@ -206,8 +206,8 @@
 }
 .lab-space .preview-strip { position: absolute; bottom: 94px; left: 18px; z-index: 5; max-width: 340px; font-size: 11px; background: var(--surface); }
 .lab-space .lab-aside { position: absolute; top: 88px; right: 18px; width: min(350px, calc(100% - 36px)); z-index: 10; }
-.lab-space:has(.bulb-activity, .em-activity) .lab-aside:not(:has([open])) { display: none; }
-.lab-space:has(.bulb-activity, .em-activity) .lab-aside:has([open]) {
+.lab-space:has(.bulb-activity, .em-activity, .eco-activity) .lab-aside:not(:has([open])) { display: none; }
+.lab-space:has(.bulb-activity, .em-activity, .eco-activity) .lab-aside:has([open]) {
   position: fixed;
   right: max(18px, env(safe-area-inset-right));
   top: max(16px, env(safe-area-inset-top));
