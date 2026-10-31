@@ -14,6 +14,8 @@ export type GeneBench = {
   /** Slot the learner edits on the replication or transcription strand. */
   activeSlot: number | null;
   viewReset: number;
+  /** Structure station: schematic tube-and-rod model or ball-and-stick atoms. */
+  representation: "schematic" | "atomic";
 };
 
 export const initialGeneBench = (station: StationId = "structure"): GeneBench => ({
@@ -24,4 +26,5 @@ export const initialGeneBench = (station: StationId = "structure"): GeneBench =>
   mutated: false,
   activeSlot: null,
   viewReset: 0,
+  representation: "schematic",
 });

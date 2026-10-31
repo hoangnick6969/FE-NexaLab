@@ -11,6 +11,7 @@ import { K7_MOTION } from "./k7-motion";
 import { K7_SCENE } from "./k7-palette";
 import { K7QualityContext, K7_TIERS, initialK7Tier, lowerTier, type K7Tier } from "./k7-quality";
 import { Nucleoplasm3D } from "./molecules/Nucleoplasm3D";
+import { NucleotidePool3D } from "./molecules/NucleotidePool3D";
 
 const text = defineText({
   vi: { unavailable: "Không thể hiển thị không gian 3D. Em vẫn làm bài được bằng sơ đồ 2D và các nút bên cạnh.", retry: "Thử tải lại 3D" },
@@ -24,8 +25,8 @@ class StageBoundary extends Component<{ children: ReactNode; fallback: ReactNode
 }
 
 type Vec3 = [number, number, number];
-/** Camera framing for one step of a molecular scene (nm); `fitWidth` is the subject width that must stay in view. */
-export type MolecularView = { position: Vec3; target: Vec3; fitWidth?: number; minDistance?: number; maxDistance?: number };
+/** Camera framing for one step of a molecular scene (nm); `fitWidth`/`fitHeight` is the subject size that must stay in view. */
+export type MolecularView = { position: Vec3; target: Vec3; fitWidth?: number; fitHeight?: number; minDistance?: number; maxDistance?: number };
 
 const FOV = 38;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -46,7 +47,8 @@ function frame(view: MolecularView, size: { width: number; height: number }) {
   const freeAspect = Math.max(size.width - right, size.width * 0.4) / Math.max(size.height - bottom - top, size.height * 0.3);
   const fitHeight = ((view.fitWidth ?? 9) * 1.12) / freeAspect;
   const freeShare = Math.max(size.height - bottom - top, size.height * 0.3) / size.height;
-  const distance = Math.max(offset.length(), fitHeight / freeShare / (2 * tanHalf));
+  const tallHeight = (view.fitHeight ?? 0) * 1.12;
+  const distance = Math.max(offset.length(), Math.max(fitHeight, tallHeight) / freeShare / (2 * tanHalf));
   offset.setLength(Math.min(distance, view.maxDistance ?? 40));
   const unitsPerPixel = (2 * offset.length() * tanHalf) / size.height;
   const sideways = new THREE.Vector3().crossVectors(UP, offset).normalize();
@@ -132,7 +134,7 @@ function MolecularLighting() {
  * lifecycle, quality tier, camera rig and the WebGL fallback; the canvas is
  * decorative (`aria-hidden`), every value is also in the DOM.
  */
-export function MolecularStage({ view, children, ambient = false, viewResetSignal = 0, entering = false }: { view: MolecularView; children: ReactNode; ambient?: boolean; viewResetSignal?: number; /** Opens like looking into an eyepiece (after the bench zoom). */ entering?: boolean }) {
+export function MolecularStage({ view, children, ambient = false, viewResetSignal = 0, entering = false, pool = null }: { view: MolecularView; children: ReactNode; ambient?: boolean; viewResetSignal?: number; /** Opens like looking into an eyepiece (after the bench zoom). */ entering?: boolean; /** Free nucleotides drifting around the scene. */ pool?: "dna" | "rna" | null }) {
   const sceneRoot = useContext(LabSceneContext);
   const reduced = usePrefersReducedMotion();
   const [tier, setTier] = useState<K7Tier>(initialK7Tier);
@@ -145,7 +147,8 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
     return () => sceneRoot.removeAttribute("aria-hidden");
   }, [sceneRoot]);
   const settings = K7_TIERS[tier];
-  const continuous = ambient && !reduced;
+  // Drift needs continuous frames; reduced motion or the low tier keeps the scene still and on demand.
+  const continuous = !reduced && (ambient || (pool !== null && tier !== "low"));
   const fallback = <div className="physics-unavailable" role="status"><p>{t.unavailable}</p><button type="button" className="secondary" onClick={() => { setLost(false); setGeneration((value) => value + 1); }}>{t.retry}</button></div>;
   const stage = <div className={`physics-stage k7-stage ${entering && !reduced ? "is-entering" : ""}`} data-testid="molecular-stage" data-tier={tier}>
     {lost ? fallback : <StageBoundary key={generation} fallback={fallback}>
@@ -163,6 +166,7 @@ export function MolecularStage({ view, children, ambient = false, viewResetSigna
           <PerformanceMonitor onDecline={() => setTier(lowerTier)} flipflops={2} />
           <MolecularLighting />
           <Nucleoplasm3D drift={continuous} />
+          {pool && <NucleotidePool3D kind={pool} animate={continuous} />}
           {children}
           <CameraRig view={view} reset={viewResetSignal} />
           {!continuous && <DemandWarmup />}

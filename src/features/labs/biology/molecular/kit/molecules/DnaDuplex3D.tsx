@@ -9,8 +9,11 @@ import { K7_MOTION } from "../k7-motion";
 import type { StrandTint } from "../k7-palette";
 import { useK7Quality } from "../k7-quality";
 import { StrandRenderer } from "./strand-renderer";
+import { AtomRenderer } from "./atom-renderer";
 
 export type DuplexHighlight = { strand: "upper" | "lower"; index: number; color?: string };
+/** Schematic tube-and-rod model, or ball-and-stick atoms on a ribbon backbone. */
+export type DuplexRepresentation = "schematic" | "atomic";
 
 const AXIS = new THREE.Vector3(1, 0, 0);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -31,7 +34,7 @@ const BOND_OFFSETS: Record<2 | 3, readonly number[]> = { 2: [-0.1, 0.1], 3: [-0.
  * eases on the frame loop. Hydrogen bonds show two dashes for A–T and three
  * for G–C, only between paired positions that are still closed.
  */
-export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["parent", "parent"], labels = false, spin = false, highlight = null, hbonds = true }: {
+export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["parent", "parent"], labels = false, spin = false, highlight = null, hbonds = true, representation = "schematic" }: {
   structure: K7Structure;
   upper: readonly (DnaBase | null)[];
   lower: readonly (DnaBase | null)[];
@@ -41,6 +44,7 @@ export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["
   spin?: boolean;
   highlight?: DuplexHighlight | null;
   hbonds?: boolean;
+  representation?: DuplexRepresentation;
 }) {
   const quality = useK7Quality();
   const reduced = usePrefersReducedMotion();
@@ -53,6 +57,9 @@ export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["
     [count, tints[0], tints[1], quality.clearcoat],
   );
   useEffect(() => () => strands.forEach((strand) => strand.dispose()), [strands]);
+  const atomic = representation === "atomic";
+  const atoms = useMemo(() => [new AtomRenderer(count), new AtomRenderer(count)] as const, [count]);
+  useEffect(() => () => atoms.forEach((renderer) => renderer.dispose()), [atoms]);
   const poses = useMemo(() => [makePoses(count), makePoses(count)] as [NucleotidePose[], NucleotidePose[]], [count]);
   const bonds = useMemo(() => {
     const mesh = new THREE.InstancedMesh(
@@ -71,7 +78,7 @@ export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["
   const haloMaterial = useRef<THREE.MeshBasicMaterial>(null);
   // Animated copy of the span: the edges jump while closed, the opening eases.
   const live = useRef<OpenSpan>({ ...span });
-  useEffect(() => { invalidate(); }, [span.from, span.to, span.amount, span.upper, span.lower, upper, lower, highlight, invalidate]);
+  useEffect(() => { invalidate(); }, [span.from, span.to, span.amount, span.upper, span.lower, upper, lower, highlight, representation, invalidate]);
 
   useFrame((state, delta) => {
     const step = Math.min(delta, 0.1);
@@ -85,9 +92,11 @@ export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["
     }
     for (let index = 0; index < count; index++) duplexPose(index, count, spec, current, poses[0][index], poses[1][index]);
 
-    const frame = { delta: step, reduced, labels, camera } as const;
+    const frame = { delta: step, reduced, labels, camera, atomic } as const;
     if (strands[0].update({ ...frame, poses: poses[0], bases: upper })) moving = true;
     if (strands[1].update({ ...frame, poses: poses[1], bases: lower })) moving = true;
+    atoms[0].group.visible = atoms[1].group.visible = atomic;
+    if (atomic) { atoms[0].update(poses[0], upper); atoms[1].update(poses[1], lower); }
 
     bonds.visible = hbonds;
     if (hbonds) {
@@ -141,6 +150,8 @@ export function DnaDuplex3D({ structure, upper, lower, span = CLOSED, tints = ["
   return <group ref={root}>
     <primitive object={strands[0].group} />
     <primitive object={strands[1].group} />
+    <primitive object={atoms[0].group} />
+    <primitive object={atoms[1].group} />
     <primitive object={bonds} />
     <mesh ref={halo} visible={false} renderOrder={5}>
       <ringGeometry args={[0.34, 0.44, 40]} />

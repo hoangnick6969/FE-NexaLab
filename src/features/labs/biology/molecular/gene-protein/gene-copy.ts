@@ -16,6 +16,8 @@ export const geneText = defineText({
     unreviewed: "Số liệu đề xuất, chưa được duyệt.",
     stationDone: "Đủ câu trả lời",
     // scene controls
+    representation: "Kiểu mô hình", schematic: "Sơ đồ", atomic: "Nguyên tử",
+    atomLegend: "Mô hình nguyên tử minh hoạ. Màu nguyên tố:", elements: { C: "C cacbon", N: "N nitơ", O: "O oxi", P: "P photpho" }, ribbon: "Dải xanh: khung đường–phosphate",
     openMicroscope: "Soi dưới kính hiển vi", backToBench: "Về bàn thí nghiệm", microscopeLabel: "Bấm để soi DNA",
     benchInstruction: "Mẫu DNA đã được đặt trên bàn kính hiển vi. Bấm vào kính hiển vi (hoặc nút bên dưới) để phóng to tới cấp phân tử và bắt đầu trạm này.",
     readBench: "Phòng thí nghiệm: kính hiển vi, máy PCR và giá ống nghiệm.",
@@ -95,6 +97,8 @@ export const geneText = defineText({
     notice: "A simplified textbook model of how genes make proteins; enzyme and ribosome sizes and shapes are not to scale. Official results are marked on the server.",
     unreviewed: "Proposed values, not yet reviewed.",
     stationDone: "Answered",
+    representation: "Model style", schematic: "Schematic", atomic: "Atoms",
+    atomLegend: "Illustrative atomic model. Element colours:", elements: { C: "C carbon", N: "N nitrogen", O: "O oxygen", P: "P phosphorus" }, ribbon: "Green ribbon: sugar–phosphate backbone",
     openMicroscope: "Look through the microscope", backToBench: "Back to the bench", microscopeLabel: "Click to see the DNA",
     benchInstruction: "The DNA sample is on the microscope stage. Click the microscope (or the button below) to zoom down to the molecules and start this station.",
     readBench: "Lab bench: microscope, PCR machine and tube rack.",

@@ -34,12 +34,22 @@ export const AMINO_GROUP_COLORS: Record<AminoGroup, string> = {
   stop: "#8b939a",
 };
 
-/** Backbone tints: original (parent) DNA, newly made DNA, and RNA. */
+/**
+ * Backbone tints: original (parent) DNA, newly made DNA, and RNA. `sugar` and
+ * `phosphate` also colour the 2D diagram; `tube` and `bead` are the glossy 3D
+ * backbone and its phosphate beads.
+ */
 export const STRAND_TINTS = {
-  parent: { sugar: "#d9c49b", phosphate: "#ee9a48" },
-  new: { sugar: "#a5e6cf", phosphate: "#f2c15c" },
-  rna: { sugar: "#a9cdf2", phosphate: "#f5cf6e" },
+  parent: { sugar: "#d9c49b", phosphate: "#ee9a48", tube: "#cfe2f2", bead: "#f3f7fb" },
+  new: { sugar: "#a5e6cf", phosphate: "#f2c15c", tube: "#a8ecd2", bead: "#effff8" },
+  rna: { sugar: "#a9cdf2", phosphate: "#f5cf6e", tube: "#dccaff", bead: "#fbf6ff" },
 } as const;
+
+/** CPK element colours for the ball-and-stick view. */
+export const ELEMENT_COLORS = { C: "#8f969c", N: "#3a5cf0", O: "#f03a33", P: "#ff8c1a" } as const;
+export type Element = keyof typeof ELEMENT_COLORS;
+/** Ball-and-stick backbone ribbon. */
+export const ATOMIC_RIBBON = "#2fbf4a";
 export type StrandTint = keyof typeof STRAND_TINTS;
 
 /** Nucleoplasm backdrop: deep teal, darker at the edges. */

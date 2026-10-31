@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useContext, useEffect, useState } from "react";
 import { LabHeaderActionsContext } from "../../../shared/LabSpace";
 import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
-import { BasePicker, CODON_MEANINGS, DNA_BASES, GeneLabBench3D, K7Hud, RNA_BASES, SequenceTrack, type Base, type CodonMeaning, type DnaBase, type RnaBase } from "../kit";
+import { BasePicker, CODON_MEANINGS, DNA_BASES, ELEMENT_COLORS, GeneLabBench3D, K7Hud, RNA_BASES, SequenceTrack, type Base, type CodonMeaning, type DnaBase, type RnaBase } from "../kit";
 import { fl27GeneConfig as config } from "./fl27-gene.config";
 import { geneText } from "./gene-copy";
 import { STATION_IDS, applyRunPins, chosenChain, defaultGeneEvidence, filledCount, geneEvidenceFrom, geneEvidenceReady, geneMolecules, stationDone, type GeneEvidence, type StationId } from "./gene-evidence";
@@ -106,6 +106,9 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
   const actions = (() => {
     switch (station) {
       case "structure": return <>
+        <div className="k7-segment" role="group" aria-label={t.representation}>
+          {(["schematic", "atomic"] as const).map((kind) => <button key={kind} type="button" className="secondary" aria-pressed={bench.representation === kind} onClick={() => patchBench({ representation: kind })} data-testid={`gene-model-${kind}`}>{t[kind]}</button>)}
+        </div>
         <button type="button" className="secondary" aria-pressed={bench.ruler} onClick={() => patchBench({ ruler: !bench.ruler })} data-testid="gene-ruler">{bench.ruler ? t.rulerOn : t.ruler}</button>
         <button type="button" className="secondary" aria-pressed={bench.labels} onClick={() => patchBench({ labels: !bench.labels })}>{bench.labels ? t.labelsOff : t.labels}</button>
         <button type="button" className="secondary" aria-pressed={bench.spin} disabled={bench.ruler} onClick={() => patchBench({ spin: !bench.spin })}>{bench.spin ? t.spinOff : t.spin}</button>
@@ -172,7 +175,14 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
   const readout = (() => {
     if (atBench) return t.readBench;
     switch (station) {
-      case "structure": return t.readStructure(molecules.coding.length + config.helixFlank.length);
+      case "structure": return bench.representation === "atomic" && viewMode === "3d" ? <>
+        {t.readStructure(molecules.coding.length + config.helixFlank.length)}
+        <span className="k7-legend" data-testid="gene-atom-legend">
+          <span>{t.atomLegend}</span>
+          {(["C", "N", "O", "P"] as const).map((element) => <span key={element} className="k7-legend-item"><span className="k7-legend-dot" style={{ background: ELEMENT_COLORS[element] }} aria-hidden="true" />{t.elements[element]}</span>)}
+          <span className="k7-legend-item"><span className="k7-legend-dot is-ribbon" aria-hidden="true" />{t.ribbon}</span>
+        </span>
+      </> : t.readStructure(molecules.coding.length + config.helixFlank.length);
       case "replication": return t.readReplication(t.phases[bench.replicationPhase], filledCount(evidence.replication.newStrand), fillCount);
       case "transcription": return t.readTranscription(mrna.filter((base) => base).length, mrna.length);
       case "translation": return t.readTranslation(chain.filter((meaning) => meaning !== "Stop").length);

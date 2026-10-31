@@ -6,14 +6,15 @@ export {
   AMINO_ACIDS, CODON_AXIS, CODON_MEANINGS, DNA_BASES, RNA_BASES, codonTable, isPurine, pairDna, parseDna, splitCodons, toRna,
   type AminoAcid, type Base, type CodonMeaning, type DnaBase, type RnaBase,
 } from "./k7-codons";
-export { AMINO_GROUP_COLORS, BASE_COLORS, BASE_INK, STRAND_TINTS, aminoGroup, type StrandTint } from "./k7-palette";
+export { AMINO_GROUP_COLORS, ATOMIC_RIBBON, BASE_COLORS, BASE_INK, ELEMENT_COLORS, STRAND_TINTS, aminoGroup, type Element, type StrandTint } from "./k7-palette";
 export { CLOSED, NM_PER_ANGSTROM, axisX, duplexPose, helixSpec, makePoses, strandAlongCurve, type NucleotidePose, type OpenSpan } from "./k7-geometry";
 export { K7_MOTION } from "./k7-motion";
 export { MolecularStage, type MolecularView } from "./MolecularStage";
 export { GeneLabBench3D, K7_BENCH_SLOTS } from "./bench/GeneLabBench3D";
 export { Microscope3D } from "./bench/Microscope3D";
 export { Thermocycler3D, TubeRack3D } from "./bench/Thermocycler3D";
-export { DnaDuplex3D, type DuplexHighlight } from "./molecules/DnaDuplex3D";
+export { DnaDuplex3D, type DuplexHighlight, type DuplexRepresentation } from "./molecules/DnaDuplex3D";
+export { NucleotidePool3D } from "./molecules/NucleotidePool3D";
 export { NucleotideStrand3D, useEasedLayout } from "./molecules/NucleotideStrand3D";
 export { Enzyme3D } from "./molecules/Enzyme3D";
 export { Ribosome3D } from "./molecules/Ribosome3D";

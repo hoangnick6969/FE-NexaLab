@@ -1,6 +1,5 @@
 import * as THREE from "three";
-import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { BASE_COLORS, BASE_INK, STRAND_TINTS, type StrandTint } from "../k7-palette";
+import { ATOMIC_RIBBON, BASE_COLORS, BASE_INK, STRAND_TINTS, type StrandTint } from "../k7-palette";
 import { baseLength, NUCLEOTIDE, type NucleotidePose } from "../k7-geometry";
 import { K7_MOTION, easeOutCubic } from "../k7-motion";
 import type { Base } from "../k7-codons";
@@ -58,13 +57,16 @@ export type StrandFrame = {
   /** Letter chips on the plate (paired strands) or just beyond its edge (single strands). */
   labelAt?: "centre" | "tip";
   camera: THREE.Camera;
+  /** Ball-and-stick view: only the backbone ribbon is drawn here; atoms come from AtomRenderer. */
+  atomic?: boolean;
   /** Where a newly paired nucleotide flies in from (local space); defaults to beyond its base edge. */
   spawn?: (index: number, out: THREE.Vector3) => void;
 };
 
 /**
- * One polynucleotide strand as instanced parts: sugars, phosphates, the
- * sugar–phosphate links and base plates (one draw call per part). Missing
+ * One polynucleotide strand as instanced parts (one draw call per part): a
+ * glossy sugar–phosphate backbone tube with phosphate beads, pentagonal
+ * deoxyribose/ribose plates and a coloured rod per base. Missing
  * (null) nucleotides are hidden, and a nucleotide that appears flies in from
  * the nucleoplasm and docks onto its pose. Presentation only.
  */
@@ -84,20 +86,27 @@ export class StrandRenderer {
   private readonly placed: THREE.Vector3[];
   /** The first frame shows the strand as it is; only later changes fly in. */
   private primed = false;
+  private readonly tubeColor: THREE.Color;
+  private readonly linkMaterial: THREE.MeshPhysicalMaterial;
+  private atomicShown = false;
 
   constructor(capacity: number, tint: StrandTint, clearcoat: boolean) {
     this.capacity = capacity;
-    const sugarGeometry = new THREE.DodecahedronGeometry(0.12, 0);
-    const phosphateGeometry = new THREE.SphereGeometry(0.105, 18, 12);
-    const linkGeometry = new THREE.CylinderGeometry(0.038, 0.038, 1, 8, 1);
+    // Pentagon prism for the five-membered sugar ring, face across the strand.
+    const sugarGeometry = new THREE.CylinderGeometry(0.14, 0.14, 0.06, 5, 1).rotateX(Math.PI / 2);
+    const phosphateGeometry = new THREE.SphereGeometry(0.078, 20, 14);
+    const linkGeometry = new THREE.CylinderGeometry(0.052, 0.052, 1, 14, 1);
     linkGeometry.translate(0, 0.5, 0);
-    const baseGeometry = new RoundedBoxGeometry(1, 1, 1, 2, 0.16);
+    // Base rod along local x (towards the partner strand).
+    const baseGeometry = new THREE.CylinderGeometry(0.072, 0.072, 1, 16, 1).rotateZ(-Math.PI / 2);
     this.geometries = [sugarGeometry, phosphateGeometry, linkGeometry, baseGeometry];
-    const coat = clearcoat ? { clearcoat: 0.65, clearcoatRoughness: 0.28 } : {};
-    const sugarMaterial = new THREE.MeshPhysicalMaterial({ color: STRAND_TINTS[tint].sugar, roughness: 0.4, sheen: 0.35, sheenRoughness: 0.6, ...coat });
-    const phosphateMaterial = new THREE.MeshPhysicalMaterial({ color: STRAND_TINTS[tint].phosphate, roughness: 0.32, ...coat });
-    const linkMaterial = new THREE.MeshStandardMaterial({ color: STRAND_TINTS[tint].sugar, roughness: 0.5 });
-    const baseMaterial = new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.42, ...coat });
+    const coat = clearcoat ? { clearcoat: 1, clearcoatRoughness: 0.12 } : {};
+    const sugarMaterial = new THREE.MeshPhysicalMaterial({ color: STRAND_TINTS[tint].tube, metalness: 0.35, roughness: 0.28, ...coat });
+    const phosphateMaterial = new THREE.MeshPhysicalMaterial({ color: STRAND_TINTS[tint].bead, metalness: 0.2, roughness: 0.18, ...coat });
+    this.tubeColor = new THREE.Color(STRAND_TINTS[tint].tube);
+    const linkMaterial = new THREE.MeshPhysicalMaterial({ color: this.tubeColor, metalness: 0.55, roughness: 0.2, ...coat });
+    const baseMaterial = new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.26, ...coat });
+    this.linkMaterial = linkMaterial;
     this.materials = [sugarMaterial, phosphateMaterial, linkMaterial, baseMaterial];
     this.sugars = new THREE.InstancedMesh(sugarGeometry, sugarMaterial, capacity);
     this.phosphates = new THREE.InstancedMesh(phosphateGeometry, phosphateMaterial, capacity);
@@ -133,7 +142,15 @@ export class StrandRenderer {
   }
 
   /** Writes all instances for this frame; returns true while a nucleotide is still flying in. */
-  update({ poses, bases, delta, reduced, labels, labelAt = "centre", camera, spawn }: StrandFrame) {
+  update({ poses, bases, delta, reduced, labels, labelAt = "centre", camera, spawn, atomic = false }: StrandFrame) {
+    if (atomic !== this.atomicShown) {
+      this.atomicShown = atomic;
+      this.linkMaterial.color.set(atomic ? ATOMIC_RIBBON : this.tubeColor);
+      for (const mesh of [this.sugars, this.phosphates, this.bases]) mesh.visible = !atomic;
+    }
+    // The ribbon of the ball-and-stick view is thicker than the schematic tube.
+    const ribbon = atomic ? 1.7 : 1;
+    if (atomic) labels = false;
     const count = Math.min(poses.length, this.capacity);
     let moving = false;
     this.group.updateWorldMatrix(true, false);
@@ -198,7 +215,7 @@ export class StrandRenderer {
       // Base plate sits beyond the sugar, its length set by purine/pyrimidine.
       const length = baseLength(base);
       const plate = this.placed[index].copy(target).addScaledVector(pose.d, (NUCLEOTIDE.sugarOffset + length / 2) * grow);
-      this.bases.setMatrixAt(index, matrix.compose(plate, quaternion, scale.set(length * grow, NUCLEOTIDE.thickness * grow, NUCLEOTIDE.width * grow)));
+      this.bases.setMatrixAt(index, matrix.compose(plate, quaternion, scale.set(length * grow, grow, grow)));
       this.bases.setColorAt(index, this.color.set(BASE_COLORS[base]));
 
       // Phosphate links this nucleotide to the previous one (5'→3'), only when both are in place.
@@ -207,7 +224,7 @@ export class StrandRenderer {
         const from = poses[index - 1].p;
         const span = start.subVectors(target, from);
         const distance = span.length();
-        this.links.setMatrixAt(index, matrix.compose(from, spin.setFromUnitVectors(UP, span.normalize()), scale.set(1, distance, 1)));
+        this.links.setMatrixAt(index, matrix.compose(from, spin.setFromUnitVectors(UP, span.normalize()), scale.set(ribbon, distance, ribbon)));
         this.phosphates.setMatrixAt(index, matrix.compose(control.lerpVectors(from, target, 0.5), quaternion, scale.setScalar(1)));
       } else {
         this.links.setMatrixAt(index, HIDDEN);

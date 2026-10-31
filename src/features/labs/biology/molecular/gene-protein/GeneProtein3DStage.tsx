@@ -17,13 +17,16 @@ const DOWN = new THREE.Vector3(0, -1, 0);
 const UP = new THREE.Vector3(0, 1, 0);
 
 const VIEWS: Record<StationId, MolecularView> = {
-  structure: { position: [0.8, 1.6, 10.5], target: [0, 0, 0], fitWidth: 8.2, minDistance: 4, maxDistance: 36 },
+  structure: { position: [1.2, 1.2, 11], target: [0, 0, 0], fitWidth: 4.2, fitHeight: 7.8, minDistance: 3, maxDistance: 36 },
   replication: { position: [0.4, 1.2, 12.5], target: [0, 0, 0], fitWidth: 7, minDistance: 5, maxDistance: 36 },
   transcription: { position: [0, 1.5, 13.5], target: [0, 0.7, 0], fitWidth: 8.4, minDistance: 5, maxDistance: 36 },
   translation: { position: [0, 2.8, 14.5], target: [0, 2.2, 0], fitWidth: 8, minDistance: 5, maxDistance: 36 },
   mutation: { position: [0, 1.2, 13], target: [0, -0.4, 0], fitWidth: 8.4, minDistance: 5, maxDistance: 36 },
   conclusion: { position: [0, 2.6, 23], target: [0, 0.6, 0], fitWidth: 21, minDistance: 8, maxDistance: 56 },
 };
+
+/** Free nucleotides around the scene where the station builds a strand from them. */
+const POOLS: Record<StationId, "dna" | "rna" | null> = { structure: "dna", replication: "dna", transcription: "rna", translation: null, mutation: null, conclusion: null };
 
 const RNA_PAIR: Record<RnaBase, RnaBase> = { A: "U", U: "A", G: "C", C: "G" };
 const ENZYME = { helicase: "#7fc3dc", polymerase: "#f1b37c", rnaPolymerase: "#7db6e6" } as const;
@@ -47,8 +50,9 @@ function DuplexEnds({ count, upper = ["5'", "3'"], lower = ["3'", "5'"] }: { cou
 function StructureScene({ bench, flankCoding }: { bench: GeneBench; flankCoding: DnaBase[] }) {
   const lower = useMemo(() => flankCoding.map(pairDna), [flankCoding]);
   const spinning = bench.spin && !bench.ruler;
-  return <group>
-    <DnaDuplex3D structure={config.structure} upper={flankCoding} lower={lower} labels={bench.labels} spin={spinning} />
+  // Upright helix (axis vertical, 5' end of the coding strand at the bottom), as in textbook figures.
+  return <group rotation={[0, 0, Math.PI / 2]}>
+    <DnaDuplex3D structure={config.structure} upper={flankCoding} lower={lower} labels={bench.labels} spin={spinning} representation={bench.representation} />
     {!spinning && <DuplexEnds count={flankCoding.length} />}
     {bench.ruler && <AngstromRuler3D structure={config.structure} count={flankCoding.length} />}
   </group>;
@@ -235,7 +239,7 @@ function ConclusionScene({ evidence, molecules }: { evidence: GeneEvidence; mole
 export function GeneProtein3DStage({ station, evidence, bench, entering = false }: { station: StationId; evidence: GeneEvidence; bench: GeneBench; entering?: boolean }) {
   const molecules = useMemo(() => geneMolecules(evidence.variantId), [evidence.variantId]);
   const flankCoding = useMemo(() => [...molecules.coding, ...parseDna(config.helixFlank)], [molecules]);
-  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset} entering={entering}>
+  return <MolecularStage view={VIEWS[station]} ambient={station === "structure" && bench.spin && !bench.ruler} viewResetSignal={bench.viewReset} entering={entering} pool={POOLS[station]}>
     {station === "structure" && <StructureScene bench={bench} flankCoding={flankCoding} />}
     {station === "replication" && <ReplicationScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}
     {station === "transcription" && <TranscriptionScene evidence={evidence} bench={bench} coding={molecules.coding} template={molecules.template} />}

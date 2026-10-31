@@ -103,6 +103,12 @@ test("3D opens in the lab room; the microscope leads into the molecular view and
   await expect(page.getByTestId("molecular-stage")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".lab-space canvas")).toHaveCount(1);
   await expect(page.locator(".k7-instruction")).toContainText("Xoay chuỗi xoắn kép");
+  // Ball-and-stick view with an element legend (colour is never the only cue).
+  await page.getByTestId("gene-model-atomic").click();
+  await expect(page.getByTestId("gene-model-atomic")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("gene-atom-legend")).toContainText("O oxi");
+  await page.getByTestId("gene-model-schematic").click();
+  await expect(page.getByTestId("gene-atom-legend")).toHaveCount(0);
   await page.getByTestId("gene-back-to-bench").click();
   await expect(page.getByTestId("physics-stage")).toBeVisible();
   await page.getByTestId("gene-open-microscope").click();
