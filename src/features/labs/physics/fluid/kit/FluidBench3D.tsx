@@ -24,8 +24,8 @@ const k3View: StageView = {
  * on-demand frame loop and a millimetre-scaled bench group. Children are
  * apparatus in mm; each Lab decides which apparatus and states to show.
  */
-export function FluidBench3D({ children }: { children: ReactNode }) {
-  return <PhysicsStage realism frameloop="demand" view={k3View}>
+export function FluidBench3D({ children, view = k3View }: { children: ReactNode; view?: StageView }) {
+  return <PhysicsStage realism frameloop="demand" view={view}>
     <group position={[0, BENCH_TOP, 0]} scale={K3_UNITS_PER_MM}>{children}</group>
   </PhysicsStage>;
 }

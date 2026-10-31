@@ -15,7 +15,7 @@ labs/
   pathways/                      assigned lesson/pathway integration
   physics/
     shared/                      Canvas lifecycle, camera, WebGL fallback
-    electricity/                 K1: FL-01 code; induction/ = FL-25 private prototype
+    electricity/                 K1: FL-01 code; induction/ = FL-25 scene
     fluid/                        K3: FL-03–05 (planned)
     thermal/                      K4: FL-07–08 (planned)
     mechanics/                    K5: FL-06/24 (planned)
@@ -31,7 +31,7 @@ labs/
 - `shared/PhysicalLabEnvironment.tsx` owns the common physical room shell (tiled floor, walls, sink, cabinets and brown worktable). K1 and the FL-10/K2 candidate both use it; kit-specific apparatus stays in its own folder. This source reuse avoids duplicate room geometry definitions; device-level memory and frame-time still require measurement.
 - Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit and K2 FL-10) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
 - `physics/shared/PhysicsStage.tsx` owns the K1 Canvas lifecycle, responsive camera and WebGL fallback. `LabSpace` remains the fullscreen UI shell, separate from the 3D room environment.
-- `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. induction/ contains the FL-25 private engineering prototype; it uses the same room shell.
+- `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `induction/` contains the FL-25 scene and uses the same room shell; release availability is controlled by the backend catalog.
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
 - `chemistry/Chemistry.tsx` remains `TECHNICAL_FIXTURE_ONLY`; it is not one of the approved/provisional released Lab experiences.
 - `biology/anatomy/` contains a Lesson resource, not a Foundational Lab implementation.
@@ -49,5 +49,17 @@ labs/
 | K6 Optics | FL-23 | `physics/optics/` | Not implemented |
 | K8 Genetics HUD | FL-26 | `biology/genetics/` | Not implemented |
 | K7 Molecular / gene-to-protein scene | FL-27 | `biology/molecular/` | Not implemented |
+
+## Catalog scene thumbnails
+
+The catalog uses static WebP captures from the corresponding 3D stage; cards never mount WebGL. The images load lazily and the existing icon art remains the fallback if no matching image exists or an image fails to load. Vite discovers all `assets/thumbnails/<lab-id>.webp` files automatically, so adding an image with the same ID as a `labInfo` entry wires it into the card without editing image imports.
+
+### Add or refresh a Lab thumbnail
+
+1. Add a fixture to `dev/lab-thumbnail-capture.tsx`, keyed by the exact Lab ID. Render the production 3D stage with a deterministic, representative state and no user/run data. Set a capture-only camera override there if the default composition does not fit a catalog card; do not alter the live Lab camera just for the thumbnail.
+2. Run `npm run capture:lab-thumbnails` to capture all registered scenes, or `npm run capture:lab-thumbnails -- <lab-id>` to capture only one. The script starts and stops a local Vite server, blocks `/api/**`, exports 1280×720 WebP files under 120 KiB, and writes only the selected thumbnail asset(s). It requires the installed Playwright Chrome channel; set `CHROME_PATH` if using a specific Chrome executable.
+3. Review the generated image and commit it with the fixture. If refreshing only one Lab, use its exact ID so other image files are left untouched.
+
+For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/tools/lab-thumbnail-capture/index.html` URL; the script then uses that server rather than starting another. Never capture a signed-in runtime page or use real student data.
 
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.

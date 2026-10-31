@@ -681,6 +681,39 @@ small {
   background: var(--fill-amber-90-2);
 }
 
+.lab-thumbnail-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 57%;
+}
+
+.lab-art.has-thumbnail:not(.thumbnail-failed)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(10 18 22 / 47%), transparent 35%, transparent 60%, rgb(10 18 22 / 48%));
+}
+
+.lab-art.has-thumbnail:not(.thumbnail-failed) .lab-subject,
+.lab-art.has-thumbnail:not(.thumbnail-failed) .art-number,
+.lab-art.has-thumbnail:not(.thumbnail-failed) .art-caption {
+  z-index: 1;
+  color: #fff;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 82%);
+}
+
+.lab-art.has-thumbnail:not(.thumbnail-failed) .art-symbol {
+  display: none;
+}
+
+.lab-art.thumbnail-failed .lab-thumbnail-image {
+  display: none;
+}
+
 .lab-art.biology {
   background: var(--fill-olive-92);
 }

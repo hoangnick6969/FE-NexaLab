@@ -1,5 +1,15 @@
 import { defineText } from "../../i18n";
 
+const thumbnailAssets = import.meta.glob<string>("./assets/thumbnails/*.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+function thumbnailFor(labId: string) {
+  return thumbnailAssets[`./assets/thumbnails/${labId}.webp`];
+}
+
 const text = defineText({
   vi: {
     circuit: { subject: "VẬT LÝ", tag: "THỬ THÁCH", title: "Thắp sáng ý tưởng", description: "Tự lắp mạch điện và tìm cách làm LED sáng an toàn." },
@@ -21,7 +31,7 @@ const text = defineText({
 const t = text();
 
 
-export const labInfo = [
+const catalogEntries = [
   {
     id: "circuit",
     ...t.circuit,
@@ -59,3 +69,8 @@ export const labInfo = [
     number: "06",
   },
 ];
+
+export const labInfo = catalogEntries.map((entry) => ({
+  ...entry,
+  thumbnail: thumbnailFor(entry.id),
+}));
