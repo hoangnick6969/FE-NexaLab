@@ -15,6 +15,7 @@ import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
 import { checkpointViewForModel, checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { defaultEmEvidence } from "./physics/electricity/induction/em-evidence";
 import { Chemistry } from "./chemistry/Chemistry";
+import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
 import { useLabRunHost } from "./runtime/lab-run-host";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
@@ -170,6 +171,8 @@ const t = text();
 const Eye = lazy(() => import("./biology/anatomy/Eye"));
 const initialLabState = (id: string) => id === "circuit"
   ? defaultCircuit()
+  : id === "mass-conservation"
+    ? {}
   : id === "chemistry"
     ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
     : id === "em-induction"
@@ -272,12 +275,19 @@ export default function Lab() {
   };
   const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
   const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
-  if (!["circuit", "eye", "chemistry", "em-induction"].includes(id))
+  if (!["circuit", "eye", "chemistry", "em-induction", "mass-conservation"].includes(id))
     return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
   if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
+  if (id === "mass-conservation") return space(user.role !== "STUDENT"
+    ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
+    : !labRun.launch || !labRun.rendererKey
+      ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu hoạt động bảo toàn khối lượng. Số cân chỉ mở sau khi em ghi dự đoán.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
+      : <MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
+          onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()}
+          attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
