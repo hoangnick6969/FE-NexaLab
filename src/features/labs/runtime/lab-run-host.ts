@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, isApiError } from "../../../lib/api";
+import { labRenderer, resolveLabRenderer, submissionPayload } from "./activity-renderers";
 
 export type LabLaunch = {
   contract: "lab-contract/1";
@@ -20,27 +21,9 @@ export type LabLaunch = {
   context: "ASSIGNMENT" | "FOUNDATIONAL";
   assignmentId: string | null;
   versionBinding: "ASSIGNMENT_PINNED" | "LEGACY_UNPINNED_LAUNCH" | "FOUNDATIONAL_LAUNCH";
+  /** Server-chosen run parameters, e.g. FL-03 specimen pins. Absent for runs that have none. */
+  runtimeParams?: Record<string, string | number> | null;
 };
-
-const renderers = {
-  circuit: { labId: "circuit", modelRefs: ["circuit@1.0.0"] },
-  "circuit-bulb": { labId: "circuit", modelRefs: ["circuit-bulb@1.0.0"] },
-  "em-induction": { labId: "em-induction", modelRefs: ["em-induction@1.0.0"] },
-  chemistry: { labId: "chemistry", modelRefs: ["chemistry@1.0.0"] },
-  "mass-conservation": { labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"] },
-  eye: { labId: "eye", modelRefs: ["eye@1.0.0"] },
-} as const;
-
-export type LabRendererKey = keyof typeof renderers;
-
-export function resolveLabRenderer(launch: LabLaunch): LabRendererKey | null {
-  const key = (launch.rendererKey ?? launch.labId) as LabRendererKey;
-  const renderer = renderers[key];
-  // shortcut: each deployed model version needs one explicit FE registry entry.
-  return renderer?.labId === launch.labId && (renderer.modelRefs as readonly string[]).includes(launch.modelRef)
-    ? key
-    : null;
-}
 
 type LabDraft = {
   key: string;
@@ -139,7 +122,7 @@ type HostInput = {
 
 export function useLabRunHost(input: HostInput) {
   const [launch, setLaunch] = useState<LabLaunch | null>(null);
-  const [rendererKey, setRendererKey] = useState<LabRendererKey | null>(null);
+  const [rendererKey, setRendererKey] = useState<string | null>(null);
   const [attempt, setAttempt] = useState<any>(null);
   const [restoreCandidate, setRestoreCandidate] = useState<LabDraft | null>(null);
   const [pending, setPending] = useState(false);
@@ -201,7 +184,7 @@ export function useLabRunHost(input: HostInput) {
       const nextRenderer = resolveLabRenderer(next);
       if (!nextRenderer) throw new Error(`Chưa cài giao diện tương thích với ${next.modelRef}.`);
       setLaunch(next);
-      setRendererKey(nextRenderer);
+      setRendererKey(nextRenderer.key);
       setAttempt(null);
       input.onStateChange(next.initialState ?? input.initialState);
       startedAt.current = Date.now();
@@ -234,17 +217,15 @@ export function useLabRunHost(input: HostInput) {
     const currentDraft = draftFor(launch, input.state);
     try {
       await saveDraft(currentDraft).catch(() => undefined);
-      const checkpointEvidence = input.state as { checkpoints?: unknown; explanation?: unknown } | null;
+      const renderer = labRenderer(rendererKey);
+      if (!renderer) throw new Error("Lab renderer is unavailable for this run");
       const response = await api<any>("/attempts", "POST", {
         contract: launch.contract,
         runId: launch.runId,
         idempotencyKey: idempotencyKey.current,
         stateSchemaVersion: launch.stateSchemaVersion,
         evidenceSchemaVersion: launch.evidenceSchemaVersion,
-        // Checkpoint rubrics send only their evidence; FL-10 submits its structured activity state.
-        ...(launch.rubricVersion !== "legacy-challenge@1.0.0" && launch.rubricVersion !== "mass-conservation-poea@1.0.0"
-          ? { checkpoints: checkpointEvidence?.checkpoints, explanation: checkpointEvidence?.explanation }
-          : { labState: input.state }),
+        ...submissionPayload(renderer, input.state),
         durationMs: Math.max(0, Date.now() - startedAt.current),
       });
       const saved = response.attempt

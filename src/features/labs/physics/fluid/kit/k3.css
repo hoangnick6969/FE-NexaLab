@@ -1,0 +1,82 @@
+/* K3 fluid bench: tokens first; components use only these and the app tokens. */
+:root {
+  --k3-body: #eef1ef;
+  --k3-stroke: #c6cfca;
+  --k3-metal: #cdd3d6;
+  --k3-metal-dark: #9aa3a0;
+  --k3-lcd: #a9b8a2;
+  --k3-lcd-ink: #16241a;
+  --k3-water: #cbe8f6;
+  --k3-glass: #b9cdd8;
+  --k3-scale: #1c3e78;
+  --k3-hud-shadow: 0 10px 32px rgb(18 38 30 / 0.12);
+  --k3-selected: #287875;
+  --k3-selected-ink: #ffffff;
+  --k3-specimen-outline: #3d4a45;
+  --k3-glass-edge: #7d97a6;
+  --k3-ruler: #f3e9c8;
+  --k3-ok: #1f6b3f;
+  --k3-warn: #8a4b00;
+}
+:root[data-theme="dark"] {
+  --k3-body: #26302d;
+  --k3-stroke: #46524d;
+  --k3-water: #3a6a80;
+  --k3-glass: #5d7380;
+  --k3-scale: #a9c4ff;
+  --k3-hud-shadow: 0 10px 32px rgb(0 0 0 / 0.35);
+  --k3-selected: #5fa8a4;
+  --k3-selected-ink: #0d1614;
+  --k3-specimen-outline: #cfd8d4;
+  --k3-glass-edge: #9db6c4;
+  --k3-ruler: #5a5236;
+  --k3-ok: #7ccf9b;
+  --k3-warn: #f0b36b;
+}
+
+.k3-hud {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  top: 76px;
+  z-index: 12;
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100dvh - 96px);
+  overflow: auto;
+  background: var(--surface);
+  color: var(--text-base);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--k3-hud-shadow);
+}
+.k3-hud-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 8px 16px; }
+.k3-hud-header h2 { margin: 0; font-size: 1rem; line-height: 1.3; overflow-wrap: break-word; min-width: 0; }
+.k3-hud-body { padding: 0 16px 16px; display: grid; gap: 12px; }
+.k3-hud-body[hidden] { display: none; }
+.k3-icon-button { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
+.k3-stations { display: flex; flex-wrap: wrap; gap: 6px; }
+.k3-station { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; font: inherit; font-size: 0.875rem; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+.k3-station[aria-selected="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
+.k3-step { margin: 0; color: var(--muted); font-size: 0.875rem; }
+.k3-instruction { margin: 0; font-size: 1rem; line-height: 1.5; }
+.k3-readout { padding: 10px 12px; border-radius: 10px; background: var(--k3-body); font-variant-numeric: tabular-nums; }
+.k3-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.k3-notice { display: flex; gap: 8px; align-items: flex-start; margin: 0; color: var(--muted); font-size: 0.8125rem; line-height: 1.45; }
+.k3-notice svg { flex: none; margin-top: 2px; }
+.k3-hud :is(button, input, select):focus-visible { outline: 3px solid var(--k3-selected); outline-offset: 2px; transition: none; }
+
+.k3-2d { display: block; width: 100%; height: auto; max-height: 60vh; }
+.k3-2d-lcd { font: 600 26px ui-monospace, Consolas, monospace; fill: var(--k3-lcd-ink); }
+.k3-2d-scale { font: 600 7px system-ui, sans-serif; fill: var(--k3-scale); }
+.k3-2d-edge { font: 700 14px system-ui, sans-serif; fill: var(--k3-specimen-outline); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+
+.k3-range { display: grid; gap: 4px; width: 100%; font-size: 0.875rem; }
+.k3-range input { width: 100%; }
+.k3-preview-2d { position: absolute; inset: 76px 440px 16px 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; padding: 16px; background: var(--surface); border-radius: 16px; }
+
+@media (max-width: 640px) {
+  .k3-preview-2d { inset: 76px 12px 54dvh 12px; }
+  .k3-hud { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); right: 12px; width: calc(100% - 24px); max-height: 52dvh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k3-station { transition: none; }
+}

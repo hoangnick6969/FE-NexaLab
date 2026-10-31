@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { simulate } from "@nexalab/sim";
 import { Link, useParams, useLocation, useSearchParams } from "react-router-dom";
 import {
@@ -10,13 +10,9 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
-import { Badge, ErrorBox, useAction, verdictLabel, InlineLoader } from "../../components/ui";
-import { Circuit, defaultCircuit } from "./physics/electricity/Circuit";
-import { checkpointViewForModel, checkpointViewForRenderer } from "./runtime/checkpoint-views";
-import { defaultEmEvidence } from "./physics/electricity/induction/em-evidence";
-import { Chemistry } from "./chemistry/Chemistry";
-import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
-import { useLabRunHost } from "./runtime/lab-run-host";
+import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
+import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";import { useLabRunHost } from "./runtime/lab-run-host";
+import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { LabSpace } from "./shared/LabSpace";
@@ -51,20 +47,12 @@ const text = defineText({
     eyeModel: "Mô hình cấu tạo mắt",
     bench: "Bàn thực hành",
     reset: "Làm lại",
-    loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…",
     engine: "Engine khoa học · v1.0.0",
     computing: "Đang tính…",
     gradeParts: "Chấm tên bộ phận",
     run: "Chạy thí nghiệm",
     challenge: "THỬ THÁCH 01",
     circuitGoal: "LED sáng, dòng điện an toàn",
-    bulbGoal: "Quan sát mạch điện đóng và mở",
-    bulbTask: "Dự đoán trạng thái bóng đèn khi đóng và mở công tắc, rồi giải thích kết quả.",
-    bulbPredict: "Dự đoán trước khi xem kết quả", bulbSubmit: "Nộp kết quả",
-    bulbExplanation: "Xem lại câu giải thích",
-    bulbPassed: "Em đã hoàn thành tốt hoạt động này.", bulbNeedsPractice: "Hãy xem lại phản hồi rồi thử lại từ đầu.",
-    bulbAssessment: "Kết quả được chấm trên máy chủ", bulbWaiting: "Hoàn thành các bước trong sơ đồ để nộp bài.",
-    bulbResult: "Kết quả bài làm",
     eyeGoal: "Em hiểu đôi mắt đến đâu?",
     chemGoal: "Cân bằng lượng chất",
     circuitTask: "Tạo mạch kín chứa nguồn, LED và điện trở. Giữ dòng qua mỗi LED từ 1 đến 20 mA.",
@@ -123,20 +111,12 @@ const text = defineText({
     eyeModel: "Eye structure model",
     bench: "Practice bench",
     reset: "Reset",
-    loadingEye: "Loading the 3D eye anatomy model…",
     engine: "Science engine · v1.0.0",
     computing: "Computing…",
     gradeParts: "Check the part names",
     run: "Run the experiment",
     challenge: "CHALLENGE 01",
     circuitGoal: "LED on, safe current",
-    bulbGoal: "Observe open and closed circuits",
-    bulbTask: "Predict the bulb state with the switch closed and open, then explain the result.",
-    bulbPredict: "Predict before seeing the result", bulbSubmit: "Submit results",
-    bulbExplanation: "Review the explanation",
-    bulbPassed: "You completed this activity successfully.", bulbNeedsPractice: "Review the feedback, then try the activity again.",
-    bulbAssessment: "Result assessed by the server", bulbWaiting: "Complete the diagram steps to submit your work.",
-    bulbResult: "Activity feedback",
     eyeGoal: "How well do you know the eye?",
     chemGoal: "Balance the amounts",
     circuitTask: "Build a closed circuit with a source, LED and resistor. Keep the current through each LED between 1 and 20 mA.",
@@ -168,16 +148,6 @@ const text = defineText({
   },
 });
 const t = text();
-const Eye = lazy(() => import("./biology/anatomy/Eye"));
-const initialLabState = (id: string) => id === "circuit"
-  ? defaultCircuit()
-  : id === "mass-conservation"
-    ? {}
-  : id === "chemistry"
-    ? { reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }
-    : id === "em-induction"
-      ? defaultEmEvidence()
-      : { answers: {} };
 
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -218,9 +188,11 @@ export default function Lab() {
   const returnAssignment = originLessonId === originLesson?.lessonId ? searchParams.get("lessonAssignmentId") || undefined : undefined;
   const returnToLesson = originLesson ? relatedLessonHref(originLesson.lessonId, returnSection ? "reading" : "labs", returnAssignment, returnSection) : undefined;
   const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
+  // Before a run resolves its renderer, students see the Lab's legacy view; teachers preview the configured model.
+  const startRenderer = user.role === "TEACHER" ? previewLabRenderer(id, lab?.simulationModelRef) : labRenderer(id);
   const fallbackState = useMemo(
-    () => location.state?.labState ?? (user.role === "TEACHER" && checkpointViewForModel(lab?.simulationModelRef) ? checkpointViewForModel(lab?.simulationModelRef)!.defaultEvidence() : initialLabState(id)),
-    [id, location.key, location.state?.labState, user.role, lab?.simulationModelRef],
+    () => location.state?.labState ?? startRenderer?.defaultState() ?? {},
+    [id, location.key, location.state?.labState, startRenderer],
   );
   const labRun = useLabRunHost({
     enabled: user.role === "STUDENT" && Boolean(lab),
@@ -233,8 +205,9 @@ export default function Lab() {
     initialState: fallbackState,
     onStateChange: setState,
   });
-  const checkpointView = checkpointViewForRenderer(labRun.rendererKey) ?? (user.role === "TEACHER" ? checkpointViewForModel(lab?.simulationModelRef) : null);
-  const isCheckpoint = Boolean(checkpointView);
+  const renderer = (user.role === "STUDENT" ? labRenderer(labRun.rendererKey) : null) ?? startRenderer;
+  const guided = renderer?.guided ?? null;
+  const guidedCopy = guided?.copy();
   const attempt = user.role === "STUDENT" ? labRun.attempt : teacherAttempt;
   useEffect(() => {
     setState(fallbackState);
@@ -275,7 +248,7 @@ export default function Lab() {
   };
   const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
   const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
-  if (!["circuit", "eye", "chemistry", "em-induction", "mass-conservation"].includes(id))
+  if (!hasLabRenderer(id))
     return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
@@ -291,7 +264,7 @@ export default function Lab() {
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {runtimeReady && preview && !isCheckpoint && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      {runtimeReady && preview && !guided && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           {runtimeReady && <div className="workspace-toolbar">
@@ -299,7 +272,7 @@ export default function Lab() {
             <button
               className="text-button"
               onClick={() => {
-                const next = checkpointView ? checkpointView.defaultEvidence() : initialLabState(id);
+                const next = renderer?.defaultState() ?? {};
                 if (user.role === "STUDENT") labRun.reset(next);
                 else change(next);
                 setResetKey((k) => k + 1);
@@ -340,50 +313,36 @@ export default function Lab() {
               </div>
             </div>
           )}
-          {runtimeReady && checkpointView ? (
-            <checkpointView.Activity state={state} onChange={change} />
-          ) : runtimeReady && (labRun.rendererKey ?? id) === "circuit" ? (
-            <Circuit
-              key={resetKey}
-              initial={state.nodes ? state : defaultCircuit()}
-              onChange={change}
-            />
-          ) : runtimeReady && (labRun.rendererKey ?? id) === "chemistry" ? (
-            <Chemistry state={state} onChange={change} result={result} />
-          ) : runtimeReady && (labRun.rendererKey ?? id) === "eye" ? (
-            <Suspense fallback={<InlineLoader message={t.loadingEye} />}>
-              <Eye key={resetKey} state={state} onChange={change} />
-            </Suspense>
-          ) : null}
-          {runtimeReady && !(isCheckpoint && user.role === "TEACHER") && <div className="lab-actions">
-            <span>{isCheckpoint ? t.bulbAssessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+          {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} />}
+          {runtimeReady && !(guided && user.role === "TEACHER") && <div className="lab-actions">
+            <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button
               className="primary"
               data-testid="lab-run-submit"
               onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
-              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (checkpointView !== null && !checkpointView.ready(state))}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (guided !== null && !guided.ready(state))}
             >
               <Play size={15} />
               {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
                 ? t.computing
-                : isCheckpoint ? t.bulbSubmit : id === "eye"
+                : guidedCopy ? guidedCopy.submit : id === "eye"
                   ? t.gradeParts
                   : t.run}
             </button>
           </div>}
           <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
         </section>
-        {runtimeReady && <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{isCheckpoint ? t.bulbResult : t.result}</summary>
-          {runtimeReady && !isCheckpoint && <section className="panel challenge-panel">
+        {runtimeReady && <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{guidedCopy ? guidedCopy.resultTitle : t.result}</summary>
+          {runtimeReady && !guided && <section className="panel challenge-panel">
             <span className="eyebrow">{t.challenge}</span>
             <h3>
-              {isCheckpoint ? t.bulbGoal : id === "circuit"
+              {id === "circuit"
                 ? t.circuitGoal
                 : id === "eye"
                   ? t.eyeGoal
                   : t.chemGoal}</h3>
             <p>
-              {isCheckpoint ? t.bulbTask : id === "circuit"
+              {id === "circuit"
                 ? t.circuitTask
                 : id === "eye"
                   ? t.eyeTask
@@ -392,7 +351,7 @@ export default function Lab() {
             <ul className="checklist">
               <li>
                 <CheckCircle2 size={15} />
-                {isCheckpoint ? t.bulbPredict : t.observe}
+                {t.observe}
               </li>
               <li>
                 <CheckCircle2 size={15} />
@@ -405,25 +364,14 @@ export default function Lab() {
             </ul>
           </section>}
           <section className="panel result-panel">
-            <h3>{isCheckpoint ? t.bulbResult : t.result}</h3>
+            <h3>{guidedCopy ? guidedCopy.resultTitle : t.result}</h3>
             {result ? (
               <>
                 <Badge tone={attempt.verdict}>
                   {verdictLabel(attempt.verdict)}
                 </Badge>
-                {isCheckpoint ? (
-                  <>
-                    <p className="bulb-result-message">{attempt.verdict === "passed" ? t.bulbPassed : t.bulbNeedsPractice}</p>
-                    <p className="bulb-result-score">{result.assessment?.score} / {result.assessment?.maximumScore}<small>{t.bulbAssessment}</small></p>
-                    <ul>
-                      {result.observations?.map((item: any) => (
-                        <li key={item.id}>
-                          {checkpointView!.describeResult(item)}
-                        </li>
-                      ))}
-                      {result.assessment?.unmetCriteria?.includes("explanation") && <li>{t.bulbExplanation}</li>}
-                    </ul>
-                  </>
+                {guided ? (
+                  <guided.Result result={result} verdict={attempt.verdict} />
                 ) : id === "circuit" ? (
                   <>
                     <div className="result-value">
@@ -478,18 +426,18 @@ export default function Lab() {
                 )}
                 <ErrorBox error={save.error} />
                 {user.role === "STUDENT" && attempt.verdict !== "passed" && (
-                  <button type="button" className="secondary wide" onClick={() => checkpointView ? labRun.reset(checkpointView.defaultEvidence()) : labRun.retry()}>
+                  <button type="button" className="secondary wide" onClick={() => guided && renderer ? labRun.reset(renderer.defaultState()) : labRun.retry()}>
                     <RotateCcw size={15} /> {t.tryAgain}
                   </button>
                 )}
               </>
             ) : (
               <p className="muted">
-                {isCheckpoint ? t.bulbWaiting : t.resultAfterRun}
+                {guidedCopy ? guidedCopy.waiting : t.resultAfterRun}
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && runtimeReady && !isCheckpoint && (
+          {user.role === "STUDENT" && runtimeReady && !guided && (
             <section className="panel tutor-panel">
               <h3>
                 <Sparkles size={19} />
@@ -523,7 +471,7 @@ export default function Lab() {
           )}
         </details></aside>}
       </div>
-      {runtimeReady && !isCheckpoint && <p className="tiny muted">{t.disclaimer}</p>}
+      {!guided && <p className="tiny muted">{t.disclaimer}</p>}
     </>
   );
 }
