@@ -6,6 +6,8 @@ import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "../
 import { circuitBulbCopy, CircuitBulbResult } from "../physics/electricity/CircuitBulbResult";
 import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
+import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
+import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
 
 const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…" }, en: { loadingEye: "Loading the 3D eye anatomy model…" } });
 const Eye = lazy(() => import("../biology/anatomy/Eye"));
@@ -61,6 +63,13 @@ const renderers: readonly LabActivityRenderer[] = [
     defaultState: defaultBulbEvidence,
     Activity: ({ state, onChange }) => <CircuitBulbActivity state={state} onChange={onChange} />,
     guided: { ready: bulbEvidenceReady, copy: circuitBulbCopy, Result: CircuitBulbResult },
+  },
+  {
+    // FL-03 density, 2D pilot. Needs a pinned density-bench pack and an active Lab to launch.
+    key: "density-bench", labId: "density", modelRefs: ["density-bench@1.0.0"], envelope: "evidence",
+    defaultState: defaultDensityEvidence,
+    Activity: ({ state, onChange, resetKey }) => <DensityActivity state={state} onChange={onChange} resetKey={resetKey} />,
+    guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
   },
   {
     key: "chemistry", labId: "chemistry", modelRefs: ["chemistry@1.0.0"], envelope: "labState",

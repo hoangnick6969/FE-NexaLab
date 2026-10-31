@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { defineText } from "../../../../../../i18n";
 import "../k3.css";
 
@@ -8,7 +8,8 @@ const text = defineText({
   en: { step: (current: number, total: number) => `Step ${current} of ${total}`, show: "Show guide", hide: "Collapse guide", readout: "Instrument reading" },
 });
 
-export type K3Station = { id: string; label: string };
+/** `done` is shown with an icon and a text alternative, never by colour alone. */
+export type K3Station = { id: string; label: string; done?: boolean; doneLabel?: string };
 
 /**
  * Guide frame shared by K3 Labs: station tabs, the current instruction,
@@ -47,13 +48,16 @@ export function K3Hud({ title, stations, current, onSelect, step, instruction, r
           aria-selected={station.id === current}
           className="k3-station"
           onClick={() => onSelect?.(station.id)}
-        >{station.label}</button>)}
+        >
+          {station.label}
+          {station.done && <><Check size={14} aria-hidden="true" /><span className="sr-only">{station.doneLabel}</span></>}
+        </button>)}
       </div>
       <p className="k3-step">{t.step(step.index + 1, step.total)}</p>
       <p className="k3-instruction" aria-live="polite">{instruction}</p>
       {readout && <div className="k3-readout" role="status" aria-label={t.readout}>{readout}</div>}
-      {children}
       {actions && <div className="k3-actions">{actions}</div>}
+      {children}
       {notice && <p className="k3-notice"><Info size={15} aria-hidden="true" /><span>{notice}</span></p>}
     </div>
   </aside>;

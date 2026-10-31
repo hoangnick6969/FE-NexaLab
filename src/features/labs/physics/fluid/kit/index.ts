@@ -8,5 +8,5 @@ export { FluidBench3D, K3Slot, K3_SLOTS } from "./FluidBench3D";
 export { DigitalBalance3D, BALANCE_PAN_TOP_MM } from "./apparatus/DigitalBalance3D";
 export { GraduatedCylinder3D } from "./apparatus/GraduatedCylinder3D";
 export { Specimen3D } from "./apparatus/Specimen3D";
-export { Balance2D, Cylinder2D } from "./two-d/K3Apparatus2D";
+export { Balance2D, Cylinder2D, Ruler2D, Specimen2D, CupGlyph, blobPath } from "./two-d/K3Apparatus2D";
 export { K3Hud, type K3Station } from "./hud/K3Hud";
