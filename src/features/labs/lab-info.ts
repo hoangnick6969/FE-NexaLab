@@ -37,36 +37,42 @@ const catalogEntries = [
     ...t.circuit,
     className: "physics",
     number: "01",
+    grade: 8,
   },
   {
     id: "eye",
     ...t.eye,
     className: "biology",
     number: "02",
+    grade: 8,
   },
   {
     id: "chemistry",
     ...t.chemistry,
     className: "chemistry",
     number: "03",
+    grade: 8,
   },
   {
     id: "density",
     ...t.density,
     className: "physics",
     number: "04",
+    grade: 8,
   },
   {
     id: "em-induction",
     ...t.induction,
     className: "physics",
     number: "05",
+    grade: 9,
   },
   {
     id: "mass-conservation",
     ...t.massConservation,
     className: "chemistry",
     number: "06",
+    grade: 8,
   },
 ];
 

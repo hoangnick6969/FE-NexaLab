@@ -5,6 +5,7 @@ import { Users } from "./Users";
 import { Taxonomy } from "./Taxonomy";
 import { Content } from "./Content";
 import { Simulations } from "./Simulations";
+import { LabReleases } from "./LabReleases";
 import { Assets } from "./Assets";
 import { AuditExplorer } from "./AuditExplorer";
 import { defineText } from "../../i18n";
@@ -16,6 +17,7 @@ const text = defineText({
     taxonomy: "Phân loại",
     content: "Nội dung",
     simulations: "Mô phỏng",
+    releases: "Duyệt Lab",
     assets: "Tệp",
     audit: "Nhật ký",
     eyebrow: "VẬN HÀNH NEXALAB",
@@ -28,6 +30,7 @@ const text = defineText({
     taxonomy: "Taxonomy",
     content: "Content",
     simulations: "Simulations",
+    releases: "Lab releases",
     assets: "Files",
     audit: "Audit log",
     eyebrow: "NEXALAB OPERATIONS",
@@ -42,7 +45,7 @@ const t = text();
  * destructive or privilege-sensitive action asks for a reason in a dialog that
  * names its effect on access and history. Status is always text + icon.
  */
-type Tab = "overview" | "users" | "taxonomy" | "content" | "simulations" | "assets" | "audit";
+type Tab = "overview" | "users" | "taxonomy" | "content" | "simulations" | "releases" | "assets" | "audit";
 
 const TABS: Array<[Tab, string]> = [
   ["overview", t.overview],
@@ -50,6 +53,7 @@ const TABS: Array<[Tab, string]> = [
   ["taxonomy", t.taxonomy],
   ["content", t.content],
   ["simulations", t.simulations],
+  ["releases", t.releases],
   ["assets", t.assets],
   ["audit", t.audit],
 ];
@@ -81,6 +85,7 @@ export default function Admin() {
       {tab === "taxonomy" && <Taxonomy />}
       {tab === "content" && <Content />}
       {tab === "simulations" && <Simulations />}
+      {tab === "releases" && <LabReleases />}
       {tab === "assets" && <Assets />}
       {tab === "audit" && <AuditExplorer />}
     </>

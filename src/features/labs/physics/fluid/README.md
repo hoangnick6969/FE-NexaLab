@@ -14,9 +14,9 @@ fluid/
     two-d/             Balance2D, Cylinder2D (same geometry as 3D)
     hud/               K3Hud guide frame + k3.css tokens
     dev/               K3KitPreview, served only by the dev server at /dev/lab-kits/k3
-  density/             FL-03 only: sample config (PROPOSED_UNAPPROVED); activity comes in Phase 4
+    density/             FL-03 Density activity and registered renderer
 ```
 
 Rules: apparatus receive readings and volumes from the pinned run and only animate towards them; the server
 recomputes every observation and score. FL-04/05 reuse the kit without importing FL-03 state or rubric.
-No FL-03 Lab renderer is registered yet; that waits for the P3.5 gate (plan §10).
+FL-03 Density has an active shared release and a registered renderer. The 2D activity and optional 3D bench share server-pinned run data; the renderer does not grade observations. FL-04 and FL-05 remain planned and are not registered.

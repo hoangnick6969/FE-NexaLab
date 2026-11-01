@@ -28,10 +28,10 @@ labs/
   biology/molecular/              K7: FL-27 (planned)
 ```
 
-- `shared/PhysicalLabEnvironment.tsx` owns the common physical room shell (tiled floor, walls, sink, cabinets and brown worktable). K1 and the FL-10/K2 candidate both use it; kit-specific apparatus stays in its own folder. This source reuse avoids duplicate room geometry definitions; device-level memory and frame-time still require measurement.
-- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit and K2 FL-10) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
+- `shared/PhysicalLabEnvironment.tsx` owns the common physical room shell (tiled floor, walls, sink, cabinets and brown worktable). K1 (Circuit and EM Induction), K3 (Density) and K2 (Mass Conservation) reuse it through `PhysicsStage` or direct composition; kit-specific apparatus stays in its own folder. Source reuse is implemented; representative-device memory and frame-time still need measurement.
+- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1, K2 and K3) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
 - `physics/shared/PhysicsStage.tsx` owns the K1 Canvas lifecycle, responsive camera and WebGL fallback. `LabSpace` remains the fullscreen UI shell, separate from the 3D room environment.
-- `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `induction/` contains the FL-25 scene and uses the same room shell; release availability is controlled by the backend catalog.
+- `physics/electricity/` contains the Circuit bulb/topology and EM Induction views. Circuit is FL-01; induction is the separate FL-25 model/activity. They share room infrastructure only; release availability is controlled by the backend catalog.
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
 - `chemistry/Chemistry.tsx` remains `TECHNICAL_FIXTURE_ONLY`; it is not one of the approved/provisional released Lab experiences.
 - `biology/anatomy/` contains a Lesson resource, not a Foundational Lab implementation.
@@ -40,11 +40,11 @@ labs/
 
 | Kit/apparatus family | Catalog IDs | Code folder | Current FE evidence |
 |---|---|---|---|
-| K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit; FL-25 private prototype in `induction/` (not released) |
-| K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Shared kit and FL-03 density 2D/3D renderer with server-pinned specimens; FL-04 and FL-05 not implemented |
+| K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | Circuit and EM Induction have active shared releases; FL-25 curriculum provenance and device QA remain open |
+| K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | FL-03 Density has an active shared release and renderer using server-pinned specimens; FL-04 and FL-05 are not implemented |
 | K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
-| K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |
+| K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | FL-10 Mass Conservation has an active shared release for one activity; FL-11–15 are not implemented and K2 is not a complete kit |
 | K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | Not implemented |
 | K6 Optics | FL-23 | `physics/optics/` | Not implemented |
 | K8 Genetics HUD | FL-26 | `biology/genetics/` | Not implemented |
