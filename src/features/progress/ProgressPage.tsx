@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Users, AlertCircle, ShieldCheck, Mail, Trash2, FlaskConical, Atom, Eye, Zap, Clock } from "lucide-react";
 import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, Field, useAction, verdictLabel, InlineLoader } from "../../components/ui";
@@ -114,6 +115,12 @@ const text = defineText({
 });
 const t = text();
 
+function LabIcon({ contentId }: { contentId: string }) {
+  if (contentId === "circuit") return <Zap size={18} strokeWidth={2} />;
+  if (contentId === "eye") return <Eye size={18} strokeWidth={2} />;
+  return <FlaskConical size={18} strokeWidth={2} />;
+}
+
 export function ProgressPage() {
   const user = useAuth((s) => s.user)!;
   const [student, setStudent] = useState(
@@ -197,12 +204,18 @@ export function ProgressPage() {
               )}
             </div>
           )}
-          <div className="button-row">
+          <div className="button-row parent-children-row">
             {children.data?.map((c: any) => (
-              <span key={c.student.id}>
-                <button className="secondary" onClick={() => setStudent(c.student.id)}>{c.student.fullName}</button>
+              <span key={c.student.id} className="child-chip-wrap">
                 <button
-                  className="icon-button"
+                  className={`secondary child-pill ${student === c.student.id ? "is-active" : ""}`}
+                  onClick={() => setStudent(c.student.id)}
+                >
+                  <Users size={14} aria-hidden="true" />
+                  <span>{c.student.fullName}</span>
+                </button>
+                <button
+                  className="icon-button child-unlink-btn"
                   aria-label={t.unlink}
                   disabled={unlink.isPending}
                   onClick={() => window.confirm(t.confirmUnlink(c.student.fullName)) && unlink.mutate(c.student.id)}
@@ -291,17 +304,22 @@ export function ProgressPage() {
             <>
               <div className="progress-cards">
                 {q.data.progress.map((p: any) => (
-                  <div className="panel" key={p.contentId}>
-                    <Badge>
-                      {p.status === "completed" ? t.completed : t.inProgress}
-                    </Badge>
+                  <div className="panel progress-lab-card" key={p.contentId}>
+                    <div className="progress-lab-card-header">
+                      <span className="progress-lab-icon">
+                        <LabIcon contentId={p.contentId} />
+                      </span>
+                      <Badge tone={p.status === "completed" ? "passed" : "neutral"}>
+                        {p.status === "completed" ? t.completed : t.inProgress}
+                      </Badge>
+                    </div>
                     <h3>
                       {t.labs[p.contentId as string] ?? p.contentId}
                     </h3>
-                    <div className="progress-track">
+                    <div className="progress-track" role="progressbar" aria-valuenow={Math.round(p.score)} aria-valuemin={0} aria-valuemax={100}>
                       <i style={{ width: p.score + "%" }} />
                     </div>
-                    <p>
+                    <p className="progress-lab-score">
                       {t.scoreAttempts(Math.round(p.score), p.attemptsCount)}
                     </p>
                     <small>{t.highestHint(p.lastHintLevel)}</small>
