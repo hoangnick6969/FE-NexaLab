@@ -6039,7 +6039,7 @@ td small {
   .student-stat-content strong { font-size: 20px; }
   .student-stat-content small { display: none; }
   .student-stat-arrow { position: absolute; top: 19px; right: 12px; width: 14px; }
-  .student-dashboard-columns { grid-template-columns: 1fr; gap: 15px; }
+  .student-dashboard-columns { grid-template-columns: minmax(0, 1fr); gap: 15px; }
   .student-dashboard-main { display: contents; }
   .student-continue-card { min-height: 0; order: 1; padding: 23px; border-radius: 20px; }
   .student-pathway-card { order: 2; padding: 17px; border-radius: 18px; }

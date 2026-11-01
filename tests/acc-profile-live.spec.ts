@@ -15,8 +15,13 @@ async function uploadOn(page: Page) {
   await expect(profile.locator("img.avatar-image")).toHaveAttribute("src", /^https?:\/\//);
   // Confirmation moves the upload out of the staging prefix that the bucket lifecycle rule expires.
   const src = (await profile.locator("img.avatar-image").getAttribute("src")) ?? "";
-  expect(decodeURIComponent(new URL(src).pathname)).toMatch(/\/avatars\/[^/]+\/[0-9a-f-]{36}\.png$/);
-  expect(src).not.toContain("/staging/");
+  const pathname = decodeURIComponent(new URL(src).pathname);
+  // The local driver carries the same object key inside an HMAC-signed token.
+  const objectKey = pathname.startsWith("/api/storage/local/")
+    ? JSON.parse(Buffer.from(pathname.split("/").at(-1)!.split(".")[0], "base64url").toString()).key as string
+    : pathname;
+  expect(objectKey).toMatch(/\/avatars\/[^/]+\/[0-9a-f-]{36}\.png$/);
+  expect(objectKey).not.toContain("/staging/");
   return profile;
 }
 
@@ -32,7 +37,9 @@ test("an adult uploads a private avatar, renames, and removes the avatar", async
   const src = await profile.locator("img.avatar-image").getAttribute("src");
   const image = await page.request.get(src!);
   expect(image.status()).toBe(200);
-  expect(image.headers()["content-type"]).toContain("image/png");
+  const local = new URL(src!).pathname.startsWith("/api/storage/local/");
+  expect(image.headers()["content-type"]).toContain(local ? "application/octet-stream" : "image/png");
+  expect(await image.body()).toEqual(png);
 
   const original = await profile.getByLabel("Tên hiển thị").inputValue();
   await profile.getByLabel("Tên hiển thị").fill(original + " (thử)");

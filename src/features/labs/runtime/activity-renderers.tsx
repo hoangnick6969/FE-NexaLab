@@ -8,9 +8,13 @@ import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
 import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
+import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
+import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
 
-const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…" }, en: { loadingEye: "Loading the 3D eye anatomy model…" } });
+const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…", loadingGene: "Đang nạp mô hình phân tử DNA…" }, en: { loadingEye: "Loading the 3D eye anatomy model…", loadingGene: "Loading the DNA molecule scene…" } });
 const Eye = lazy(() => import("../biology/anatomy/Eye"));
+// FL-27 pulls in the K7 molecular kit; load it only when that Lab opens.
+const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
 
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
@@ -54,6 +58,20 @@ const renderers: readonly LabActivityRenderer[] = [
     },
   },
   {
+    // FL-20 ecology-tolerance, 2D only.
+    key: "ecology-tolerance", labId: "ecology-tolerance", modelRefs: ["ecology-tolerance@1.0.0"], envelope: "checkpoints",
+    defaultState: () => checkpointViewForRenderer("ecology-tolerance")!.defaultEvidence(),
+    Activity: ({ state, onChange }) => {
+      const view = checkpointViewForRenderer("ecology-tolerance")!;
+      return <view.Activity state={state} onChange={onChange} />;
+    },
+    guided: {
+      ready: (state) => checkpointViewForRenderer("ecology-tolerance")!.ready(state),
+      copy: circuitBulbCopy,
+      Result: ({ result, verdict }) => <CircuitBulbResult result={result} verdict={verdict} describeObservation={checkpointViewForRenderer("ecology-tolerance")!.describeResult} />,
+    },
+  },
+  {
     key: "circuit", labId: "circuit", modelRefs: ["circuit@1.0.0"], envelope: "labState",
     defaultState: defaultCircuit,
     Activity: ({ state, onChange, resetKey }) => <Circuit key={resetKey} initial={state.nodes ? state : defaultCircuit()} onChange={onChange} />,
@@ -70,6 +88,16 @@ const renderers: readonly LabActivityRenderer[] = [
     defaultState: defaultDensityEvidence,
     Activity: ({ state, onChange, resetKey, runtimeParams }) => <DensityActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />,
     guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
+  },
+  {
+    // FL-27 gene-to-protein, private engineering prototype. The server pins a gene variant per run (runtimeParams.variantId)
+    // and marks the evidence with rubric gene-protein-stations@1.0.0.
+    key: "gene-expression", labId: "gene-protein", modelRefs: ["gene-expression@1.0.0"], envelope: "evidence",
+    defaultState: defaultGeneEvidence,
+    Activity: ({ state, onChange, resetKey, runtimeParams }) => <Suspense fallback={<InlineLoader message={text().loadingGene} />}>
+      <GeneProteinActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />
+    </Suspense>,
+    guided: { ready: geneEvidenceReady, copy: geneResultCopy, Result: GeneResult },
   },
   {
     key: "mass-conservation", labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"], envelope: "labState",

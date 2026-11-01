@@ -1,4 +1,4 @@
-import { FlaskConical, ArrowUpRight, Zap, Eye, Magnet, Scale, Search, X, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { FlaskConical, ArrowUpRight, Zap, Eye, Magnet, Scale, Search, X, RotateCcw, SlidersHorizontal, Dna } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState, useMemo } from "react";
@@ -287,7 +287,7 @@ export function LabCards({ guided = false, showFilters = false }: { guided?: boo
                 <span className="lab-subject">{l.subject}</span>
                 <span className="art-number">{l.number}</span>
                 <div className="art-symbol">
-                  {l.id === "circuit" ? <Zap size={34} strokeWidth={1.75} /> : l.id === "eye" ? <Eye size={34} strokeWidth={1.75} /> : l.id === "em-induction" ? <Magnet size={34} strokeWidth={1.75} /> : l.id === "density" || l.id === "mass-conservation" ? <Scale size={34} strokeWidth={1.75} /> : <FlaskConical size={34} strokeWidth={1.75} />}
+                  {l.id === "circuit" ? <Zap size={34} strokeWidth={1.75} /> : l.id === "eye" ? <Eye size={34} strokeWidth={1.75} /> : l.id === "em-induction" ? <Magnet size={34} strokeWidth={1.75} /> : l.id === "density" || l.id === "mass-conservation" ? <Scale size={34} strokeWidth={1.75} /> : l.id === "gene-protein" ? <Dna size={34} strokeWidth={1.75} /> : <FlaskConical size={34} strokeWidth={1.75} />}
                 </div>
                 <span className="art-caption">NEXALAB / EXPERIMENT {l.number}</span>
               </div>
