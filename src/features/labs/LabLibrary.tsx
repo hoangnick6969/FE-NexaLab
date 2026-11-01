@@ -15,6 +15,7 @@ const text = defineText({
     basicsFirst: "Học kiến thức nền trước",
     explore: "Khám phá phòng lab",
     relatedLesson: "Bài học liên quan",
+    moreRelatedLessons: (count: number) => `Xem thêm ${count} bài học liên quan`,
     nonePublished: "Chưa có phòng thực hành nền tảng nào được phát hành.",
     eyebrow: "HỌC QUA TRẢI NGHIỆM",
     title: "Phòng thí nghiệm",
@@ -44,6 +45,7 @@ const text = defineText({
     basicsFirst: "Learn the basics first",
     explore: "Explore the lab",
     relatedLesson: "Related lesson",
+    moreRelatedLessons: (count: number) => `Show ${count} more related lessons`,
     nonePublished: "No foundation labs are published yet.",
     eyebrow: "LEARN BY EXPERIENCE",
     title: "Labs",
@@ -83,11 +85,11 @@ export function LabCards({ guided = false, showFilters = false }: { guided?: boo
   const cards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
     const visual = labInfo.find((item) => item.id === lab.id);
     const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
-    return visual ? [{ ...visual, title: lab.title, description: lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
+    return visual ? [{ ...visual, grade: "grade" in visual ? visual.grade : undefined, title: lab.title, description: lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
   }) : labInfo.map((visual) => {
     const lab = labs.data?.find((item) => item.id === visual.id);
     const label = labCurriculumLabel(lab, visual.subject, t.grades);
-    return { ...visual, title: lab?.title ?? visual.title, description: lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
+    return { ...visual, grade: "grade" in visual ? visual.grade : undefined, title: lab?.title ?? visual.title, description: lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
   });
 
   const gradeCounts = useMemo(() => {
@@ -306,7 +308,18 @@ export function LabCards({ guided = false, showFilters = false }: { guided?: boo
                 </div>
               </div>
             </Link>
-            {l.lessonLinks?.map((lesson) => <Link className="lab-library-lesson" key={lesson.lessonId} to={relatedLessonHref(lesson.lessonId)}>{t.relatedLesson}: {lesson.title}<ArrowUpRight size={15} /></Link>)}
+            {!!l.lessonLinks?.length && <div className="lab-library-lesson-row">
+              <span className="lab-library-lesson-label">{t.relatedLesson}:</span>
+              <Link className="lab-library-lesson-primary" to={relatedLessonHref(l.lessonLinks[0].lessonId)}>
+                <span>{l.lessonLinks[0].title}</span><ArrowUpRight size={15} aria-hidden="true" />
+              </Link>
+              {l.lessonLinks.length > 1 && <details className="lab-library-lesson-more">
+                <summary aria-label={t.moreRelatedLessons(l.lessonLinks.length - 1)}>+{l.lessonLinks.length - 1}</summary>
+                <ul>
+                  {l.lessonLinks.slice(1).map((lesson) => <li key={lesson.lessonId}><Link to={relatedLessonHref(lesson.lessonId)}>{lesson.title}<ArrowUpRight size={14} aria-hidden="true" /></Link></li>)}
+                </ul>
+              </details>}
+            </div>}
           </article>
         ))}
         {filteredCards.length === 0 && cards.length > 0 && (
