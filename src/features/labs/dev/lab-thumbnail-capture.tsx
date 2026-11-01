@@ -10,6 +10,7 @@ import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtei
 import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evidence";
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
+import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -40,6 +41,7 @@ const scenes: Record<string, () => ReactNode> = {
   />,
   "mass-conservation": () => <WetBenchStage mixed pouring={false} scaleReading="435,0 g" onContextLost={() => undefined} />,
   "gene-protein": () => <GeneProtein3DStage station="structure" evidence={defaultGeneEvidence()} bench={initialGeneBench("structure")} />,
+  "lever-equilibrium": () => <K5Stage3D attachments={[{ kind: "WEIGHT", positionMillimetres: -100, forceMilliNewtons: 1000 }]} tilt="LEVEL" reduced={false} />,
 };
 
 const labId = new URLSearchParams(location.search).get("lab");
