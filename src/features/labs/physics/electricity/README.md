@@ -2,7 +2,7 @@
 
 Provisional portfolio group: FL-01 and FL-25. The root files implement the FL-01 Circuit bulb/topology family.
 
-`induction/` is the FL-25 electromagnetic-induction **private engineering prototype** (owner exception recorded 2026-10-31 while the P3.5 gate is not met). It has its own model (`em-induction@1.0.0`), activity and apparatus, and shares only the K1 room (`../shared/PhysicsStage.tsx`) and the `Wire` cable component. It is not a released or reviewed Lab. Plan and blueprint: `BE-NexaLab/_bmad-output/specs/spec-fl-25-em-induction/`.
+`induction/` implements FL-25 electromagnetic induction with its own model (`em-induction@1.0.0`), activity and apparatus. It shares the K1 room (`../shared/PhysicsStage.tsx`) and the `Wire` cable component. The shared database has FL-25 release v1 active as of 2026-11-01 with a historical `OWNER_SIGNOFF_V1` receipt. New release drafts use `DEV_APPROVAL_V1` after developer/agent checks in Admin. KHTN 9 outcome provenance and representative-device QA remain open. Plan and blueprint: `BE-NexaLab/_bmad-output/specs/spec-fl-25-em-induction/`.
 
 - `em-evidence.ts`: checkpoint evidence, phase machine and the advisory `@nexalab/sim` preview.
 - `choreography.ts`: presentation timing shared by the 3D and 2D views; the current sign always comes from the model observation.

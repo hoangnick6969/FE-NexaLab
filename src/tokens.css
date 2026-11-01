@@ -322,6 +322,12 @@
   --text: #14202b;
   --text-green: #233c34;
   --text-muted: #506070;
+  /* UI component tokens */
+  --fill-neutral-98: #f8faf7;
+  --line-focus: #89bda0;
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  --surface-glass-light: rgba(255, 255, 255, 0.85);
+  --surface-glass-chip-active: rgba(255, 255, 255, 0.25);
 }
 
 :root[data-theme="dark"] {
@@ -619,6 +625,12 @@
   --text: #c1d1e0;
   --text-green: #acc9be;
   --text-muted: #9caec0;
+  /* UI component tokens – dark overrides */
+  --fill-neutral-98: #1a2424;
+  --line-focus: #3d7060;
+  --surface-glass: rgba(24, 32, 32, 0.88);
+  --surface-glass-light: rgba(24, 32, 32, 0.85);
+  --surface-glass-chip-active: rgba(255, 255, 255, 0.15);
 }
 
 /* Motion (notifications dropdown + toasts): enters ease out, exits run ~65% of the enter and ease in. */

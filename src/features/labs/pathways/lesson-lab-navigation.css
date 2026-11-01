@@ -12,6 +12,17 @@
 .lab-lesson-context strong { display: block; margin-top: 6px; }
 .lab-library-item { min-width: 0; display: flex; flex-direction: column; }
 .lab-library-item > .lab-card { flex: 1; }
-.lab-library-lesson { display: flex; align-items: center; gap: 8px; padding: 13px 8px; color: var(--brand-green); font-size: 13px; }
+.lab-library-lesson-row { position: relative; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 52px; padding: 4px 8px; color: var(--brand-green); font-size: 13px; line-height: 1.4; }
+.lab-library-lesson-label { flex: 0 0 auto; color: var(--text-muted); }
+.lab-library-lesson-primary { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: inherit; text-decoration: none; }
+.lab-library-lesson-primary span { overflow-wrap: anywhere; }
+.lab-library-lesson-primary:hover, .lab-library-lesson-more li a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.lab-library-lesson-row a:focus-visible, .lab-library-lesson-more summary:focus-visible { outline: 3px solid var(--brand-green); outline-offset: 2px; border-radius: 4px; }
+.lab-library-lesson-more { position: relative; flex: 0 0 auto; }
+.lab-library-lesson-more summary { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--brand-green); font-weight: 700; cursor: pointer; list-style: none; }
+.lab-library-lesson-more summary::-webkit-details-marker { display: none; }
+.lab-library-lesson-more ul { position: absolute; z-index: 20; right: 0; bottom: calc(100% + 6px); width: min(280px, 75vw); max-height: 240px; overflow-y: auto; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 24px rgb(0 0 0 / 14%); list-style: none; }
+.lab-library-lesson-more li a { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 44px; padding: 10px; color: var(--brand-green); text-decoration: none; }
+@media (max-width: 600px) { .lab-library-lesson-row { align-items: flex-start; flex-wrap: wrap; } .lab-library-lesson-primary { flex: 1 1 65%; } .lab-library-lesson-more summary { min-height: 44px; } }
 @media (max-width: 600px) { .lesson-lab-card { padding: 16px; } .lesson-lab-card .button-row > a { width: 100%; justify-content: center; } .lab-lesson-context { padding: 16px; } }
 .lesson-detail-main-col:only-child { grid-column: 1 / -1; min-width: 0; }

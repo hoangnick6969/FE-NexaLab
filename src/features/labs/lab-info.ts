@@ -69,12 +69,14 @@ const catalogEntries = [
     ...t.geneProtein,
     className: "biology",
     number: "06",
+    grade: 9,
   },
   {
     id: "mass-conservation",
     ...t.massConservation,
     className: "chemistry",
     number: "07",
+    grade: 8,
   },
 ];
 

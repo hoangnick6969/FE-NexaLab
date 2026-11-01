@@ -136,4 +136,3 @@ export function GeneNotebook({ station, evidence, patch, codonInFocus }: { stati
     <p className="k7-status" data-testid="gene-readiness">{missing.length ? <CircleAlert size={15} aria-hidden="true" /> : <CircleCheck size={15} aria-hidden="true" />}<span>{missing.length ? t.missing(missing.join(", ")) : t.allDone}</span></p>
   </section>;
 }
-

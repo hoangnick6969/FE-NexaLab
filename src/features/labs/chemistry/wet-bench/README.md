@@ -12,6 +12,6 @@ Planned portfolio group: FL-10–FL-15. Each Lab keeps its own scientific model,
 
 ## FL-10 candidate boundary
 
-FL-10 currently uses this candidate scene with `MassConservationActivity` for one activity: conservation of mass in the BaCl₂ + Na₂SO₄ precipitation reaction. It does not cover the full FL-10 scope such as mole calculations, limiting reactants or balancing general equations. Source, science, safety, rubric and OWNER_SIGNOFF gates remain open, so this is not a released Lab.
+FL-10 uses this scene with `MassConservationActivity` for one activity: conservation of mass in the BaCl₂ + Na₂SO₄ precipitation reaction. It does not cover the full FL-10 scope such as mole calculations, limiting reactants or balancing general equations. The shared database has Mass Conservation release v1 active as of 2026-11-01 with a historical `OWNER_SIGNOFF_V1` receipt. New drafts use `DEV_APPROVAL_V1` after developer/agent checks in Admin. This released activity does not complete the full FL-10 portfolio scope.
 
 Both solutions are colorless in reality. The vessels use high-contrast labels and a safety warning for soluble barium; the white BaSO₄ precipitate is a model visualization.
