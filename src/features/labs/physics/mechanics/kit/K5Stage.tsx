@@ -19,7 +19,7 @@ export function K5Stage2D({ attachments, tilt }: { attachments: readonly K5Attac
       <rect x="40" y="285" width="620" height="22" rx="5" fill="#ad794c" />
       <path d="M350 190 L310 280 L390 280 Z" fill="#647478" stroke="#354145" strokeWidth="3" />
       <circle cx="350" cy="190" r="14" fill="#c5cdd0" stroke="#354145" strokeWidth="3" />
-      <g transform={`rotate(${angle(tilt) * 180 / Math.PI} 350 190)`}>
+      <g transform={`rotate(${-angle(tilt) * 180 / Math.PI} 350 190)`}>
         <rect x="90" y="179" width="520" height="22" rx="5" fill="#b48151" stroke="#63452e" strokeWidth="3" />
         {K5_HOLES.map((position, index) => <g key={position}><circle cx={100 + index * 50} cy="190" r="7" fill="#29383a" stroke="#e4d9bb" strokeWidth="2" /><text x={100 + index * 50} y="170" textAnchor="middle" fontSize="13" fill="#243039">{position}</text></g>)}
         {attachments.map(item => { const x = 350 + item.positionMillimetres; return <g key={item.positionMillimetres}><line x1={x} x2={x} y1="198" y2="230" stroke="#354145" strokeWidth="3" /><rect x={x - 25} y="230" width="50" height="38" rx="5" fill={item.kind === "GAUGE" ? "#e2b65e" : "#6d8390"} stroke="#354145" strokeWidth="2" /><text x={x} y="253" textAnchor="middle" fontSize="12" fill="#1d2b30">{newtons(item.forceMilliNewtons)}</text></g>; })}

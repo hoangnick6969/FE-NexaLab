@@ -33,6 +33,11 @@ test("FL-06 K5 completes six ordered events with 2D, 3D, mobile and WebGL fallba
   await page.getByLabel("Dự đoán bên phải").selectOption("TILT_RIGHT");
   await page.getByRole("button", { name: "Ghi dự đoán" }).click();
   await expect(page.getByText(/Đầu trái nghiêng xuống/)).toBeVisible();
+  const leftIsLower = await page.locator(".k5-visual-2d svg").evaluate(svg => {
+    const circles = svg.querySelectorAll("circle");
+    return circles[1].getBoundingClientRect().y > circles[6].getBoundingClientRect().y;
+  });
+  expect(leftIsLower).toBe(true);
   await page.getByLabel("Trạng thái lần 1").selectOption("TILT_LEFT");
   await page.getByRole("button", { name: "Tại O" }).click();
   await page.getByLabel("Trạng thái lần 2").selectOption("LEVEL");
