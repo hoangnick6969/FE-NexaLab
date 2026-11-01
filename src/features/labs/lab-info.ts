@@ -18,6 +18,7 @@ const text = defineText({
     induction: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM 3D", title: "Cảm ứng điện từ", description: "Đẩy, kéo nam châm và quay máy phát để thấy khi nào có dòng điện cảm ứng." },
     density: { subject: "VẬT LÝ", tag: "THỰC HÀNH", title: "Xác định khối lượng riêng", description: "Cân, đo thể tích và tính khối lượng riêng của khối gỗ, nước và hòn sỏi." },
     massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
+    ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
   },
   en: {
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
@@ -26,6 +27,7 @@ const text = defineText({
     induction: { subject: "PHYSICS", tag: "3D EXPERIMENT", title: "Electromagnetic induction", description: "Push and pull a magnet and turn a generator to see when an induced current appears." },
     density: { subject: "PHYSICS", tag: "PRACTICAL", title: "Measuring density", description: "Weigh, measure volume and work out the density of a wooden block, water and a pebble." },
     massConservation: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Conservation of mass", description: "Observe a precipitation reaction and compare the mass before and after." },
+    ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
   },
 });
 const t = text();
@@ -67,6 +69,12 @@ const catalogEntries = [
     ...t.massConservation,
     className: "chemistry",
     number: "06",
+  },
+  {
+    id: "ecology-tolerance",
+    ...t.ecology,
+    className: "biology",
+    number: "07",
   },
 ];
 
