@@ -36,8 +36,8 @@ function Apparatus({ attachments, tilt, reduced }: { attachments: readonly K5Att
     const target = angle(tilt);
     bar.current.rotation.z = reduced ? target : THREE.MathUtils.damp(bar.current.rotation.z, target, 7, delta);
   });
-  return <group position={[0, .5, 0]}>
-    <mesh position={[0, -.25, 0]} castShadow><cylinderGeometry args={[.55, .85, .6, 4]} /><meshStandardMaterial color="#77858a" metalness={.45} roughness={.35} /></mesh>
+  return <group position={[0, .9, 0]}>
+    <mesh position={[0, -.65, 0]} castShadow><cylinderGeometry args={[.55, .85, .6, 4]} /><meshStandardMaterial color="#77858a" metalness={.45} roughness={.35} /></mesh>
     <mesh position={[0, 0, .12]} castShadow rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[.13, .13, .5, 32]} /><meshStandardMaterial color="#c2ccd0" metalness={.8} roughness={.25} /></mesh>
     <group ref={bar}>
       <mesh castShadow><boxGeometry args={[5.2, .18, .28]} /><meshStandardMaterial color="#ab7649" roughness={.5} /></mesh>
