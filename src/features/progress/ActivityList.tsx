@@ -1,3 +1,4 @@
+import { HelpCircle, FlaskConical, ChevronRight } from "lucide-react";
 import { type ActivityItem } from "../../lib/api";
 import { Badge, verdictLabel } from "../../components/ui";
 import { type SheetView, stepNames, time, verdictTone } from "./progress-format";
@@ -72,7 +73,16 @@ export function ActivityGroups({
 function ActivityRow({ item, onOpen }: { item: ActivityItem; onOpen: (view: SheetView, event: React.MouseEvent<HTMLElement>) => void }) {
   return (
     <li className="activity-row">
-      <Badge tone="outline">{item.kind === "QUIZ" ? t.quiz : t.practice}</Badge>
+      <Badge tone="outline">
+        <span className="activity-kind-badge">
+          {item.kind === "QUIZ" ? (
+            <HelpCircle size={13} className="activity-kind-icon" aria-hidden="true" />
+          ) : (
+            <FlaskConical size={13} className="activity-kind-icon" aria-hidden="true" />
+          )}
+          <span>{item.kind === "QUIZ" ? t.quiz : t.practice}</span>
+        </span>
+      </Badge>
       <div className="activity-title">
         <b>{item.title}</b>
         <span className="tiny muted">
@@ -88,10 +98,11 @@ function ActivityRow({ item, onOpen }: { item: ActivityItem; onOpen: (view: Shee
       <time dateTime={item.occurredAt} className="tiny muted">{time(item.occurredAt)}</time>
       <button
         type="button"
-        className="link-button"
+        className="link-button activity-details-btn"
         onClick={(event) => onOpen(item.kind === "QUIZ" ? { kind: "quiz", id: item.id } : { kind: "practical", id: item.id }, event)}
       >
-        {t.details}
+        <span>{t.details}</span>
+        <ChevronRight size={13} aria-hidden="true" />
       </button>
     </li>
   );
