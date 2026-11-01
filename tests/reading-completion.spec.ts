@@ -29,7 +29,7 @@ test("assigned reading completion retries and resumes from server evidence", asy
   // I1 moved reading, video and study cards from the assignment page to the lesson page.
   await page.goto("/lessons/lesson-circuit?assignmentId=pilot-a-lesson-assignment");
 
-  const reading = page.getByRole("region", { name: "Nội dung bài đọc có thể cuộn" });
+  const reading = page.getByRole("region", { name: "Nội dung bài đọc" });
   const complete = page.getByRole("button", { name: "Hoàn thành phần đọc" });
   const done = page.getByRole("status").filter({ hasText: "Đã hoàn thành phần đọc" });
   await expect(reading).toBeVisible();

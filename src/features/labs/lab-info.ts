@@ -17,7 +17,9 @@ const text = defineText({
     chemistry: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Những biến đổi kỳ diệu", description: "Khám phá phản ứng, quan sát hiện tượng và chất dư." },
     induction: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM 3D", title: "Cảm ứng điện từ", description: "Đẩy, kéo nam châm và quay máy phát để thấy khi nào có dòng điện cảm ứng." },
     density: { subject: "VẬT LÝ", tag: "THỰC HÀNH", title: "Xác định khối lượng riêng", description: "Cân, đo thể tích và tính khối lượng riêng của khối gỗ, nước và hòn sỏi." },
+    geneProtein: { subject: "SINH HỌC", tag: "MÔ HÌNH 3D", title: "Từ gene đến protein", description: "Tái bản DNA, phiên mã, dịch mã và quan sát một đột biến điểm làm thay đổi protein." },
     massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
+    lever: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Moment lực và đòn bẩy", description: "Đo moment lực, tìm vị trí cân bằng và vận dụng đòn bẩy." },
     ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
   },
   en: {
@@ -26,7 +28,9 @@ const text = defineText({
     chemistry: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Amazing changes", description: "Explore reactions, observe what happens and what is left over." },
     induction: { subject: "PHYSICS", tag: "3D EXPERIMENT", title: "Electromagnetic induction", description: "Push and pull a magnet and turn a generator to see when an induced current appears." },
     density: { subject: "PHYSICS", tag: "PRACTICAL", title: "Measuring density", description: "Weigh, measure volume and work out the density of a wooden block, water and a pebble." },
+    geneProtein: { subject: "BIOLOGY", tag: "3D MODEL", title: "From gene to protein", description: "Replicate DNA, transcribe and translate a gene, and see how one point mutation changes the protein." },
     massConservation: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Conservation of mass", description: "Observe a precipitation reaction and compare the mass before and after." },
+    lever: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Lever equilibrium", description: "Explore force, distance, torque and balance." },
     ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
   },
 });
@@ -65,17 +69,21 @@ const catalogEntries = [
     number: "05",
   },
   {
+    id: "gene-protein",
+    ...t.geneProtein,
+    className: "biology",
+    number: "06",
+    grade: 9,
+  },
+  {
     id: "mass-conservation",
     ...t.massConservation,
     className: "chemistry",
-    number: "06",
-  },
-  {
-    id: "ecology-tolerance",
-    ...t.ecology,
-    className: "biology",
     number: "07",
+    grade: 8,
   },
+  { id: "lever-equilibrium", ...t.lever, className: "physics", number: "08", grade: 8 },
+  { id: "ecology-tolerance", ...t.ecology, className: "biology", number: "09", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({

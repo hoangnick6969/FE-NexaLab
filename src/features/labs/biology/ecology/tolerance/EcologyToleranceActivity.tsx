@@ -453,4 +453,3 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     </div>
   </section>;
 }
-

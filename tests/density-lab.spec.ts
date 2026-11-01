@@ -299,15 +299,21 @@ test("reduced motion snaps 3D water and balance state without a stream", async (
   await waterPreview(page, true);
   await page.getByTestId("density-balance-toggle").click({ force: true });
   await page.getByTestId("density-transfer").click({ force: true });
-  await page.clock.runFor(100);
-  await expect.poll(async () => (await waterScene(page))?.cup).toBeCloseTo(50, 4);
+  // The page clock is paused: wall-time polling cannot flush an R3F invalidate.
+  // Advance RAF on each poll so slower grouped runs can commit the snapped scene.
+  await expect.poll(async () => {
+    await page.clock.runFor(32);
+    return (await waterScene(page))?.cup;
+  }, { timeout: 15000 }).toBeCloseTo(50, 4);
   const sample = (await waterScene(page))!;
   expect(sample.stream).toBe(false);
   expect(sample.tilt).toBe(0);
   expect(sample.cylinderPosition).toEqual([40, 0, -10]);
   await page.getByTestId("density-transfer").click({ force: true });
-  await page.clock.runFor(100);
-  await expect.poll(async () => (await waterScene(page))?.cylinder).toBeCloseTo(50, 4);
+  await expect.poll(async () => {
+    await page.clock.runFor(32);
+    return (await waterScene(page))?.cylinder;
+  }, { timeout: 15000 }).toBeCloseTo(50, 4);
 });
 
 test("both 3D pebbles stay within the bore throughout the drop and rest on the inner floor", async ({ page }) => {

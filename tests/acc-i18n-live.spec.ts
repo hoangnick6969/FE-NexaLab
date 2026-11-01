@@ -32,7 +32,7 @@ test("English from the landing page through the app, saved on the profile, then 
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
     await expect(page.getByText("Ready to explore")).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Notifications/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Notifications/ })).toBeVisible();
     // The language picked before sign-in is newer than the profile's, so it is saved there.
     await expect.poll(async () => (await call("/me/profile", "GET", undefined, token)).data.preferences.locale).toBe("en");
 

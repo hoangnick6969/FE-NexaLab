@@ -6,7 +6,11 @@ import { Density3DStage } from "../physics/fluid/density/Density3DStage";
 import type { StageView } from "../physics/shared/PhysicsStage";
 import { defaultDensityEvidence } from "../physics/fluid/density/density-evidence";
 import { WetBenchStage } from "../chemistry/wet-bench/WetBenchStage";
+import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtein3DStage";
+import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evidence";
+import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
+import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -36,6 +40,13 @@ const scenes: Record<string, () => ReactNode> = {
     view={densityThumbnailView}
   />,
   "mass-conservation": () => <WetBenchStage mixed pouring={false} scaleReading="435,0 g" onContextLost={() => undefined} />,
+  "gene-protein": () => <GeneProtein3DStage station="structure" evidence={defaultGeneEvidence()} bench={initialGeneBench("structure")} />,
+  "lever-equilibrium": () => <div className="k5-thumbnail-close"><K5Stage3D attachments={[
+    { kind: "WEIGHT", positionMillimetres: -150, forceMilliNewtons: 1500 },
+    { kind: "WEIGHT", positionMillimetres: 100, forceMilliNewtons: 1000 },
+  ]} tilt="LEVEL" reduced />
+    <style>{`.k5-thumbnail-close .physics-stage { --k5-thumbnail-zoom: 1; } .k5-thumbnail-close canvas { transform: scale(1.35); }`}</style>
+  </div>,
 };
 
 const labId = new URLSearchParams(location.search).get("lab");

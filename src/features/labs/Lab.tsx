@@ -11,7 +11,9 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
-import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";import { useLabRunHost } from "./runtime/lab-run-host";
+import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
+import { LeverInvestigationActivity } from "./physics/mechanics/LeverInvestigationActivity";
+import { useLabRunHost } from "./runtime/lab-run-host";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
@@ -261,10 +263,15 @@ export default function Lab() {
       : <MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
           onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()}
           attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+  if (id === "lever-equilibrium") return space(user.role !== "STUDENT"
+    ? <section className="panel"><p>FL-06 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
+    : !labRun.launch || !labRun.rendererKey
+      ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành đòn bẩy. Dự đoán được ghi trước khi mở kết quả.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
+      : <LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {runtimeReady && preview && !guided && id !== "eye" && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      {runtimeReady && preview && !guided && (id === "circuit" || typeof preview.extent === "number") && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
       <div className="lab-layout">
         <section className="lab-workspace">
           {runtimeReady && <div className="workspace-toolbar">

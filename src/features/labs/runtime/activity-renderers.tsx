@@ -8,9 +8,13 @@ import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
 import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
+import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
+import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
 
-const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…" }, en: { loadingEye: "Loading the 3D eye anatomy model…" } });
+const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…", loadingGene: "Đang nạp mô hình phân tử DNA…" }, en: { loadingEye: "Loading the 3D eye anatomy model…", loadingGene: "Loading the DNA molecule scene…" } });
 const Eye = lazy(() => import("../biology/anatomy/Eye"));
+// FL-27 pulls in the K7 molecular kit; load it only when that Lab opens.
+const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
 
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
@@ -86,9 +90,23 @@ const renderers: readonly LabActivityRenderer[] = [
     guided: { ready: densityEvidenceReady, copy: densityCopy, Result: DensityResult },
   },
   {
+    // FL-27 gene-to-protein, private engineering prototype. The server pins a gene variant per run (runtimeParams.variantId)
+    // and marks the evidence with rubric gene-protein-stations@1.0.0.
+    key: "gene-expression", labId: "gene-protein", modelRefs: ["gene-expression@1.0.0"], envelope: "evidence",
+    defaultState: defaultGeneEvidence,
+    Activity: ({ state, onChange, resetKey, runtimeParams }) => <Suspense fallback={<InlineLoader message={text().loadingGene} />}>
+      <GeneProteinActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />
+    </Suspense>,
+    guided: { ready: geneEvidenceReady, copy: geneResultCopy, Result: GeneResult },
+  },
+  {
     key: "mass-conservation", labId: "mass-conservation", modelRefs: ["mass-conservation@1.0.0"], envelope: "labState",
     defaultState: () => ({}),
     Activity: () => null, // The run-bound FL-10 activity is rendered by Lab.
+  },
+  {
+    key: "lever-bench", labId: "lever-equilibrium", modelRefs: ["lever-bench@1.0.0"], envelope: "labState",
+    defaultState: () => ({}), Activity: () => null, // Run-bound K5 activity renders in Lab.
   },
   {
     key: "chemistry", labId: "chemistry", modelRefs: ["chemistry@1.0.0"], envelope: "labState",

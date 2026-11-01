@@ -1,4 +1,4 @@
-import { Atom, LayoutDashboard, FlaskConical, BookOpen, Users, ChartNoAxesCombined, LogOut, Settings, GraduationCap, ClipboardList } from "lucide-react";
+import { Atom, LayoutDashboard, FlaskConical, BookOpen, Users, ChartNoAxesCombined, LogOut, Settings, GraduationCap, ClipboardList, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Suspense, lazy, useEffect, useLayoutEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useLocation, Link } from "react-router-dom";
 import { api, useAuth, restore } from "../lib/api";
@@ -20,6 +20,8 @@ import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 // Development-only K3 apparatus bench; the branch is removed from production builds.
 const K3KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/kit/dev/K3KitPreview")) : null;
 const DensityPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/density/dev/DensityPilotPreview")) : null;
+const K7KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/kit/dev/K7KitPreview")) : null;
+const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/gene-protein/dev/GeneProteinPilotPreview")) : null;
 
 const PublicLanding = lazy(() =>
   import("../features/landing/PublicLanding").then((m) => ({ default: m.PublicLanding }))
@@ -98,6 +100,8 @@ const text = defineText({
     signOut: "Đăng xuất",
     ready: "Sẵn sàng khám phá",
     account: "Tài khoản",
+    collapseSidebar: "Thu gọn menu",
+    expandSidebar: "Mở rộng menu",
     loadingSpace: "Đang nạp không gian học tập…",
     footerLeft: "NexaLab · Chạm vào khoa học",
     footerRight: "Quan sát. Thử nghiệm. Thấu hiểu.",
@@ -127,11 +131,17 @@ const text = defineText({
     signOut: "Sign out",
     ready: "Ready to explore",
     account: "Account",
+    collapseSidebar: "Collapse sidebar",
+    expandSidebar: "Expand sidebar",
     loadingSpace: "Loading your learning space…",
     footerLeft: "NexaLab · Touch science",
     footerRight: "Observe. Experiment. Understand.",
   },
 });
+
+// Module-level flag: survives HMR component remounts so the auth restore does
+// not flash the full-screen PageLoader on every hot-reload in development.
+let _restoreSettled = false;
 
 export default function App() {
   const { user } = useAuth();
@@ -156,12 +166,35 @@ export default function App() {
     if (savedLocale) setLocale(savedLocale);
   }, [profileLoaded, savedLocale]);
   const t = text();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(_restoreSettled);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("nexalab:sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("nexalab:sidebar-collapsed", String(next));
+      } catch {
+        // Safe fallback when storage is inaccessible
+      }
+      return next;
+    });
+  };
   useLayoutEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [location.pathname, location.hash]);
   useEffect(() => {
-    restore().finally(() => setReady(true));
+    if (_restoreSettled) return; // Already ran — skip HMR re-runs
+    restore().finally(() => {
+      _restoreSettled = true;
+      setReady(true);
+    });
   }, []);
   if (!ready)
     return (
@@ -175,6 +208,10 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K3KitPreview /></Suspense>;
   if (DensityPilotPreview && location.pathname === "/dev/lab-kits/density")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><DensityPilotPreview /></Suspense>;
+  if (K7KitPreview && location.pathname === "/dev/lab-kits/k7")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K7KitPreview /></Suspense>;
+  if (GeneProteinPilotPreview && location.pathname === "/dev/lab-kits/gene-protein")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><GeneProteinPilotPreview /></Suspense>;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {
@@ -200,19 +237,33 @@ export default function App() {
     <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
   </Suspense>;
   return (
-    <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}`}>
-      <aside className="sidebar">
-        <Link to="/" className="brand">
-          <span className="brand-icon">
-            <Atom size={25} />
-          </span>
-          NexaLab<span className="brand-dot">.</span>
-        </Link>
+    <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+      <aside className={`sidebar${sidebarCollapsed ? " is-collapsed" : ""}`}>
+        <div className="sidebar-header">
+          <Link to="/" className="brand" title="NexaLab">
+            <span className="brand-icon">
+              <Atom size={25} />
+            </span>
+            <span className="brand-text">
+              NexaLab<span className="brand-dot">.</span>
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            onClick={toggleSidebar}
+            title={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
+            aria-label={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
+            aria-expanded={!sidebarCollapsed}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
         <div className="workspace">
           <span className="workspace-icon">
             <GraduationCap size={20} />
           </span>
-          <div>
+          <div className="workspace-info">
             <b>{t.workspace}</b>
             <small>{t.workspaceScope}</small>
           </div>
@@ -221,36 +272,37 @@ export default function App() {
         <nav>
           {user.role === "STUDENT" ? (
             <>
-              <NavLink end to="/" aria-label={t.home}><LayoutDashboard />{t.home}</NavLink>
-              <NavLink to="/lessons" aria-label={t.lessons}><BookOpen />{t.lessons}</NavLink>
-              <NavLink to="/labs" aria-label={t.labsLabel}><FlaskConical />{t.labsShort}</NavLink>
-              <NavLink to="/assignments" aria-label={t.assignments}><ClipboardList />{t.assignments}</NavLink>
-              <NavLink to="/classes" aria-label={t.classSpace}><Users />{t.classSpace}</NavLink>
-              <NavLink to="/progress" aria-label={t.progress}><ChartNoAxesCombined />{t.progress}</NavLink>
+              <NavLink end to="/" aria-label={t.home} title={t.home}><LayoutDashboard /><span className="nav-text">{t.home}</span></NavLink>
+              <NavLink to="/lessons" aria-label={t.lessons} title={t.lessons}><BookOpen /><span className="nav-text">{t.lessons}</span></NavLink>
+              <NavLink to="/labs" aria-label={t.labsLabel} title={t.labsLabel}><FlaskConical /><span className="nav-text">{t.labsShort}</span></NavLink>
+              <NavLink to="/assignments" aria-label={t.assignments} title={t.assignments}><ClipboardList /><span className="nav-text">{t.assignments}</span></NavLink>
+              <NavLink to="/classes" aria-label={t.classSpace} title={t.classSpace}><Users /><span className="nav-text">{t.classSpace}</span></NavLink>
+              <NavLink to="/progress" aria-label={t.progress} title={t.progress}><ChartNoAxesCombined /><span className="nav-text">{t.progress}</span></NavLink>
             </>
           ) : (
             <>
-              <NavLink end to="/"><LayoutDashboard />{t.overview}</NavLink>
-              {user.role === "TEACHER" && <NavLink to="/labs"><FlaskConical />{t.labsLabel}</NavLink>}
-              {user.role !== "PARENT" && <NavLink to="/lessons"><BookOpen />{t.lessonLibrary}</NavLink>}
-              {user.role === "TEACHER" && <NavLink to="/classes"><Users />{t.myClasses}</NavLink>}
-              {user.role === "PARENT" && <NavLink to="/progress"><ChartNoAxesCombined />{t.childProgress}</NavLink>}
-              {user.role === "ADMIN" && <NavLink to="/admin"><Settings />{t.admin}</NavLink>}
+              <NavLink end to="/" title={t.overview}><LayoutDashboard /><span className="nav-text">{t.overview}</span></NavLink>
+              {user.role === "TEACHER" && <NavLink to="/labs" title={t.labsLabel}><FlaskConical /><span className="nav-text">{t.labsLabel}</span></NavLink>}
+              {user.role !== "PARENT" && <NavLink to="/lessons" title={t.lessonLibrary}><BookOpen /><span className="nav-text">{t.lessonLibrary}</span></NavLink>}
+              {user.role === "TEACHER" && <NavLink to="/classes" title={t.myClasses}><Users /><span className="nav-text">{t.myClasses}</span></NavLink>}
+              {user.role === "PARENT" && <NavLink to="/progress" title={t.childProgress}><ChartNoAxesCombined /><span className="nav-text">{t.childProgress}</span></NavLink>}
+              {user.role === "ADMIN" && <NavLink to="/admin" title={t.admin}><Settings /><span className="nav-text">{t.admin}</span></NavLink>}
             </>
           )}
         </nav>
-        <NavLink className="settings-link" to="/settings">
+        <NavLink className="settings-link" to="/settings" title={t.settings}>
           <Settings size={18} />
-          {t.settings}
+          <span className="nav-text">{t.settings}</span>
         </NavLink>
         <div className="user-card">
           <Avatar name={user.fullName} url={profile.data?.avatarUrl} />
-          <div>
+          <div className="user-card-info">
             <b>{user.fullName}</b>
             <small>{commonText().roles[user.role]}</small>
           </div>
           <button
             title={t.signOut}
+            aria-label={t.signOut}
             className="icon-button"
             onClick={async () => {
               try {
@@ -267,7 +319,19 @@ export default function App() {
       </aside>
       <div className="main-wrap">
         <header className="topbar">
-          <TopbarBreadcrumb pathname={location.pathname} user={user} />
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="topbar-sidebar-toggle"
+              onClick={toggleSidebar}
+              title={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
+              aria-label={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
+              aria-expanded={!sidebarCollapsed}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+            <TopbarBreadcrumb pathname={location.pathname} user={user} />
+          </div>
           <div>
             <span className="online-dot" /> {t.ready}{" "}
             <NotificationBell />
