@@ -4,7 +4,7 @@ import { defineText } from "../../../../../i18n";
 import { AnatomyStage, CalloutPins, type Callout, type FocusTarget } from "../kit/AnatomyStage";
 import { EYE_PART_ANCHORS, EYE_PART_IDS, EyeModel, MM, type EyePartId } from "../kit/EyeModel";
 import { accommodationFromLensPower } from "../kit/eye-geometry";
-import { CORNEA_POWER_D, FOCUS_TOLERANCE_D, paraxialFan, requiredPowerD, traceEye, type Vec2 } from "../kit/optics";
+import { CORNEA_POWER_D, FOCUS_TOLERANCE_D, paraxialFan, paraxialFocus, requiredPowerD, traceEye, type Vec2 } from "../kit/optics";
 import {
   DISTANCE_OPTIONS_M, EYE_OPTICS_SCENARIOS, GLASSES_RANGE_D, LENS_RANGE_D, POWER_STEP_D,
   eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt, type ScenarioId,
@@ -63,8 +63,10 @@ const EYE_ROTATION: [number, number, number] = [0, 0, Math.PI / 2];
 const world = ([x, y]: Vec2): [number, number, number] => [-y * MM, x * MM, 0];
 const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
 
-function OpticsRays({ axialMm, objectDistanceM, providedPowerD }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number }) {
+function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
   const fan = useMemo(() => paraxialFan({ axialMm, objectDistanceM, providedPowerD }), [axialMm, objectDistanceM, providedPowerD]);
+  // Off the retina, mark where the rays really meet: the gap is under 1 mm on a 23 mm eye and hard to see otherwise.
+  const focus = inFocus ? null : paraxialFocus({ objectDistanceM, providedPowerD });
   const chief = fan[1];
   const objectStart = chief[0];
   const retinaImage = chief[2];
@@ -74,8 +76,20 @@ function OpticsRays({ axialMm, objectDistanceM, providedPowerD }: { axialMm: num
       {fan.map((ray, index) => <Line key={index} points={ray.map(scene)} color={RAY_COLORS[index]} lineWidth={2} />)}
       <mesh position={scene(retinaImage)}>
         <sphereGeometry args={[0.05, 16, 12]} />
-        <meshStandardMaterial color="#2f6b52" emissive="#2f6b52" emissiveIntensity={0.4} />
+        <meshStandardMaterial color={inFocus ? "#2f6b52" : "#9aa59c"} emissive={inFocus ? "#2f6b52" : "#000000"} emissiveIntensity={0.4} />
       </mesh>
+      {focus && (
+        <group position={scene(focus)}>
+          <mesh>
+            <sphereGeometry args={[0.07, 20, 14]} />
+            <meshStandardMaterial color="#dc2626" emissive="#dc2626" emissiveIntensity={0.6} />
+          </mesh>
+          <mesh rotation={[0, 0, 0]}>
+            <torusGeometry args={[0.16, 0.015, 8, 40]} />
+            <meshStandardMaterial color="#dc2626" emissive="#dc2626" emissiveIntensity={0.5} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
@@ -118,7 +132,8 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
   const offsetText = Math.abs(offset).toFixed(1);
   // Same dioptre tolerance as the rubric, so "on the retina" here means the same thing as on the server.
   const defocusD = providedPowerD - requiredPowerD(scenario.axialMm, attempt.objectDistanceM);
-  const readout = Math.abs(defocusD) <= FOCUS_TOLERANCE_D + 1e-9 ? t.onRetina : offset > 0 ? t.before(offsetText) : t.behind(offsetText);
+  const inFocus = Math.abs(defocusD) <= FOCUS_TOLERANCE_D + 1e-9;
+  const readout = inFocus ? t.onRetina : offset > 0 ? t.before(offsetText) : t.behind(offsetText);
   const blurText = t.blur(trace.blurMm.toFixed(2));
 
   const callouts: Callout[] = EYE_PART_IDS.map((id, index) => ({
@@ -150,7 +165,7 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
           />
           {phase === "names" && <CalloutPins callouts={callouts} />}
           {phase === "optics" && showRays && (
-            <OpticsRays axialMm={scenario.axialMm} objectDistanceM={attempt.objectDistanceM} providedPowerD={providedPowerD} />
+            <OpticsRays axialMm={scenario.axialMm} objectDistanceM={attempt.objectDistanceM} providedPowerD={providedPowerD} inFocus={inFocus} />
           )}
           </group>
         </AnatomyStage>

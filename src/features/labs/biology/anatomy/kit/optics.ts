@@ -86,6 +86,20 @@ export function paraxialFan({ axialMm, objectDistanceM, providedPowerD, heightsM
   });
 }
 
+/**
+ * Paraxial image point (axis frame, mm) of the object tip: where the fan from
+ * paraxialFan actually meets. Null when the rays leave parallel (object at the focal point).
+ */
+export function paraxialFocus({ objectDistanceM, providedPowerD, objectHeightMm = 3 }: { objectDistanceM: number | null; providedPowerD: number; objectHeightMm?: number }): Vec2 | null {
+  const powerPerMm = providedPowerD / 1000;
+  const objectMm = objectDistanceM === null ? null : objectDistanceM * 1000;
+  const vergence = powerPerMm - (objectMm === null ? 0 : 1 / objectMm);
+  if (vergence <= 0) return null;
+  const imageMm = VITREOUS_INDEX / vergence;
+  const chiefSlope = objectMm === null ? 0 : -objectHeightMm / objectMm / VITREOUS_INDEX;
+  return [chiefSlope * imageMm, EQUIVALENT_SURFACE_Y_MM - imageMm];
+}
+
 export type TraceResult = {
   /** Chief and marginal rays from the object tip, sampled from the object to the retina. */
   rays: Array<{ kind: "chief" | "marginal"; points: Vec2[] }>;
