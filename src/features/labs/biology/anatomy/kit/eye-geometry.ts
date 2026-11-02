@@ -81,20 +81,98 @@ export function lensProfile(accommodation: number): Profile {
   return points;
 }
 
-/** Retina: posterior inner surface from the back pole to the equator. */
-export function retinaProfile(axialMm: number): Profile {
-  const back = posteriorSemiAxisMm(axialMm) - 0.4;
+/** Inner shell (choroid, retina): ellipsoid behind the equator, sphere in front, up to `frontY`. */
+function shellProfile(radius: number, back: number, frontY: number): Profile {
+  const front = Math.asin(Math.min(frontY / radius, 1));
   const points: Profile = [];
   for (let i = 0; i <= SEGMENTS; i++) {
-    const phi = -Math.PI / 2 + ((Math.PI / 2) * i) / SEGMENTS;
-    points.push([RETINA_RADIUS_MM * Math.cos(phi), back * Math.sin(phi)]);
+    const phi = -Math.PI / 2 + ((front + Math.PI / 2) * i) / SEGMENTS;
+    points.push([radius * Math.cos(phi), phi < 0 ? back * Math.sin(phi) : radius * Math.sin(phi)]);
   }
   return points;
 }
 
-/** Vitreous: the posterior inner volume, closed along the axis at the equator. */
+export const CHOROID_RADIUS_MM = 11.8;
+/** Ora serrata: where the retina ends in front, just behind the ciliary body. */
+export const ORA_SERRATA_Y_MM = 6.2;
+
+/** Choroid: the dark vascular layer between sclera and retina, up to the ciliary body. */
+export function choroidProfile(axialMm: number): Profile {
+  return shellProfile(CHOROID_RADIUS_MM, posteriorSemiAxisMm(axialMm) - 0.2, 7);
+}
+
+/** Retina: inner surface from the back pole to the ora serrata. */
+export function retinaProfile(axialMm: number): Profile {
+  return shellProfile(RETINA_RADIUS_MM, posteriorSemiAxisMm(axialMm) - 0.4, ORA_SERRATA_Y_MM);
+}
+
+/** Vitreous: the inner volume from the retina forward to just behind the lens, closed along the axis. */
 export function vitreousProfile(axialMm: number): Profile {
-  return [...retinaProfile(axialMm), [0, 0]];
+  return [...shellProfile(RETINA_RADIUS_MM - 0.1, posteriorSemiAxisMm(axialMm) - 0.5, 5), [4, 5.7], [0, 5.85]];
+}
+
+/** Ciliary body: a wedge ring from the choroid to just outside the lens equator. */
+export function ciliaryProfile(): Profile {
+  // Outer edge stays inside the sclera (r ≈ 8.0 mm at y 8.9, 10.3 mm at y 6.1).
+  return [[7.6, 8.9], [5.7, 8.1], [5.9, 7.6], [8.9, 6.1]];
+}
+
+/** Zonule fibres: radial segments from the lens equator to the ciliary body, as [r, y] pairs. */
+export const ZONULE_SEGMENT: [[number, number], [number, number]] = [[LENS_EQUATOR_MM + 0.05, LENS_CENTRE_Y_MM], [5.8, 7.85]];
+
+/**
+ * Fundus map: (a, c) in radians from the back pole, a along local +x, c along +z
+ * (the half kept by the sagittal section). Returns a local 3D point (mm) on the
+ * retina, moved `insetMm` towards the centre so it sits on the inner surface.
+ */
+export function fundusPoint(axialMm: number, a: number, c: number, insetMm = 0.08): [number, number, number] {
+  const back = posteriorSemiAxisMm(axialMm) - 0.4;
+  const theta = Math.hypot(a, c);
+  const psi = Math.atan2(c, a);
+  const radius = RETINA_RADIUS_MM - insetMm;
+  return [radius * Math.sin(theta) * Math.cos(psi), -(back - insetMm) * Math.cos(theta), radius * Math.sin(theta) * Math.sin(psi)];
+}
+
+/** Optic disc (blind spot) on the fundus map, about 15° from the fovea. The fovea is at the back pole. */
+export const OPTIC_DISC: [number, number] = [0.27, 0];
+
+/** Stylised retinal vessels leaving the disc and arching around the fovea; [a, c] polylines with a radius in mm. */
+export const RETINAL_VESSELS: Array<{ points: Array<[number, number]>; radiusMm: number; artery: boolean }> = [
+  { points: [[0.27, 0.02], [0.3, 0.18], [0.2, 0.36], [0, 0.44], [-0.25, 0.4], [-0.45, 0.3], [-0.62, 0.17]], radiusMm: 0.13, artery: false },
+  { points: [[0.26, 0.03], [0.24, 0.15], [0.12, 0.3], [-0.08, 0.36], [-0.3, 0.32], [-0.5, 0.22]], radiusMm: 0.1, artery: true },
+  { points: [[0.28, 0.02], [0.42, 0.12], [0.6, 0.25], [0.76, 0.45]], radiusMm: 0.11, artery: false },
+  { points: [[0.29, 0.03], [0.38, 0.3], [0.42, 0.6], [0.34, 0.86]], radiusMm: 0.1, artery: true },
+  { points: [[0, 0.44], [-0.05, 0.65], [-0.2, 0.9]], radiusMm: 0.07, artery: false },
+  { points: [[-0.25, 0.4], [-0.45, 0.55], [-0.72, 0.6]], radiusMm: 0.06, artery: true },
+  { points: [[0.26, 0.01], [0.15, 0.06], [0.05, 0.13], [-0.15, 0.17], [-0.35, 0.11]], radiusMm: 0.05, artery: true },
+  { points: [[0.42, 0.6], [0.6, 0.72], [0.82, 0.74]], radiusMm: 0.06, artery: false },
+];
+
+/** Optic nerve centreline (local mm): leaves the disc outward, then runs back towards the orbit apex. */
+export function opticNervePath(axialMm: number): Array<[number, number, number]> {
+  const [x, y] = fundusPoint(axialMm, OPTIC_DISC[0], OPTIC_DISC[1], 0);
+  const length = Math.hypot(x, y);
+  const [nx, ny] = [x / length, y / length];
+  return [
+    [x - nx * 0.6, y - ny * 0.6, 0],
+    [x + nx * 1.5, y + ny * 1.5, 0],
+    [x + nx * 4 + 0.6, y + ny * 4 - 1.5, 0],
+    [x + nx * 6 + 2.2, y + ny * 6 - 5, 0],
+    [x + nx * 7 + 3.4, y + ny * 7 - 9, 0],
+  ];
+}
+
+/** Superior and inferior rectus muscles along the outer sclera in the sagittal plane, local mm. */
+export function rectusMusclePath(axialMm: number, side: 1 | -1): Array<[number, number, number]> {
+  const back = posteriorSemiAxisMm(axialMm);
+  const points: Array<[number, number, number]> = [];
+  for (const phi of [0.5, 0.25, 0, -0.35, -0.7, -0.95]) {
+    const r = (SCLERA_RADIUS_MM + 0.9) * Math.cos(phi);
+    const y = phi >= 0 ? (SCLERA_RADIUS_MM + 0.9) * Math.sin(phi) : (back + 0.9) * Math.sin(phi);
+    points.push([side * r, y, 0]);
+  }
+  points.push([side * 6.5, -(back + 6), 0], [side * 4.5, -(back + 14), 0]);
+  return points;
 }
 
 /** Retinal point at `angleRad` from the back pole, on the eye's posterior surface. */

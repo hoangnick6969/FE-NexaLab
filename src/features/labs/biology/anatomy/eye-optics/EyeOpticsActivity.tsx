@@ -56,11 +56,18 @@ const text = defineText({
 
 const pick = <T,>(list: readonly T[], index: number) => list[Math.min(Math.max(index, 0), list.length - 1)];
 
-/** Axis frame (mm, anterior = +y) to the eye group, which is turned so light enters from the left. */
+/**
+ * Axis frame (mm, anterior = +y) to the eye group. The group turns −90° so the
+ * cornea faces world +x, which the camera (behind the section, at −z) shows on
+ * the left: light enters from the left and the optic nerve leaves on the right,
+ * as in the textbook figures.
+ */
 const scene = ([x, y]: Vec2): [number, number, number] => [x * MM, y * MM, 0];
-const EYE_ROTATION: [number, number, number] = [0, 0, Math.PI / 2];
+const EYE_ROTATION: [number, number, number] = [0, 0, -Math.PI / 2];
+/** Orbit centre between the cornea and the optic nerve, so the whole eye and nerve fit in view. */
+const EYE_CENTRE: [number, number, number] = [-0.3, 0, 0];
 /** The same point in world space, for the camera focus rig. */
-const world = ([x, y]: Vec2): [number, number, number] => [-y * MM, x * MM, 0];
+const world = ([x, y]: Vec2): [number, number, number] => [y * MM, -x * MM, 0];
 const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
 
 function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
@@ -108,7 +115,7 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
   useEffect(() => { setPhase("names"); setPart("cornea"); setFocus(null); setScenarioIndex(0); }, [resetKey]);
   useEffect(() => { if (optionalLocked && phase === "optics") setPhase("names"); }, [optionalLocked, phase]);
   // Phase 2 frames the whole eye again, whatever part phase 1 last focused.
-  useEffect(() => { if (phase === "optics") setFocus({ point: [0, 0, 0], key: Date.now() }); }, [phase]);
+  useEffect(() => { if (phase === "optics") setFocus({ point: EYE_CENTRE, key: Date.now() }); }, [phase]);
 
   const focusPart = (id: EyePartId) => {
     setPart(id);
@@ -153,7 +160,7 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
       {optionalLocked && phase === "names" && <p className="tiny muted">{t.lockedOptics}</p>}
 
       <div className="eye-optics-layout">
-        <AnatomyStage label={t.stageLabel} focus={focus} cameraPosition={[1.1, 0.9, -4.4]}>
+        <AnatomyStage label={t.stageLabel} focus={focus} cameraPosition={[0.9, 0.7, -6.2]} target={EYE_CENTRE}>
           <group rotation={EYE_ROTATION}>
           <EyeModel
             axialMm={phase === "optics" ? scenario.axialMm : 22.6}

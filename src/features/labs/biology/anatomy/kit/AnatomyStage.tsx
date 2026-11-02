@@ -139,11 +139,13 @@ export function CalloutPins({ callouts }: { callouts: Callout[] }) {
   );
 }
 
-export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.6, -7.5] }: {
+export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.6, -7.5], target = [0, 0, 0] }: {
   label: string;
   focus: FocusTarget;
   children: ReactNode;
   cameraPosition?: [number, number, number];
+  /** Initial orbit centre, in world units. */
+  target?: [number, number, number];
 }) {
   return (
     <div className="anatomy-stage" role="img" aria-label={label}>
@@ -157,10 +159,12 @@ export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.
         <hemisphereLight args={["#f7f9f4", "#c9cfc4", 0.9]} />
         <directionalLight position={[5, 7, 6]} intensity={1.6} />
         <pointLight position={[-6, 2, -4]} intensity={0.6} color="#dfeaff" />
+        {/* Fill from the camera side, so the inside of a sectioned organ is not in shadow. */}
+        <directionalLight position={[1.5, 2.5, -6]} intensity={1.3} color="#fff4ea" />
         <group scale={1}>{children}</group>
         <FocusRig target={focus} />
         {import.meta.env.DEV && <DevStageProbe />}
-        <OrbitControls makeDefault enablePan={false} minDistance={3} maxDistance={18} target={[0, 0, 0]} />
+        <OrbitControls makeDefault enablePan={false} minDistance={3} maxDistance={18} target={target} />
       </Canvas>
     </div>
   );
