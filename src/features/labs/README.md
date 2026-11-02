@@ -22,7 +22,8 @@ labs/
     optics/                       K6: FL-23 (planned)
   chemistry/                     chemistry compatibility fixture renderer
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
-  biology/anatomy/               existing Eye learning resource (FL-16 is NO LAB)
+  biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, camera focus, callouts, sagittal section;
+                                 eye-optics/ = FL-16 activity (rubric eye-anatomy-optics@1.0.0); Eye.tsx = legacy eye@1.0.0 resource
   biology/ecology/                K8: FL-20 tolerance (built, not released); FL-21 planned
   biology/genetics/               K8: FL-26 (planned)
   biology/molecular/              K7: kit/ (bench entry + molecular scene) + gene-protein/ = FL-27 technical candidate
