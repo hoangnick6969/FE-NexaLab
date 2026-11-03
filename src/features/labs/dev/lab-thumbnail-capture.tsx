@@ -10,7 +10,14 @@ import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtei
 import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evidence";
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
+import { FluidBench3D, OverflowCan3D, SpringDynamometer3D, ForceVectorOverlay3D, Specimen3D, k3Specimen, k3Material } from "../physics/fluid/kit";
+import { fl03DensityConfig } from "../physics/fluid/density/fl03-density.config";
 import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
+import { ThermalBench3D } from "../physics/thermal/kit/ThermalBenchStage";
+import { AnatomyStage } from "../biology/anatomy/kit/AnatomyStage";
+import { EyeModel } from "../biology/anatomy/kit/EyeModel";
+import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry";
+import { EYE_CENTRE, EYE_ROTATION, OpticsRays } from "../biology/anatomy/eye-optics/EyeOpticsActivity";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -19,7 +26,29 @@ const densityThumbnailView: StageView = {
   minDistance: 1, maxDistance: 3,
 };
 
+/** FL-16: sectioned eye with a ray fan focused on the retina (normal eye, object at 25 cm, lens 20 D). Capture-only framing. */
+const eyeOpticsThumbnail = () => <div className="eye-thumbnail">
+  <AnatomyStage label="FL-16 eye" focus={null} cameraPosition={[0.85, 0.6, -6.2]} target={EYE_CENTRE}>
+    <group rotation={EYE_ROTATION}>
+      <EyeModel axialMm={22.6} accommodation={accommodationFromLensPower(20)} pupilMm={2.5} sectioned highlight={null} />
+      <OpticsRays axialMm={22.6} objectDistanceM={0.25} providedPowerD={63} inFocus />
+    </group>
+  </AnatomyStage>
+  <style>{`.eye-thumbnail .anatomy-stage { width: 1280px; height: 720px; aspect-ratio: auto; min-height: 0; border: 0; border-radius: 0; }`}</style>
+</div>;
+
 const scenes: Record<string, () => ReactNode> = {
+  "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
+  buoyancy: () => {
+    const kit = fl03DensityConfig;
+    const specimen = k3Specimen(kit, "iron-1v");
+    return <FluidBench3D view={{ position: [.45, 1.8, 2.8], target: [0, .65, .1], narrowPosition: [.45, 1.8, 2.8], narrowTarget: [0, .65, .1], minDistance: .6, maxDistance: 4 }}>
+      <OverflowCan3D collectedMl={10} />
+      <group position={[0, 160, 0]}><SpringDynamometer3D forceN={.667} /></group>
+      <group position={[0, 48, 0]}><Specimen3D specimen={specimen} material={k3Material(kit, specimen.materialId)} /><ForceVectorOverlay3D weightN={.765} buoyantForceN={.098} position={[20, 20, 50]} /></group>
+    </FluidBench3D>;
+  },
+  "eye-optics": eyeOpticsThumbnail,
   circuit: () => <CircuitBulb3DStage closed switchIsActive={false} onToggleSwitch={() => undefined} isLit />,
   "em-induction": () => <EmInduction3DStage
     cue={{ action: null, nonce: 0, startedAt: 0 }}

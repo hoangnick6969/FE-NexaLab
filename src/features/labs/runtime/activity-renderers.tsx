@@ -8,18 +8,24 @@ import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
 import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
+import { BuoyancyActivity } from "../physics/fluid/buoyancy/BuoyancyActivity";
+import { defaultBuoyancyEvidence, buoyancyEvidenceReady, BuoyancyResult, buoyancyCopy } from "../physics/fluid/buoyancy/BuoyancyEvidence";
 import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
 import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
+import { defaultEyeOpticsEvidence, eyeOpticsEvidenceReady } from "../biology/anatomy/eye-optics/eye-optics-evidence";
+import { EyeOpticsResult, eyeOpticsCopy } from "../biology/anatomy/eye-optics/EyeOpticsResult";
 
 const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…", loadingGene: "Đang nạp mô hình phân tử DNA…" }, en: { loadingEye: "Loading the 3D eye anatomy model…", loadingGene: "Loading the DNA molecule scene…" } });
 const Eye = lazy(() => import("../biology/anatomy/Eye"));
+// FL-16 eye anatomy and optics. Pulls in the anatomy kit only when this Lab opens.
+const EyeOpticsActivity = lazy(() => import("../biology/anatomy/eye-optics/EyeOpticsActivity").then((module) => ({ default: module.EyeOpticsActivity })));
 // FL-27 pulls in the K7 molecular kit; load it only when that Lab opens.
 const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
 
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
 
-export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null };
+export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null; runtimeConfig?: unknown };
 
 export type GuidedActivity = {
   /** Submission is enabled only when the activity evidence is complete. */
@@ -44,6 +50,12 @@ export type LabActivityRenderer = {
 };
 
 const renderers: readonly LabActivityRenderer[] = [
+  {
+    key: "buoyancy-bench", labId: "buoyancy", modelRefs: ["buoyancy@1.0.0"], envelope: "evidence",
+    defaultState: defaultBuoyancyEvidence,
+    Activity: (props) => <BuoyancyActivity {...props} />,
+    guided: { ready: buoyancyEvidenceReady, copy: buoyancyCopy, Result: BuoyancyResult },
+  },
   {
     key: "em-induction", labId: "em-induction", modelRefs: ["em-induction@1.0.0"], envelope: "checkpoints",
     defaultState: () => checkpointViewForRenderer("em-induction")!.defaultEvidence(),
@@ -123,6 +135,10 @@ const renderers: readonly LabActivityRenderer[] = [
     defaultState: () => ({}), Activity: () => null, // Run-bound K5 activity renders in Lab.
   },
   {
+    key: "thermal-bench", labId: "thermal-energy", modelRefs: ["thermal-bench@1.0.0"], envelope: "labState",
+    defaultState: () => ({}), Activity: () => null, // Run-bound K4 activity renders in Lab.
+  },
+  {
     key: "chemistry", labId: "chemistry", modelRefs: ["chemistry@1.0.0"], envelope: "labState",
     defaultState: () => ({ reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }),
     Activity: ({ state, onChange, result }) => <Chemistry state={state} onChange={onChange} result={result} />,
@@ -133,6 +149,15 @@ const renderers: readonly LabActivityRenderer[] = [
     Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
       <Eye key={resetKey} state={state} onChange={onChange} />
     </Suspense>,
+  },
+  {
+    // FL-16 eye structure (phase 1) and accommodation with corrective lenses (phase 2). Rubric eye-anatomy-optics@1.0.0.
+    key: "eye-anatomy-optics", labId: "eye-optics", modelRefs: ["eye-optics@1.0.0"], envelope: "evidence",
+    defaultState: defaultEyeOpticsEvidence,
+    Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
+      <EyeOpticsActivity state={state} onChange={onChange} resetKey={resetKey} />
+    </Suspense>,
+    guided: { ready: eyeOpticsEvidenceReady, copy: eyeOpticsCopy, Result: EyeOpticsResult },
   },
 ];
 

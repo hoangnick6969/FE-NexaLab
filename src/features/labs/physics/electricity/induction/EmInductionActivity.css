@@ -180,3 +180,5 @@
   /* Explore labels stay visible: they are the only names of these actions */
   .em-explore .em-tool span, .em-explore-moves .em-tool { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
 }
+.lab-space:has(.em-activity) .lab-aside:has([open]) { width: min(var(--em-panel-w), calc(100% - 36px)); }
+.lab-space:has(.em-activity) .lab-aside:has([open]) .lab-space-results { background: var(--em-panel-solid); box-shadow: var(--em-panel-shadow); }

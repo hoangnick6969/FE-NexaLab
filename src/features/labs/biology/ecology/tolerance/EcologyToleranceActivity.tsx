@@ -4,10 +4,12 @@ import { ECOLOGY_POPULATIONS } from "@nexalab/sim";
 import { defineText } from "../../../../../i18n";
 import { useReducedMotion } from "../../../physics/electricity/induction/apparatus/anim";
 import { PondScene, type FishState } from "./PondScene";
+import { PondView3D, vigorAt } from "./PondView3D";
+import { webglAvailable } from "../kit";
 import { ComparisonGraph, ToleranceGraph } from "./ToleranceGraph";
 import { AgePyramid, PopulationPlot } from "./PopulationViews";
 import {
-  DENSITY_PATTERN, DENSITY_UNITS, ECO_CHOICES, ECO_STEP_COUNT, ecoEvidenceFrom, ecoPhaseOf, ecoStepNumber,
+  DENSITY_PATTERN, DENSITY_UNITS, ECO_CHOICES, ECO_STEP_COUNT, LIMIT_OPTIONS, OBSERVE_FIRST, ecoEvidenceFrom, ecoPhaseOf, ecoStepNumber,
   formatCount, formatDeciC, previewEco, tolerance,
   type DensityAnswer, type DensityUnit, type EcoCheckpointId, type EcoChoice, type EcoEvidence, type EcoObservation,
 } from "./eco-evidence";
@@ -56,8 +58,13 @@ const text = defineText({
     b: "Vì mùa đông cá rô phi không có đủ thức ăn.",
     c: "Vì không loài cá nào sống được ở nước dưới 10 °C.",
     ready: "Em đã hoàn thành các câu hỏi và phần giải thích.",
+    review: {
+      chosen: "Em đã chọn", right: "Đúng rồi.", wrong: (answer: string) => `Chưa đúng. Đáp án đúng: ${answer}.`,
+      next: "Câu tiếp theo", toExplain: "Sang câu giải thích",
+      note: "Máy chủ chấm lại toàn bộ khi em nộp bài.",
+    },
     persists: (v: string) => `Ở ${v} °C, cá rô phi bơi bình thường: chúng tồn tại được ở nhiệt độ này.`,
-    gone: (v: string) => `Ở ${v} °C, cá rô phi không tồn tại được (hình cá chỉ còn đường viền mờ).`,
+    gone: (v: string) => `Ở ${v} °C, cá rô phi không tồn tại được: cá yếu dần, ngừng bơi và nằm im dưới đáy ao.`,
     sweepSeen: { cold: "Đã thử phía lạnh", warm: "Đã thử phía nóng" },
     limitsRead: "Giới hạn sinh thái về nhiệt độ của cá rô phi là từ 5,6 °C đến 42 °C (SGK KHTN 8, Bài 41).",
     comparison: (name: string) => `${name} chịu được toàn bộ khoảng nhiệt độ nước của địa phương. Các loài còn lại sẽ gặp nhiệt độ ngoài giới hạn sinh thái của chúng.`,
@@ -85,6 +92,7 @@ const text = defineText({
     },
     pyramid: { title: "Tháp tuổi", pre: "Trước sinh sản", reproductive: "Sinh sản", post: "Sau sinh sản", illustrative: "Số liệu minh hoạ." },
     sceneLabel: "Ao nuôi cá rô phi cắt ngang, có nhiệt kế đo nhiệt độ nước.",
+    view2d: "Xem sơ đồ 2D", view3d: "Xem cảnh 3D",
     modelLimit: "Mô hình đơn giản: chỉ thay đổi một nhân tố (nhiệt độ), các nhân tố khác coi như thuận lợi. Cá A, B, C, khoảng nhiệt độ ở địa phương và các tháp tuổi là số liệu minh hoạ.",
     explore: {
       show: "Khám phá thêm", hide: "Đóng khám phá", title: "Khám phá tự do",
@@ -139,8 +147,13 @@ const text = defineText({
     b: "Because tilapia lack food in winter.",
     c: "Because no fish can live in water below 10 °C.",
     ready: "You have completed the questions and your explanation.",
+    review: {
+      chosen: "Your answer", right: "Correct.", wrong: (answer: string) => `Not quite. The answer is: ${answer}.`,
+      next: "Next question", toExplain: "On to the explanation",
+      note: "The server checks every answer again when you submit.",
+    },
     persists: (v: string) => `At ${v} °C the tilapia swim normally: they can persist at this temperature.`,
-    gone: (v: string) => `At ${v} °C tilapia cannot persist (the fish show only as faded outlines).`,
+    gone: (v: string) => `At ${v} °C tilapia cannot persist: the fish weaken, stop swimming and lie still on the pond floor.`,
     sweepSeen: { cold: "Cold side tried", warm: "Warm side tried" },
     limitsRead: "The temperature tolerance range of tilapia is 5.6 °C to 42 °C (KHTN 8 textbook, lesson 41).",
     comparison: (name: string) => `${name} tolerates the whole range of the site's water. The others would meet temperatures outside their tolerance range.`,
@@ -168,6 +181,7 @@ const text = defineText({
     },
     pyramid: { title: "Age pyramid", pre: "Pre-reproductive", reproductive: "Reproductive", post: "Post-reproductive", illustrative: "Illustrative data." },
     sceneLabel: "Cross-section of a tilapia pond with a thermometer in the water.",
+    view2d: "Show 2D diagram", view3d: "Show 3D scene",
     modelLimit: "Simple model: only one factor (temperature) changes; the others are assumed favourable. Fish A, B, C, the site range and the age pyramids are illustrative data.",
     explore: {
       show: "Explore more", hide: "Close explore", title: "Free explore",
@@ -188,6 +202,9 @@ const FACTORS: Array<{ id: string; biotic: boolean }> = [
   { id: "grass", biotic: true }, { id: "insects", biotic: true }, { id: "people", biotic: true },
 ];
 const SWEEP_MS = 2400;
+/** Per-viewer choice between the 3D pond and the 2D diagram; not part of the evidence. */
+const VIEW_KEY = "nexalab.fl20.pondView";
+const storedView = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
 type ExploreScene = "pond" | "population" | "pyramid" | "factors";
 type Scene = "pond" | "compare" | "population" | "pyramid";
 const sceneFor = (id: EcoCheckpointId | null): Scene =>
@@ -206,6 +223,14 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
   const phase = ecoPhaseOf(evidence);
   const step = ecoStepNumber(phase);
   const [questionOpen, setQuestionOpen] = useState(true);
+  // The checkpoint just finished: its verdict stays on screen until the learner moves on (not part of the evidence).
+  const [review, setReview] = useState<EcoCheckpointId | null>(null);
+  const [canRender3d] = useState(webglAvailable);
+  const [view, setView] = useState<"3d" | "2d">(() => canRender3d && storedView() !== "2d" ? "3d" : "2d");
+  const chooseView = (next: "3d" | "2d") => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage blocked: the choice lasts for this page */ }
+  };
   // The sweep starts where the 44,0 °C step left the pond.
   const [sweepValue, setSweepValue] = useState(440);
   const [seen, setSeen] = useState({ cold: false, warm: false });
@@ -225,12 +250,13 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
   const done = phase.kind === "explain" || phase.kind === "ready";
   const exploring = done && explore !== null;
   // The scene follows the step being worked on; after the last step it stays on the last checkpoint.
-  const focusId = current?.id ?? "AGE";
+  const focusId = review ?? current?.id ?? "AGE";
   const scene: Scene = exploring ? (explore === "pyramid" ? "pyramid" : explore === "population" ? "population" : "pond") : sceneFor(focusId);
 
   const markObserved = (id: EcoCheckpointId) => {
     const next = latest.current;
     onChange({ ...next, observed: { ...next.observed, [id]: true } });
+    if (!OBSERVE_FIRST.has(id)) setReview(id);
   };
   const visit = (value: number) => {
     setSweepValue(value);
@@ -257,7 +283,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     frame.current = requestAnimationFrame(tick);
   };
   const act = () => {
-    if (phase.kind !== "act" || sweeping) return;
+    if (phase.kind !== "act" || sweeping || review) return;
     if (phase.id === "LIMITS") autoSweep();
     else markObserved(phase.id);
   };
@@ -266,6 +292,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     const checkpoints = [...evidence.checkpoints] as EcoEvidence["checkpoints"];
     checkpoints[phase.index] = { ...checkpoints[phase.index], prediction };
     onChange({ ...evidence, checkpoints });
+    if (OBSERVE_FIRST.has(phase.id)) setReview(phase.id);
   };
   const saveDensity = () => {
     const value = density.value.trim();
@@ -308,6 +335,44 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     if (id === "AGE" && ageObservation) return t.age[ageObservation.pyramid];
     return null;
   };
+  const answerText = (id: EcoCheckpointId, answer: unknown) => id === "DENSITY"
+    ? `${(answer as DensityAnswer).value} ${t.unit[(answer as DensityAnswer).unit]}`
+    : t.choice[answer as EcoChoice];
+  /** Local preview of the server rubric (same model, same rules); the server result stays authoritative. */
+  const checkpointOf = (id: EcoCheckpointId) => evidence.checkpoints.find((item) => item.id === id)!;
+  const verdictOf = (id: EcoCheckpointId): { correct: boolean; expected: string } | null => {
+    const checkpoint = checkpointOf(id);
+    const prediction = checkpoint.prediction;
+    if (prediction === null) return null;
+    if (id === "T_INSIDE" || id === "T_ABOVE") {
+      const expected: EcoChoice = tolerance((checkpoint.state as { valueDeciC: number }).valueDeciC)?.canPersist ? "PERSISTS" : "NOT_PERSIST";
+      return { correct: prediction === expected, expected: t.choice[expected] };
+    }
+    if (id === "LIMITS") {
+      const range = tolerance(300)?.limits;
+      const expected = (Object.keys(LIMIT_OPTIONS) as Array<keyof typeof LIMIT_OPTIONS>)
+        .find((key) => LIMIT_OPTIONS[key][0] === range?.minDeciC && LIMIT_OPTIONS[key][1] === range?.maxDeciC);
+      return expected ? { correct: prediction === expected, expected: t.choice[expected] } : null;
+    }
+    if (id === "IMPORT" && comparison) {
+      const fits = comparison.candidates.filter((candidate) => candidate.suitable);
+      const expected = (fits.length === 1 ? `FISH_${fits[0].speciesId.slice(-1).toUpperCase()}` : "NONE") as EcoChoice;
+      return { correct: prediction === expected, expected: t.choice[expected] };
+    }
+    if (id === "DENSITY" && densityObservation) {
+      const answer = prediction as DensityAnswer;
+      const unit = unitOf(densityObservation.unit);
+      const { num, den } = densityObservation.density;
+      const correct = answer.unit === unit && Math.abs(Number(answer.value.replace(",", ".")) * den - num) < 1e-9;
+      return { correct, expected: `${fractionText(densityObservation.density)} ${t.unit[unit]}` };
+    }
+    if (id === "AGE") {
+      const age = previewEco(evidence.checkpoints[5].state) as Extract<EcoObservation, { setup: "age-structure" }> | null;
+      return age ? { correct: prediction === age.pyramid, expected: t.choice[age.pyramid as EcoChoice] } : null;
+    }
+    return null;
+  };
+  const reviewed = review ? { id: review, answer: answerText(review, checkpointOf(review).prediction), verdict: verdictOf(review) } : null;
   const lastObserved = [...evidence.checkpoints].reverse().find((checkpoint) => evidence.observed[checkpoint.id]) ?? null;
   // The sweep shows the live value; otherwise the current step once observed, else the last observed step.
   const shownText = current?.id === "LIMITS" && phase.kind === "act" ? (pondObservation?.canPersist ? t.persists(formatDeciC(sweepValue)) : t.gone(formatDeciC(sweepValue)))
@@ -315,16 +380,28 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     : lastObserved ? observationText(lastObserved.id)
     : null;
 
-  const heading = phase.kind === "predict" ? t.question[phase.id] : phase.kind === "act" ? t.actPrompt[phase.id] : phase.kind === "explain" ? t.explanation : t.ready;
+  const heading = review ? t.question[review] : phase.kind === "predict" ? t.question[phase.id] : phase.kind === "act" ? t.actPrompt[phase.id] : phase.kind === "explain" ? t.explanation : t.ready;
   const factorScore = FACTORS.filter((factor) => factorAnswers[factor.id] === factor.biotic).length;
 
+  // Answered and waiting for "Quan sát": the choice stays in view instead of the hint.
+  const awaitingCheck = phase.kind === "act" && current?.prediction != null;
+  const pond3d = scene === "pond" && view === "3d";
+  const limits = pondObservation?.limits ?? { minDeciC: 56, maxDeciC: 420 };
+  const vigor = vigorAt(pondValue, pondObservation);
+  const pondLabel = `${t.sceneLabel} ${formatDeciC(pondValue)} °C.`;
+
   return <section className="eco-activity" data-testid="eco-activity" aria-label={t.title}>
-    <div className="eco-stage" data-testid="eco-stage" data-scene={scene}>
+    <div className="eco-stage" data-testid="eco-stage" data-scene={scene} data-view={pond3d ? "3d" : "2d"}>
+      {pond3d && <PondView3D valueDeciC={pondValue} fish={fish} vigor={vigor} label={pondLabel} valueLabel={`${formatDeciC(pondValue)} °C`}
+        layoutKey={`${phase.kind}-${focusId}-${questionOpen}-${explore}-${showSlider}`} />}
       <div className="eco-stage-inner">
         {scene === "pond" && <>
-          <PondScene valueDeciC={pondValue} fish={fish} label={`${t.sceneLabel} ${formatDeciC(pondValue)} °C.`} />
-          <ToleranceGraph limits={pondObservation?.limits ?? { minDeciC: 56, maxDeciC: 420 }} valueDeciC={pondValue}
+          {!pond3d && <PondScene valueDeciC={pondValue} fish={fish} label={pondLabel} />}
+          <ToleranceGraph limits={limits} valueDeciC={pondValue}
             showLimits={limitsShown || exploring} labels={t.graph} />
+          {canRender3d && <button type="button" className="eco-link eco-view-toggle" data-testid="eco-view-toggle" onClick={() => chooseView(view === "3d" ? "2d" : "3d")}>
+            {view === "3d" ? t.view2d : t.view3d}
+          </button>}
         </>}
         {scene === "compare" && comparison && <ComparisonGraph comparison={comparison} revealed={evidence.observed.IMPORT} labels={t.compare} />}
         {scene === "population" && <PopulationPlot selected="bap-cai" labels={t.population} />}
@@ -339,7 +416,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           data-testid="eco-slider" onChange={(event) => exploring ? setExploreValue(Number(event.target.value)) : visit(Number(event.target.value))} />
       </label>}
       {sliderLocked && scene === "pond" && <p className="eco-dock-note">{t.fishLocked} {formatDeciC(pondValue)} °C</p>}
-      <button type="button" className="eco-act" data-testid="eco-act" disabled={phase.kind !== "act" || sweeping} onClick={act}>
+      <button type="button" className="eco-act" data-testid="eco-act" disabled={phase.kind !== "act" || sweeping || review !== null} onClick={act}>
         <Play size={16} aria-hidden="true" />
         <span>{sweeping ? t.running : actId ? t.action[actId] : current ? t.action[current.id] : t.action.AGE}</span>
       </button>
@@ -361,19 +438,22 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
       </div>
       <h3 className="eco-heading" aria-live="polite">{heading}</h3>
 
-      {actId === "LIMITS" && <ul className="eco-seen" data-testid="eco-sweep-progress">
+      {!review && awaitingCheck && current && <p className="eco-chosen" data-testid="eco-chosen">
+        {t.review.chosen}: <b>{answerText(current.id, current.prediction)}</b>
+      </p>}
+      {actId === "LIMITS" && !review && <ul className="eco-seen" data-testid="eco-sweep-progress">
         <li data-done={seen.cold}>{seen.cold && <Check size={14} aria-hidden="true" />}{t.sweepSeen.cold}</li>
         <li data-done={seen.warm}>{seen.warm && <Check size={14} aria-hidden="true" />}{t.sweepSeen.warm}</li>
       </ul>}
 
-      {phase.kind === "predict" && phase.id !== "DENSITY" && <fieldset className="eco-choices" data-testid={`eco-answer-${phase.id.toLowerCase()}`}>
+      {!review && phase.kind === "predict" && phase.id !== "DENSITY" && <fieldset className="eco-choices" data-testid={`eco-answer-${phase.id.toLowerCase()}`}>
         <legend>{t.answerLegend}</legend>
         {ECO_CHOICES[phase.id].map((choice) => <label key={choice} className="eco-choice">
           <input type="radio" name={`eco-answer-${phase.id}`} value={choice} checked={current?.prediction === choice} onChange={() => predict(choice)} />
           <span>{t.choice[choice]}</span>
         </label>)}
       </fieldset>}
-      {phase.kind === "predict" && phase.id === "DENSITY" && <form className="eco-density" data-testid="eco-answer-density" onSubmit={(event) => { event.preventDefault(); saveDensity(); }}>
+      {!review && phase.kind === "predict" && phase.id === "DENSITY" && <form className="eco-density" data-testid="eco-answer-density" onSubmit={(event) => { event.preventDefault(); saveDensity(); }}>
         <label className="eco-field-label">
           <span>{t.densityValue}</span>
           <input type="text" inputMode="decimal" autoComplete="off" value={density.value} aria-invalid={densityError} aria-describedby={densityError ? "eco-density-error" : undefined}
@@ -389,12 +469,26 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
         <button type="submit" className="eco-tool">{t.densitySave}</button>
       </form>}
 
-      <div className="eco-observation" role="status" aria-live="polite" data-testid="eco-observation">
+      {reviewed ? <div className="eco-review" data-testid="eco-review" data-correct={reviewed.verdict?.correct ?? "unknown"}>
+        <p className="eco-chosen">{t.review.chosen}: <b>{reviewed.answer}</b></p>
+        {reviewed.verdict && <p className="eco-verdict" role="status">
+          {reviewed.verdict.correct ? <Check size={16} aria-hidden="true" /> : <X size={16} aria-hidden="true" />}
+          <span>{reviewed.verdict.correct ? t.review.right : t.review.wrong(reviewed.verdict.expected)}</span>
+        </p>}
+        <div className="eco-observation" data-testid="eco-observation">
+          <p><Info size={15} aria-hidden="true" /> {observationText(reviewed.id)}</p>
+        </div>
+        <p className="eco-note">{t.review.note}</p>
+        <button type="button" className="eco-act eco-next" data-testid="eco-next" autoFocus onClick={() => setReview(null)}>
+          {phase.kind === "explain" || phase.kind === "ready" ? t.review.toExplain : t.review.next}
+        </button>
+      </div>
+      : !(awaitingCheck && !shownText) && <div className="eco-observation" role="status" aria-live="polite" data-testid="eco-observation">
         {shownText ? <p>{actId === "LIMITS" ? <Info size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />} {shownText}</p>
           : <p className="eco-hint"><Info size={15} aria-hidden="true" /> {t.predictHint}</p>}
-      </div>
+      </div>}
 
-      {done && <fieldset className="eco-choices" data-testid="eco-explanation">
+      {done && !review && <fieldset className="eco-choices" data-testid="eco-explanation">
         <legend>{t.explanation}</legend>
         {(["A", "B", "C"] as const).map((answer) => <label key={answer} className="eco-choice">
           <input type="radio" name="eco-explanation" value={answer} checked={evidence.explanation === answer} onChange={() => explain(answer)} />
@@ -402,9 +496,9 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           <span>{t[answer.toLowerCase() as "a" | "b" | "c"]}</span>
         </label>)}
       </fieldset>}
-      {phase.kind === "ready" && <p className="eco-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
+      {phase.kind === "ready" && !review && <p className="eco-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
 
-      {done && <div className="eco-explore" data-testid="eco-explore">
+      {done && !review && <div className="eco-explore" data-testid="eco-explore">
         <button type="button" className="eco-tool" aria-expanded={exploring} aria-controls="eco-explore-controls" onClick={() => setExplore((value) => value ? null : "pond")}>
           <Compass size={16} aria-hidden="true" /><span>{exploring ? t.explore.hide : t.explore.show}</span>
         </button>

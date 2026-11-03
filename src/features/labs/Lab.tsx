@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
+import { ThermalEnergyActivity } from "./physics/thermal/ThermalEnergyActivity";
 import { LeverInvestigationActivity } from "./physics/mechanics/LeverInvestigationActivity";
 import { useLabRunHost } from "./runtime/lab-run-host";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
@@ -268,6 +269,11 @@ export default function Lab() {
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành đòn bẩy. Dự đoán được ghi trước khi mở kết quả.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
       : <LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+  if (id === "thermal-energy") return space(user.role !== "STUDENT"
+    ? <section className="panel"><p>FL-07 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
+    : !labRun.launch || !labRun.rendererKey
+      ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành năng lượng nhiệt.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
+      : <ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />);
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
@@ -320,7 +326,7 @@ export default function Lab() {
               </div>
             </div>
           )}
-          {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} />}
+          {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} runtimeConfig={labRun.launch?.runtimeConfig} />}
           {runtimeReady && !(guided && user.role === "TEACHER") && <div className="lab-actions">
             <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
             <button

@@ -1,6 +1,6 @@
-/* Hallmark · v2.0.0 · scope: app screen (FL-20 Lab panel and 2D scene) · system: existing Lab Space tokens, no theme dealt */
-/* critique: one scene, one action dock, one question panel; status in text; fish never shown dying; motion is transform/opacity only and stops under reduced motion */
-/* waive 29: the question panel keeps the translucent Lab Space surface shared with the Circuit and FL-25 panels, so the Labs read as one space */
+/* Hallmark · v2.0.0 · scope: app screen (FL-20 Lab panel, K8 3D pond and 2D scene) · system: existing Lab Space tokens, no theme dealt */
+/* critique: one scene (3D diorama, 2D on request or without WebGL), one graph card, one action dock, one question panel; status in text; fish never shown dying; motion is transform/opacity only and stops under reduced motion */
+/* waive 29: the question panel and the 3D graph card keep the translucent Lab Space surface (the card must let the diorama show through) shared with the Circuit and FL-25 panels, so the Labs read as one space */
 /* answered F7: dock and panel controls reuse the Lab Space control recipe of the Circuit and FL-25 panels on purpose; the primary action is set apart by its filled accent */
 
 :root {
@@ -15,6 +15,7 @@
   --eco-muted: var(--muted);
   --eco-focus: #287875;
   --eco-error: #b3261e;
+  --eco-error-soft: rgb(179 38 30 / 8%);
   --eco-stage-from: #f7faf4;
   --eco-stage-to: #e2ece4;
   --eco-sky: #eef5f2;
@@ -48,6 +49,9 @@
   --eco-age-repro: #5d9b72;
   --eco-age-post: #b9a582;
   --eco-panel-w: clamp(300px, 34vw, 380px);
+  --eco-card-bg: rgb(255 255 255 / 86%);
+  --eco-chip-bg: rgb(255 255 255 / 92%);
+  --eco-chip-ink: #8a2a1f;
 }
 :root[data-theme="dark"] {
   --eco-panel-bg: rgb(24 32 32 / 94%);
@@ -57,6 +61,7 @@
   --eco-accent-soft: rgb(124 195 164 / 14%);
   --eco-focus: #7cc3a4;
   --eco-error: #f2b8b5;
+  --eco-error-soft: rgb(242 184 181 / 12%);
   --eco-stage-from: #1c2624;
   --eco-stage-to: #121a19;
   --eco-sky: #1f2b2a;
@@ -66,6 +71,9 @@
   --eco-site-line: #8cc4ea;
   --eco-site: rgb(140 196 234 / 14%);
   --eco-grid: rgb(220 235 210 / 16%);
+  --eco-card-bg: rgb(24 32 32 / 86%);
+  --eco-chip-bg: rgb(24 32 32 / 92%);
+  --eco-chip-ink: #f2b8b5;
 }
 
 .eco-activity { color: var(--eco-ink); font-size: 14px; line-height: 1.5; }
@@ -78,6 +86,21 @@
 .eco-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
 .eco-stage text { fill: var(--eco-ink); font-size: 15px; }
 figure.eco-graph, figure.eco-pyramid { margin: 0; }
+
+/* K8 3D pond: the diorama fills the stage; the tolerance graph floats as a card clear of the header, dock and panel */
+.eco-stage[data-view="3d"] { overflow: hidden; padding: 0; }
+.eco-pond-3d, .eco-3d { position: absolute; inset: 0; }
+.eco-3d canvas { touch-action: none; }
+.eco-stage[data-view="3d"] .eco-stage-inner { position: absolute; top: 18px; right: calc(var(--eco-panel-w) + 56px); display: grid; gap: 4px; width: min(440px, 32vw); min-height: 0; margin: 0; padding: 8px 16px 12px; border-radius: 16px; background: var(--eco-card-bg); box-shadow: var(--eco-panel-shadow); backdrop-filter: blur(16px) saturate(160%); }
+.eco-stage[data-view="3d"] .eco-graph svg text { font-size: 22px; }
+/* In the card the y label starts at the axis instead of hanging left of it */
+.eco-stage[data-view="3d"] .eco-graph-y { text-anchor: start; }
+.eco-view-toggle { justify-self: start; }
+.eco-link { min-height: 44px; padding: 8px 0; border: 0; background: none; color: var(--eco-accent); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.eco-link:focus-visible { outline: 3px solid var(--eco-focus); outline-offset: 2px; transition: none; }
+.eco-thermo-chip { display: inline-block; padding: 4px 12px; border-radius: 999px; background: var(--eco-chip-bg); color: var(--eco-chip-ink); font-size: 15px; font-weight: 700; white-space: nowrap; box-shadow: var(--eco-panel-shadow); }
+.eco-pond-question { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--eco-chip-bg); color: var(--eco-ink); font-size: 32px; font-weight: 700; box-shadow: var(--eco-panel-shadow); }
+.eco-stage-fallback { display: grid; align-content: center; gap: 8px; height: 100%; padding: 124px 24px 240px; }
 .eco-graph figcaption, .eco-pyramid figcaption { color: var(--eco-muted); font-size: 12px; }
 
 .eco-sky { fill: var(--eco-sky); }
@@ -187,6 +210,18 @@ figure.eco-graph, figure.eco-pyramid { margin: 0; }
 .eco-observation p { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
 .eco-observation p > svg { flex: none; margin-top: 4px; }
 .eco-hint { color: var(--eco-muted); }
+/* Per-question review: the learner's answer, the verdict, why, then an explicit move on. */
+.eco-chosen { margin: 0; font-size: 14px; line-height: 1.5; color: var(--eco-muted); }
+.eco-chosen b { color: var(--eco-ink); }
+.eco-review { display: grid; gap: 12px; }
+.eco-verdict { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 650; line-height: 1.45; }
+.eco-verdict > svg { flex: none; margin-top: 4px; }
+.eco-review[data-correct="true"] .eco-verdict { background: var(--eco-accent-soft); color: var(--eco-accent); }
+.eco-review[data-correct="false"] .eco-verdict { background: var(--eco-error-soft); color: var(--eco-error); }
+.eco-next { justify-self: stretch; }
+/* The result drawer replaces the question panel while open: same box, no duplicate title, nothing showing through. */
+.lab-space:has(.eco-activity) .lab-aside:has([open]) { width: min(var(--eco-panel-w), calc(100% - 36px)); }
+.lab-space:has(.eco-activity) .lab-aside:has([open]) .lab-space-results { max-height: calc(100dvh - 32px); border: 0; border-radius: 20px; background: var(--eco-panel-solid); box-shadow: var(--eco-panel-shadow); }
 .eco-ready { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--eco-accent); font-weight: 600; }
 .eco-note { margin: 0; color: var(--eco-muted); font-size: 12px; line-height: 1.5; }
 
@@ -211,7 +246,15 @@ figure.eco-graph, figure.eco-pyramid { margin: 0; }
   .eco-stage { padding-right: calc(var(--eco-panel-w) + 56px); }
   .eco-dock, .lab-space:has(.eco-activity) .lab-workspace > .lab-actions { max-width: calc(100% - var(--eco-panel-w) - 72px); }
 }
+@media (min-width: 721px) and (max-width: 1180px) {
+  /* Narrow desktop: the graph card moves under the header so it never overlaps it */
+  .eco-stage[data-view="3d"] .eco-stage-inner { top: 128px; left: 18px; right: auto; width: min(360px, 40vw); }
+}
 @media (max-width: 720px) {
+  /* Phone: the diorama is a framed box above the graph, both scroll above the bottom sheet */
+  .eco-stage[data-view="3d"] { overflow-y: auto; padding: 112px 12px calc(36dvh + 260px); }
+  .eco-stage[data-view="3d"] .eco-pond-3d { position: relative; inset: auto; height: 300px; border-radius: 16px; overflow: hidden; }
+  .eco-stage[data-view="3d"] .eco-stage-inner { position: static; width: 100%; margin-top: 12px; }
   /* Phone: scene on top, then the panel as a bottom sheet, then the dock right above the submit bar */
   .eco-stage { padding: 112px 12px calc(36dvh + 260px); }
   .eco-stage-inner, .eco-stage[data-scene="pond"] .eco-stage-inner { align-content: start; width: 100%; }

@@ -37,6 +37,8 @@ export const k3InstrumentsSchema = z.object({
   }).strict(),
   ruler: z.object({ lengthMm: positive, resolutionMm: positive }).strict(),
   beaker: z.object({ capacityMl: positive, innerDiameterMm: positive, heightMm: positive, emptyMassG: positive }).strict(),
+  dynamometer: z.object({ minN: z.literal(0), maxN: positive, resolutionN: positive, springConstantNPerM: positive, springMassKg: positive }).strict().optional(),
+  overflowCan: z.object({ capacityMl: positive, innerDiameterMm: positive, heightMm: positive, spoutDiameterMm: positive }).strict().optional(),
 }).strict();
 
 export const k3SpecimenSchema = z.discriminatedUnion("shape", [

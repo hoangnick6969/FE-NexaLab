@@ -142,6 +142,8 @@ test("bulb activity restores its predictions and sends checkpoint evidence to th
   await page.locator("label.bulb-explanation-choice").filter({ hasText: /Công tắc mở làm ngắt đường đi/ }).click();
   await page.getByTestId("lab-run-submit").click();
   await expect(page.getByText("Công tắc đóng: Bóng đèn sáng", { exact: false })).toBeVisible();
+  // The result drawer takes the question panel's place instead of overlapping it.
+  await expect(page.locator(".bulb-content")).toBeHidden();
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toMatchObject({ runId: "bulb-run-2", explanation: "A", checkpoints: [
     { id: "CLOSED", prediction: "ON", state: { nodes: expect.arrayContaining([{ id: "switch", type: "switch", closed: true }]) } },

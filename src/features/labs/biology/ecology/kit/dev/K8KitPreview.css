@@ -1,0 +1,26 @@
+/* Hallmark · v2.0.0 · scope: app screen (K8 kit dev preview, development only) · system: FL-20 eco tokens, no theme dealt */
+/* critique: one panel, temperature first, overrides tucked away */
+/* Hallmark · waive 26b · shared states · the preview buttons are .eco-tool, whose :active and other states live in EcologyToleranceActivity.css */
+/* K8 kit dev preview (/dev/lab-kits/k8): one panel, temperature first, overrides tucked away. */
+.k8-panel { position: absolute; right: max(18px, env(safe-area-inset-right)); top: 96px; z-index: 10; display: grid; gap: 12px; width: min(400px, calc(100% - 36px)); max-height: calc(100% - 114px); overflow-y: auto; padding: 16px; border-radius: 16px; background: var(--surface); color: var(--eco-ink); box-shadow: var(--eco-panel-shadow); }
+.k8-panel-title { margin: 0; font-size: 16px; font-weight: 700; }
+.k8-panel-status { margin: 0; font-size: 14px; line-height: 1.45; color: var(--eco-muted); }
+.k8-panel-status[data-out="true"] { color: var(--eco-error); }
+.k8-temp { display: grid; gap: 4px; font-size: 14px; }
+.k8-temp input { width: 100%; min-height: 32px; accent-color: var(--eco-accent); }
+.k8-temp input:focus-visible, .k8-advanced summary:focus-visible { outline: 2px solid var(--eco-focus); outline-offset: 2px; }
+.k8-ruler { position: relative; display: block; height: 30px; margin: 0 8px; }
+.k8-ruler-band { position: absolute; top: 0; height: 6px; border-radius: 3px; background: var(--eco-accent); opacity: .45; }
+.k8-ruler-tick { position: absolute; top: 10px; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--eco-ink); white-space: nowrap; }
+.k8-ruler-legend { font-size: 12px; color: var(--eco-muted); }
+.k8-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.k8-preset { flex-direction: column; gap: 0; padding: 8px; line-height: 1.3; }
+.k8-preset-temp { font-size: 12px; font-weight: 500; color: var(--eco-muted); }
+.k8-preview-moods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.k8-advanced { border-top: 1px solid var(--line); padding-top: 12px; }
+.k8-advanced-body { display: grid; gap: 12px; padding-top: 8px; }
+.k8-advanced summary { min-height: 32px; padding-top: 4px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-presets .eco-tool[aria-pressed="true"], .k8-preview-moods .eco-tool[aria-pressed="true"] { border-color: var(--eco-accent); background: var(--eco-accent-soft); color: var(--eco-ink); }
+@media (max-width: 720px) {
+  .k8-panel { top: auto; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: auto; max-height: 52dvh; }
+}
