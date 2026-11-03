@@ -22,7 +22,8 @@ export type StudentLessonCard = {
   id: string;
   title: string;
   subjectId: string;
-  subject: { id: string; name: string; ebookUrl?: string | null };
+  subject: { id: string; name: string; ebookUrl?: string | null; ebookEditions?: CatalogEbookEdition[] };
+  coverAssetVersionId?: string | null;
   grade: number;
   chapter: string;
   topic: string;
@@ -34,10 +35,20 @@ export type StudentLessonCard = {
   assignments: StudentLessonAssignment[];
 };
 
+export type CatalogEbookEdition = {
+  id: string;
+  version: string;
+  url: string;
+  fallbackPhysicalPage?: number;
+  isCurrent?: boolean;
+  coverAssetVersionId?: string | null;
+};
+
 type CatalogSubject = {
   id: string;
   name: string;
   ebookUrl?: string | null;
+  ebookEditions?: CatalogEbookEdition[];
   grades?: Array<{
     grade: number;
     chapters?: Array<{
@@ -50,6 +61,14 @@ type CatalogSubject = {
   }>;
 };
 
+function editionGrade(edition: CatalogEbookEdition): number | null {
+  for (const value of [edition.version, edition.url]) {
+    const match = value.match(/(?:khtn|grade)[-_ ]?(\d{1,2})/i);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
 export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[] } | null | undefined): StudentLessonCard[] {
   const lessons = new Map<string, StudentLessonCard>();
   for (const subject of catalog?.subjects ?? []) {
@@ -57,11 +76,14 @@ export function flattenReleasedCurriculum(catalog: { subjects?: CatalogSubject[]
       for (const chapter of grade.chapters ?? []) {
         const add = (lesson: any, topicTitle = "") => {
           if (!lesson?.id || lessons.has(lesson.id)) return;
+          const gradeEditions = (subject.ebookEditions ?? []).filter((edition) => editionGrade(edition) === grade.grade);
+          const gradeEdition = gradeEditions.find((edition) => edition.isCurrent) ?? gradeEditions[gradeEditions.length - 1];
           lessons.set(lesson.id, {
             ...lesson,
             subjectId: subject.id,
-            subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl },
+            subject: { id: subject.id, name: subject.name, ebookUrl: subject.ebookUrl, ebookEditions: subject.ebookEditions },
             grade: grade.grade,
+            coverAssetVersionId: gradeEdition?.coverAssetVersionId ?? null,
             // The official chapter/topic from the catalog wins over the lesson's free-text label.
             chapter: chapter.title || lesson.chapter,
             topic: topicTitle || lesson.topic,

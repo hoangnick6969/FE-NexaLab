@@ -70,6 +70,8 @@ const text = defineText({
     prevLesson: "Bài trước",
     nextLesson: "Bài sau",
     chapterLessons: "Mục lục chương",
+    showChapterLessons: "Xem danh sách bài",
+    hideChapterLessons: "Ẩn danh sách bài",
   },
   en: {
     opening: "Opening the lesson…",
@@ -121,6 +123,8 @@ const text = defineText({
     prevLesson: "Previous lesson",
     nextLesson: "Next lesson",
     chapterLessons: "Chapter lessons",
+    showChapterLessons: "Show lesson list",
+    hideChapterLessons: "Hide lesson list",
   },
 });
 const t = text();
@@ -130,6 +134,7 @@ export function LessonDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const assignmentId = searchParams.get("assignmentId") || undefined;
+  const [chapterListOpen, setChapterListOpen] = useState(false);
   const user = useAuth((state) => state.user)!;
   type LessonTab = "reading" | "video" | "exercise" | "labs" | "materials";
   const requestedTab = searchParams.get("tab");
@@ -321,8 +326,17 @@ export function LessonDetail() {
             <span className="eyebrow">{lesson.chapter}</span>
             <h3>{t.chapterLessons}</h3>
             <small>{chapterLessons.length} bài học</small>
+            <button
+              type="button"
+              className="toc-sidebar-toggle"
+              aria-expanded={chapterListOpen}
+              aria-controls="lesson-chapter-toc-list"
+              onClick={() => setChapterListOpen((open) => !open)}
+            >
+              {chapterListOpen ? t.hideChapterLessons : t.showChapterLessons}
+            </button>
           </div>
-          <ol className="toc-sidebar-list">
+          <ol id="lesson-chapter-toc-list" className={`toc-sidebar-list${chapterListOpen ? " is-open" : ""}`}>
             {chapterLessons.map((item: any, index: number) => {
               const isCurrent = item.id === id;
               const linkUrl = assignmentId
@@ -382,7 +396,7 @@ export function LessonDetail() {
         {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
           <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
             {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : structuredContent?.learningContent ? <StructuredLessonBody value={structuredContent} sourceAvailable={Boolean(sourceDocument)} onOpenSource={setSourcePage} renderSectionLabs={(sectionId) => foundationalLabs.data?.filter((lab) => sectionFor(lab)?.id === sectionId).map((lab) => labCard(lab, true))} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
+            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : structuredContent?.learningContent ? <StructuredLessonBody value={structuredContent} title={lesson.title} sourceAvailable={Boolean(sourceDocument)} onOpenSource={setSourcePage} renderSectionLabs={(sectionId) => foundationalLabs.data?.filter((lab) => sectionFor(lab)?.id === sectionId).map((lab) => labCard(lab, true))} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
             {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
           </div>
           {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
@@ -499,7 +513,7 @@ function LessonMarkdown({ value, displayMath = false }: { value: string; display
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: false }]]}>{markdown}</ReactMarkdown>;
 }
 
-function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSectionLabs }: { value: any; sourceAvailable: boolean; onOpenSource: (page: number) => void; renderSectionLabs?: (sectionId: string) => React.ReactNode }) {
+function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, renderSectionLabs }: { value: any; title: string; sourceAvailable: boolean; onOpenSource: (page: number) => void; renderSectionLabs?: (sectionId: string) => React.ReactNode }) {
   const content = value.learningContent ?? {};
   const pageByBlock = new Map<string, { pdfPage?: number; printedPageLabel?: string }>();
   for (const block of value.sourceBlocks ?? []) {
@@ -550,11 +564,13 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSect
     if (!normalized || renderedText.has(normalized)) return null;
     renderedText.add(normalized);
     ids.forEach((id: string) => coveredBlocks.add(id));
-    return <div key={item?.id ?? key}><LessonMarkdown value={uniqueText} displayMath={displayMath} />{evidence(ids)}</div>;
+    const itemTitle = typeof item?.title === "string" ? item.title.trim() : typeof item?.label === "string" ? item.label.trim() : "";
+    return <div className="lesson-structured-item" key={item?.id ?? key}>{itemTitle && normalize(itemTitle) !== normalized && <h4>{itemTitle}</h4>}<LessonMarkdown value={uniqueText} displayMath={displayMath} />{evidence(ids)}</div>;
   };
   const range = value.pdfPageRange ? `PDF ${value.pdfPageRange.start}–${value.pdfPageRange.end}` : "";
   return <div className="lesson-content lesson-structured-content">
-    {content.summary && !summaryDuplicatesSection && <div className="lesson-structured-summary"><LessonMarkdown value={content.summary} /></div>}
+    <header className="lesson-structured-heading"><h2>Bài học: {title}</h2></header>
+    {content.summary && !summaryDuplicatesSection && <section className="lesson-structured-summary" aria-label="Tóm tắt bài học"><h3>Tóm tắt bài học</h3><div className="lesson-structured-summary-content"><LessonMarkdown value={content.summary} /></div></section>}
     {sections.map((section: any, index: number) => {
       const ids = Array.isArray(section.sourceBlockIds) ? section.sourceBlockIds : [];
       ids.forEach((id: unknown) => { if (typeof id === "string") coveredBlocks.add(id); });
@@ -570,15 +586,18 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSect
         sectionTextByBlock.set(id, [...(sectionTextByBlock.get(id) ?? []), ...texts]);
       });
       const rawHeading = typeof section.heading === "string" ? section.heading.trim() : "";
-      const displayHeading = rawHeading === "?" ? "Câu hỏi & Thảo luận" : rawHeading;
-      return <section key={section.id ?? index} id={section.id ?? `lesson-section-${index}`} tabIndex={-1}>
-      {displayHeading && (/^#{1,6}\s/.test(displayHeading) ? <LessonMarkdown value={displayHeading} /> : <h2>{displayHeading}</h2>)}{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
+      const displayHeading = rawHeading === "?" ? "Câu hỏi & Thảo luận" : rawHeading.replace(/^#{1,6}\s+/, "").trim();
+      const sectionId = section.id ?? `lesson-section-${index}`;
+      const headingId = `${sectionId}-heading`;
+      return <section key={section.id ?? index} id={sectionId} aria-labelledby={headingId} tabIndex={-1}>
+      <h3 id={headingId}>{displayHeading || `Nội dung ${String(index + 1).padStart(2, "0")}`}</h3>{body && !bodyRepeatsHeading && <div className="lesson-structured-markdown"><LessonMarkdown value={body} /></div>}{evidence(ids)}
       {typeof section.id === "string" && renderSectionLabs?.(section.id)}
     </section>;
     })}
     {(content.knowledgeUnits ?? []).map((unit: any, index: number) => {
       const claims = (unit.claims ?? []).map((claim: any, claimIndex: number) => renderSupplement({ ...claim, sourceBlockIds: claim.sourceBlockIds ?? unit.sourceBlockIds }, claim.id ?? claimIndex)).filter(Boolean);
-      return claims.length ? <section key={unit.id ?? index}>{unit.title && <h2>{unit.title}</h2>}{claims}</section> : null;
+      const headingId = `lesson-knowledge-${unit.id ?? index}-heading`;
+      return claims.length ? <section key={unit.id ?? index} aria-labelledby={headingId}><h3 id={headingId}>{unit.title || `Kiến thức trọng tâm ${String(index + 1).padStart(2, "0")}`}</h3>{claims}</section> : null;
     })}
     {[
       ["Khái niệm", content.definitions, false],
@@ -588,7 +607,8 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSect
       ["Luyện tập trong nguồn", content.basicExercises, false],
     ].map(([heading, items, displayMath]) => {
       const rendered = (Array.isArray(items) ? items : []).map((item: any, index: number) => renderSupplement(item, index, Boolean(displayMath))).filter(Boolean);
-      return rendered.length ? <section key={String(heading)}><h2>{heading}</h2>{rendered}</section> : null;
+      const headingId = `lesson-supplement-${String(heading).toLowerCase().replace(/[^a-z0-9]+/g, "-")}-heading`;
+      return rendered.length ? <section key={String(heading)} aria-labelledby={headingId}><h3 id={headingId}>{heading}</h3>{rendered}</section> : null;
     })}
     {(value.book?.title || range) && <small className="lesson-structured-provenance">Nguồn: {value.book?.title ?? ""}{value.book?.author ? ` · ${value.book.author}` : ""}{value.book?.version ? ` · ${value.book.version}` : ""}{range ? ` · ${range}` : ""}</small>}
   </div>;
