@@ -9,6 +9,7 @@ import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLess
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
 import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
 import { StudentLessonsHub } from "./StudentLessonsHub";
+import { SubjectCover } from "../../components/SubjectGradeChapterBrowser";
 import { defineText, formatDate } from "../../i18n";
 import { commonText } from "../../i18n/common";
 
@@ -364,16 +365,20 @@ function LessonsLibrary({ user }: { user: any }) {
           ) : null
         }
       />
-      {subjects.data?.some((subject: any) => safeEbookUrl(subject.ebookUrl)) && (
+      {subjects.data?.some((subject: any) => safeEbookUrl(subject.ebookUrl) || subject.ebookEditions?.some((edition: any) => safeEbookUrl(edition.url))) && (
         <section className="subject-ebook-links" aria-label={t.referenceBooks}>
           <h2>{t.referenceTitle}</h2>
           <p>{t.referenceIntro}</p>
           <div>
-            {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl)).map((subject: any) => (
-              <Link key={subject.id} to={`/ebooks/${subject.id}`}>
-                <BookOpen size={18} /> {subject.name} <ArrowUpRight size={14} aria-hidden="true" />
-              </Link>
-            ))}
+            {subjects.data.filter((subject: any) => safeEbookUrl(subject.ebookUrl) || subject.ebookEditions?.some((edition: any) => safeEbookUrl(edition.url))).flatMap((subject: any) => {
+              const editions = subject.ebookEditions?.length ? subject.ebookEditions : [{ id: subject.id, version: "", coverAssetVersionId: null }];
+              const current = editions.find((edition: any) => edition.isCurrent) ?? editions[editions.length - 1];
+              const editionGrade = /(?:khtn|grade)[-_ ]?(\d{1,2})/i.exec(`${current.version ?? ""} ${current.url ?? ""}`)?.[1];
+              return <Link className="subject-ebook-card" key={`${subject.id}:${current.id}`} to={`/ebooks/${subject.id}`}>
+                <SubjectCover subjectId={subject.id} subjectName={subject.name} versionId={current.coverAssetVersionId} />
+                <span><b>{subject.name}</b><small>{editionGrade ? t.grade(Number(editionGrade)) : t.referenceTitle}</small></span>
+              </Link>;
+            })}
           </div>
         </section>
       )}

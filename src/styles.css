@@ -1635,9 +1635,14 @@ td small {
 .subject-ebook-links { margin: 0 0 24px; padding: 18px 20px; border-radius: 16px; background: var(--fill-neutral-96); }
 .subject-ebook-links h2 { margin: 0; font-size: 17px; }
 .subject-ebook-links p { margin: 5px 0 12px; color: var(--muted); }
-.subject-ebook-links > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.subject-ebook-links > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 230px)); justify-content: start; gap: 14px; }
 .subject-ebook-links a { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 12px; background: var(--surface); color: var(--dark); }
 .subject-ebook-links a:hover { text-decoration: underline; }
+.subject-ebook-links .subject-ebook-card { display: grid; grid-template-rows: auto 1fr; align-content: start; gap: 10px; min-height: 0; padding: 10px; border: 1px solid var(--line-neutral-93-2); border-radius: 15px; }
+.subject-ebook-card > span:not(.subject-icon) { display: grid; gap: 4px; min-width: 0; }
+.subject-ebook-card small { color: var(--muted); }
+.subject-ebook-card .subject-icon { display: grid; place-items: center; width: 100%; aspect-ratio: 2 / 3; height: auto; padding: 0; overflow: hidden; border-radius: 9px 12px 12px 9px; background: var(--fill-neutral-95); color: var(--ink-teal-52); box-shadow: inset 4px 0 0 var(--line-neutral-93-2); }
+.subject-ebook-card .subject-icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .lesson-card-top {
@@ -7938,23 +7943,73 @@ td small {
   .app-shell-student .student-lessons-page .student-lesson-card { min-height: 205px; }
   .app-shell-student .lesson-detail-page .page-heading h1 { font-size: 21px; }
 }
-.hierarchy-browser { display: grid; gap: 14px; min-width: 0; }
-.hierarchy-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--ink-neutral-59); font-size: 13px; }
-.hierarchy-breadcrumb a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 2px; color: var(--ink-sky-49-2); font: inherit; font-weight: 700; text-decoration: none; }
-.hierarchy-breadcrumb a:hover { text-decoration: underline; }
-.hierarchy-breadcrumb [aria-current="page"] { color: var(--ink-sky-31); font-weight: 700; }
+.hierarchy-browser { display: grid; gap: 12px; min-width: 0; }
+.hierarchy-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--fill-neutral-97);
+  border: 1px solid var(--line-neutral-93-2);
+  color: var(--ink-neutral-59);
+  font-size: 12.5px;
+  line-height: 1.3;
+}
+.hierarchy-breadcrumb a,
+.hierarchy-breadcrumb .breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--ink-sky-42);
+  font: inherit;
+  font-weight: 550;
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+.hierarchy-breadcrumb a:hover,
+.hierarchy-breadcrumb .breadcrumb-item:hover {
+  background: var(--surface);
+  color: var(--brand);
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.hierarchy-breadcrumb .breadcrumb-sep {
+  color: var(--ink-neutral-61);
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+}
+.hierarchy-breadcrumb .breadcrumb-current,
+.hierarchy-breadcrumb [aria-current="page"] {
+  color: var(--ink-sky-31);
+  font-weight: 650;
+  padding: 2px 6px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .hierarchy-grade-sections { display: grid; gap: 20px; }
 .hierarchy-grade-section { display: grid; gap: 10px; }
 .hierarchy-grade-section > h3 { margin: 0; color: var(--ink-neutral-51); font-size: 14px; }
-.hierarchy-grade-section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+.hierarchy-grade-section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 230px)); justify-content: start; gap: 16px; }
 .hierarchy-choice, .hierarchy-chapter { display: flex; align-items: center; gap: 13px; min-width: 0; min-height: 78px; padding: 15px; border: 1px solid var(--line-neutral-93-2); border-radius: 15px; background: var(--surface); color: var(--ink-sky-31); text-align: left; text-decoration: none; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.hierarchy-choice { display: grid; align-content: start; gap: 11px; min-height: 0; padding: 10px; border-radius: 16px; }
 .hierarchy-choice:hover, .hierarchy-chapter:hover { border-color: var(--line-sky-75); background: var(--fill-neutral-97); transform: translateY(-1px); }
 .hierarchy-choice:focus-visible, .hierarchy-chapter:focus-visible, .hierarchy-breadcrumb a:focus-visible { outline: 3px solid var(--line-teal-52); outline-offset: 3px; }
 .hierarchy-choice > svg, .hierarchy-chapter > svg { flex: 0 0 auto; color: var(--ink-teal-54); }
-.hierarchy-choice .subject-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; padding: 9px; border-radius: 12px; background: var(--fill-neutral-95); color: var(--ink-teal-52); }
-.hierarchy-choice .subject-icon svg { width: 22px; height: 22px; }
+.hierarchy-choice .subject-icon { display: grid; place-items: center; width: 100%; aspect-ratio: 2 / 3; height: auto; padding: 0; overflow: hidden; border-radius: 10px 13px 13px 10px; background: var(--fill-neutral-95); color: var(--ink-teal-52); box-shadow: inset 5px 0 0 var(--line-neutral-93-2), 0 4px 12px var(--shadow-sky-31-a9); }
+.hierarchy-choice .subject-icon svg { width: 32px; height: 32px; }
 .hierarchy-choice .subject-icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .hierarchy-choice-copy, .hierarchy-chapter > span { display: grid; flex: 1; gap: 5px; min-width: 0; }
+.hierarchy-choice-copy { padding: 1px 3px 3px; }
 .hierarchy-choice-copy b, .hierarchy-chapter b { overflow-wrap: anywhere; font-size: 15px; }
 .hierarchy-choice-copy small, .hierarchy-chapter small { color: var(--ink-neutral-55); font-size: 12px; }
 /* Book-like chapter TOC list */
@@ -7988,13 +8043,14 @@ td small {
   .app-shell-student .student-assignment-label { grid-column: 1 / -1; }
   .app-shell-student .student-assignment-links .student-lesson-open,
   .app-shell-student .student-assignment-links .student-assignment-open { width: 100%; }
-  .hierarchy-grade-section-grid { grid-template-columns: 1fr; gap: 8px; }
+  .hierarchy-grade-section-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .hierarchy-choice, .hierarchy-chapter { min-height: 68px; padding: 12px; border-radius: 12px; }
-  .hierarchy-choice .subject-icon { width: 38px; height: 38px; }
+  .hierarchy-choice { min-height: 0; padding: 8px; }
   .hierarchy-content-list { grid-template-columns: 1fr; gap: 9px; }
   .hierarchy-breadcrumb { gap: 5px; font-size: 12px; }
   .student-closed-assignments .student-assignment-row { padding: 12px; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .hierarchy-choice, .hierarchy-chapter { transition: none; }
   .hierarchy-choice:hover, .hierarchy-chapter:hover { transform: none; }
@@ -8829,37 +8885,40 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
    STUDENT LESSONS REDESIGN: Hub, Catalog, Accordion TOC, Reading View
    ========================================================================== */
 
-/* 1. Filter Panel (Grade chips, Subject chips, Search) */
+/* 1. Filter Panel (Grade chips, Subject chips, Search) - Apple Controlled Density */
 .student-lesson-filter-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--line-neutral-93-2);
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-neutral-90-2);
   border-radius: 14px;
   background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .filter-chip-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .filter-label-group {
   flex: 0 0 auto;
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--ink-sky-42);
-  min-width: 44px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  min-width: 40px;
 }
 
 .chip-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -8867,16 +8926,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
-  padding: 5px 14px;
+  min-height: 28px;
+  padding: 2px 11px;
   border-radius: 999px;
   border: 1px solid var(--line-neutral-90-2);
   background: var(--surface);
   color: var(--ink-sky-31);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 550;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all 120ms ease;
   user-select: none;
 }
 
@@ -8890,8 +8949,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border-color: var(--brand);
   background: var(--brand);
   color: #fff;
-  font-weight: 700;
-  box-shadow: 0 2px 6px rgba(31, 111, 120, 0.25);
+  font-weight: 650;
+  box-shadow: 0 1px 4px rgba(31, 111, 120, 0.25);
 }
 
 .chip.is-disabled, .chip:disabled {
@@ -8906,56 +8965,82 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 10px;
+  gap: 10px;
+  padding-top: 8px;
   border-top: 1px solid var(--line-neutral-96);
   flex-wrap: wrap;
 }
 
 .filter-secondary-row .tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--fill-neutral-95);
   margin: 0;
+}
+
+.filter-secondary-row .tabs button {
+  min-height: 28px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-sky-42);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.filter-secondary-row .tabs button.active {
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .filter-search-box {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1 1 240px;
-  max-width: 360px;
+  flex: 1 1 220px;
+  max-width: 340px;
 }
 
 .filter-search-box input {
   width: 100%;
-  min-height: 38px;
-  padding: 7px 32px 7px 12px;
+  min-height: 32px;
+  padding: 4px 28px 4px 10px;
   border: 1px solid var(--line-neutral-90-2);
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
   background: var(--surface);
   color: var(--text);
-  transition: border-color 150ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .filter-search-box input:focus {
   border-color: var(--brand);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(31, 111, 120, 0.15);
+  box-shadow: 0 0 0 3px rgba(31, 111, 120, 0.12);
 }
 
 .clear-search-btn {
   position: absolute;
-  right: 6px;
+  right: 5px;
   top: 50%;
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border: 0;
   border-radius: 50%;
   background: var(--fill-neutral-90);
   color: var(--ink-neutral-51);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -8967,33 +9052,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* 2. Apple-style Minimalist Assigned Coursework Callout & Cards */
 
-/* 2.1 Top Compact Callout Banner (shown on /lessons when assigned work exists) */
-/* 2. Apple-style Minimalist Assigned Coursework Callout & Cards */
-
 /* 2.1 Top Compact Apple-style Callout Banner */
 .student-assigned-apple-callout {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 14px 20px;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 10px 16px;
   border: 1px solid var(--line-neutral-90-2);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .student-assigned-apple-callout:hover {
   border-color: var(--line-sky-75);
-  box-shadow: 0 4px 14px rgba(31, 111, 120, 0.06);
+  box-shadow: 0 3px 12px rgba(31, 111, 120, 0.05);
 }
 
 .callout-clickable-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   flex: 1 1 auto;
   text-decoration: none;
@@ -9004,10 +9086,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .callout-squircle-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: rgba(31, 111, 120, 0.08);
   color: var(--brand);
   transition: background 140ms ease;
@@ -9020,7 +9102,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .callout-body-col {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -9032,7 +9114,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .callout-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--ink-sky-31);
   letter-spacing: -0.015em;
@@ -9042,24 +9124,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--fill-neutral-94);
-  color: var(--ink-sky-42);
+  padding: 2px 7.5px;
+  border-radius: 6px;
+  background: var(--fill-neutral-95);
+  border: 1px solid var(--line-neutral-92);
+  color: var(--ink-neutral-55);
   font-size: 11px;
-  font-weight: 650;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .callout-pill.is-overdue {
-  background: #FEECEB;
-  color: #B42318;
-  font-weight: 700;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  font-weight: 650;
 }
 
 .callout-subline {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ink-neutral-55);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9073,8 +9157,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .callout-meta-sep {
   color: var(--ink-neutral-61);
-  margin: 0 2px;
+  margin: 0 3px;
   user-select: none;
+}
+
+.callout-meta-context {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--fill-neutral-95);
+  color: var(--ink-sky-42);
+  font-weight: 600;
 }
 
 .callout-actions-col {
@@ -9088,16 +9182,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 35px;
-  padding: 6px 14px;
+  min-height: 32px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: var(--fill-neutral-95);
-  border: 0;
+  background: var(--fill-neutral-96);
+  border: 1px solid var(--line-neutral-90-2);
   color: var(--ink-sky-42);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 550;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: all 120ms ease;
 }
 
 .callout-btn-secondary:hover {
@@ -9109,25 +9203,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 35px;
-  padding: 6px 16px;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 14px;
   border-radius: 999px;
   background: var(--brand);
   color: #fff !important;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 650;
   text-decoration: none;
   border: 0;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(31, 111, 120, 0.2);
-  transition: all 140ms ease;
+  box-shadow: 0 1px 2px rgba(31, 111, 120, 0.2);
+  transition: all 120ms ease;
 }
 
 .callout-btn-primary:hover {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(31, 111, 120, 0.28);
 }
 
 /* 2.2 Dedicated Assigned Coursework View (shown when filter is 'assigned') */
@@ -9140,28 +9233,212 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   align-items: flex-end;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--line-neutral-93-2);
 }
 
 .assigned-apple-heading h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 750;
   color: var(--ink-sky-31);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+}
+
+.assigned-apple-heading-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .assigned-apple-count {
   color: var(--ink-neutral-55);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+}
+
+/* Sub-filter chips for Subjects / Classes */
+.assigned-subfilter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: var(--fill-neutral-97);
+  border: 1px solid var(--line-neutral-93-2);
+}
+
+.subfilter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-sky-42);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.subfilter-chip:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ink-sky-31);
+}
+
+.subfilter-chip.is-active {
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.subfilter-badge {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 550;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.subfilter-alert-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b91c1c;
+  display: inline-block;
+}
+
+/* Subject & Class Group Container */
+.student-assigned-groups-container {
+  display: grid;
+  gap: 16px;
+}
+
+.student-assigned-group-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-neutral-90-2);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.assigned-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-neutral-95);
+  flex-wrap: wrap;
+}
+
+.assigned-group-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.assigned-group-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(31, 111, 120, 0.08);
+  color: var(--brand);
+}
+
+.assigned-group-headings {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.assigned-group-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.assigned-group-subject-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink-sky-31);
+  letter-spacing: -0.015em;
+}
+
+.assigned-group-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--ink-sky-42);
+}
+
+.assigned-group-scope-class {
+  color: var(--ink-sky-42);
+  font-weight: 600;
+}
+
+.assigned-group-scope-grade {
+  color: var(--ink-neutral-55);
+  font-weight: 500;
+}
+
+.assigned-group-scope-sep {
+  color: var(--line-neutral-75, #cbd5e1);
+  user-select: none;
+}
+
+.assigned-group-class-badge,
+.assigned-group-grade-badge {
+  display: none;
+}
+
+.assigned-group-subtext {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-neutral-59);
+}
+
+.assigned-group-stat-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.assigned-group-count-label,
+.assigned-group-count-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--ink-neutral-55);
 }
 
 .student-assigned-apple-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Apple-style Minimalist Card */
@@ -9169,24 +9446,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 18px 22px;
-  border: 1px solid var(--line-neutral-90-2);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  gap: 16px;
+  padding: 13px 18px;
+  border: 1px solid var(--line-neutral-92, #e5e7eb);
+  border-radius: 12px;
+  background: var(--fill-neutral-99, #fbfcfd);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .student-assigned-apple-card:hover {
   border-color: var(--line-sky-75);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  background: var(--surface);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
 }
 
 .apple-card-main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -9195,84 +9473,152 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink-neutral-55);
   flex-wrap: wrap;
 }
 
-.apple-card-meta-text {
-  font-weight: 650;
-  color: var(--brand);
-}
-
-.apple-card-meta-sep {
-  color: var(--ink-neutral-61);
-  user-select: none;
-}
-
-.apple-card-meta-chapter {
+/* Editorial metadata line (Pure typographic hierarchy, ZERO pill clutter) */
+.apple-card-editorial-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.35;
   color: var(--ink-neutral-55);
+  flex-wrap: wrap;
+}
+
+.apple-meta-subject-pure {
+  color: var(--ink-sky-20, #0f172a);
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.apple-meta-class-pure {
+  color: var(--ink-sky-42, #334155);
+  font-weight: 550;
+}
+
+.apple-meta-grade-pure {
+  color: var(--ink-neutral-55, #64748b);
+  font-weight: 450;
+}
+
+.apple-meta-chapter-pure {
+  color: var(--ink-neutral-55, #64748b);
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.apple-meta-sep {
+  color: var(--line-neutral-75, #cbd5e1);
+  font-size: 12px;
+  user-select: none;
+}
+
+/* Backwards compatibility aliases */
+.apple-meta-subject,
+.apple-meta-class,
+.apple-meta-grade {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-neutral-55);
+  background: transparent;
+  padding: 0;
+}
+
+.apple-card-meta-chapter {
+  color: var(--ink-neutral-55);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Refined Apple Status Capsules (Hairline border, calm typography, NO blinking) */
+.apple-status-pill,
 .apple-card-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--fill-neutral-94);
-  color: var(--ink-sky-42);
+  padding: 2.5px 8px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.3;
   white-space: nowrap;
+  letter-spacing: -0.005em;
 }
 
+.apple-status-pill.is-overdue,
 .apple-card-status-badge.is-overdue {
-  background: #FEECEB;
-  color: #B42318;
-  font-weight: 700;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+  font-weight: 650;
+}
+
+.apple-status-pill.is-due,
+.apple-card-status-badge.is-due {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  font-weight: 600;
+}
+
+.apple-status-pill.is-open,
+.apple-card-status-badge.is-open {
+  background: var(--fill-neutral-96);
+  border: 1px solid var(--line-neutral-92);
+  color: var(--ink-neutral-55);
+}
+
+.apple-pulse-dot {
+  display: none;
 }
 
 .apple-card-title {
-  margin: 2px 0;
-  font-size: 16px;
-  font-weight: 750;
+  margin: 1px 0 2px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--ink-sky-31);
   line-height: 1.35;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   overflow-wrap: break-word;
 }
 
 .apple-card-linked-lesson {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: var(--fill-neutral-96);
+  padding: 0;
+  background: transparent;
+  border: 0;
   width: fit-content;
   max-width: 100%;
+  color: var(--ink-neutral-55);
 }
 
 .apple-card-lesson-icon {
   color: var(--brand);
   flex: 0 0 auto;
+  opacity: 0.85;
 }
 
 .apple-card-lesson-label {
-  color: var(--ink-neutral-55);
-  font-weight: 500;
+  color: var(--ink-neutral-59);
+  font-weight: 450;
 }
 
 .apple-card-lesson-link {
   color: var(--ink-sky-31);
-  font-weight: 650;
+  font-weight: 600;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9282,6 +9628,126 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .apple-card-lesson-link:hover {
   color: var(--brand);
   text-decoration: underline;
+}
+
+/* ==========================================================================
+   Apple-grade Featured Ebook Priority Card (High Visual Priority)
+   ========================================================================== */
+.apple-ebook-priority-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px 8px 10px;
+  background: linear-gradient(135deg, #0d3b42 0%, #17545e 50%, #1f6f78 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  color: #ffffff !important;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(13, 59, 66, 0.2), 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease, border-color 160ms ease;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.apple-ebook-priority-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+}
+
+.apple-ebook-priority-card:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(13, 59, 66, 0.3), 0 2px 6px rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.36);
+  color: #ffffff !important;
+}
+
+.apple-ebook-priority-card:hover .ebook-priority-arrow-frame {
+  transform: translateX(3px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.ebook-priority-icon-frame {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.ebook-priority-text-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  min-width: 0;
+}
+
+.ebook-priority-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ebook-priority-kicker {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a5f3fc;
+  line-height: 1;
+}
+
+.ebook-priority-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.ebook-priority-heading {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.ebook-priority-subtext {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ebook-priority-arrow-frame {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  margin-left: 4px;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), background 160ms ease;
 }
 
 .apple-card-actions {
@@ -9295,20 +9761,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 6px 16px;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 14px;
   border-radius: 999px;
   background: var(--brand);
   color: #fff !important;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 650;
   text-decoration: none;
   border: 0;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(31, 111, 120, 0.2);
-  transition: all 140ms ease;
+  box-shadow: 0 1px 2px rgba(31, 111, 120, 0.2);
+  transition: all 120ms ease;
 }
 
 .apple-btn-primary:hover {
@@ -9320,23 +9786,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 6px 14px;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--line-neutral-90-2);
-  background: transparent;
+  background: var(--fill-neutral-97);
   color: var(--ink-sky-31);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 550;
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 140ms ease;
+  transition: all 120ms ease;
 }
 
 .apple-btn-secondary:hover {
-  background: var(--fill-neutral-96);
+  background: var(--surface);
   border-color: var(--brand);
   color: var(--brand);
 }
@@ -9345,12 +9811,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: rgba(31, 111, 120, 0.08);
+  padding: 1.5px 7px;
+  border-radius: 5px;
+  background: rgba(31, 111, 120, 0.07);
+  border: 1px solid rgba(31, 111, 120, 0.16);
   color: var(--brand);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* 3. Slim Lesson Row */
@@ -9358,24 +9825,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 18px;
+  gap: 14px;
+  padding: 10px 14px;
   border: 1px solid var(--line-neutral-93-2);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface);
-  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
 .student-lesson-row:hover {
   border-color: var(--line-sky-75);
   background: var(--fill-neutral-99);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .lesson-row-main-link {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex: 1 1 auto;
   min-width: 0;
   text-decoration: none;
@@ -9385,13 +9852,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .lesson-row-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--fill-neutral-95);
   color: var(--brand);
-  transition: transform 150ms ease;
+  transition: transform 140ms ease;
 }
 
 .student-lesson-row:hover .lesson-row-icon {
@@ -9401,40 +9868,55 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .lesson-row-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .lesson-row-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.lesson-tag {
+.lesson-row-hierarchy {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: var(--fill-neutral-95);
-  color: var(--ink-sky-42);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
-.lesson-chapter-tag {
-  font-size: 12px;
-  color: var(--ink-neutral-55);
+.lesson-meta-subject {
+  color: var(--ink-sky-20, #0f172a);
+  font-weight: 650;
+}
+
+.lesson-meta-sep {
+  color: var(--line-neutral-75, #cbd5e1);
+  user-select: none;
+}
+
+.lesson-meta-chapter {
+  color: var(--ink-neutral-55, #64748b);
+  font-weight: 450;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.lesson-tag {
+  display: none;
+}
+
+.lesson-chapter-tag {
+  display: none;
+}
+
 .lesson-row-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--ink-sky-31);
   line-height: 1.35;
@@ -9458,7 +9940,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .lesson-row-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
@@ -9466,19 +9948,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 6px 14px;
-  border-radius: 9px;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 13px;
+  border-radius: 8px;
   background: var(--brand);
   color: #fff !important;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 650;
   text-decoration: none;
   border: 0;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 
 .btn-solid-teal:hover {
@@ -9490,19 +9972,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 6px 12px;
-  border-radius: 9px;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
   border: 1px solid var(--line-neutral-90-2);
   background: var(--surface);
   color: var(--ink-sky-43);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 550;
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 150ms ease, background 150ms ease;
+  transition: border-color 140ms ease, background 140ms ease;
 }
 
 .btn-outline-subtle:hover {
@@ -9961,6 +10443,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     min-height: 40px;
     justify-content: center;
   }
+  .apple-ebook-priority-card {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 14px;
+    box-sizing: border-box;
+  }
   .student-assigned-apple-card {
     flex-direction: column;
     align-items: stretch;
@@ -10205,4 +10693,306 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     font-size: 13px;
     min-height: 44px;
   }
+}
+
+/* Student lessons actions: plain text hierarchy and one clear action per notice. */
+.apple-ebook-priority-card {
+  min-height: 44px;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-neutral-90-2);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--brand-ink) !important;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.apple-ebook-priority-card::before { display: none; }
+.apple-ebook-priority-card:hover {
+  transform: none;
+  border-color: var(--brand);
+  background: var(--fill-neutral-98);
+  color: var(--brand-ink) !important;
+  box-shadow: none;
+}
+.ebook-priority-text-frame { gap: 1px; }
+.ebook-priority-heading { color: inherit; font-size: 13px; font-weight: 650; }
+.ebook-priority-subtext { color: var(--ink-neutral-55); font-size: 11px; }
+
+.student-assigned-apple-callout {
+  min-height: 60px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+}
+.student-assigned-apple-callout:hover { box-shadow: none; }
+.callout-badge-line { gap: 7px; color: var(--ink-neutral-55); }
+.callout-title { color: var(--ink-sky-31); font-size: 14px; letter-spacing: 0; }
+.callout-subline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--ink-neutral-55);
+  font-size: 13px;
+  white-space: normal;
+}
+.callout-task-name { color: var(--ink-sky-31); font-weight: 600; }
+.callout-attention {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #9b2c24;
+  font-weight: 600;
+}
+.callout-btn-primary {
+  min-height: 40px;
+  padding: 7px 12px;
+  white-space: nowrap;
+  border-radius: 7px;
+  background: var(--brand);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+.callout-btn-primary:hover { transform: none; opacity: 1; background: var(--brand-ink); }
+
+@media (max-width: 600px) {
+  .student-assigned-apple-callout { gap: 12px; padding: 14px; }
+  .callout-btn-primary { width: 100%; min-height: 44px; }
+}
+
+/* Assigned work is grouped under the lesson it belongs to. */
+.student-assigned-groups-container { gap: 12px; }
+.student-assigned-group-box {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.student-assigned-group-box:hover { box-shadow: none; }
+.assigned-group-header {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 16px;
+  padding: 15px 18px 13px;
+  border-bottom: 1px solid var(--line-neutral-95);
+}
+.assigned-lesson-heading { display: grid; gap: 3px; min-width: 0; }
+.assigned-lesson-label { color: var(--ink-neutral-55); font-size: 12px; }
+.assigned-group-subject-title {
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.assigned-group-subtext { font-size: 12px; line-height: 1.5; }
+.assigned-group-stat-col { align-items: flex-end; gap: 3px; padding-top: 2px; }
+.assigned-group-count-label { white-space: nowrap; }
+.assigned-lesson-study {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  color: var(--brand-ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.assigned-lesson-study:hover { text-decoration: underline; text-underline-offset: 3px; }
+.assigned-lesson-study:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 2px; }
+.student-assigned-apple-list { gap: 0; }
+.student-assigned-task-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line-neutral-96);
+}
+.student-assigned-task-row:last-child { border-bottom: 0; }
+.assigned-task-copy { display: grid; gap: 5px; min-width: 0; }
+.assigned-task-title { margin: 0; color: var(--ink-sky-31); font-size: 14px; font-weight: 650; line-height: 1.45; }
+.assigned-task-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--ink-neutral-55); font-size: 12px; line-height: 1.5; }
+.assigned-task-due { display: inline-flex; align-items: center; gap: 4px; }
+.assigned-task-due.is-overdue { color: #9b2c24; font-weight: 600; }
+.assigned-task-actions { display: flex; align-items: center; gap: 8px; }
+.assigned-task-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-neutral-90-2);
+  border-radius: 7px;
+  color: var(--ink-sky-42);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.assigned-task-open { border-color: var(--brand); background: var(--brand); color: #fff; }
+.assigned-task-open:hover { background: var(--brand-ink); color: #fff; }
+.assigned-task-open:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .assigned-group-header { display: grid; grid-template-columns: 1fr; gap: 7px; padding: 13px 14px 10px; }
+  .assigned-group-stat-col { flex-direction: row; align-items: center; justify-content: space-between; }
+  .student-assigned-task-row { grid-template-columns: 1fr; gap: 10px; padding: 13px 14px; }
+  .assigned-task-actions { display: flex; }
+  .assigned-task-open { width: 100%; min-height: 44px; }
+}
+
+/* Give structured lesson content the reading column's full attention. */
+@media (min-width: 861px) {
+  .app-shell-student .lesson-detail-two-col { grid-template-columns: minmax(220px, 240px) minmax(0, 1fr); }
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-content {
+  max-width: 74ch;
+  margin-inline: auto;
+  color: var(--ink-sky-31);
+  font-size: 17px;
+  line-height: 1.8;
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-content > section { margin-block: 2rem; }
+.app-shell-student .lesson-detail-reading .lesson-structured-content > section > h2 { font-size: 21px; line-height: 1.4; }
+
+.toc-sidebar-toggle { display: none; }
+@media (max-width: 760px) {
+  .app-shell-student .lesson-detail-two-col { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .app-shell-student .lesson-chapter-toc-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 11px 13px;
+    border-radius: 12px;
+  }
+  .app-shell-student .toc-sidebar-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .app-shell-student .toc-sidebar-header > .eyebrow { grid-column: 1 / -1; }
+  .app-shell-student .toc-sidebar-header h3 { grid-column: 1; grid-row: 2; }
+  .app-shell-student .toc-sidebar-header small { grid-column: 1; grid-row: 3; }
+  .app-shell-student .toc-sidebar-toggle {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 2 / 4;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 7px 10px;
+    border: 1px solid var(--line-neutral-90-2);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--brand-ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .app-shell-student .toc-sidebar-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .app-shell-student .toc-sidebar-list { display: none; }
+  .app-shell-student .toc-sidebar-list.is-open {
+    display: grid;
+    max-height: 260px;
+    margin-top: 10px;
+    padding-top: 8px;
+    overflow-y: auto;
+    border-top: 1px solid var(--line-neutral-93-2);
+  }
+  .app-shell-student .toc-sidebar-link { min-height: 44px; }
+  .app-shell-student .lesson-prev-next-nav.top { display: none; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs { gap: 2px; scrollbar-width: none; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs::-webkit-scrollbar { display: none; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs button { gap: 5px; padding-inline: 7px; font-size: 12px; }
+  .app-shell-student .lesson-detail-reading .lesson-structured-content { font-size: 16px; line-height: 1.78; }
+  .app-shell-student .lesson-detail-reading .lesson-structured-content > section { margin-block: 1.7rem; }
+  .app-shell-student .lesson-detail-reading .lesson-structured-content > section > h2 { font-size: 20px; }
+}
+
+/* Keep the lesson frame steady while long structured content scrolls on desktop. */
+@media (min-width: 761px) {
+  .app-shell-student .lesson-detail-reading.lesson-tab-panel { padding: 20px; }
+  .app-shell-student .lesson-source-layout:not(.is-open) .lesson-detail-reading.lesson-tab-panel {
+    height: min(68dvh, 640px);
+    min-height: 320px;
+    overflow: hidden;
+  }
+  .app-shell-student .lesson-source-layout:not(.is-open) .lesson-reading-scroll {
+    height: 100%;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0;
+    scrollbar-gutter: auto;
+  }
+}
+
+.app-shell-student .lesson-detail-reading .lesson-structured-content > section {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line-neutral-93-2);
+  border-radius: 14px;
+  background: var(--fill-neutral-99);
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-content { max-width: 82ch; }
+.app-shell-student .lesson-detail-reading .lesson-structured-content > section + section { margin-top: 16px; }
+.app-shell-student .lesson-detail-reading .lesson-structured-heading {
+  margin: 0 0 16px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line-neutral-93-2);
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-content > section > h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.app-shell-student .lesson-detail-reading .lesson-structured-item + .lesson-structured-item { margin-top: 16px; }
+.app-shell-student .lesson-detail-reading .lesson-structured-item > h4 {
+  margin: 0 0 8px;
+  color: var(--ink-sky-31);
+  font-size: 16px;
+  line-height: 1.45;
+}
+@media (max-width: 760px) {
+  .app-shell-student .lesson-detail-reading .lesson-structured-content > section + section { margin-top: 12px; }
+  .app-shell-student .lesson-detail-reading .lesson-structured-content > section { padding: 14px; border-radius: 12px; }
+  .app-shell-student .lesson-detail-reading .lesson-structured-heading h2 { font-size: 20px; }
+}
+.app-shell-student .lesson-detail-main-col .lesson-prev-next-nav.bottom {
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  flex-direction: row;
+  align-items: center;
+}
+.app-shell-student .lesson-detail-main-col .lesson-prev-next-nav.bottom .lesson-nav-btn.prev { display: none; }
+.app-shell-student .lesson-detail-main-col .lesson-prev-next-nav.bottom .lesson-nav-btn.next {
+  max-width: 100%;
+  min-height: 36px;
+  padding: 5px 11px;
 }

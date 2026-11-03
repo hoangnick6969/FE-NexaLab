@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, ArrowUpRight, BookOpen, ClipboardList, Clock3, Play, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, BookOpen, ClipboardList, Clock3, Play } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
@@ -26,14 +26,15 @@ const text = defineText({
     all: "Tất cả",
     assignedLessons: "Bài học được giao",
     sharedLessons: "Thư viện mở",
-    assignedSection: "Nhiệm vụ từ lớp học",
+    assignedSection: "Bài tập theo bài học",
     assignedSectionDesc: "Hoàn thành nội dung đọc và bài tập theo yêu cầu của giáo viên bộ môn.",
-    tasksCount: (n: number) => `${n} nhiệm vụ cần làm`,
+    tasksCount: (n: number) => `${n} bài tập cần làm`,
     overdue: "Quá hạn",
     due: "Hạn nộp",
     noDueDate: "Không có hạn chót",
-    assignedTask: "Nhiệm vụ",
-    assignedLessonTitle: "Bài học liên kết",
+    assignedTask: "Bài tập",
+    assignmentCount: (n: number) => `${n} bài tập`,
+    assignedLessonTitle: "Bài học",
     assignedCalloutTitle: "Bài tập từ lớp học",
     assignedNoticeHeadline: (n: number) => `Bạn có ${n} bài tập cần hoàn thành`,
     assignedNoticeSubtext: "Nhấn để mở trang Bài tập và hoàn thành theo yêu cầu của giáo viên.",
@@ -53,10 +54,15 @@ const text = defineText({
     noAssigned: "Hiện chưa có bài học nào được giao có thể mở.",
     noShared: "Chưa có bài học chung được phát hành phù hợp với tìm kiếm này.",
     noMatch: "Chưa có nội dung phù hợp. Hãy thử lại sau.",
-    ebookLibrary: "Thư viện Ebook",
+    ebookEyebrow: "SÁCH GIÁO KHOA SỐ",
+    ebookLibrary: "Thư viện SGK điện tử",
+    ebookBadge: "Trực tuyến",
+    ebookSub: "Đọc & tra cứu SGK chuẩn chương trình",
     allGrades: "Tất cả khối",
     allSubjects: "Tất cả môn",
     gradeShort: (g: number) => `Khối ${g}`,
+    allSubjectsFilter: "Tất cả các môn",
+    groupTaskDesc: (n: number, sub: string) => `${n} bài tập theo yêu cầu của giáo viên bộ môn ${sub}`,
   },
   en: {
     assignedKind: "Assigned",
@@ -73,14 +79,15 @@ const text = defineText({
     all: "All",
     assignedLessons: "Assigned lessons",
     sharedLessons: "Open library",
-    assignedSection: "Class assignments",
+    assignedSection: "Assignments by lesson",
     assignedSectionDesc: "Complete assigned readings and exercises requested by your teacher.",
-    tasksCount: (n: number) => `${n} ${n === 1 ? "task" : "tasks"} to complete`,
+    tasksCount: (n: number) => `${n} ${n === 1 ? "assignment" : "assignments"} to complete`,
     overdue: "Overdue",
     due: "Due",
     noDueDate: "No deadline",
-    assignedTask: "Task",
-    assignedLessonTitle: "Linked lesson",
+    assignedTask: "Assignment",
+    assignmentCount: (n: number) => `${n} ${n === 1 ? "task" : "tasks"}`,
+    assignedLessonTitle: "Lesson",
     assignedCalloutTitle: "Class assignments",
     assignedNoticeHeadline: (n: number) => `You have ${n} assigned ${n === 1 ? "task" : "tasks"}`,
     assignedNoticeSubtext: "Click to open Assignments and submit work requested by your teacher.",
@@ -100,10 +107,15 @@ const text = defineText({
     noAssigned: "No assigned lessons can be opened right now.",
     noShared: "No published shared lessons match this search.",
     noMatch: "Nothing matches yet. Please try again later.",
+    ebookEyebrow: "DIGITAL TEXTBOOKS",
     ebookLibrary: "Ebook library",
+    ebookBadge: "Online",
+    ebookSub: "Access official digital textbooks",
     allGrades: "All grades",
     allSubjects: "All subjects",
     gradeShort: (g: number) => `Grade ${g}`,
+    allSubjectsFilter: "All subjects",
+    groupTaskDesc: (n: number, sub: string) => `${n} ${n === 1 ? "task" : "tasks"} requested by your ${sub} teacher`,
   },
 });
 
@@ -132,89 +144,49 @@ function cleanClassroomName(classroomName?: string | null, subjectName?: string)
   return name;
 }
 
-/**
- * Single de-duplicated metadata line for assignment display.
- * Avoids repeating subject, grade, and class name.
- */
 function getAssignmentMeta(subjectName: string, grade: number, classroomName?: string | null): string {
   const cls = (classroomName || "").trim();
   if (!cls) return `${subjectName} · Khối ${grade}`;
+  if (cls.toLowerCase().startsWith(subjectName.toLowerCase())) return cls;
 
-  const lowerCls = cls.toLowerCase();
-  const lowerSub = subjectName.toLowerCase();
-
-  // If classroom name already incorporates the subject (e.g. "Khoa học tự nhiên 8A")
-  if (lowerCls.startsWith(lowerSub)) {
-    return cls;
-  }
-
-  // If classroom name already includes the grade digit (e.g., "8A", "Lớp 8", "Pilot Science 8A")
   const hasGrade = new RegExp(`(?:^|\\D)${grade}(?:\\D|$)`).test(cls);
   const formattedClass = cls.startsWith("Lớp") || cls.startsWith("lớp") || cls.includes(" ") ? cls : `Lớp ${cls}`;
-
-  if (hasGrade) {
-    return `${subjectName} · ${formattedClass}`;
-  }
-  return `${subjectName} · Khối ${grade} · ${formattedClass}`;
+  return hasGrade ? `${subjectName} · ${formattedClass}` : `${subjectName} · Khối ${grade} · ${formattedClass}`;
 }
 
-function AssignedLessonCard({ lesson, assignment }: { lesson: StudentLessonCard; assignment: StudentLessonAssignment }) {
+function AssignedTaskRow({ lesson, assignment }: { lesson: StudentLessonCard; assignment: StudentLessonAssignment }) {
   const t = text();
   const lessonUrl = `/lessons/${encodeURIComponent(lesson.id)}?assignmentId=${encodeURIComponent(assignment.id)}`;
   const assignmentUrl = `/assignments/${encodeURIComponent(assignment.id)}`;
-  const metaText = getAssignmentMeta(lesson.subject.name, lesson.grade, assignment.classroom?.name);
+  const cleanedClass = cleanClassroomName(assignment.classroom?.name, lesson.subject.name);
+  const classLabel = cleanedClass
+    ? (cleanedClass.toLowerCase().startsWith("lớp") || cleanedClass.includes(" ") ? cleanedClass : `Lớp ${cleanedClass}`)
+    : assignment.classroom?.name || t.classFallback;
 
   return (
-    <article className="student-assigned-apple-card">
-      <div className="apple-card-main">
-        <div className="apple-card-meta-line">
-          <span className="apple-card-meta-text">{metaText}</span>
-          {lesson.chapter && (
-            <>
-              <span className="apple-card-meta-sep" aria-hidden="true">·</span>
-              <span className="apple-card-meta-chapter">{lesson.chapter}</span>
-            </>
-          )}
+    <article className="student-assigned-task-row">
+      <div className="assigned-task-copy">
+        <h4 className="assigned-task-title">
+          {assignment.title.trim().toLocaleLowerCase() === lesson.title.trim().toLocaleLowerCase() ? t.assignedTask : assignment.title}
+        </h4>
+        <div className="assigned-task-meta">
+          <span>{classLabel}</span>
+          <span aria-hidden="true">·</span>
           {assignment.overdue ? (
-            <span className="apple-card-status-badge is-overdue">
-              <AlertTriangle size={11} aria-hidden="true" />
-              <span>{t.overdue}{assignment.dueDate ? `: ${formatDate(assignment.dueDate)}` : ""}</span>
+            <span className="assigned-task-due is-overdue">
+              <AlertTriangle size={13} aria-hidden="true" />
+              {t.overdue}{assignment.dueDate ? ` · ${formatDate(assignment.dueDate)}` : ""}
             </span>
           ) : assignment.dueDate ? (
-            <span className="apple-card-status-badge">
-              <Clock3 size={11} aria-hidden="true" />
-              <span>{t.due}: {formatDate(assignment.dueDate)}</span>
-            </span>
-          ) : null}
-        </div>
-
-        <h3 className="apple-card-title">{assignment.title}</h3>
-
-        <div className="apple-card-linked-lesson">
-          <BookOpen size={13} className="apple-card-lesson-icon" aria-hidden="true" />
-          <span className="apple-card-lesson-label">{t.assignedLessonTitle}:</span>
-          <Link to={lessonUrl} className="apple-card-lesson-link">
-            {lesson.title}
-          </Link>
+            <span className="assigned-task-due"><Clock3 size={13} aria-hidden="true" />{t.due}: {formatDate(assignment.dueDate)}</span>
+          ) : (
+            <span>{t.noDueDate}</span>
+          )}
         </div>
       </div>
-
-      <div className="apple-card-actions">
-        <Link
-          to={lessonUrl}
-          className="apple-btn-primary"
-          title={t.study}
-        >
-          <Play size={13} fill="currentColor" aria-hidden="true" />
-          <span>{t.study}</span>
-        </Link>
-        <Link
-          to={assignmentUrl}
-          className="apple-btn-secondary"
-          title={t.doAssignment}
-        >
-          <ClipboardList size={13} aria-hidden="true" />
-          <span>{t.doAssignment}</span>
+      <div className="assigned-task-actions">
+        <Link to={assignmentUrl} className="assigned-task-open" title={t.doAssignment}>
+          <ClipboardList size={14} aria-hidden="true" /> <span>{t.doAssignment}</span>
         </Link>
       </div>
     </article>
@@ -244,12 +216,19 @@ function LessonRow({ lesson }: { lesson: StudentLessonCard }) {
         </div>
         <div className="lesson-row-body">
           <div className="lesson-row-meta">
-            <span className="lesson-tag">{lesson.subject.name}</span>
-            {lesson.chapter && <span className="lesson-chapter-tag">{lesson.chapter}</span>}
+            <span className="lesson-row-hierarchy">
+              <strong className="lesson-meta-subject">{lesson.subject.name}</strong>
+              {lesson.chapter && (
+                <>
+                  <span className="lesson-meta-sep" aria-hidden="true">·</span>
+                  <span className="lesson-meta-chapter">{lesson.chapter}</span>
+                </>
+              )}
+            </span>
             {hasAssignment && (
-              <span className="lesson-assigned-inline-badge">
+              <span className="lesson-assigned-inline-badge" title={`${t.assignedKind}: ${classLabel}`}>
                 <ClipboardList size={11} aria-hidden="true" />
-                {classLabel}
+                <span>{classLabel}</span>
               </span>
             )}
           </div>
@@ -353,6 +332,30 @@ export function StudentLessonsHub() {
     );
   }, [earliestDue]);
 
+  type AssignedGroup = {
+    key: string;
+    lesson: StudentLessonCard;
+    items: StudentLessonAssignment[];
+  };
+
+  const assignedGroups = useMemo(() => {
+    return assignedLessons.map((lesson): AssignedGroup => ({
+      key: lesson.id,
+      lesson,
+      items: [...lesson.assignments].sort((a, b) => {
+        if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }),
+    })).sort((a, b) =>
+      a.lesson.grade - b.lesson.grade ||
+      a.lesson.subject.name.localeCompare(b.lesson.subject.name, "vi") ||
+      a.lesson.title.localeCompare(b.lesson.title, "vi", { numeric: true }),
+    );
+  }, [assignedLessons]);
+
   const retry = () => { void curriculum.refetch(); void assigned.refetch(); };
   const hasError = curriculum.isError || assigned.isError;
   const loading = curriculum.isLoading || assigned.isLoading;
@@ -363,75 +366,57 @@ export function StudentLessonsHub() {
         eyebrow={t.eyebrow}
         title={t.title}
         description={t.description}
-        action={<Link className="secondary" to="/ebooks"><BookOpen size={17} /> {t.ebookLibrary}</Link>}
+        action={
+          <Link
+            className="apple-ebook-priority-card"
+            to="/ebooks"
+            title={t.ebookLibrary}
+            data-testid="student-ebooks-cta"
+          >
+            <BookOpen size={18} strokeWidth={1.8} aria-hidden="true" />
+            <span className="ebook-priority-text-frame">
+              <strong className="ebook-priority-heading">{t.ebookLibrary}</strong>
+              <span className="ebook-priority-subtext">{t.ebookSub}</span>
+            </span>
+          </Link>
+        }
       />
 
-      {/* Apple-style minimalist Callout container for assigned coursework */}
+      {/* Keep class work visible without turning the notice into a second hero. */}
       {!catalogRoute && filter !== "assigned" && totalAssignedTasks > 0 && (
         <div
           className="student-assigned-apple-callout"
           role="region"
           aria-label={t.assignedNoticeHeadline(totalAssignedTasks)}
         >
-          <Link
-            to="/assignments"
-            className="callout-clickable-main"
-            title={t.goToAssignments}
-          >
-            <div className="callout-squircle-icon">
-              <ClipboardList size={19} strokeWidth={2.2} aria-hidden="true" />
+          <div className="callout-body-col">
+            <div className="callout-badge-line">
+              <ClipboardList size={17} strokeWidth={1.8} aria-hidden="true" />
+              <span className="callout-title">{t.assignedCalloutTitle}</span>
             </div>
-            <div className="callout-body-col">
-              <div className="callout-badge-line">
-                <span className="callout-title">{t.assignedCalloutTitle}</span>
-                <span className={`callout-pill${overdueCount > 0 ? " is-overdue" : ""}`}>
-                  {overdueCount > 0 ? (
-                    <>
-                      <AlertTriangle size={11} aria-hidden="true" />
-                      <span>{t.overdueTasks(overdueCount)}</span>
-                    </>
-                  ) : (
-                    <span>{t.tasksCount(totalAssignedTasks)}</span>
-                  )}
+            <p className="callout-subline">
+              {overdueCount > 0 ? (
+                <span className="callout-attention" role="status">
+                  <AlertTriangle size={14} strokeWidth={1.8} aria-hidden="true" />
+                  {t.overdueTasks(overdueCount)}
                 </span>
-              </div>
-              <p className="callout-subline">
-                {earliestDue ? (
-                  <>
-                    <strong className="callout-task-name">{earliestDue.title}</strong>
-                    {earliestDueMeta && (
-                      <>
-                        <span className="callout-meta-sep" aria-hidden="true">·</span>
-                        <span>{earliestDueMeta}</span>
-                      </>
-                    )}
-                    {earliestDue.dueDate && (
-                      <>
-                        <span className="callout-meta-sep" aria-hidden="true">·</span>
-                        <span>{t.due}: {formatDate(earliestDue.dueDate)}</span>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  t.assignedNoticeSubtext
-                )}
-              </p>
-            </div>
-          </Link>
-          <div className="callout-actions-col">
-            <button
-              type="button"
-              className="callout-btn-secondary"
-              onClick={() => setFilter("assigned")}
-              title={t.viewAssignedLessons}
-            >
-              {t.viewAssignedLessons}
-            </button>
-            <Link to="/assignments" className="callout-btn-primary" title={t.goToAssignments}>
-              <span>{t.goToAssignments}</span>
-              <ArrowRight size={13} aria-hidden="true" />
-            </Link>
+              ) : (
+                <span>{t.tasksCount(totalAssignedTasks)}</span>
+              )}
+              {earliestDue && (
+                <>
+                  {overdueCount === 0 && <span className="callout-meta-sep" aria-hidden="true">·</span>}
+                  <strong className="callout-task-name">{earliestDue.title}</strong>
+                  {earliestDueMeta && <><span className="callout-meta-sep" aria-hidden="true">·</span><span>{earliestDueMeta}</span></>}
+                  {earliestDue.dueDate && <><span className="callout-meta-sep" aria-hidden="true">·</span><span>{t.due}: {formatDate(earliestDue.dueDate)}</span></>}
+                </>
+              )}
+            </p>
           </div>
+          <Link to="/assignments" className="callout-btn-primary" title={t.goToAssignments}>
+            <span>{t.goToAssignments}</span>
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
         </div>
       )}
 
@@ -551,7 +536,7 @@ export function StudentLessonsHub() {
 
       {!loading && (
         <>
-          {/* Section: Bài học được giao — Chỉ hiển thị khi chọn tab 'Bài học được giao' */}
+          {/* Section: Bài học được giao — Phân nhóm rõ ràng theo từng Môn học và Lớp học */}
           {!catalogRoute && filter === "assigned" && (
             <section aria-labelledby="assigned-top-heading" className="student-assigned-apple-section">
               <header className="assigned-apple-heading">
@@ -559,21 +544,56 @@ export function StudentLessonsHub() {
                   <span className="eyebrow">{t.assignedSection}</span>
                   <h2 id="assigned-top-heading">{t.assignedLessons}</h2>
                 </div>
-                <span className="assigned-apple-count">
-                  {t.tasksCount(totalAssignedTasks)}
-                </span>
-              </header>
-              {assignedLessons.length > 0 ? (
-                <div className="student-assigned-apple-list">
-                  {assignedLessons.flatMap((lesson) =>
-                    lesson.assignments.map((assignment) => (
-                      <AssignedLessonCard
-                        key={`${lesson.id}-${assignment.id}`}
-                        lesson={lesson}
-                        assignment={assignment}
-                      />
-                    ))
+                <div className="assigned-apple-heading-stats">
+                  {overdueCount > 0 && (
+                    <span className="apple-status-pill is-overdue">
+                      <span className="apple-pulse-dot" aria-hidden="true" />
+                      <AlertTriangle size={11} aria-hidden="true" />
+                      <span>{t.overdueTasks(overdueCount)}</span>
+                    </span>
                   )}
+                  <span className="assigned-apple-count">
+                    {t.tasksCount(totalAssignedTasks)}
+                  </span>
+                </div>
+              </header>
+
+              {assignedGroups.length > 0 ? (
+                <div className="student-assigned-groups-container">
+                  {assignedGroups.map((group) => (
+                    <div key={group.key} className="student-assigned-group-box">
+                      <div className="assigned-group-header">
+                        <div className="assigned-lesson-heading">
+                          <span className="assigned-lesson-label">{t.assignedLessonTitle}</span>
+                          <h3 className="assigned-group-subject-title">{group.lesson.title}</h3>
+                          <p className="assigned-group-subtext">
+                            {[group.lesson.subject.name, t.gradeShort(group.lesson.grade), group.lesson.chapter].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <div className="assigned-group-stat-col">
+                          <span className="assigned-group-count-label">
+                            {t.assignmentCount(group.items.length)}
+                          </span>
+                          <Link
+                            className="assigned-lesson-study"
+                            to={`/lessons/${encodeURIComponent(group.lesson.id)}?assignmentId=${encodeURIComponent(group.items[0].id)}`}
+                          >
+                            <Play size={13} aria-hidden="true" /> {t.study}
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="student-assigned-apple-list">
+                        {group.items.map((assignment) => (
+                          <AssignedTaskRow
+                            key={`${group.lesson.id}-${assignment.id}`}
+                            lesson={group.lesson}
+                            assignment={assignment}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="hierarchy-empty">{t.noAssigned}</p>

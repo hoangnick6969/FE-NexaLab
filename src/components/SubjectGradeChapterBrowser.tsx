@@ -70,7 +70,7 @@ const compareOrder = (left?: number | null, right?: number | null) =>
   (left ?? Number.MAX_SAFE_INTEGER) - (right ?? Number.MAX_SAFE_INTEGER);
 const chapterPath = (chapter: string) => encodeURIComponent(chapter);
 
-function SubjectCover({ subjectId, subjectName, versionId }: { subjectId: string; subjectName: string; versionId?: string | null }) {
+export function SubjectCover({ subjectId, subjectName, versionId }: { subjectId: string; subjectName: string; versionId?: string | null }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
@@ -157,15 +157,31 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
     <p className="hierarchy-empty">{t.notFound}</p><Link to={basePath}>{t.backToCatalog}</Link>
   </div>;
   if (selected && chapterTitle && !selectedChapter) return <div className={`hierarchy-browser ${className}`}>
-    <nav aria-label={t.catalogPath}><Link to={selectionPath}>{t.grade(selected.grade)} · {selected.subjectName}</Link></nav>
+    <nav className="hierarchy-breadcrumb" aria-label={t.catalogPath}>
+      <Link to={basePath} className="breadcrumb-item">{t.subjectsAndGrades}</Link>
+      <ChevronRight size={12} className="breadcrumb-sep" aria-hidden="true" />
+      <Link to={selectionPath} className="breadcrumb-item">{t.grade(selected.grade)} · {selected.subjectName}</Link>
+    </nav>
     <p className="hierarchy-empty">{t.chapterNotFound}</p>
   </div>;
 
   return <div className={`hierarchy-browser ${className}`}>
     <nav className="hierarchy-breadcrumb" aria-label={t.catalogPath}>
-      <Link to={basePath}>{t.subjectsAndGrades}</Link>
-      {selected && <><span aria-hidden="true">/</span><Link to={selectionPath} aria-current={!chapterTitle ? "page" : undefined}>{t.grade(selected.grade)} · {selected.subjectName}</Link></>}
-      {selectedChapter && <><span aria-hidden="true">/</span><span aria-current="page">{selectedChapter[1].title}</span></>}
+      <Link to={basePath} className="breadcrumb-item">{t.subjectsAndGrades}</Link>
+      {selected && (
+        <>
+          <ChevronRight size={12} className="breadcrumb-sep" aria-hidden="true" />
+          <Link to={selectionPath} className="breadcrumb-item" aria-current={!chapterTitle ? "page" : undefined}>
+            {t.grade(selected.grade)} · {selected.subjectName}
+          </Link>
+        </>
+      )}
+      {selectedChapter && (
+        <>
+          <ChevronRight size={12} className="breadcrumb-sep" aria-hidden="true" />
+          <span className="breadcrumb-current" aria-current="page">{selectedChapter[1].title}</span>
+        </>
+      )}
     </nav>
     {!selected ? <div className="hierarchy-grade-sections">
       {grades.map((gradeValue) => <section className="hierarchy-grade-section" key={gradeValue} aria-labelledby={`catalog-grade-${gradeValue}`}>
