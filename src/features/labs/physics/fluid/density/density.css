@@ -1,7 +1,6 @@
 /* FL-03 density activity: layout only; colours come from app and K3 tokens. */
-.lab-space .density-activity { display: contents; }
 
-.fl03-stage {
+.fluid-kit-shell .fl03-stage {
   position: absolute;
   inset: 76px 440px 88px 16px;
   display: grid;
@@ -14,52 +13,52 @@
   border: 1px solid var(--line);
   border-radius: 16px;
 }
-.fl03-figure { margin: 0; display: grid; gap: 6px; min-width: 0; align-content: end; }
-.fl03-figure.is-wide { grid-column: 1 / -1; }
-.fl03-figure figcaption { color: var(--muted); font-size: 0.8125rem; }
-.fl03-figure .k3-2d { max-height: 34vh; }
-.fl03-cup { max-width: 140px; }
+.fluid-kit-shell .fl03-figure { margin: 0; display: grid; gap: 6px; min-width: 0; align-content: end; }
+.fluid-kit-shell .fl03-figure.is-wide { grid-column: 1 / -1; }
+.fluid-kit-shell .fl03-figure figcaption { color: var(--muted); font-size: 0.8125rem; }
+.fluid-kit-shell .fl03-figure .k3-2d { max-height: 34vh; }
+.fluid-kit-shell .fl03-cup { max-width: 140px; }
 
-.fl03-field { display: grid; gap: 4px; min-width: 0; font-size: 0.875rem; }
-.fl03-field-label { color: var(--muted); }
-.fl03-field-control { display: flex; align-items: center; gap: 6px; }
-.fl03-field input, .fl03-field select { width: 100%; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: inherit; font: inherit; font-variant-numeric: tabular-nums; }
-.fl03-field input[aria-invalid="true"] { border-color: var(--k3-warn); }
-.fl03-unit { white-space: nowrap; color: var(--muted); }
-.fl03-error { color: var(--k3-warn); font-size: 0.8125rem; }
-.fl03-select { min-width: 160px; flex: 1 1 160px; }
+.fluid-kit-shell .fl03-field { display: grid; gap: 4px; min-width: 0; font-size: 0.875rem; }
+.fluid-kit-shell .fl03-field-label { color: var(--muted); }
+.fluid-kit-shell .fl03-field-control { display: flex; align-items: center; gap: 6px; }
+.fluid-kit-shell .fl03-field input, .fluid-kit-shell .fl03-field select { width: 100%; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: inherit; font: inherit; font-variant-numeric: tabular-nums; }
+.fluid-kit-shell .fl03-field input[aria-invalid="true"] { border-color: var(--k3-warn); }
+.fluid-kit-shell .fl03-unit { white-space: nowrap; color: var(--muted); }
+.fluid-kit-shell .fl03-error { color: var(--k3-warn); font-size: 0.8125rem; }
+.fluid-kit-shell .fl03-select { min-width: 160px; flex: 1 1 160px; }
 
-.fl03-notebook { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
-.fl03-notebook-title { margin: 0; font-size: 0.9375rem; line-height: 1.35; }
-.fl03-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.fl03-table caption { text-align: left; font-weight: 650; padding-bottom: 6px; font-size: 0.875rem; }
-.fl03-table th, .fl03-table td { padding: 4px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
-.fl03-table th { text-transform: none; letter-spacing: normal; font-size: inherit; }
-.fl03-table th[scope="col"] { color: var(--muted); font-weight: 600; }
-.fl03-table .fl03-field input { min-height: 40px; padding: 4px 6px; }
-.fl03-tentative { margin: 0; color: var(--muted); font-size: 0.8125rem; }
-.fl03-derived { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 0.875rem; }
-.fl03-derived small { color: var(--muted); }
-.fl03-trial { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
-.fl03-trial legend { padding: 0 6px; font-size: 0.875rem; font-weight: 650; }
-.fl03-trial .fl03-derived { grid-column: 1 / -1; }
-.fl03-density-entry { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
-.fl03-inline-actions, .fl03-segment { display: flex; flex-wrap: wrap; gap: 6px; }
-.fl03-line { margin: 0; width: 100%; font-size: 0.875rem; }
+.fluid-kit-shell .fl03-notebook { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.fluid-kit-shell .fl03-notebook-title { margin: 0; font-size: 0.9375rem; line-height: 1.35; }
+.fluid-kit-shell .fl03-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.fluid-kit-shell .fl03-table caption { text-align: left; font-weight: 650; padding-bottom: 6px; font-size: 0.875rem; }
+.fluid-kit-shell .fl03-table th, .fluid-kit-shell .fl03-table td { padding: 4px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.fluid-kit-shell .fl03-table th { text-transform: none; letter-spacing: normal; font-size: inherit; }
+.fluid-kit-shell .fl03-table th[scope="col"] { color: var(--muted); font-weight: 600; }
+.fluid-kit-shell .fl03-table .fl03-field input { min-height: 40px; padding: 4px 6px; }
+.fluid-kit-shell .fl03-tentative { margin: 0; color: var(--muted); font-size: 0.8125rem; }
+.fluid-kit-shell .fl03-derived { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 0.875rem; }
+.fluid-kit-shell .fl03-derived small { color: var(--muted); }
+.fluid-kit-shell .fl03-trial { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.fluid-kit-shell .fl03-trial legend { padding: 0 6px; font-size: 0.875rem; font-weight: 650; }
+.fluid-kit-shell .fl03-trial .fl03-derived { grid-column: 1 / -1; }
+.fluid-kit-shell .fl03-density-entry { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
+.fluid-kit-shell .fl03-inline-actions, .fluid-kit-shell .fl03-segment { display: flex; flex-wrap: wrap; gap: 6px; }
+.fluid-kit-shell .fl03-line { margin: 0; width: 100%; font-size: 0.875rem; }
 
-.fl03-choices { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
-.fl03-choices legend { padding: 0; margin-bottom: 6px; font-weight: 650; font-size: 0.9375rem; }
-.fl03-choice { display: grid; grid-template-columns: auto 28px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 0.875rem; line-height: 1.4; }
-.fl03-choice:has(input:checked) { border-color: var(--k3-selected); }
-.fl03-choice input { margin-top: 3px; width: 18px; height: 18px; }
-.fl03-choice-letter { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--k3-body); font-weight: 700; }
+.fluid-kit-shell .fl03-choices { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.fluid-kit-shell .fl03-choices legend { padding: 0; margin-bottom: 6px; font-weight: 650; font-size: 0.9375rem; }
+.fluid-kit-shell .fl03-choice { display: grid; grid-template-columns: auto 28px 1fr; gap: 8px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 0.875rem; line-height: 1.4; }
+.fluid-kit-shell .fl03-choice:has(input:checked) { border-color: var(--k3-selected); }
+.fluid-kit-shell .fl03-choice input { margin-top: 3px; width: 18px; height: 18px; }
+.fluid-kit-shell .fl03-choice-letter { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--k3-body); font-weight: 700; }
 
-.fl03-ready ul, .fl03-criteria { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.875rem; }
-.fl03-ready-ok { margin: 0; color: var(--k3-ok); font-weight: 650; }
-.fl03-criteria li { display: flex; gap: 8px; align-items: flex-start; }
-.fl03-criteria li svg { flex: none; margin-top: 2px; }
-.fl03-criteria li[data-met="true"] svg { color: var(--k3-ok); }
-.fl03-criteria li[data-met="false"] svg { color: var(--k3-warn); }
+.fluid-kit-shell .fl03-ready ul, .fluid-kit-shell .fl03-criteria { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.875rem; }
+.fluid-kit-shell .fl03-ready-ok { margin: 0; color: var(--k3-ok); font-weight: 650; }
+.fluid-kit-shell .fl03-criteria li { display: flex; gap: 8px; align-items: flex-start; }
+.fluid-kit-shell .fl03-criteria li svg { flex: none; margin-top: 2px; }
+.fluid-kit-shell .fl03-criteria li[data-met="true"] svg { color: var(--k3-ok); }
+.fluid-kit-shell .fl03-criteria li[data-met="false"] svg { color: var(--k3-warn); }
 
 /* Result panel sits at the left while the guide stays on the right. */
 .lab-space:has(.density-activity) .lab-aside:not(:has([open])) { display: none; }
@@ -74,16 +73,16 @@
 }
 
 @media (max-width: 640px) {
-  .fl03-stage { inset: 148px 12px 54dvh 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }
-  .fl03-figure .k3-2d { max-height: 20vh; }
+  .fluid-kit-shell .fl03-stage { inset: 148px 12px 54dvh 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }
+  .fluid-kit-shell .fl03-figure .k3-2d { max-height: 20vh; }
   .lab-space:has(.density-activity) .lab-workspace > .lab-actions { top: 76px; bottom: auto; left: 12px; right: 12px; max-width: none; }
   .lab-space:has(.density-activity) .lab-aside:has([open]) { top: 132px; max-height: calc(100dvh - 150px); }
-  .fl03-trial { grid-template-columns: minmax(0, 1fr); }
+  .fluid-kit-shell .fl03-trial { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Pressed toggles read as selected without relying on colour alone (the label changes too). */
-.k3-actions button[aria-pressed="true"], .fl03-segment button[aria-pressed="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
-.k3-actions button, .fl03-segment button { min-height: 44px; }
+.fluid-kit-shell .k3-actions button[aria-pressed="true"], .fluid-kit-shell .fl03-segment button[aria-pressed="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
+.fluid-kit-shell .k3-actions button, .fluid-kit-shell .fl03-segment button { min-height: 44px; }
 
 /* View toggle: larger touch targets on phones (the 3D/2D choice must be easy to hit). */
 .lab-space:has(.density-activity) .lab-renderer-toggle button { min-width: 64px; min-height: 44px; }
@@ -119,3 +118,12 @@
   .lab-space:has(.density-activity) .lab-space-header h1 { font-size: 13px; }
   .lab-space:has(.density-activity) .lab-renderer-toggle button { min-width: 44px; padding-inline: 5px; gap: 3px; }
 }
+
+
+.fluid-kit-shell .fluid-kit-renderer { position: absolute; inset: 0; min-width: 0; min-height: 0; overflow: hidden; }
+.fluid-kit-shell .fluid-kit-renderer-2d { visibility: hidden; opacity: 0; pointer-events: none; }
+.fluid-kit-shell .fluid-kit-renderer-2d.is-active { visibility: visible; opacity: 1; }
+
+
+
+.fluid-kit-shell .fluid-kit-renderer { pointer-events: none; }

@@ -22,7 +22,8 @@ labs/
     optics/                       K6: FL-23 (planned)
   chemistry/                     chemistry compatibility fixture renderer
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
-  biology/anatomy/               existing Eye learning resource (FL-16 is NO LAB)
+  biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, camera focus, callouts, sagittal section;
+                                 eye-optics/ = FL-16 activity (rubric eye-anatomy-optics@1.0.0); Eye.tsx = legacy eye@1.0.0 resource
   biology/ecology/                K8: FL-20 tolerance (built, not released); FL-21 planned
   biology/genetics/               K8: FL-26 (planned)
   biology/molecular/              K7: kit/ (bench entry + molecular scene) + gene-protein/ = FL-27 technical candidate
@@ -69,5 +70,9 @@ For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/
 - Fixture: `dev/lab-thumbnail-capture.tsx` renders `K5Stage3D` in a deterministic balanced state with two hanging weights. The close framing belongs only to the capture fixture; it does not change the activity camera.
 - Output: `assets/thumbnails/lever-equilibrium.webp`, 1280×720 WebP under 120 KiB. `lab-info.ts` discovers it automatically by the exact Lab ID.
 - To refresh after changing the K5 scene: `npm run capture:lab-thumbnails -- lever-equilibrium`; inspect the resulting image and confirm the bar, O pivot, position labels, support and both hanging weights are visible. Capture runs against production stage components with `/api/**` blocked and does not create LabRuns, events, or database writes.
+
+### FL-16 (`eye-optics`)
+- Fixture: `dev/lab-thumbnail-capture.tsx` renders the EX-A `AnatomyStage` with the sectioned `EyeModel` (normal eye, lens 20 D) and the ray fan focused on the retina. The framing belongs only to the fixture.
+- Output: `assets/thumbnails/eye-optics.webp`. Refresh with `npm run capture:lab-thumbnails -- eye-optics` after changing the eye model.
 
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.

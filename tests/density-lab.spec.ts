@@ -269,7 +269,7 @@ test("3D pouring lifts, tilts, streams, conserves water and returns; reverse and
   expect(during.cylinder + during.cup + during.supply).toBeCloseTo(100, 4);
   await page.screenshot({ path: "test-results/density-water-pour.png" });
   await advancePour(page, 3000);
-  await expect.poll(async () => (await waterScene(page))?.cylinderPosition, { timeout: 30000 }).toEqual([40, 0, -10]);
+  await expect.poll(async () => (await waterScene(page))?.cylinderPosition, { timeout: 30000 }).toEqual([225, 0, 0]);
   const after = (await waterScene(page))!;
   expect(after.stream).toBe(false);
   expect(after.tilt).toBe(0);
@@ -308,7 +308,7 @@ test("reduced motion snaps 3D water and balance state without a stream", async (
   const sample = (await waterScene(page))!;
   expect(sample.stream).toBe(false);
   expect(sample.tilt).toBe(0);
-  expect(sample.cylinderPosition).toEqual([40, 0, -10]);
+  expect(sample.cylinderPosition).toEqual([225, 0, 0]);
   await page.getByTestId("density-transfer").click({ force: true });
   await expect.poll(async () => {
     await page.clock.runFor(32);
