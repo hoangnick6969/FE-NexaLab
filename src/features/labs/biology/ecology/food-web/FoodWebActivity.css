@@ -1,6 +1,6 @@
-/* Hallmark · v2.0.0 · scope: app screen (FL-21 Lab panel and 2D food-web board) · system: existing Lab Space tokens, no theme dealt */
-/* critique: one board, one action dock, one question panel; species are real buttons; effects in text plus arrows; motion is transform/opacity only and stops under reduced motion */
-/* waive 29: the question panel keeps the translucent Lab Space surface shared with the Circuit, FL-25 and FL-20 panels, so the Labs read as one space */
+/* Hallmark · v2.0.0 · scope: app screen (FL-21 Lab panel, K8 3D meadow and 2D food-web board) · system: existing Lab Space tokens, no theme dealt */
+/* critique: one board (3D meadow, 2D on request or without WebGL), one action dock, one question panel; species are real buttons; effects in text plus arrows; motion is transform/opacity only and stops under reduced motion */
+/* waive 29: the question panel and the 3D card keep the translucent Lab Space surface (the card lets the meadow show through) shared with the Circuit, FL-25 and FL-20 panels, so the Labs read as one space */
 /* answered F7: dock and panel controls reuse the Lab Space control recipe of the other Lab panels on purpose; the primary action is set apart by its filled accent */
 
 :root {
@@ -18,7 +18,8 @@
   --fw-stage-from: #f7faf4;
   --fw-stage-to: #e2ece4;
   --fw-board: #eef4ea;
-  --fw-edge: #8a988f;
+  --fw-edge: #6d7c74;
+  --fw-edge-focus: #1f4f8a;
   --fw-edge-chain: var(--brand-green);
   --fw-missing: #c8402f;
   --fw-decay: #9b8a72;
@@ -37,6 +38,8 @@
   --fw-protect: #e3f1d8;
   --fw-harm: #f6e0dc;
   --fw-panel-w: clamp(300px, 34vw, 380px);
+  --fw-card-bg: rgb(255 255 255 / 88%);
+  --fw-chip-shadow: 0 2px 10px rgb(18 38 30 / 14%);
 }
 :root[data-theme="dark"] {
   --fw-panel-bg: rgb(24 32 32 / 94%);
@@ -49,7 +52,8 @@
   --fw-stage-from: #1c2624;
   --fw-stage-to: #121a19;
   --fw-board: #1b2422;
-  --fw-edge: #7d8b84;
+  --fw-edge: #a9b8b0;
+  --fw-edge-focus: #8fb8f0;
   --fw-node: #22302d;
   --fw-node-line: #3c4d48;
   --fw-producer: #2b3f2a;
@@ -58,6 +62,8 @@
   --fw-increase: #8fd6ac;
   --fw-decrease: #f2a99f;
   --fw-protect: #2b3f2a;
+  --fw-card-bg: rgb(24 32 32 / 88%);
+  --fw-chip-shadow: 0 2px 10px rgb(0 0 0 / 40%);
   --fw-harm: #4a2c28;
 }
 
@@ -78,12 +84,15 @@
 .fw-scene figcaption, .fw-pyramid figcaption { margin-top: 8px; color: var(--fw-muted); font-size: 12px; }
 .fw-board { position: relative; aspect-ratio: 720 / 520; border-radius: 20px; background: var(--fw-board); }
 .fw-board > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.fw-edge { stroke: var(--fw-edge); stroke-width: 2.5; transition: opacity .2s ease-out; }
+.fw-edge { stroke: var(--fw-edge); stroke-width: 3; transition: opacity .2s ease-out; }
+.fw-edge.is-focus { stroke: var(--fw-edge-focus); stroke-width: 4.5; }
+.fw-edge.is-dim { opacity: .18; }
 .fw-edge.is-chain { stroke: var(--fw-edge-chain); stroke-width: 5; }
 .fw-edge.is-cut { opacity: .18; }
 .fw-edge.is-missing { stroke: var(--fw-missing); stroke-width: 4; stroke-dasharray: 8 6; }
 .fw-head { fill: var(--fw-edge); }
 .fw-head-on { fill: var(--fw-edge-chain); }
+.fw-head-focus { fill: var(--fw-edge-focus); }
 .fw-decay { fill: none; stroke: var(--fw-decay); stroke-width: 2; stroke-dasharray: 3 6; }
 
 .fw-node { position: absolute; display: inline-flex; flex-direction: column; align-items: center; gap: 0; min-width: 88px; min-height: 44px; padding: 4px 12px; transform: translate(-50%, -50%); border: 1.5px solid var(--fw-node-line); border-radius: 14px; background: var(--fw-node); color: var(--fw-ink); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.25; cursor: default; transition: opacity .2s ease-out, transform .14s ease-out; }
@@ -94,6 +103,7 @@
 .fw-node[data-role="DECOMPOSER"] { background: var(--fw-decomposer); }
 .fw-node[data-in-chain="true"] { border-color: var(--fw-edge-chain); border-width: 3px; }
 .fw-node[data-removed="true"] { opacity: .4; border-style: dashed; }
+.fw-node[data-dim="true"] { opacity: .45; }
 .fw-node[data-effect="INCREASE"] { border-color: var(--fw-increase); border-width: 3px; }
 .fw-node[data-effect="DECREASE"] { border-color: var(--fw-decrease); border-width: 3px; }
 .fw-node:focus-visible { outline: 3px solid var(--fw-focus); outline-offset: 3px; transition: none; }
@@ -178,8 +188,30 @@
 .fw-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin: 0; padding-left: 16px; font-size: 13px; }
 
 /* Dock and submit bar stay left of the question panel */
+/* K8 3D meadow: the diorama fills the stage; labels are buttons in a DOM overlay; the pyramid or causes float as a card */
+.fw-stage[data-view="3d"] { overflow: hidden; padding: 0; }
+.fw-meadow, .fw-meadow-labels { position: absolute; inset: 0; }
+.fw-meadow-labels { overflow: hidden; pointer-events: none; }
+.fw-meadow-labels .fw-node { pointer-events: auto; box-shadow: var(--fw-chip-shadow); }
+.fw-meadow .fw-node { flex-direction: row; gap: 8px; min-width: 0; min-height: 36px; padding: 4px 12px; font-size: 14px; white-space: nowrap; }
+.fw-meadow .fw-role { font-size: 12px; }
+.fw-meadow-note { position: absolute; top: 172px; left: max(18px, env(safe-area-inset-left)); z-index: 4; max-width: 300px; margin: 0; color: var(--fw-muted); font-size: 12px; line-height: 1.45; }
+.fw-card { position: absolute; top: 18px; right: calc(var(--fw-panel-w) + 56px); z-index: 6; width: min(440px, 34vw); min-height: 0; max-height: calc(100% - 260px); overflow-y: auto; margin: 0; padding: 16px; border-radius: 16px; background: var(--fw-card-bg); box-shadow: var(--fw-panel-shadow); backdrop-filter: blur(16px) saturate(160%); }
+.fw-card .fw-causes { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.fw-card .fw-causes li { min-height: 0; padding: 12px; }
+/* Reading aid: what the inspected organism eats and what eats it */
+.fw-relation { max-width: min(100%, 820px); margin: 12px auto 0; padding: 12px 16px; border-radius: 12px; background: var(--fw-card-bg); color: var(--fw-ink); font-size: 14px; line-height: 1.5; }
+.fw-stage[data-view="3d"] .fw-relation { position: absolute; top: 236px; left: max(18px, env(safe-area-inset-left)); z-index: 6; max-width: 320px; margin: 0; box-shadow: var(--fw-panel-shadow); }
+.fw-view-toggle { position: absolute; top: 128px; left: max(18px, env(safe-area-inset-left)); z-index: 6; min-height: 44px; padding: 8px 0; border: 0; background: none; color: var(--fw-accent); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.fw-view-toggle:hover { color: var(--fw-ink); }
+.fw-view-toggle:active { opacity: .7; }
+.fw-view-toggle:focus-visible { outline: 3px solid var(--fw-focus); outline-offset: 2px; transition: none; }
+@media (min-width: 721px) and (max-width: 1180px) {
+  /* Narrow desktop: the card moves under the header so it never covers the panel */
+  .fw-card { top: 176px; left: 18px; right: auto; width: min(360px, 40vw); }
+}
 @media (min-width: 721px) {
-  .fw-stage { padding-right: calc(var(--fw-panel-w) + 56px); }
+  .fw-stage:not([data-view="3d"]) { padding-right: calc(var(--fw-panel-w) + 56px); }
   .fw-dock, .lab-space:has(.fw-activity) .lab-workspace > .lab-actions { max-width: calc(100% - var(--fw-panel-w) - 72px); }
 }
 @media (max-width: 720px) {
@@ -194,6 +226,14 @@
   .fw-dock { left: 10px; right: 10px; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 72px); max-width: none; }
   .fw-dock .fw-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .fw-chain-text { font-size: 13px; padding: 4px 12px; }
+  /* Phone: the meadow is a framed box with its labels, the card and the toggle follow it */
+  .fw-stage[data-view="3d"] { display: grid; align-content: start; gap: 8px; overflow-y: auto; padding: 100px 8px calc(30dvh + 260px); }
+  .fw-stage[data-view="3d"] .fw-meadow { position: relative; inset: auto; height: 400px; border-radius: 16px; overflow: hidden; }
+  .fw-meadow .fw-node { min-height: 28px; padding: 2px 8px; font-size: 11px; }
+  .fw-meadow .fw-role { display: none; }
+  .fw-meadow-note { position: static; max-width: none; padding: 4px 8px 0; }
+  .fw-card, .fw-view-toggle, .fw-stage[data-view="3d"] .fw-relation { position: static; width: 100%; max-width: none; max-height: none; }
+  .fw-view-toggle { justify-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

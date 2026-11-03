@@ -89,8 +89,7 @@ figure.eco-graph, figure.eco-pyramid { margin: 0; }
 
 /* K8 3D pond: the diorama fills the stage; the tolerance graph floats as a card clear of the header, dock and panel */
 .eco-stage[data-view="3d"] { overflow: hidden; padding: 0; }
-.eco-pond-3d, .eco-3d { position: absolute; inset: 0; }
-.eco-3d canvas { touch-action: none; }
+.eco-pond-3d { position: absolute; inset: 0; }
 .eco-stage[data-view="3d"] .eco-stage-inner { position: absolute; top: 18px; right: calc(var(--eco-panel-w) + 56px); display: grid; gap: 4px; width: min(440px, 32vw); min-height: 0; margin: 0; padding: 8px 16px 12px; border-radius: 16px; background: var(--eco-card-bg); box-shadow: var(--eco-panel-shadow); backdrop-filter: blur(16px) saturate(160%); }
 .eco-stage[data-view="3d"] .eco-graph svg text { font-size: 22px; }
 /* In the card the y label starts at the axis instead of hanging left of it */

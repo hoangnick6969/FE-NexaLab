@@ -166,3 +166,48 @@ test("FL-21 broken chain shows the missing link; phone layout has no horizontal 
   await expect(page.getByTestId("fw-observation")).toContainText("Chuỗi bị đứt: Ếch không ăn cỏ");
   await page.screenshot({ path: "test-results/fw-phone.png" });
 });
+
+test("FL-21 K8 meadow: 3D by default on desktop, labels keep the node contract, 2D on request and remembered", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockShell(page);
+  await page.route("**/api/labs/food-web/runs", (route) => route.fulfill({ json: launch("fw-run-3d") }));
+  await page.goto("/labs/food-web?assignmentId=assignment-fw");
+  await page.getByTestId("lab-session-start").click();
+
+  const stage = page.getByTestId("fw-stage");
+  await expect(stage).toHaveAttribute("data-view", "3d");
+  await expect(page.getByTestId("eco-3d").locator("canvas")).toBeVisible();
+  await expect(page.getByTestId("eco-3d")).toHaveAttribute("aria-hidden", "true");
+  // The labels are real buttons outside the decorative canvas, one per organism.
+  await expect(page.locator(".fw-meadow-labels .fw-node")).toHaveCount(11);
+  await expect(page.locator('.fw-node[data-species="co"]')).toHaveAttribute("aria-label", "Cỏ");
+  // Reading aid: hovering an organism brings its links forward and names them; the others dim.
+  await page.locator('.fw-node[data-species="ech"]').hover();
+  await expect(page.getByTestId("fw-relation")).toHaveText("Ếch ăn: Châu chấu, Sâu ăn lá. Ếch là thức ăn của: Rắn.");
+  await expect(page.locator('.fw-node[data-species="tho"]')).toHaveAttribute("data-dim", "true");
+  await expect(page.locator('.fw-node[data-species="ran"]')).toHaveAttribute("data-dim", "false");
+  await page.mouse.move(4, 600);
+  await expect(page.getByTestId("fw-relation")).toContainText("Mũi tên đi từ thức ăn tới loài ăn nó");
+
+  const roles = page.getByTestId("fw-answer-roles");
+  await roles.getByRole("group", { name: "Cỏ" }).getByLabel("Sản xuất").check();
+  await roles.getByRole("group", { name: "Ếch" }).getByLabel("Tiêu thụ").check();
+  await roles.getByRole("group", { name: "Nấm, vi khuẩn" }).getByLabel("Phân giải").check();
+  await roles.getByRole("button", { name: "Ghi câu trả lời" }).click();
+  await page.getByTestId("fw-act").click();
+  await expect(page.locator('.fw-node[data-species="ech"]')).toHaveAttribute("data-role", "CONSUMER");
+  for (const id of ["co", "chau-chau", "ech", "ran"]) await page.locator(`.fw-node[data-species="${id}"]`).click();
+  await expect(page.getByTestId("fw-chain-text")).toContainText("Cỏ → Châu chấu → Ếch → Rắn");
+  await expect(page.locator('.fw-node[data-in-chain="true"]')).toHaveCount(4);
+
+  await page.getByTestId("fw-view-toggle").click();
+  await expect(stage).toHaveAttribute("data-view", "2d");
+  await expect(page.locator(".fw-board .fw-node[data-in-chain=\"true\"]")).toHaveCount(4);
+  await page.reload();
+  await page.getByTestId("lab-session-start").click();
+  const restore = page.getByRole("button", { name: "Khôi phục", exact: true });
+  if (await restore.isVisible().catch(() => false)) await restore.click();
+  await expect(page.getByTestId("fw-stage")).toHaveAttribute("data-view", "2d");
+  await page.getByTestId("fw-view-toggle").click();
+  await expect(page.getByTestId("fw-stage")).toHaveAttribute("data-view", "3d");
+});

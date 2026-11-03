@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check, CircleHelp, Compass, Info, Play, RotateCcw, Undo2, X } from "lucide-react";
 import { FOOD_WEB_CAUSES, foodWebChains } from "@nexalab/sim";
 import { defineText } from "../../../../../i18n";
 import { EnergyPyramid, FoodWebScene } from "./FoodWebScene";
+import { FoodWebView3D } from "./FoodWebView3D";
+import { webglAvailable } from "../kit";
 import {
   ASKED, CAUSE_IDS, DECIMAL_PATTERN, EFFECTS, ENERGY_CHAIN, FW_STEP_COUNT, MAX_CHAIN, ROLES, ROLE_ITEMS,
-  chainState, fwEvidenceFrom, fwPhaseOf, fwStepNumber, previewFw,
+  boardFocus, chainState, eatersOf, foodsOf, fwEvidenceFrom, fwPhaseOf, fwStepNumber, previewFw,
   type CauseId, type Effect, type FwCheckpointId, type FwEvidence, type FwPrediction, type Role, type RolesAnswer, type SpeciesId,
 } from "./fw-evidence";
 import "./FoodWebActivity.css";
@@ -69,6 +71,15 @@ const text = defineText({
     b: "Vì rắn là sinh vật sản xuất của hệ sinh thái.",
     c: "Vì không còn rắn thì cỏ và cây xanh không mọc được.",
     ready: "Em đã hoàn thành các câu hỏi và phần giải thích.",
+    view2d: "Xem sơ đồ 2D", view3d: "Xem cảnh 3D",
+    relation: {
+      hint: "Mũi tên đi từ thức ăn tới loài ăn nó. Rê chuột hoặc bấm vào một loài để xem nó ăn gì và là thức ăn của loài nào.",
+      eats: (name: string, foods: string) => `${name} ăn: ${foods}.`,
+      eatsNothing: (name: string) => `${name} không ăn loài nào trong lưới.`,
+      eatenBy: (name: string, eaters: string) => `${name} là thức ăn của: ${eaters}.`,
+      eatenByNone: (name: string) => `Không loài nào trong lưới ăn ${name.toLowerCase()}.`,
+      decomposer: "Nấm, vi khuẩn nhận xác và chất thải của các loài khác (đường nét đứt).",
+    },
     sceneLabel: "Sa bàn lưới thức ăn: mũi tên đi từ thức ăn tới sinh vật ăn nó.",
     illustrative: "Lưới thức ăn minh hoạ, không phải số liệu SGK. Mũi tên chỉ từ thức ăn tới sinh vật ăn nó; đường nét đứt là xác và chất thải tới sinh vật phân giải.",
     pyramid: { title: "Tháp năng lượng của chuỗi Cỏ → Châu chấu → Ếch → Rắn", unit: "kJ", heat: "mất dưới dạng nhiệt:", unknown: "? kJ", note: "Quy ước minh hoạ 1/10; độ rộng các bậc không theo tỉ lệ." },
@@ -139,6 +150,15 @@ const text = defineText({
     b: "Because the snake is the ecosystem's producer.",
     c: "Because without snakes grass and trees cannot grow.",
     ready: "You have completed the questions and your explanation.",
+    view2d: "Show 2D diagram", view3d: "Show 3D scene",
+    relation: {
+      hint: "Arrows point from food to the organism that eats it. Hover or tap an organism to see what it eats and what eats it.",
+      eats: (name: string, foods: string) => `${name} eats: ${foods}.`,
+      eatsNothing: (name: string) => `${name} eats nothing in this web.`,
+      eatenBy: (name: string, eaters: string) => `${name} is eaten by: ${eaters}.`,
+      eatenByNone: (name: string) => `Nothing in this web eats ${name.toLowerCase()}.`,
+      decomposer: "Fungi and bacteria receive remains and waste from the others (dashed lines).",
+    },
     sceneLabel: "Food-web board: arrows point from food to the organism that eats it.",
     illustrative: "An illustrative food web, not textbook data. Arrows point from food to eater; the dashed line is remains and waste going to decomposers.",
     pyramid: { title: "Energy pyramid of Grass → Grasshopper → Frog → Snake", unit: "kJ", heat: "lost as heat:", unknown: "? kJ", note: "Illustrative 1/10 convention; bar widths are not to scale." },
@@ -156,6 +176,11 @@ const t = text();
 const chains = foodWebChains();
 const chainCount = (id: SpeciesId) => chains.filter((chain) => chain.includes(id)).length;
 
+/** Per-viewer choice between the 3D meadow and the 2D board; not part of the evidence. */
+const VIEW_KEY = "nexalab.fl21.boardView";
+const storedView = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
+/** Eleven labelled organisms need width: phones start on the 2D board and can still switch to 3D. */
+const narrowScreen = () => typeof window !== "undefined" && window.matchMedia?.("(max-width: 720px)").matches;
 const isRemoval = (id: FwCheckpointId): id is "HUNT" | "DEFOREST" => id === "HUNT" || id === "DEFOREST";
 
 function effectsMap(observation: any): Partial<Record<SpeciesId, Effect>> | null {
@@ -176,6 +201,15 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
   const [exploreRemoved, setExploreRemoved] = useState<SpeciesId | null>(null);
   // After a check the board keeps that result until the learner moves on.
   const [review, setReview] = useState<FwCheckpointId | null>(null);
+  const [canRender3d] = useState(webglAvailable);
+  // The organism whose links are shown; a reading aid, never part of the evidence.
+  const [inspected, setInspected] = useState<SpeciesId | null>(null);
+  useEffect(() => setInspected(null), [step]);
+  const [view, setView] = useState<"3d" | "2d">(() => { const stored = storedView(); return canRender3d && (stored === "3d" || (stored !== "2d" && !narrowScreen())) ? "3d" : "2d"; });
+  const chooseView = (next: "3d" | "2d") => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* storage blocked: the choice lasts for this page */ }
+  };
 
   const current = phase.kind === "predict" || phase.kind === "act" ? evidence.checkpoints[phase.index] : null;
   const done = phase.kind === "explain" || phase.kind === "ready";
@@ -242,10 +276,34 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
   const showPyramid = !exploring && focus.id === "ENERGY";
   const showCauses = !exploring && focus.id === "CAUSES";
   const causesSeen = observation("CAUSES");
+  const board3d = view === "3d";
+  // Bring forward what the current question is about (given in its wording); never the effect it asks for.
+  // A removal question shows every link of the species to be removed (its foods and its eaters), as hovering it would.
+  const questionAbout = !exploring && !removal && isRemoval(focus.id) ? ASKED[focus.id].removed : null;
+  const highlight: readonly SpeciesId[] = !exploring && focus.id === "ROLES" && !rolesSeen ? ROLE_ITEMS : [];
+  const relationText = (id: SpeciesId) => {
+    if (id === "nam-vi-khuan") return t.relation.decomposer;
+    const names = (ids: SpeciesId[]) => ids.map((item) => t.names[item]).join(", ");
+    const foods = foodsOf(id), eaters = eatersOf(id);
+    return `${foods.length ? t.relation.eats(t.names[id], names(foods)) : t.relation.eatsNothing(t.names[id])} ${eaters.length ? t.relation.eatenBy(t.names[id], names(eaters)) : t.relation.eatenByNone(t.names[id])}`;
+  };
+  const board = {
+    names: t.names, roleNames: t.roles, effectNames: t.effects, removedLabel: t.removed,
+    // The energy question is about the chain in its wording, not the learner's own chain.
+    chain: focus.id === "CHAIN" ? chainNodes : showPyramid ? [...ENERGY_CHAIN] : [],
+    brokenAt: focus.id === "CHAIN" && chainSeen && !chainSeen.valid ? chainSeen.brokenAt : null,
+    focus: boardFocus(inspected ?? questionAbout, highlight), onInspect: setInspected,
+    removed: removal?.removed ?? null, effects: effectsMap(removal),
+    roles: rolesSeen ? rolesSeen.roles : null,
+    pickable: (id: SpeciesId) => exploring ? id !== "nam-vi-khuan" : phase.kind === "predict" && phase.id === "CHAIN" && !chainNodes.includes(id),
+    onPick: exploring ? (id: SpeciesId) => setExploreRemoved(id) : pickChain,
+    label: t.sceneLabel, illustrative: t.illustrative,
+  };
 
   return <section className="fw-activity" data-testid="fw-activity" aria-label={t.title}>
-    <div className="fw-stage" data-testid="fw-stage">
-      <div className="fw-stage-inner">
+    <div className="fw-stage" data-testid="fw-stage" data-view={board3d ? "3d" : "2d"}>
+      {board3d && <FoodWebView3D {...board} layoutKey={`${phase.kind}-${focus.id}-${questionOpen}-${exploring}-${showPyramid || showCauses}`} />}
+      {showCauses || showPyramid || !board3d ? <div className={board3d ? "fw-stage-inner fw-card" : "fw-stage-inner"}>
         {showCauses
           ? <ul className="fw-causes" data-testid="fw-causes">
               {CAUSE_IDS.map((id) => {
@@ -257,19 +315,14 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
               })}
             </ul>
           : <>
-              <div className={showPyramid ? "fw-compact" : undefined}>
-                <FoodWebScene names={t.names} roleNames={t.roles} effectNames={t.effects} removedLabel={t.removed}
-                  chain={focus.id === "CHAIN" || showPyramid ? chainNodes : []}
-                  brokenAt={(focus.id === "CHAIN" || showPyramid) && chainSeen && !chainSeen.valid ? chainSeen.brokenAt : null}
-                  removed={removal?.removed ?? null} effects={effectsMap(removal)}
-                  roles={rolesSeen ? rolesSeen.roles : null}
-                  pickable={(id) => exploring ? id !== "nam-vi-khuan" : phase.kind === "predict" && phase.id === "CHAIN" && !chainNodes.includes(id)}
-                  onPick={exploring ? (id) => setExploreRemoved(id) : pickChain}
-                  label={t.sceneLabel} illustrative={t.illustrative} />
-              </div>
+              {!board3d && <div className={showPyramid ? "fw-compact" : undefined}><FoodWebScene {...board} /></div>}
               {showPyramid && <EnergyPyramid names={ENERGY_CHAIN.map((id) => t.names[id])} levelsKJ={energySeen?.levelsKJ ?? null} heatKJ={energySeen?.heatKJ ?? null} labels={t.pyramid} />}
             </>}
-      </div>
+      </div> : null}
+      {!showCauses && <p className="fw-relation" data-testid="fw-relation" aria-live="polite">{inspected ? relationText(inspected) : t.relation.hint}</p>}
+      {canRender3d && <button type="button" className="fw-view-toggle" data-testid="fw-view-toggle" onClick={() => chooseView(board3d ? "2d" : "3d")}>
+        {board3d ? t.view2d : t.view3d}
+      </button>}
     </div>
 
     <div className="fw-dock" role="group" aria-label={t.title}>

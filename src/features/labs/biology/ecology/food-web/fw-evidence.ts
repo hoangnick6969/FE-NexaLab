@@ -1,4 +1,4 @@
-import { FOOD_WEB_CAUSES, FOOD_WEB_SPECIES, foodWeb } from "@nexalab/sim";
+import { FOOD_WEB_CAUSES, FOOD_WEB_EDGES, FOOD_WEB_SPECIES, foodWeb } from "@nexalab/sim";
 
 // FL-21 checkpoint evidence. Fixed checkpoints carry the state the server
 // requires; CHAIN carries the learner's own chain. `observed` is local UI
@@ -95,4 +95,20 @@ export const fwEvidenceReady = (value: unknown) => fwPhaseOf(fwEvidenceFrom(valu
 /** Advisory preview from the pinned shared model; the server result replaces it. */
 export function previewFw(state: Record<string, unknown>): any {
   try { return foodWeb(state); } catch { return null; }
+}
+
+// Reading aids for the board: what a species eats and what eats it. They show the
+// web the learner already sees, never a removal effect or an answer.
+export const foodsOf = (id: SpeciesId) => FOOD_WEB_EDGES.filter(([, eater]) => eater === id).map(([food]) => food as SpeciesId);
+export const eatersOf = (id: SpeciesId) => FOOD_WEB_EDGES.filter(([food]) => food === id).map(([, eater]) => eater as SpeciesId);
+
+/** Species and links to bring forward: the inspected species with its direct links, else the species a question is about. */
+export type BoardFocus = { species: ReadonlySet<SpeciesId>; link: (food: SpeciesId, eater: SpeciesId) => boolean };
+export function boardFocus(inspected: SpeciesId | null, highlight: readonly SpeciesId[]): BoardFocus | null {
+  if (inspected) {
+    return { species: new Set([inspected, ...foodsOf(inspected), ...eatersOf(inspected)]), link: (food, eater) => food === inspected || eater === inspected };
+  }
+  if (!highlight.length) return null;
+  const species = new Set(highlight);
+  return { species, link: (food, eater) => species.has(food) && species.has(eater) };
 }
