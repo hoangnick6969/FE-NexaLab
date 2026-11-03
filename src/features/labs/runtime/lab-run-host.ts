@@ -136,6 +136,9 @@ export function useLabRunHost(input: HostInput) {
   const draftKey = launch
     ? `${contextKey}:run:${launch.runId}:schema:${launch.stateSchemaVersion}`
     : null;
+  // FL-07 evidence lives on the server; retain the launch identity across F5.
+  const serverSessionKey = `nexalab:server-event-run:${contextKey}`;
+  const restoresServerEvents = input.labId === "thermal-energy";
 
   const draftFor = (currentLaunch: LabLaunch, state: unknown): LabDraft => ({
     key: `${contextKey}:run:${currentLaunch.runId}:schema:${currentLaunch.stateSchemaVersion}`,
@@ -169,6 +172,26 @@ export function useLabRunHost(input: HostInput) {
     setError(null);
     idempotencyKey.current = crypto.randomUUID();
   }, [contextKey]);
+
+  useEffect(() => {
+    if (!input.enabled || !restoresServerEvents || !input.challengeId) return;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(serverSessionKey) ?? "null");
+      const renderer = cached?.launch ? resolveLabRenderer(cached.launch) : null;
+      if (!renderer || cached.launch.labId !== input.labId || cached.launch.challengeId !== input.challengeId ||
+          cached.launch.assignmentId !== (input.assignmentId ?? null) || typeof cached.submissionKey !== "string" ||
+          (cached.launch.expiresAt && new Date(cached.launch.expiresAt).getTime() <= Date.now())) return;
+      setLaunch(cached.launch); setRendererKey(renderer.key); setAttempt(cached.attempt ?? null);
+      idempotencyKey.current = cached.submissionKey;
+      startedAt.current = Number.isSafeInteger(cached.startedAt) ? cached.startedAt : Date.now();
+    } catch { /* Server access and tuple checks still gate every event and submission. */ }
+  }, [contextKey, input.enabled, input.challengeId]);
+
+  useEffect(() => {
+    if (!restoresServerEvents || !launch) return;
+    try { sessionStorage.setItem(serverSessionKey, JSON.stringify({ launch, attempt, submissionKey: idempotencyKey.current, startedAt: startedAt.current })); }
+    catch { /* A browser storage failure never changes server evidence. */ }
+  }, [launch, attempt, serverSessionKey, restoresServerEvents]);
 
   const open = async () => {
     if (!input.enabled || !input.challengeId || pending) return;

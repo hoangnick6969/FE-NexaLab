@@ -11,6 +11,7 @@ import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evid
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
 import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
+import { ThermalBench3D } from "../physics/thermal/kit/ThermalBenchStage";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -20,6 +21,7 @@ const densityThumbnailView: StageView = {
 };
 
 const scenes: Record<string, () => ReactNode> = {
+  "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
   circuit: () => <CircuitBulb3DStage closed switchIsActive={false} onToggleSwitch={() => undefined} isLit />,
   "em-induction": () => <EmInduction3DStage
     cue={{ action: null, nonce: 0, startedAt: 0 }}
