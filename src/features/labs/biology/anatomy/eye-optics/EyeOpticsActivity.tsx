@@ -7,7 +7,7 @@ import { accommodationFromLensPower } from "../kit/eye-geometry";
 import { CORNEA_POWER_D, FOCUS_TOLERANCE_D, paraxialFan, paraxialFocus, requiredPowerD, traceEye, type Vec2 } from "../kit/optics";
 import {
   DISTANCE_OPTIONS_M, EYE_OPTICS_SCENARIOS, GLASSES_RANGE_D, LENS_RANGE_D, POWER_STEP_D,
-  eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt, type ScenarioId,
+  eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt,
 } from "./eye-optics-evidence";
 import "./eye-optics.css";
 
