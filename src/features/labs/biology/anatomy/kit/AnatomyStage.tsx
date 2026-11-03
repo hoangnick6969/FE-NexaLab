@@ -139,23 +139,25 @@ export function CalloutPins({ callouts }: { callouts: Callout[] }) {
   );
 }
 
-export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.6, -7.5], target = [0, 0, 0] }: {
+export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.6, -7.5], target = [0, 0, 0], room = false }: {
   label: string;
   focus: FocusTarget;
   children: ReactNode;
   cameraPosition?: [number, number, number];
   /** Initial orbit centre, in world units. */
   target?: [number, number, number];
+  /** The children draw a room (EyeLabRoom), so the studio backdrop is not painted and the camera may stand further back. */
+  room?: boolean;
 }) {
   return (
-    <div className="anatomy-stage" role="img" aria-label={label}>
+    <div className={`anatomy-stage${room ? " has-room" : ""}`} role="img" aria-label={label}>
       <Canvas
         frameloop="demand"
         dpr={[1, 2]}
         camera={{ position: cameraPosition, fov: 30, near: 0.05, far: 200 }}
         gl={{ localClippingEnabled: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace }}
       >
-        <color attach="background" args={["#eef2ee"]} />
+        {!room && <color attach="background" args={["#eef2ee"]} />}
         <hemisphereLight args={["#f7f9f4", "#c9cfc4", 0.9]} />
         <directionalLight position={[5, 7, 6]} intensity={1.6} />
         <pointLight position={[-6, 2, -4]} intensity={0.6} color="#dfeaff" />
@@ -164,7 +166,7 @@ export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.
         <group scale={1}>{children}</group>
         <FocusRig target={focus} />
         {import.meta.env.DEV && <DevStageProbe />}
-        <OrbitControls makeDefault enablePan={false} minDistance={3} maxDistance={18} target={target} />
+        <OrbitControls makeDefault enablePan={false} minDistance={3} maxDistance={room ? 22 : 18} target={target} />
       </Canvas>
     </div>
   );

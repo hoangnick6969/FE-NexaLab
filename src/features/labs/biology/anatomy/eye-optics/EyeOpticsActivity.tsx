@@ -4,6 +4,7 @@ import { defineText } from "../../../../../i18n";
 import { AnatomyStage, CalloutPins, type Callout, type FocusTarget } from "../kit/AnatomyStage";
 import { EYE_PART_ANCHORS, EYE_PART_IDS, EyeModel, MM, type EyePartId } from "../kit/EyeModel";
 import { accommodationFromLensPower } from "../kit/eye-geometry";
+import { EntryFlight, EyeLabRoom } from "../kit/EyeLabRoom";
 import { CORNEA_POWER_D, FOCUS_TOLERANCE_D, paraxialFan, paraxialFocus, requiredPowerD, traceEye, type Vec2 } from "../kit/optics";
 import {
   DISTANCE_OPTIONS_M, EYE_OPTICS_SCENARIOS, GLASSES_RANGE_D, LENS_RANGE_D, POWER_STEP_D,
@@ -31,6 +32,9 @@ const text = defineText({
     fallback: "Mô hình minh hoạ, không phải mô hình giải phẫu chuẩn y khoa. Mọi thao tác trên 3D cũng có nút tương đương bên cạnh.",
     scenarioName: { "normal-near": "Mắt bình thường, vật ở 25 cm", "myopia-far": "Mắt cận thị nhẹ, vật ở xa", "hyperopia-near": "Mắt viễn thị, vật ở 40 cm" },
     scenarioHelp: "Đặt vật đúng khoảng cách, rồi chỉnh điều tiết và kính để ảnh rơi trên màng lưới.",
+    roomTitle: "Phòng thí nghiệm sinh học",
+    roomIntro: "Trên bàn có mô hình nhãn cầu phóng to khoảng 8 lần, bảng đo thị lực và hộp kính thử. Bấm vào mô hình mắt hoặc nút bên dưới để quan sát gần.",
+    enter: "Quan sát mô hình mắt", entering: "Đang tiến lại gần…", backToRoom: "Nhìn toàn phòng",
   },
   en: {
     phaseNames: "1. Name the parts", phaseOptics: "2. Accommodation and lenses",
@@ -51,6 +55,9 @@ const text = defineText({
     fallback: "An illustrative model, not a medical-grade anatomy model. Every 3D action also has a button beside the model.",
     scenarioName: { "normal-near": "Normal eye, object at 25 cm", "myopia-far": "Mildly myopic eye, distant object", "hyperopia-near": "Hyperopic eye, object at 40 cm" },
     scenarioHelp: "Place the object at the right distance, then adjust the lens and glasses so the image lands on the retina.",
+    roomTitle: "Biology lab",
+    roomIntro: "The bench holds an eyeball model enlarged about 8 times, a visual-acuity chart and a trial lens case. Click the eye model, or the button below, to look closer.",
+    enter: "Look at the eye model", entering: "Moving closer…", backToRoom: "View the whole room",
   },
 });
 
@@ -69,6 +76,9 @@ export const EYE_CENTRE: [number, number, number] = [-0.3, 0, 0];
 /** The same point in world space, for the camera focus rig. */
 const world = ([x, y]: Vec2): [number, number, number] => [y * MM, -x * MM, 0];
 const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
+/** Working view on the section, and the opening view from across the room. */
+const CLOSE_VIEW: [number, number, number] = [0.9, 0.7, -6.2];
+const ROOM_VIEW: [number, number, number] = [3.2, 3.6, -18];
 
 export function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
   const fan = useMemo(() => paraxialFan({ axialMm, objectDistanceM, providedPowerD }), [axialMm, objectDistanceM, providedPowerD]);
@@ -111,8 +121,11 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [showRays, setShowRays] = useState(true);
   const [sectioned, setSectioned] = useState(true);
+  // 3D opens in the lab room; the eye model on the bench is the way in (presentation only, like the K7 microscope).
+  const [view, setView] = useState<"room" | "approach" | "eye">("room");
+  const atEye = view === "eye";
 
-  useEffect(() => { setPhase("names"); setPart("cornea"); setFocus(null); setScenarioIndex(0); }, [resetKey]);
+  useEffect(() => { setPhase("names"); setPart("cornea"); setFocus(null); setScenarioIndex(0); setView("room"); }, [resetKey]);
   useEffect(() => { if (optionalLocked && phase === "optics") setPhase("names"); }, [optionalLocked, phase]);
   // Phase 2 frames the whole eye again, whatever part phase 1 last focused.
   useEffect(() => { if (phase === "optics") setFocus({ point: EYE_CENTRE, key: Date.now() }); }, [phase]);
@@ -151,33 +164,45 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
     onSelect: () => focusPart(id),
   }));
 
+  const approach = () => { setFocus(null); setView("approach"); };
+  const backToRoom = () => { setFocus(null); setView("room"); };
+
   return (
     <div className="eye-optics">
       <div className="eye-optics-phases" role="tablist" aria-label={t.phaseNames}>
         <button type="button" role="tab" aria-selected={phase === "names"} className={phase === "names" ? "is-active" : ""} onClick={() => setPhase("names")}>{t.phaseNames}</button>
         <button type="button" role="tab" aria-selected={phase === "optics"} className={phase === "optics" ? "is-active" : ""} disabled={optionalLocked} onClick={() => setPhase("optics")}>{t.phaseOptics}</button>
+        {atEye && <button type="button" className="secondary eye-optics-room-button" onClick={backToRoom}>{t.backToRoom}</button>}
       </div>
-      {optionalLocked && phase === "names" && <p className="tiny muted">{t.lockedOptics}</p>}
+      {optionalLocked && phase === "names" && atEye && <p className="tiny muted">{t.lockedOptics}</p>}
 
       <div className="eye-optics-layout">
-        <AnatomyStage label={t.stageLabel} focus={focus} cameraPosition={[0.9, 0.7, -6.2]} target={EYE_CENTRE}>
+        <AnatomyStage label={t.stageLabel} focus={focus} cameraPosition={ROOM_VIEW} target={EYE_CENTRE} room>
+          <EyeLabRoom pulse={view === "room"} />
+          <EntryFlight entered={view !== "room"} room={ROOM_VIEW} close={CLOSE_VIEW} target={EYE_CENTRE} onArrive={() => setView("eye")} />
           <group rotation={EYE_ROTATION}>
           <EyeModel
             axialMm={phase === "optics" ? scenario.axialMm : 22.6}
             accommodation={phase === "optics" ? accommodationFromLensPower(attempt.lensPowerD) : 0}
             pupilMm={2.5}
-            sectioned={sectioned}
-            highlight={phase === "names" ? part : null}
-            onPick={phase === "names" ? focusPart : undefined}
+            sectioned={view !== "room" && sectioned}
+            highlight={atEye && phase === "names" ? part : null}
+            onPick={view === "room" ? approach : atEye && phase === "names" ? focusPart : undefined}
           />
-          {phase === "names" && <CalloutPins callouts={callouts} />}
-          {phase === "optics" && showRays && (
+          {atEye && phase === "names" && <CalloutPins callouts={callouts} />}
+          {atEye && phase === "optics" && showRays && (
             <OpticsRays axialMm={scenario.axialMm} objectDistanceM={attempt.objectDistanceM} providedPowerD={providedPowerD} inFocus={inFocus} />
           )}
           </group>
         </AnatomyStage>
 
-        {phase === "names" ? (
+        {!atEye ? (
+          <section className="eye-optics-panel eye-optics-intro" aria-label={t.roomTitle}>
+            <h2>{t.roomTitle}</h2>
+            <p className="tiny muted">{t.roomIntro}</p>
+            <button type="button" className="primary" disabled={view === "approach"} onClick={approach}>{view === "approach" ? t.entering : t.enter}</button>
+          </section>
+        ) : phase === "names" ? (
           <section className="eye-optics-panel" aria-label={t.labelsLabel}>
             <p className="tiny muted">{t.partHint}</p>
             <ol className="eye-optics-parts">

@@ -41,6 +41,10 @@ test("FL-16 eye Lab: 8 names, 3 optics scenarios, server rubric passes 11/11", a
   await expect(page.getByRole("img", { name: /Mô hình 3D nhãn cầu/ })).toBeVisible();
   await page.waitForFunction(() => Boolean((window as unknown as { __anatomyStage?: unknown }).__anatomyStage));
 
+  // 3D opens in the lab room; the eye model on the bench is the way in.
+  await page.getByRole("button", { name: "Quan sát mô hình mắt" }).click();
+  await expect(page.getByLabel("Tên bộ phận 1")).toBeVisible();
+
   // Phase 2 stays locked until all 8 names are filled.
   const opticsTab = page.getByRole("tab", { name: "2. Điều tiết và kính" });
   await expect(opticsTab).toBeDisabled();

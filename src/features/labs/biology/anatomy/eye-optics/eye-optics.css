@@ -11,6 +11,29 @@
   background: #eef2ee;
 }
 
+.anatomy-stage.has-room {
+  background: #e4e8e5;
+  animation: eye-room-in 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes eye-room-in {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 1; transform: none; }
+}
+
+.eye-optics-intro h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.eye-optics-intro .primary {
+  justify-self: start;
+}
+
+.eye-optics-room-button {
+  margin-left: auto;
+}
+
 .anatomy-stage canvas {
   display: block;
   width: 100% !important;
@@ -231,6 +254,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .anatomy-stage.has-room {
+    animation: none;
+  }
+
   .anatomy-pin,
   .eye-optics-phases button,
   .eye-optics-scenarios button {
