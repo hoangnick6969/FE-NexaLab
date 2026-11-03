@@ -21,6 +21,7 @@ const text = defineText({
     massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
     lever: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Moment lực và đòn bẩy", description: "Đo moment lực, tìm vị trí cân bằng và vận dụng đòn bẩy." },
     ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
+    foodWeb: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Lưới thức ăn", description: "Dựng chuỗi thức ăn, tính năng lượng qua các bậc và xem điều gì xảy ra khi một loài biến mất." },
   },
   en: {
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
@@ -32,6 +33,7 @@ const text = defineText({
     massConservation: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Conservation of mass", description: "Observe a precipitation reaction and compare the mass before and after." },
     lever: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Lever equilibrium", description: "Explore force, distance, torque and balance." },
     ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
+    foodWeb: { subject: "BIOLOGY", tag: "SIMULATION", title: "Food webs", description: "Build a food chain, follow energy through the levels and see what happens when a species disappears." },
   },
 });
 const t = text();
@@ -84,6 +86,7 @@ const catalogEntries = [
   },
   { id: "lever-equilibrium", ...t.lever, className: "physics", number: "08", grade: 8 },
   { id: "ecology-tolerance", ...t.ecology, className: "biology", number: "09", grade: 8 },
+  { id: "food-web", ...t.foodWeb, className: "biology", number: "10", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({
