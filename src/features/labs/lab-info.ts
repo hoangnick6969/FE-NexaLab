@@ -12,6 +12,7 @@ function thumbnailFor(labId: string) {
 
 const text = defineText({
   vi: {
+    buoyancy: { subject: "KHTN", tag: "THỰC HÀNH", title: "Lực đẩy Ác-si-mét", description: "Nhúng mẫu vào bình tràn, đọc lực kế và kiểm chứng độ lớn lực đẩy Ác-si-mét." },
     circuit: { subject: "VẬT LÝ", tag: "THỬ THÁCH", title: "Thắp sáng ý tưởng", description: "Tự lắp mạch điện và tìm cách làm LED sáng an toàn." },
     eye: { subject: "SINH HỌC", tag: "MÔ HÌNH 3D", title: "Thế giới qua đôi mắt", description: "Đi sâu vào cấu tạo mắt và theo dấu hành trình ánh sáng." },
     chemistry: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Những biến đổi kỳ diệu", description: "Khám phá phản ứng, quan sát hiện tượng và chất dư." },
@@ -22,6 +23,7 @@ const text = defineText({
     massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
   },
   en: {
+    buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
     eye: { subject: "BIOLOGY", tag: "3D MODEL", title: "The world through your eyes", description: "Look inside the eye and follow the path of light." },
     chemistry: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Amazing changes", description: "Explore reactions, observe what happens and what is left over." },
@@ -36,6 +38,7 @@ const t = text();
 
 
 const catalogEntries = [
+  { id: "buoyancy", ...t.buoyancy, className: "physics", number: "09", grade: 8 },
   {
     id: "circuit",
     ...t.circuit,
@@ -91,5 +94,5 @@ const catalogEntries = [
 
 export const labInfo = catalogEntries.map((entry) => ({
   ...entry,
-  thumbnail: thumbnailFor(entry.id),
+  thumbnail: thumbnailFor(entry.id) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
 }));

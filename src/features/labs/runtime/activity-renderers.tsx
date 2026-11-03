@@ -8,6 +8,8 @@ import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
 import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
+import { BuoyancyActivity } from "../physics/fluid/buoyancy/BuoyancyActivity";
+import { defaultBuoyancyEvidence, buoyancyEvidenceReady, BuoyancyResult, buoyancyCopy } from "../physics/fluid/buoyancy/BuoyancyEvidence";
 import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
 import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
 import { defaultEyeOpticsEvidence, eyeOpticsEvidenceReady } from "../biology/anatomy/eye-optics/eye-optics-evidence";
@@ -23,7 +25,7 @@ const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
 
-export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null };
+export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null; runtimeConfig?: unknown };
 
 export type GuidedActivity = {
   /** Submission is enabled only when the activity evidence is complete. */
@@ -48,6 +50,12 @@ export type LabActivityRenderer = {
 };
 
 const renderers: readonly LabActivityRenderer[] = [
+  {
+    key: "buoyancy-bench", labId: "buoyancy", modelRefs: ["buoyancy@1.0.0"], envelope: "evidence",
+    defaultState: defaultBuoyancyEvidence,
+    Activity: (props) => <BuoyancyActivity {...props} />,
+    guided: { ready: buoyancyEvidenceReady, copy: buoyancyCopy, Result: BuoyancyResult },
+  },
   {
     key: "em-induction", labId: "em-induction", modelRefs: ["em-induction@1.0.0"], envelope: "checkpoints",
     defaultState: () => checkpointViewForRenderer("em-induction")!.defaultEvidence(),

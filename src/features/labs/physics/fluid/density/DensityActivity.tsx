@@ -10,6 +10,7 @@ import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRender
 import { Density2DStage, balanceReadingG, cylinderVolumeMl, initialBench, stationSpecimenId, type Bench } from "./Density2DStage";
 import { Density3DStage } from "./Density3DStage";
 import { DensityNotebook } from "./DensityNotebook";
+import { FluidKitLayoutShell } from "../kit";
 import "./density.css";
 
 export { defaultDensityEvidence, densityEvidenceReady };
@@ -110,11 +111,14 @@ export function DensityActivity({ state, onChange, resetKey, runtimeParams = nul
   </>;
 
   const measured = STATION_IDS.slice(0, 4).every((other) => stationDone(evidence, other));
-  return <section className="density-activity" data-testid="density-activity" aria-label={t.title}>
+  return <FluidKitLayoutShell className="density-activity" mode={viewMode} testId="density-activity" ariaLabel={t.title}>
     {headerActions && createPortal(<LabRendererToggle mode={viewMode} onChange={setViewMode} />, headerActions)}
-    {viewMode === "3d"
-      ? <Density3DStage station={station} evidence={evidence} bench={bench} />
-      : <Density2DStage station={station} evidence={evidence} bench={bench} />}
+    <div className={`fluid-kit-renderer fluid-kit-renderer-3d${viewMode === "3d" ? " is-active" : ""}`} aria-hidden={viewMode !== "3d"}>
+      <Density3DStage station={station} evidence={evidence} bench={bench} active={viewMode === "3d"} />
+    </div>
+    <div className={`fluid-kit-renderer fluid-kit-renderer-2d${viewMode === "2d" ? " is-active" : ""}`} aria-hidden={viewMode !== "2d"}>
+      <Density2DStage station={station} evidence={evidence} bench={bench} />
+    </div>
     <K3Hud
       title={t.title}
       stations={STATION_IDS.map((id) => ({
@@ -134,5 +138,5 @@ export function DensityActivity({ state, onChange, resetKey, runtimeParams = nul
     >
       <DensityNotebook station={station} evidence={evidence} onChange={onChange} />
     </K3Hud>
-  </section>;
+  </FluidKitLayoutShell>;
 }
