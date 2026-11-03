@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ECO_COLORS } from "./eco-palette";
+import { paint } from "./procedural";
 
 /**
  * Procedural cá rô phi (Nile tilapia), head along +x, about 1 unit long:
@@ -11,19 +12,7 @@ const HALF = 0.5;
 /** Body taper along x: full depth behind the head, narrow caudal peduncle. */
 const taper = (x: number) => (x < 0 ? 1 - 0.66 * Math.pow(-x / HALF, 1.5) : 1 - 0.3 * Math.pow(x / HALF, 2.2));
 /** Half the body height at x (top of the back is a little higher than the belly is low). */
-export const bodyTop = (x: number) => 0.2 * taper(x) * Math.sqrt(Math.max(0, 1 - (x / HALF) ** 2)) + 0.012;
-
-function paint(geometry: THREE.BufferGeometry, colorAt: (p: THREE.Vector3) => THREE.Color) {
-  const position = geometry.getAttribute("position");
-  const colors = new Float32Array(position.count * 3);
-  const p = new THREE.Vector3();
-  for (let i = 0; i < position.count; i++) {
-    const c = colorAt(p.fromBufferAttribute(position, i));
-    colors.set([c.r, c.g, c.b], i * 3);
-  }
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  return geometry;
-}
+const bodyTop = (x: number) => 0.2 * taper(x) * Math.sqrt(Math.max(0, 1 - (x / HALF) ** 2)) + 0.012;
 
 function finShape(points: Array<[number, number]>) {
   const shape = new THREE.Shape();
@@ -57,10 +46,10 @@ export function createTilapiaGeometry() {
     if (bar) mix.lerp(c.fishBar, 0.45);
     // Gill cover edge.
     if (Math.abs(p.x - 0.27) < 0.012 && ny < 0.6) mix.lerp(c.fishBar, 0.6);
-    return mix.clone();
+    return mix;
   });
 
-  const finColor = (edge: (p: THREE.Vector3) => number) => (p: THREE.Vector3) => mix.copy(c.fishFin).lerp(c.fishFinEdge, THREE.MathUtils.smoothstep(edge(p), 0.55, 1)).clone();
+  const finColor = (edge: (p: THREE.Vector3) => number) => (p: THREE.Vector3) => mix.copy(c.fishFin).lerp(c.fishFinEdge, THREE.MathUtils.smoothstep(edge(p), 0.55, 1));
   const tailX = -0.47;
   const tail = finShape([[tailX, 0.03], [-0.6, 0.17], [-0.72, 0.2], [-0.74, 0], [-0.72, -0.2], [-0.6, -0.17], [tailX, -0.03]]);
   paint(tail, finColor((p) => (tailX - p.x) / 0.27));

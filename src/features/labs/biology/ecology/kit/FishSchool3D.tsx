@@ -5,6 +5,7 @@ import { ECO_MOTION } from "./eco-motion";
 import { useEcoQuality } from "./eco-quality";
 import { createTilapiaGeometry } from "./fish-geometry";
 import { POND } from "./PondDiorama3D";
+import { seeded } from "./procedural";
 
 /**
  * neutral: before the learner's prediction is checked (still, grey); swimming;
@@ -21,15 +22,12 @@ const TARGET: Record<FishMood, { swim: number; desat: number }> = {
   heat: { swim: 0, desat: 0 },
   cold: { swim: 0, desat: 0 },
 };
-const smooth = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
+const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
+const { clamp } = THREE.MathUtils;
 
 /** Seeded loops inside the water, so every run and screenshot shows the same school. */
 function loops(count: number) {
-  let seed = 7;
-  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const rand = seeded(7);
   const { x, z } = POND.water;
   return Array.from({ length: count }, (_, i) => ({
     cx: (rand() - 0.5) * (x * 2 - 6.2), cy: POND.floor + 0.9 + rand() * (POND.surface - POND.floor - 1.7), cz: (rand() - 0.5) * (z * 2 - 2.6),
@@ -91,7 +89,7 @@ export function FishSchool3D({ mood, vigor, animate }: { mood: FishMood; /** 0â€
     const heat = kind.current === "heat";
     const t0 = uniforms.uTime.value;
     school.forEach((fish, i) => {
-      const s = Math.min(1, Math.max(0, (stress.current - fish.delay) / (1 - 0.22)));
+      const s = clamp((stress.current - fish.delay) / (1 - 0.22), 0, 1);
       // Heat: up to the surface first, then down; cold: straight down.
       const up = heat ? smooth(0, 0.22, s) * (1 - smooth(0.5, 0.8, s)) : 0;
       const down = heat ? smooth(0.55, 1, s) : smooth(0.05, 0.9, s);
@@ -150,7 +148,7 @@ export function FishSchool3D({ mood, vigor, animate }: { mood: FishMood; /** 0â€
     }
     const k = 1 - Math.exp(-ECO_MOTION.fishLambda * dt);
     // The sequence runs over about ECO_MOTION.stressSeconds and reverses faster once the water is back in range.
-    stress.current = Math.min(1, Math.max(0, stress.current + (stressed ? dt / ECO_MOTION.stressSeconds : -dt / (ECO_MOTION.stressSeconds * 0.4))));
+    stress.current = clamp(stress.current + (stressed ? dt / ECO_MOTION.stressSeconds : -dt / (ECO_MOTION.stressSeconds * 0.4)), 0, 1);
     const s = stress.current;
     const heat = kind.current === "heat";
     // Heat: frantic at the surface, then still; cold: slower and slower.

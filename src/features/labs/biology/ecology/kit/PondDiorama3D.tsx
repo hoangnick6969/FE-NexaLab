@@ -5,6 +5,7 @@ import { ContactShadows } from "@react-three/drei";
 import { ECO_MOTION } from "./eco-motion";
 import { ECO_COLORS, waterTint } from "./eco-palette";
 import { useEcoQuality } from "./eco-quality";
+import { paint, seeded } from "./procedural";
 
 /** Diorama layout (1 unit ≈ 10 cm, not to scale): a pond cut open at the front, between two banks. */
 export const POND = {
@@ -22,25 +23,14 @@ const WHITE = new THREE.Color("#ffffff");
 /** Soil block with layers painted by height: grass on top, then soil, clay and sand. */
 function strataBox(width: number, height: number, depth: number, centerY: number, grassTop: boolean) {
   const geometry = new THREE.BoxGeometry(width, height, depth, 1, 28, 1).translate(0, centerY, 0);
-  const position = geometry.getAttribute("position");
-  const colors = new Float32Array(position.count * 3);
   const grass = color(ECO_COLORS.grass), soil = color(ECO_COLORS.bankSoil), top = color(ECO_COLORS.topsoil), clay = color(ECO_COLORS.clay), sand = color(ECO_COLORS.sand);
   const c = new THREE.Color();
-  for (let i = 0; i < position.count; i++) {
-    const y = position.getY(i);
-    if (grassTop && y > POND.bankTop - 0.14) c.copy(grass);
-    else if (y > -0.4) c.copy(top).lerp(soil, THREE.MathUtils.smoothstep(y, POND.bankTop - 0.3, -0.4));
-    else if (y > -2.4) c.copy(soil).lerp(clay, THREE.MathUtils.smoothstep(y, -0.4, -2.4));
-    else c.copy(clay).lerp(sand, THREE.MathUtils.smoothstep(y, -2.4, POND.base));
-    colors.set([c.r, c.g, c.b], i * 3);
-  }
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  return geometry;
-}
-
-function seeded(seed: number) {
-  let s = seed;
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  return paint(geometry, ({ y }) => {
+    if (grassTop && y > POND.bankTop - 0.14) return c.copy(grass);
+    if (y > -0.4) return c.copy(top).lerp(soil, THREE.MathUtils.smoothstep(y, POND.bankTop - 0.3, -0.4));
+    if (y > -2.4) return c.copy(soil).lerp(clay, THREE.MathUtils.smoothstep(y, -0.4, -2.4));
+    return c.copy(clay).lerp(sand, THREE.MathUtils.smoothstep(y, -2.4, POND.base));
+  });
 }
 
 function Earth() {
@@ -68,17 +58,13 @@ function Floor() {
   const { geometry, pebbles } = useMemo(() => {
     const g = new THREE.PlaneGeometry(POND.water.x * 2, POND.water.z * 2, 56, 20).rotateX(-Math.PI / 2);
     const position = g.getAttribute("position");
-    const colors = new Float32Array(position.count * 3);
-    const mud = color(ECO_COLORS.mud), c = new THREE.Color();
     for (let i = 0; i < position.count; i++) {
       const x = position.getX(i), z = position.getZ(i);
-      const n = Math.sin(x * 1.3) * Math.cos(z * 1.7) * 0.06 + Math.sin(x * 3.1 + z * 2.2) * 0.025;
-      position.setY(i, n);
-      c.copy(mud).multiplyScalar(0.9 + n * 2.2);
-      colors.set([c.r, c.g, c.b], i * 3);
+      position.setY(i, Math.sin(x * 1.3) * Math.cos(z * 1.7) * 0.06 + Math.sin(x * 3.1 + z * 2.2) * 0.025);
     }
-    g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     g.computeVertexNormals();
+    const mud = color(ECO_COLORS.mud), c = new THREE.Color();
+    paint(g, ({ y }) => c.copy(mud).multiplyScalar(0.9 + y * 2.2));
     const rand = seeded(11);
     const pebbles = Array.from({ length: 46 }, () => ({ x: (rand() - 0.5) * (POND.water.x * 2 - 0.6), z: (rand() - 0.5) * (POND.water.z * 2 - 0.4), s: 0.06 + rand() * 0.12, r: rand() * 6 }));
     return { geometry: g, pebbles };
@@ -134,16 +120,10 @@ function Weeds({ animate }: { animate: boolean }) {
   const { geometry, material, blades } = useMemo(() => {
     const g = new THREE.PlaneGeometry(0.16, 1, 1, 10).translate(0, 0.5, 0);
     const position = g.getAttribute("position");
-    const colors = new Float32Array(position.count * 3);
-    const base = color(ECO_COLORS.weed), tip = color(ECO_COLORS.weedTip), c = new THREE.Color();
-    for (let i = 0; i < position.count; i++) {
-      const y = position.getY(i);
-      position.setX(i, position.getX(i) * (1 - y * 0.75));
-      c.copy(base).lerp(tip, y);
-      colors.set([c.r, c.g, c.b], i * 3);
-    }
-    g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    for (let i = 0; i < position.count; i++) position.setX(i, position.getX(i) * (1 - position.getY(i) * 0.75));
     g.computeVertexNormals();
+    const base = color(ECO_COLORS.weed), tip = color(ECO_COLORS.weedTip), c = new THREE.Color();
+    paint(g, ({ y }) => c.copy(base).lerp(tip, y));
     const m = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.7 });
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = uniforms.uTime;
@@ -225,6 +205,9 @@ function BankPlants() {
   </group>;
 }
 
+/** Lily pads: x, z, radius. */
+const PADS = [[-3.1, -0.6, 0.5], [-2.2, 0.7, 0.36], [2.6, -0.9, 0.46], [3.5, 0.3, 0.32], [0.4, -1.2, 0.4]] as const;
+
 /** Soft round sprite for steam. */
 function puffTexture() {
   const canvas = document.createElement("canvas");
@@ -251,7 +234,6 @@ function Water({ valueDeciC, animate }: { valueDeciC: number; animate: boolean }
   const paneMaterial = useRef<THREE.MeshStandardMaterial>(null);
   const shown = useRef(valueDeciC);
   const time = useRef(0);
-  const pads = useMemo(() => [[-3.1, -0.6, 0.5], [-2.2, 0.7, 0.36], [2.6, -0.9, 0.46], [3.5, 0.3, 0.32], [0.4, -1.2, 0.4]] as const, []);
   const padGroup = useRef<THREE.Group>(null);
   const texture = useMemo(puffTexture, []);
   const steam = useRef<THREE.Group>(null);
@@ -309,7 +291,7 @@ function Water({ valueDeciC, animate }: { valueDeciC: number; animate: boolean }
       <meshStandardMaterial ref={surfaceMaterial} transparent depthWrite={false} roughness={0.08} metalness={0} envMapIntensity={1.4} side={THREE.DoubleSide} />
     </mesh>
     <group ref={padGroup}>
-      {pads.map(([x, z, r], i) => <mesh key={i} position={[x, POND.surface + 0.03, z]} rotation={[-Math.PI / 2, 0, i * 1.3]} castShadow>
+      {PADS.map(([x, z, r], i) => <mesh key={i} position={[x, POND.surface + 0.03, z]} rotation={[-Math.PI / 2, 0, i * 1.3]} castShadow>
         <circleGeometry args={[r, 22, 0.35, Math.PI * 2 - 0.35]} />
         <meshStandardMaterial color={ECO_COLORS.lily} roughness={0.55} side={THREE.DoubleSide} />
       </mesh>)}

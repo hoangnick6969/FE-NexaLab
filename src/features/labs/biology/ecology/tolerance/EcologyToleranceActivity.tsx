@@ -4,7 +4,7 @@ import { ECOLOGY_POPULATIONS } from "@nexalab/sim";
 import { defineText } from "../../../../../i18n";
 import { useReducedMotion } from "../../../physics/electricity/induction/apparatus/anim";
 import { PondScene, type FishState } from "./PondScene";
-import { PondView3D } from "./PondView3D";
+import { PondView3D, vigorAt } from "./PondView3D";
 import { webglAvailable } from "../kit";
 import { ComparisonGraph, ToleranceGraph } from "./ToleranceGraph";
 import { AgePyramid, PopulationPlot } from "./PopulationViews";
@@ -339,8 +339,9 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     ? `${(answer as DensityAnswer).value} ${t.unit[(answer as DensityAnswer).unit]}`
     : t.choice[answer as EcoChoice];
   /** Local preview of the server rubric (same model, same rules); the server result stays authoritative. */
+  const checkpointOf = (id: EcoCheckpointId) => evidence.checkpoints.find((item) => item.id === id)!;
   const verdictOf = (id: EcoCheckpointId): { correct: boolean; expected: string } | null => {
-    const checkpoint = evidence.checkpoints.find((item) => item.id === id)!;
+    const checkpoint = checkpointOf(id);
     const prediction = checkpoint.prediction;
     if (prediction === null) return null;
     if (id === "T_INSIDE" || id === "T_ABOVE") {
@@ -371,7 +372,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
     }
     return null;
   };
-  const reviewed = review ? { id: review, answer: answerText(review, evidence.checkpoints.find((item) => item.id === review)!.prediction), verdict: verdictOf(review) } : null;
+  const reviewed = review ? { id: review, answer: answerText(review, checkpointOf(review).prediction), verdict: verdictOf(review) } : null;
   const lastObserved = [...evidence.checkpoints].reverse().find((checkpoint) => evidence.observed[checkpoint.id]) ?? null;
   // The sweep shows the live value; otherwise the current step once observed, else the last observed step.
   const shownText = current?.id === "LIMITS" && phase.kind === "act" ? (pondObservation?.canPersist ? t.persists(formatDeciC(sweepValue)) : t.gone(formatDeciC(sweepValue)))
@@ -382,10 +383,11 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
   const heading = review ? t.question[review] : phase.kind === "predict" ? t.question[phase.id] : phase.kind === "act" ? t.actPrompt[phase.id] : phase.kind === "explain" ? t.explanation : t.ready;
   const factorScore = FACTORS.filter((factor) => factorAnswers[factor.id] === factor.biotic).length;
 
+  // Answered and waiting for "Quan sát": the choice stays in view instead of the hint.
+  const awaitingCheck = phase.kind === "act" && current?.prediction != null;
   const pond3d = scene === "pond" && view === "3d";
   const limits = pondObservation?.limits ?? { minDeciC: 56, maxDeciC: 420 };
-  const span = (pondValue - limits.minDeciC) / (limits.maxDeciC - limits.minDeciC);
-  const vigor = pondObservation?.canPersist ? Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, span))), 0.7) : 0;
+  const vigor = vigorAt(pondValue, pondObservation);
   const pondLabel = `${t.sceneLabel} ${formatDeciC(pondValue)} °C.`;
 
   return <section className="eco-activity" data-testid="eco-activity" aria-label={t.title}>
@@ -436,7 +438,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
       </div>
       <h3 className="eco-heading" aria-live="polite">{heading}</h3>
 
-      {!review && phase.kind === "act" && current?.prediction != null && <p className="eco-chosen" data-testid="eco-chosen">
+      {!review && awaitingCheck && current && <p className="eco-chosen" data-testid="eco-chosen">
         {t.review.chosen}: <b>{answerText(current.id, current.prediction)}</b>
       </p>}
       {actId === "LIMITS" && !review && <ul className="eco-seen" data-testid="eco-sweep-progress">
@@ -481,7 +483,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           {phase.kind === "explain" || phase.kind === "ready" ? t.review.toExplain : t.review.next}
         </button>
       </div>
-      : !(phase.kind === "act" && current?.prediction != null && !shownText) && <div className="eco-observation" role="status" aria-live="polite" data-testid="eco-observation">
+      : !(awaitingCheck && !shownText) && <div className="eco-observation" role="status" aria-live="polite" data-testid="eco-observation">
         {shownText ? <p>{actId === "LIMITS" ? <Info size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />} {shownText}</p>
           : <p className="eco-hint"><Info size={15} aria-hidden="true" /> {t.predictHint}</p>}
       </div>}

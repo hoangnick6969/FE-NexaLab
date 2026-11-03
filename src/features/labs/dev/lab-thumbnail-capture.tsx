@@ -18,6 +18,8 @@ import { AnatomyStage } from "../biology/anatomy/kit/AnatomyStage";
 import { EyeModel } from "../biology/anatomy/kit/EyeModel";
 import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry";
 import { EYE_CENTRE, EYE_ROTATION, OpticsRays } from "../biology/anatomy/eye-optics/EyeOpticsActivity";
+import { PondView3D } from "../biology/ecology/tolerance/PondView3D";
+import "../biology/ecology/tolerance/EcologyToleranceActivity.css";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -37,7 +39,14 @@ const eyeOpticsThumbnail = () => <div className="eye-thumbnail">
   <style>{`.eye-thumbnail .anatomy-stage { width: 1280px; height: 720px; aspect-ratio: auto; min-height: 0; border: 0; border-radius: 0; }`}</style>
 </div>;
 
+/** FL-20: the cut-open pond at 28 °C with the cá rô phi school swimming (inside its tolerance range). */
+const ecologyThumbnail = () => <div className="eco-thumbnail">
+  <PondView3D valueDeciC={280} fish="persists" vigor={0.9} label="FL-20 pond" valueLabel="28,0 °C" layoutKey="thumbnail" />
+  <style>{`.eco-thumbnail { position: relative; width: 1280px; height: 720px; }`}</style>
+</div>;
+
 const scenes: Record<string, () => ReactNode> = {
+  "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
   buoyancy: () => {
     const kit = fl03DensityConfig;

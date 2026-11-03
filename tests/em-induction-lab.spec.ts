@@ -97,6 +97,8 @@ test("FL-25 induction activity runs in 2D, restores after F5 and submits only ch
   await expect(page.getByTestId("lab-run-submit")).toBeEnabled();
   await page.getByTestId("lab-run-submit").click();
   await expect(page.getByText("Đẩy cực N vào: có dòng điện, kim lệch phải, dự đoán đúng")).toBeVisible();
+  // The result drawer takes the question panel's place instead of overlapping it.
+  await expect(page.locator(".em-panel")).toBeHidden();
 
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toEqual(expect.objectContaining({
