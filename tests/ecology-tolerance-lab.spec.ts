@@ -63,21 +63,31 @@ test("FL-20 ecology activity: predictions before observations, F5 restore, keybo
   const act = page.getByTestId("eco-act");
   const observation = page.getByTestId("eco-observation");
   const step = page.locator(".eco-step");
+  const next = page.getByTestId("eco-next");
+  const review = page.getByTestId("eco-review");
 
   // The fish state and the limit markers stay hidden until the prediction is made and observed.
   await expect(act).toBeDisabled();
   await expect(page.locator(".eco-pond")).toHaveAttribute("data-fish", "hidden");
   await expect(page.getByTestId("eco-limit-markers")).toHaveCount(0);
   await page.getByTestId("eco-answer-t_inside").getByRole("radio", { name: "Tồn tại được", exact: true }).click();
+  // The chosen answer stays in view until it is checked.
+  await expect(page.getByTestId("eco-chosen")).toContainText("Tồn tại được");
   await act.press("Enter");
   await expect(observation).toContainText("bơi bình thường");
   await expect(page.locator(".eco-pond")).toHaveAttribute("data-fish", "persists");
+  // Each checkpoint shows its verdict and waits for the learner before the next question.
+  await expect(review).toHaveAttribute("data-correct", "true");
+  await expect(review).toContainText("Đúng rồi.");
+  await expect(act).toBeDisabled();
+  await next.click();
 
   await page.getByTestId("eco-answer-t_above").getByRole("radio", { name: "Không tồn tại được", exact: true }).click();
   await expect(page.locator(".eco-pond")).toHaveAttribute("data-fish", "hidden");
   await act.click();
   await expect(observation).toContainText("không tồn tại được");
   await expect(step).toHaveText("Bước 5/13");
+  await expect(review).toHaveAttribute("data-correct", "true");
   await page.waitForTimeout(500);
 
   await page.reload();
@@ -95,12 +105,15 @@ test("FL-20 ecology activity: predictions before observations, F5 restore, keybo
   await expect(page.getByTestId("eco-temperature")).toHaveText("50,0 °C");
   await expect(step).toHaveText("Bước 6/13");
   await page.getByTestId("eco-answer-limits").getByLabel("Từ 5,6 °C đến 42 °C").click();
+  await expect(review).toHaveAttribute("data-correct", "true");
+  await next.click();
   await expect(page.getByTestId("eco-limit-markers")).toHaveCount(0); // the scene moved on to the comparison
   await expect(page.getByTestId("eco-comparison")).toBeVisible();
 
   await page.getByTestId("eco-answer-import").getByLabel("Cá B").click();
   await act.click();
   await expect(observation).toContainText("Cá B chịu được toàn bộ khoảng nhiệt độ");
+  await next.click();
 
   const density = page.getByTestId("eco-answer-density");
   await density.getByLabel("Mật độ").fill("bốn");
@@ -111,10 +124,14 @@ test("FL-20 ecology activity: predictions before observations, F5 restore, keybo
   await density.getByRole("button", { name: "Ghi câu trả lời" }).click();
   await act.click();
   await expect(observation).toContainText("3.000 : 750 = 4 cây/m²");
+  await expect(review).toHaveAttribute("data-correct", "true");
+  await next.click();
 
   await page.getByTestId("eco-answer-age").getByLabel("Dạng suy giảm").click();
   await act.click();
   await expect(observation).toContainText("tháp dạng suy giảm");
+  await expect(next).toHaveText("Sang câu giải thích");
+  await next.click();
 
   await page.getByRole("radio", { name: /nằm ngoài giới hạn sinh thái/ }).click();
   await expect(page.getByTestId("lab-run-submit")).toBeEnabled();
@@ -157,4 +174,32 @@ test("FL-20 phone layout: no horizontal scroll, panel and dock reachable; free e
   expect(act.y).toBeGreaterThanOrEqual(panel.y + panel.height);
   expect(act.y + act.height).toBeLessThanOrEqual(submit.y);
   await page.screenshot({ path: "test-results/eco-phone.png" });
+});
+
+test("FL-20 K8 pond: 3D diorama by default, 2D diagram on request, same fish contract, choice remembered", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockShell(page);
+  await page.route("**/api/labs/ecology-tolerance/runs", (route) => route.fulfill({ json: launch("eco-run-3d") }));
+  await page.goto("/labs/ecology-tolerance?assignmentId=assignment-eco");
+  await page.getByTestId("lab-session-start").click();
+
+  const stage = page.getByTestId("eco-stage");
+  await expect(stage).toHaveAttribute("data-view", "3d");
+  await expect(page.getByTestId("eco-3d").locator("canvas")).toBeVisible();
+  await expect(page.getByTestId("eco-3d")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator(".eco-pond")).toHaveAttribute("data-fish", "hidden");
+  await expect(page.locator(".eco-pond")).toHaveAttribute("aria-label", /30,0 °C/);
+  // The graph card stays clear of the question panel.
+  const card = (await page.locator(".eco-stage-inner").boundingBox())!;
+  const panel = (await page.locator(".eco-panel").boundingBox())!;
+  expect(card.x + card.width).toBeLessThanOrEqual(panel.x);
+
+  await page.getByTestId("eco-view-toggle").click();
+  await expect(stage).toHaveAttribute("data-view", "2d");
+  await expect(page.locator("svg.eco-pond")).toHaveAttribute("data-fish", "hidden");
+  await page.reload();
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByTestId("eco-stage")).toHaveAttribute("data-view", "2d");
+  await page.getByTestId("eco-view-toggle").click();
+  await expect(page.getByTestId("eco-stage")).toHaveAttribute("data-view", "3d");
 });

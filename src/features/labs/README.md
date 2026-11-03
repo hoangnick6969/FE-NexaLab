@@ -24,7 +24,7 @@ labs/
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
   biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, camera focus, callouts, sagittal section;
                                  eye-optics/ = FL-16 activity (rubric eye-anatomy-optics@1.0.0); Eye.tsx = legacy eye@1.0.0 resource
-  biology/ecology/                K8: FL-20 tolerance (built, not released); FL-21 planned
+  biology/ecology/                K8: shared 3D pond kit; FL-20 tolerance (released v1, 3D diorama since v1.1); FL-21 food web
   biology/genetics/               K8: FL-26 (planned)
   biology/molecular/              K7: kit/ (bench entry + molecular scene) + gene-protein/ = FL-27 technical candidate
 ```
@@ -46,7 +46,7 @@ labs/
 | K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | FL-07 run-bound 2D/3D technical candidate; FL-08 not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
 | K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |
-| K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | FL-20 built (2D, not released); FL-21 not implemented |
+| K8 Ecology light scene + HUD | FL-20, FL-21 | `biology/ecology/` | K8 kit (`kit/`: EcoStage, pond diorama, instanced fish, thermometer; preview `/dev/lab-kits/k8`). FL-20 released v1, renderer v1.1 uses the 3D diorama with the 2D scene as option and fallback; FL-21 on its own branch |
 | K6 Optics | FL-23 | `physics/optics/` | Not implemented |
 | K8 Genetics HUD | FL-26 | `biology/genetics/` | Not implemented |
 | K7 Molecular / gene-to-protein scene | FL-27 (FL-28, FL-30 deferred) | `biology/molecular/` | Technical candidate: K7 kit (bench entry in the shared room with microscope, PCR machine and tube rack → `MolecularStage` without a room; schematic and ball-and-stick views; 2D read view) and FL-27 (`gene-protein/`) running through the lab run host against BE `gene-expression@1.0.0` / `gene-protein-stations@1.0.0`. Not released; previews `/dev/lab-kits/k7`, `/dev/lab-kits/gene-protein` |
