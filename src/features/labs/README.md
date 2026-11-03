@@ -22,7 +22,7 @@ labs/
     optics/                       K6: FL-23 (planned)
   chemistry/                     chemistry compatibility fixture renderer
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
-  biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, camera focus, callouts, sagittal section;
+  biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, lab room entry (EyeLabRoom), camera focus, callouts, sagittal section;
                                  eye-optics/ = FL-16 activity (rubric eye-anatomy-optics@1.0.0); Eye.tsx = legacy eye@1.0.0 resource
   biology/ecology/                K8: shared 3D pond kit; FL-20 tolerance (released v1, 3D diorama since v1.1); FL-21 food web
   biology/genetics/               K8: FL-26 (planned)
@@ -30,12 +30,12 @@ labs/
 ```
 
 - `shared/PhysicalLabEnvironment.tsx` owns the common physical room shell (tiled floor, walls, sink, cabinets and brown worktable). K1 and the FL-10/K2 candidate both use it; kit-specific apparatus stays in its own folder. This source reuse avoids duplicate room geometry definitions; device-level memory and frame-time still require measurement.
-- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit, K2 FL-10, K3 FL-03 and the K7 FL-27 bench) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
+- Treat `PhysicalLabEnvironment.tsx` as a cross-kit contract. A kit task must compose it without adding kit-specific props or geometry there. Room-wide changes require checking all current consumers (K1 Circuit, K2 FL-10, K3 FL-03, the K7 FL-27 bench and the EX-A FL-16 room) and updating this contract; kit apparatus stays in its kit directory. FL-10 uses only its balance and two beakers; it does not add a reagent shelf or test-tube rack.
 - `physics/shared/PhysicsStage.tsx` owns the K1 Canvas lifecycle, responsive camera and WebGL fallback. `LabSpace` remains the fullscreen UI shell, separate from the 3D room environment.
 - `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `induction/` contains the FL-25 scene and uses the same room shell; release availability is controlled by the backend catalog.
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
 - `chemistry/Chemistry.tsx` remains `TECHNICAL_FIXTURE_ONLY`; it is not one of the approved/provisional released Lab experiences.
-- `biology/anatomy/` contains a Lesson resource, not a Foundational Lab implementation.
+- `biology/anatomy/Eye.tsx` is the legacy Lesson resource. FL-16 (`eye-optics/`) opens in the shared room scaled 3× around the enlarged eye model, full screen behind a floating guide panel as FL-27 does (`kit/EyeLabRoom.tsx`: stand, acuity chart, trial lens case); clicking the model or its DOM button flies the camera in to the section, as the K7 microscope does.
 
 ## Provisional 20-slot grouping and code destination
 
