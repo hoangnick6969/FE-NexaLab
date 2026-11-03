@@ -40,7 +40,7 @@ export function Thermometer3D({ valueDeciC, label, animate, position }: { valueD
       <sphereGeometry args={[0.2, 20, 14]} />
       <meshStandardMaterial color={ECO_COLORS.mercury} roughness={0.3} />
     </mesh>
-    <mesh ref={column} position={[0, 0, 0]}>
+    <mesh ref={column}>
       <primitive object={columnGeometry} attach="geometry" />
       <meshStandardMaterial color={ECO_COLORS.mercury} roughness={0.3} />
     </mesh>

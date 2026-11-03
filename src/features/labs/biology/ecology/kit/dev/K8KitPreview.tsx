@@ -2,16 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LabSpace } from "../../../../shared/LabSpace";
 import "../../tolerance/EcologyToleranceActivity.css";
-import { tolerance } from "../../tolerance/eco-evidence";
-import { EcoStage, FishSchool3D, PondDiorama3D, POND, Thermometer3D, type EcoView, type FishMood } from "..";
+import "./K8KitPreview.css";
+import { formatDeciC as celsius, tolerance } from "../../tolerance/eco-evidence";
+import { POND_VIEW, THERMOMETER_AT, stressAt, vigorAt } from "../../tolerance/PondView3D";
+import { EcoStage, FishSchool3D, PondDiorama3D, Thermometer3D, type FishMood } from "..";
 
-const VIEW: EcoView = { target: [0, -0.5, 0], direction: [0, 0.38, 1], width: 18.6, height: 7 };
 const MOODS: Array<[FishMood | "auto", string]> = [
   ["auto", "Theo nhiệt độ"], ["neutral", "Chờ dự đoán"], ["swimming", "Bơi"], ["heat", "Quá nóng"], ["cold", "Quá lạnh"],
 ];
 const PRESETS: Array<[number, string]> = [[20, "Quá lạnh"], [300, "Thích hợp"], [440, "Quá nóng"]];
 const MAX = 500;
-const celsius = (deci: number) => (deci / 10).toFixed(1).replace(".", ",");
 
 /** Development-only K8 pond diorama: try temperatures the way the Lab does, or force one fish state; not a Lab run. */
 export default function K8KitPreview() {
@@ -22,23 +22,22 @@ export default function K8KitPreview() {
   const [manualVigor, setVigor] = useState(1);
   const observation = tolerance(value);
   const limits = observation?.limits ?? { minDeciC: 56, maxDeciC: 420 };
-  const span = Math.min(1, Math.max(0, (value - limits.minDeciC) / (limits.maxDeciC - limits.minDeciC)));
-  const fishMood: FishMood = mood !== "auto" ? mood : observation?.canPersist ? "swimming" : value >= 240 ? "heat" : "cold";
-  const vigor = mood !== "auto" ? manualVigor : observation?.canPersist ? Math.pow(Math.sin(Math.PI * span), 0.7) : 0;
+  const fishMood: FishMood = mood !== "auto" ? mood : observation?.canPersist ? "swimming" : stressAt(value);
+  const vigor = mood !== "auto" ? manualVigor : vigorAt(value, observation);
   const status = observation?.canPersist ? "Cá rô phi tồn tại được: cá bơi, nhanh nhất ở khoảng giữa giới hạn."
-    : value >= 240 ? "Quá nóng: cá ngoi lên đớp khí, rồi lịm dần và nằm dưới đáy."
+    : stressAt(value) === "heat" ? "Quá nóng: cá ngoi lên đớp khí, rồi lịm dần và nằm dưới đáy."
     : "Quá lạnh: cá chậm dần, bạc màu và nằm dưới đáy.";
   const pct = (deci: number) => `${(deci / MAX) * 100}%`;
   return <LabSpace title="Bộ kit sinh thái K8, xem trước" onExit={() => navigate("/")}>
     <div className="eco-activity">
       <div className="eco-stage" data-view="3d" data-scene="pond">
         <div className="eco-pond eco-pond-3d">
-          <EcoStage view={VIEW} avoid={[".lab-space-header", ".k8-panel"]}
+          <EcoStage view={POND_VIEW} avoid={[".lab-space-header", ".k8-panel"]}
             fallback={<p>WebGL unavailable</p>}
             scene={({ animate, dark }) => <>
               <PondDiorama3D valueDeciC={value} animate={animate} dark={dark} />
               <FishSchool3D mood={fishMood} vigor={vigor} animate={animate} />
-              <Thermometer3D valueDeciC={value} label={`${celsius(value)} °C`} animate={animate} position={[POND.water.x - 0.7, POND.floor + 0.9, 1.2]} />
+              <Thermometer3D valueDeciC={value} label={`${celsius(value)} °C`} animate={animate} position={THERMOMETER_AT} />
             </>} />
         </div>
       </div>
@@ -52,8 +51,8 @@ export default function K8KitPreview() {
           <input type="range" min={0} max={MAX} value={value} onChange={(event) => { setValue(Number(event.target.value)); setMood("auto"); }} />
           <span className="k8-ruler" aria-hidden="true">
             <span className="k8-ruler-band" style={{ left: pct(limits.minDeciC), width: pct(limits.maxDeciC - limits.minDeciC) }} />
-            <span className="k8-ruler-tick" data-limit style={{ left: pct(limits.minDeciC) }}>{celsius(limits.minDeciC)}</span>
-            <span className="k8-ruler-tick" data-limit style={{ left: pct(limits.maxDeciC) }}>{celsius(limits.maxDeciC)}</span>
+            <span className="k8-ruler-tick" style={{ left: pct(limits.minDeciC) }}>{celsius(limits.minDeciC)}</span>
+            <span className="k8-ruler-tick" style={{ left: pct(limits.maxDeciC) }}>{celsius(limits.maxDeciC)}</span>
           </span>
           <span className="k8-ruler-legend">Thang 0–50 °C. Dải tô màu là giới hạn sinh thái của cá rô phi.</span>
         </label>

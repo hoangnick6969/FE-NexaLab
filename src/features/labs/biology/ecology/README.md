@@ -11,7 +11,8 @@ ecology/
     FishSchool3D.tsx      procedural cá rô phi (fish-geometry.ts), one instanced draw, tail bend in a vertex shader
     Thermometer3D.tsx     glass thermometer with a 0–50 °C column and scale plate
     eco-quality.ts / eco-palette.ts / eco-motion.ts   tiers, colours, motion tokens
-    dev/K8KitPreview.tsx  /dev/lab-kits/k8 (DEV build only)
+    procedural.ts         seeded random and vertex-colour painting shared by the pond and the fish
+    dev/K8KitPreview.tsx  /dev/lab-kits/k8 (DEV build only, own K8KitPreview.css)
   tolerance/      FL-20 `ecology-tolerance` renderer: PondView3D (default) or the 2D PondScene, tolerance graph card,
                   comparison of three hypothetical fish, density plot with SGK table 42.1, age pyramid
 ```
