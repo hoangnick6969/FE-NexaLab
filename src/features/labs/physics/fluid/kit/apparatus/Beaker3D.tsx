@@ -54,7 +54,9 @@ export function Beaker3D({ beaker, waterMl, liquid, liquidKind = "water", submer
     const step = Math.min(delta, 1 / 30);
     const frameTarget = liquid ? Math.max(0, liquid.current.volumeMl) * 1000 / (Math.PI * radius * radius) : target;
     const targetMm = liquid ? frameTarget : target;
-    if (reduced) { level.current = targetMm; levelVelocity.current = 0; }
+    // Coordinated pours already provide animated, conserved volumes. A second
+    // spring here would make the rendered receiving volume lag behind the source.
+    if (liquid || reduced) { level.current = targetMm; levelVelocity.current = 0; }
     else {
       const next = dampedSpringStep(level.current, levelVelocity.current, targetMm, step, K3_MOTION.surfaceSpring);
       level.current = next.position; levelVelocity.current = next.velocity;

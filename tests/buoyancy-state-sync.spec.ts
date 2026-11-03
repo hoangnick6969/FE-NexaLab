@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { openBuoyancyLab } from "./helpers/buoyancy";
 
 test("FL-05 immersion lowers spring reading and 2D table keeps the same result", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/dev/lab-kits/k3/buoyancy");
+  await openBuoyancyLab(page);
   await expect(page.getByRole("heading", { name: /FL-05/ }).first()).toBeVisible();
   await page.getByRole("combobox", { name: "Mẫu vật" }).selectOption("iron-1v");
   const reading = page.getByRole("status", { name: "Số đọc trên dụng cụ" });

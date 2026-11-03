@@ -6,7 +6,7 @@ import type { K3LiquidKind } from "./Beaker3D";
 import { Html } from "@react-three/drei";
 
 /** Eureka can starts filled to its spout. Collector volume approaches the displaced target; stream stops at equilibrium. */
-export function OverflowCan3D({ volumeMl: _volumeMl, collectedMl, liquidKind = "water", submergedMl = 0 }: { volumeMl: number; collectedMl: number; liquidKind?: K3LiquidKind; submergedMl?: number }) {
+export function OverflowCan3D({ collectedMl, liquidKind = "water", submergedMl = 0 }: { collectedMl: number; liquidKind?: K3LiquidKind; submergedMl?: number }) {
   const invalidate = useThree(s => s.invalidate);
   const actual = useRef(0); const flow = useRef(0); const ripple = useRef(0); const surface = useRef<THREE.Mesh>(null); const stream = useRef<THREE.Mesh>(null);
   const [displayMl, setDisplayMl] = useState(0);

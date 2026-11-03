@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { openBuoyancyLab } from "./helpers/buoyancy";
 
 test("2D apparatus diagram supports selection and dragging while preserving the 3D canvas", async ({ page }) => {
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/dev/lab-kits/k3/buoyancy");
+  await openBuoyancyLab(page);
   await expect(page.locator(".physics-stage canvas")).toHaveCount(1);
   const canvas = await page.locator(".physics-stage canvas").elementHandle();
   await page.getByRole("button", { name: "2D", exact: true }).click();
@@ -26,7 +27,7 @@ test("blue water is visible and Eureka stream runs during displacement then stop
   test.setTimeout(90000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 950 });
-  await page.goto("/dev/lab-kits/k3/buoyancy");
+  await openBuoyancyLab(page);
   await expect(page.getByTestId("buoyancy-hoist-slider")).toBeVisible();
   await page.getByTestId("buoyancy-hoist-slider").fill("80");
   await expect(page.getByText("Nước đang tràn", { exact: true })).toBeVisible({ timeout: 20000 });
@@ -39,7 +40,7 @@ test("FL-05 supports orbit, specimen drag, continuous hoist, depth plateau and r
   test.setTimeout(180000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/dev/lab-kits/k3/buoyancy");
+  await openBuoyancyLab(page);
   const inspect = () => page.evaluate(async () => {
     const url = performance.getEntriesByType("resource").map(entry => entry.name).find(name => name.includes("/@react-three_fiber.js?")) ?? "/node_modules/.vite/deps/@react-three_fiber.js";
     const { _roots } = await import(url);

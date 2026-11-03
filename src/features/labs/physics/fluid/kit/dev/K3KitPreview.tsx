@@ -117,7 +117,7 @@ export default function K3KitPreview() {
       <K3Slot at="cylinder"><GraduatedCylinder3D cylinder={cylinder} volumeMl={cylinderMl} /></K3Slot>
       <K3Slot at="beaker"><Beaker3D beaker={config.instruments.beaker} waterMl={waterMl} submergedVolumeMl={submergedVolumeMl} liquidKind={liquidKind} /></K3Slot>
       <K3Slot at="dynamometer"><SpringDynamometer3D forceN={Math.min(5, forceReadingN)} /></K3Slot>
-      <K3Slot at="overflowCan"><OverflowCan3D volumeMl={waterMl} collectedMl={collectedMl} liquidKind={liquidKind} /></K3Slot>
+      <K3Slot at="overflowCan"><OverflowCan3D collectedMl={collectedMl} liquidKind={liquidKind} /></K3Slot>
       <MovingSpecimen3D
         specimen={specimen}
         material={material}

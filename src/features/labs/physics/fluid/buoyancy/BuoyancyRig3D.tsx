@@ -46,7 +46,7 @@ function Rig() {
   };
   return <group name="buoyancy-complete-rig">
     <group {...handlers}><RetortStand3D clampY={dynamometerY + 167} /></group>
-    <OverflowCan3D volumeMl={100} collectedMl={state.overflowMl} submergedMl={state.submergedVolumeMl} />
+    <OverflowCan3D collectedMl={state.overflowMl} submergedMl={state.submergedVolumeMl} />
     <group position={[0, dynamometerY, 0]} {...handlers}>
       <SpringDynamometer3D forceN={state.springForceN} massKg={sample.massG / 1000} />
       <Html position={[50, 90, 0]} center style={{ pointerEvents: "none" }}><span className="buoyancy-scene-badge">F = {state.springForceN.toFixed(3)} N</span></Html>

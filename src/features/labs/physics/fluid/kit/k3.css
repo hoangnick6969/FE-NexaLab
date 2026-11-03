@@ -88,9 +88,6 @@
 .fluid-kit-shell .k3-range { display: grid; gap: 4px; width: 100%; font-size: 0.875rem; }
 .fluid-kit-shell .k3-range input { width: 100%; }
 .fluid-kit-shell .k3-preview-2d { position: absolute; inset: 76px 440px 16px 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; padding: 16px; background: var(--surface); border-radius: 16px; }
-.fluid-kit-shell .k3-preview-vector { position: absolute; left: 24px; bottom: 24px; z-index: 3; display: flex; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface) 90%, transparent); font-variant-numeric: tabular-nums; }
-.fluid-kit-shell .k3-preview-vector [data-force="weight"] { color: #bd3f38; }
-.fluid-kit-shell .k3-preview-vector [data-force="buoyancy"] { color: #287875; }
 
 @media (max-width: 640px) {
   .fluid-kit-shell .k3-preview-2d { inset: 76px 12px 54dvh 12px; }
@@ -100,7 +97,6 @@
   .fluid-kit-shell .k3-station { transition: none; }
 }
 @supports not ((backdrop-filter: blur(1px))) { .fluid-kit-shell .k3-hud-glass { background: var(--surface); } }
-
 
 /* Shared stage frame: overlay slots never participate in the canvas sizing flow. */
 .fluid-kit-shell { position: absolute; inset: 0; box-sizing: border-box; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; }
@@ -113,13 +109,9 @@
 .fluid-kit-shell .fl03-stage { inset: 76px 440px 88px 16px; }
 @media (max-width: 640px) { .fluid-kit-shell .fl03-stage { inset: 148px 12px 54dvh 12px; } }
 
-
 .fluid-kit-shell { pointer-events: none; }
 .lab-space .lab-workspace > .fluid-kit-shell,
 .lab-space .lab-space-body > .fluid-kit-shell { pointer-events: none; }
-.fluid-kit-shell .k3-hud { }
 .fluid-kit-shell .fluid-kit-renderer { pointer-events: none; }
-
-
 
 .fluid-kit-shell .k3-hud { pointer-events: auto; }

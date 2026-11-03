@@ -10,8 +10,8 @@ import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtei
 import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evidence";
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
-import { FluidBench3D, OverflowCan3D, SpringDynamometer3D, ForceVectorOverlay3D, Specimen3D, parseK3LabConfig, k3Specimen, k3Material } from "../physics/fluid/kit";
-import buoyancyConfig from "../physics/fluid/buoyancy/buoyancy-preview-config.json";
+import { FluidBench3D, OverflowCan3D, SpringDynamometer3D, ForceVectorOverlay3D, Specimen3D, k3Specimen, k3Material } from "../physics/fluid/kit";
+import { fl03DensityConfig } from "../physics/fluid/density/fl03-density.config";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -22,10 +22,10 @@ const densityThumbnailView: StageView = {
 
 const scenes: Record<string, () => ReactNode> = {
   buoyancy: () => {
-    const kit = parseK3LabConfig(buoyancyConfig.kit);
+    const kit = fl03DensityConfig;
     const specimen = k3Specimen(kit, "iron-1v");
     return <FluidBench3D view={{ position: [.45, 1.8, 2.8], target: [0, .65, .1], narrowPosition: [.45, 1.8, 2.8], narrowTarget: [0, .65, .1], minDistance: .6, maxDistance: 4 }}>
-      <OverflowCan3D volumeMl={60} collectedMl={10} />
+      <OverflowCan3D collectedMl={10} />
       <group position={[0, 160, 0]}><SpringDynamometer3D forceN={.667} /></group>
       <group position={[0, 48, 0]}><Specimen3D specimen={specimen} material={k3Material(kit, specimen.materialId)} /><ForceVectorOverlay3D weightN={.765} buoyantForceN={.098} position={[20, 20, 50]} /></group>
     </FluidBench3D>;

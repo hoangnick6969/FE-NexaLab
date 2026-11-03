@@ -1,22 +1,20 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { LabHeaderActionsContext } from "../../../shared/LabSpace";
 import { LabRendererToggle } from "../../../shared/LabRendererToggle";
-import previewConfig from "./buoyancy-preview-config.json";
 import { FluidKitLayoutShell } from "../kit";
 import { BuoyancyRig3D } from "./BuoyancyRig3D";
 import { Buoyancy2DStage } from "./Buoyancy2DStage";
 import { BuoyancyHud } from "./BuoyancyHud";
 import { BuoyancyStoreProvider, EXPLORATION_SPECIMENS, useBuoyancyStore } from "./useBuoyancyStore";
-import { buoyancyPresentationSchema, defaultBuoyancyEvidence, type BuoyancyEvidence } from "./BuoyancyEvidence";
+import { buoyancyPresentationSchema, type BuoyancyEvidence } from "./BuoyancyEvidence";
 import "./buoyancy.css";
 
-export function BuoyancyActivity({ state: evidence, onChange, resetKey = 0, runtimeConfig }: { state?: BuoyancyEvidence; onChange?: (next: BuoyancyEvidence) => void; resetKey?: number; runtimeConfig?: unknown }) {
-  const [previewEvidence, setPreviewEvidence] = useState(defaultBuoyancyEvidence);
-  const config = useMemo(() => buoyancyPresentationSchema.safeParse(onChange ? runtimeConfig : previewConfig), [runtimeConfig, onChange]);
+export function BuoyancyActivity({ state: evidence, onChange, resetKey = 0, runtimeConfig }: { state: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void; resetKey?: number; runtimeConfig?: unknown }) {
+  const config = useMemo(() => buoyancyPresentationSchema.safeParse(runtimeConfig), [runtimeConfig]);
   if (!config.success) return <div role="alert">Cấu hình FL-05 đã ghim không hợp lệ hoặc bị thiếu.</div>;
-  return <BuoyancyStoreProvider key={resetKey} config={config.data} evidence={evidence ?? previewEvidence}>
-    <BuoyancyScene evidence={evidence ?? previewEvidence} onChange={onChange ?? setPreviewEvidence} />
+  return <BuoyancyStoreProvider key={resetKey} config={config.data} evidence={evidence}>
+    <BuoyancyScene evidence={evidence} onChange={onChange} />
   </BuoyancyStoreProvider>;
 }
 

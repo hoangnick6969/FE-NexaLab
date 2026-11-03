@@ -19,7 +19,6 @@ import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
 // Development-only K3 apparatus bench; the branch is removed from production builds.
 const K3KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/kit/dev/K3KitPreview")) : null;
-const BuoyancyPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/buoyancy/dev/BuoyancyPreview")) : null;
 const DensityPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/density/dev/DensityPilotPreview")) : null;
 const K7KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/kit/dev/K7KitPreview")) : null;
 const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/gene-protein/dev/GeneProteinPilotPreview")) : null;
@@ -208,8 +207,6 @@ export default function App() {
     );
   if (K3KitPreview && location.pathname === "/dev/lab-kits/k3")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K3KitPreview /></Suspense>;
-  if (BuoyancyPreview && location.pathname === "/dev/lab-kits/k3/buoyancy")
-    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><BuoyancyPreview /></Suspense>;
   if (DensityPilotPreview && location.pathname === "/dev/lab-kits/density")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><DensityPilotPreview /></Suspense>;
   if (K7KitPreview && location.pathname === "/dev/lab-kits/k7")

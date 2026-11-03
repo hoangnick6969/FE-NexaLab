@@ -4,7 +4,7 @@ import type { BuoyancyPresentation, BuoyancyEvidence } from "./BuoyancyEvidence"
 import { dampedSpringStep, usePrefersReducedMotion } from "../kit/k3-motion";
 export type BuoyancyStep = "air" | "partial" | "full" | "verify";
 type State = {
-  hoistHeight: number; targetHoistHeight: number; records: Array<{ specimenId: string; immersion: number; weightN: number; springN: number; buoyantN: number; volumeMl: number }>;
+  hoistHeight: number; targetHoistHeight: number; records: Array<{ specimenId: string; weightN: number; springN: number; buoyantN: number; volumeMl: number }>;
   setHoistHeight: (value: number) => void; advanceHoist: (value: number) => void; recordReading: () => void;
   config: BuoyancyPresentation; specimenId: string; specimenY: number; submergedVolumeMl: number; springForceN: number; overflowMl: number;
   step: BuoyancyStep; mode: "2d" | "3d";
@@ -16,7 +16,7 @@ function createBuoyancyStore(config: BuoyancyPresentation, evidence: BuoyancyEvi
     if (!item) throw new Error("Specimen is not in the pinned pack");
     const fraction = Math.min(1, Math.max(0, (hoist - .3) / .45));
     const submergedVolumeMl = item.volumeMl * fraction;
-    const height = id === "pebble-a" ? 22 : id === "explore-wood" ? 25 : 25;
+    const height = id === "pebble-a" ? 22 : 25;
     const specimenY = hoist <= .3 ? 90 + 35 * (1 - hoist / .3) : hoist <= .75 ? 90 - height * fraction : 90 - height - 12 * ((hoist - .75) / .25);
     return { specimenY, submergedVolumeMl,
       springForceN: Math.max(0, item.massG / 1000 * config.gravity - config.fluidDensityKgM3 * config.gravity * submergedVolumeMl / 1e6), overflowMl: submergedVolumeMl };
@@ -29,7 +29,7 @@ function createBuoyancyStore(config: BuoyancyPresentation, evidence: BuoyancyEvi
     selectSpecimen: (id) => set({ specimenId: id, step: "air", hoistHeight: 0, targetHoistHeight: 0, ...readings(id, 0) }),
     setHoistHeight: (value) => set({ targetHoistHeight: Math.max(0, Math.min(1, value)) }),
     advanceHoist: (value) => set((current) => { const next = readings(current.specimenId, value); return { hoistHeight: value, ...next, overflowMl: Math.max(current.overflowMl, next.overflowMl), step: value < .3 ? "air" : value < .75 ? "partial" : "full" }; }),
-    recordReading: () => { const current = get(); const specimen = [...config.specimens, ...EXPLORATION_SPECIMENS].find(item => item.id === current.specimenId)!; set({ records: [...current.records, { specimenId: current.specimenId, immersion: current.hoistHeight, weightN: specimen.massG / 1000 * config.gravity, springN: current.springForceN, buoyantN: config.fluidDensityKgM3 * config.gravity * current.submergedVolumeMl / 1e6, volumeMl: current.overflowMl }] }); },
+    recordReading: () => { const current = get(); const specimen = [...config.specimens, ...EXPLORATION_SPECIMENS].find(item => item.id === current.specimenId)!; set({ records: [...current.records, { specimenId: current.specimenId, weightN: specimen.massG / 1000 * config.gravity, springN: current.springForceN, buoyantN: config.fluidDensityKgM3 * config.gravity * current.submergedVolumeMl / 1e6, volumeMl: current.overflowMl }] }); },
     setStep: (next) => { get().setHoistHeight(next === "air" ? 0 : next === "partial" ? .525 : .8); set({ step: next }); },
     setMode: (mode) => set({ mode }),
   }));
