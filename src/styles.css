@@ -7953,6 +7953,7 @@ td small {
 .hierarchy-choice > svg, .hierarchy-chapter > svg { flex: 0 0 auto; color: var(--ink-teal-54); }
 .hierarchy-choice .subject-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; padding: 9px; border-radius: 12px; background: var(--fill-neutral-95); color: var(--ink-teal-52); }
 .hierarchy-choice .subject-icon svg { width: 22px; height: 22px; }
+.hierarchy-choice .subject-icon img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .hierarchy-choice-copy, .hierarchy-chapter > span { display: grid; flex: 1; gap: 5px; min-width: 0; }
 .hierarchy-choice-copy b, .hierarchy-chapter b { overflow-wrap: anywhere; font-size: 15px; }
 .hierarchy-choice-copy small, .hierarchy-chapter small { color: var(--ink-neutral-55); font-size: 12px; }

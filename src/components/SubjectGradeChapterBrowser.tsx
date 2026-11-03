@@ -1,8 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { defineText } from "../i18n";
 import { commonText } from "../i18n/common";
+import { inlineMaterial } from "../lib/api";
 
 const text = defineText({
   vi: {
@@ -52,6 +53,7 @@ export type HierarchyItem = {
   chapter: string;
   chapterOrder?: number | null;
   itemOrder?: number | null;
+  coverAssetVersionId?: string | null;
 };
 
 type SubjectGradeChapterBrowserProps<T extends HierarchyItem> = {
@@ -67,6 +69,24 @@ type SubjectGradeChapterBrowserProps<T extends HierarchyItem> = {
 const compareOrder = (left?: number | null, right?: number | null) =>
   (left ?? Number.MAX_SAFE_INTEGER) - (right ?? Number.MAX_SAFE_INTEGER);
 const chapterPath = (chapter: string) => encodeURIComponent(chapter);
+
+function SubjectCover({ subjectId, subjectName, versionId }: { subjectId: string; subjectName: string; versionId?: string | null }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let revoke: () => void = () => undefined;
+    setSrc(null);
+    if (versionId) inlineMaterial(`assetv:${versionId}`).then((image) => {
+      if (active) { revoke = image.revoke; setSrc(image.src); }
+      else image.revoke();
+    }).catch(() => undefined);
+    return () => { active = false; revoke(); };
+  }, [versionId]);
+  return <span className={`subject-icon ${subjectId}`} aria-hidden="true">
+    {src ? <img src={src} alt="" onError={() => setSrc(null)} /> : <BookOpen />}
+    <span className="sr-only">{subjectName}</span>
+  </span>;
+}
 
 /** URL-backed hierarchy shared by student catalogs; every level is a real screen/deep link. */
 export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
@@ -85,11 +105,12 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
 
   const subjectGrades = useMemo(() => {
-    const groups = new Map<string, { subjectId: string; subjectName: string; grade: number; count: number }>();
+    const groups = new Map<string, { subjectId: string; subjectName: string; grade: number; count: number; coverAssetVersionId?: string | null }>();
     for (const item of items) {
       const key = `${item.grade}:${item.subjectId}`;
-      const group = groups.get(key) ?? { subjectId: item.subjectId, subjectName: item.subjectName, grade: item.grade, count: 0 };
+      const group = groups.get(key) ?? { subjectId: item.subjectId, subjectName: item.subjectName, grade: item.grade, count: 0, coverAssetVersionId: item.coverAssetVersionId };
       group.count += 1;
+      if (!group.coverAssetVersionId) group.coverAssetVersionId = item.coverAssetVersionId;
       groups.set(key, group);
     }
     return [...groups.values()].sort((a, b) => a.grade - b.grade || a.subjectName.localeCompare(b.subjectName, "vi"));
@@ -150,7 +171,7 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
       {grades.map((gradeValue) => <section className="hierarchy-grade-section" key={gradeValue} aria-labelledby={`catalog-grade-${gradeValue}`}>
         <h3 id={`catalog-grade-${gradeValue}`}>{t.grade(gradeValue)}</h3>
         <div className="hierarchy-grade-section-grid">{subjectGrades.filter((group) => group.grade === gradeValue).map((group) => <Link className="hierarchy-choice" key={`${group.grade}:${group.subjectId}`} to={`${basePath}/grades/${group.grade}/subjects/${encodeURIComponent(group.subjectId)}`}>
-          <span className={`subject-icon ${group.subjectId}`}><BookOpen /></span>
+          <SubjectCover subjectId={group.subjectId} subjectName={group.subjectName} versionId={group.coverAssetVersionId} />
           <span className="hierarchy-choice-copy"><b>{group.subjectName}</b><small>{t.items(group.count)}</small></span><ArrowRight size={18} aria-hidden="true" />
         </Link>)}</div>
       </section>)}

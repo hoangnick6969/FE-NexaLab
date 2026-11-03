@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BookOpen, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
 import { CardSkeleton, ErrorBox } from "../../components/ui";
-import { api } from "../../lib/api";
+import { api, inlineMaterial } from "../../lib/api";
 import { httpsUrl } from "../../lib/urls";
 import { defineText } from "../../i18n";
 import "./ebook-library.css";
@@ -50,6 +50,7 @@ type Book = {
   version: string;
   grade: number | null;
   initialPage: number;
+  coverAssetVersionId?: string | null;
 };
 
 function gradeFrom(...values: string[]): number | null {
@@ -62,8 +63,8 @@ function gradeFrom(...values: string[]): number | null {
 
 async function loadBooks(): Promise<Book[]> {
   const [curriculum, subjects] = await Promise.all([
-    api<{ subjects?: Array<{ id: string; name: string; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number }> }> }>("/open-curriculum"),
-    api<Array<{ id: string; name: string; ebookUrl?: string | null }>>("/subjects"),
+    api<{ subjects?: Array<{ id: string; name: string; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }> }>("/open-curriculum"),
+    api<Array<{ id: string; name: string; ebookUrl?: string | null; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }>>("/subjects"),
   ]);
   const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
   const curriculumById = new Map((curriculum.subjects ?? []).map((subject) => [subject.id, subject]));
@@ -74,7 +75,7 @@ async function loadBooks(): Promise<Book[]> {
     const subject = curriculumById.get(subjectId);
     const subjectName = subject?.name ?? fallback?.name;
     if (!subjectName) continue;
-    const editions = subject?.ebookEditions ?? [];
+    const editions = subject?.ebookEditions?.length ? subject.ebookEditions : fallback?.ebookEditions ?? [];
     for (const edition of editions) {
       const url = httpsUrl(edition.url);
       if (!url) continue;
@@ -86,6 +87,7 @@ async function loadBooks(): Promise<Book[]> {
         version: edition.version,
         grade: gradeFrom(edition.version, url),
         initialPage: edition.fallbackPhysicalPage ?? 1,
+        coverAssetVersionId: edition.coverAssetVersionId,
       });
     }
     if (editions.length) continue;
@@ -106,6 +108,23 @@ async function loadBooks(): Promise<Book[]> {
   return books.sort((a, b) => (a.grade ?? Number.MAX_SAFE_INTEGER) - (b.grade ?? Number.MAX_SAFE_INTEGER)
     || a.subjectName.localeCompare(b.subjectName, "vi")
     || a.version.localeCompare(b.version, "vi"));
+}
+
+function EbookCover({ book }: { book: Book }) {
+  const t = text();
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let revoke: () => void = () => undefined;
+    setSrc(null);
+    if (book.coverAssetVersionId) inlineMaterial(`assetv:${book.coverAssetVersionId}`).then((image) => {
+      if (active) { revoke = image.revoke; setSrc(image.src); }
+      else image.revoke();
+    }).catch(() => undefined);
+    return () => { active = false; revoke(); };
+  }, [book.coverAssetVersionId]);
+  if (src) return <img className="ebook-library-cover-image" src={src} alt="" onError={() => setSrc(null)} />;
+  return <div className="ebook-library-cover" aria-hidden="true"><span>{book.grade ? t.grade(book.grade) : t.subject}</span><BookOpen size={34} strokeWidth={1.5} /><b>{book.subjectName}</b></div>;
 }
 
 export function EbookLibraryPage() {
@@ -134,11 +153,7 @@ export function EbookLibraryPage() {
     {query.isLoading ? <div className="ebook-library-grid"><CardSkeleton count={4} /></div> : query.error ? <><ErrorBox error={query.error} /><button className="secondary" type="button" onClick={() => void query.refetch()}>{t.loadFailed}</button></> : filtered.length ? (
       <section className="ebook-library-grid" aria-label={t.title}>
         {filtered.map((book) => <article key={`${book.subjectId}:${book.id}`} className="ebook-library-card">
-          <div className="ebook-library-cover" aria-hidden="true">
-            <span>{book.grade ? t.grade(book.grade) : t.subject}</span>
-            <BookOpen size={34} strokeWidth={1.5} />
-            <b>{book.subjectName}</b>
-          </div>
+          <EbookCover book={book} />
           <div className="ebook-library-card-body">
             <div className="ebook-library-card-meta"><span>{book.grade ? t.grade(book.grade) : t.subject}</span><small>{t.volume(book.version)}</small></div>
             <h2>{book.subjectName}</h2>
