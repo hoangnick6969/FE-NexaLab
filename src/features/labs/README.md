@@ -63,4 +63,10 @@ The catalog uses static WebP captures from the corresponding 3D stage; cards nev
 
 For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/tools/lab-thumbnail-capture/index.html` URL; the script then uses that server rather than starting another. Never capture a signed-in runtime page or use real student data.
 
+### FL-06 (`lever-equilibrium`)
+
+- Fixture: `dev/lab-thumbnail-capture.tsx` renders `K5Stage3D` in a deterministic balanced state with two hanging weights. The close framing belongs only to the capture fixture; it does not change the activity camera.
+- Output: `assets/thumbnails/lever-equilibrium.webp`, 1280×720 WebP under 120 KiB. `lab-info.ts` discovers it automatically by the exact Lab ID.
+- To refresh after changing the K5 scene: `npm run capture:lab-thumbnails -- lever-equilibrium`; inspect the resulting image and confirm the bar, O pivot, position labels, support and both hanging weights are visible. Capture runs against production stage components with `/api/**` blocked and does not create LabRuns, events, or database writes.
+
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.
