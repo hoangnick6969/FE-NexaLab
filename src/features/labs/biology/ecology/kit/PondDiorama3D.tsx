@@ -5,7 +5,7 @@ import { ContactShadows } from "@react-three/drei";
 import { ECO_MOTION } from "./eco-motion";
 import { ECO_COLORS, waterTint } from "./eco-palette";
 import { useEcoQuality } from "./eco-quality";
-import { paint, seeded } from "./procedural";
+import { paint, seeded, soilBlock } from "./procedural";
 
 /** Diorama layout (1 unit ≈ 10 cm, not to scale): a pond cut open at the front, between two banks. */
 export const POND = {
@@ -20,18 +20,8 @@ export const POND = {
 const color = (hex: string) => new THREE.Color(hex);
 const WHITE = new THREE.Color("#ffffff");
 
-/** Soil block with layers painted by height: grass on top, then soil, clay and sand. */
-function strataBox(width: number, height: number, depth: number, centerY: number, grassTop: boolean) {
-  const geometry = new THREE.BoxGeometry(width, height, depth, 1, 28, 1).translate(0, centerY, 0);
-  const grass = color(ECO_COLORS.grass), soil = color(ECO_COLORS.bankSoil), top = color(ECO_COLORS.topsoil), clay = color(ECO_COLORS.clay), sand = color(ECO_COLORS.sand);
-  const c = new THREE.Color();
-  return paint(geometry, ({ y }) => {
-    if (grassTop && y > POND.bankTop - 0.14) return c.copy(grass);
-    if (y > -0.4) return c.copy(top).lerp(soil, THREE.MathUtils.smoothstep(y, POND.bankTop - 0.3, -0.4));
-    if (y > -2.4) return c.copy(soil).lerp(clay, THREE.MathUtils.smoothstep(y, -0.4, -2.4));
-    return c.copy(clay).lerp(sand, THREE.MathUtils.smoothstep(y, -2.4, POND.base));
-  });
-}
+const strataBox = (width: number, height: number, depth: number, centerY: number, grassTop: boolean) =>
+  soilBlock(width, height, depth, centerY, { top: POND.bankTop, base: POND.base, grass: grassTop });
 
 function Earth() {
   const { water, bankTop, base, bankWidth } = POND;

@@ -79,4 +79,8 @@ For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/
 - Fixture: `dev/lab-thumbnail-capture.tsx` renders the production K8 `PondView3D` at 28 °C with the cá rô phi school swimming inside its tolerance range. The framing belongs only to the fixture.
 - Output: `assets/thumbnails/ecology-tolerance.webp`. Refresh with `npm run capture:lab-thumbnails -- ecology-tolerance` after changing the pond kit.
 
+### FL-21 (`food-web`)
+- Fixture: `dev/lab-thumbnail-capture.tsx` renders the production K8 `FoodWebView3D` meadow with every food → eater arrow and the energy chain (Cỏ → Châu chấu → Ếch → Rắn) lit. Species labels and the note are hidden in the fixture so the card reads in any language.
+- Output: `assets/thumbnails/food-web.webp`. Refresh with `npm run capture:lab-thumbnails -- food-web` after changing the meadow kit or the food-web layout.
+
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.

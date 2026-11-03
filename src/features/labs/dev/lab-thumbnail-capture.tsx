@@ -20,6 +20,10 @@ import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry"
 import { EYE_CENTRE, EYE_ROTATION, OpticsRays } from "../biology/anatomy/eye-optics/EyeOpticsActivity";
 import { PondView3D } from "../biology/ecology/tolerance/PondView3D";
 import "../biology/ecology/tolerance/EcologyToleranceActivity.css";
+import { FoodWebView3D } from "../biology/ecology/food-web/FoodWebView3D";
+import { ENERGY_CHAIN, type SpeciesId } from "../biology/ecology/food-web/fw-evidence";
+import { FOOD_WEB_SPECIES } from "@nexalab/sim";
+import "../biology/ecology/food-web/FoodWebActivity.css";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -45,7 +49,16 @@ const ecologyThumbnail = () => <div className="eco-thumbnail">
   <style>{`.eco-thumbnail { position: relative; width: 1280px; height: 720px; }`}</style>
 </div>;
 
+/** FL-21: the meadow diorama with every food → eater arrow and the energy chain lit; labels are hidden so the card reads in any language. */
+const foodWebThumbnail = () => <div className="fw-thumbnail">
+  <FoodWebView3D names={Object.fromEntries(Object.keys(FOOD_WEB_SPECIES).map((id) => [id, id])) as Record<SpeciesId, string>}
+    roleNames={{ PRODUCER: "", CONSUMER: "", DECOMPOSER: "" }} effectNames={{ INCREASE: "", DECREASE: "", NO_DIRECT_EFFECT: "" }}
+    removedLabel="" chain={[...ENERGY_CHAIN]} label="FL-21 meadow" illustrative="" layoutKey="thumbnail" />
+  <style>{`.fw-thumbnail { position: relative; width: 1280px; height: 720px; } .fw-thumbnail .fw-meadow-labels, .fw-thumbnail .fw-meadow-note { display: none; }`}</style>
+</div>;
+
 const scenes: Record<string, () => ReactNode> = {
+  "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
   buoyancy: () => {

@@ -1,0 +1,4 @@
+/* Hallmark · v2.0.0 · scope: app screen (K8 canvas host shared by FL-20 and FL-21) · system: existing Lab Space tokens, no theme dealt */
+/* critique: the canvas fills its scene box and never scrolls the page while the learner orbits */
+.eco-3d { position: absolute; inset: 0; }
+.eco-3d canvas { touch-action: none; }

@@ -24,6 +24,7 @@ const text = defineText({
     lever: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Moment lực và đòn bẩy", description: "Đo moment lực, tìm vị trí cân bằng và vận dụng đòn bẩy." },
     thermal: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Năng lượng nhiệt", description: "Đo điện năng cấp vào và độ tăng nhiệt độ của mẫu nước trong mô hình nhiệt lượng kế lý tưởng." },
     ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
+    foodWeb: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Lưới thức ăn", description: "Dựng chuỗi thức ăn, tính năng lượng qua các bậc và xem điều gì xảy ra khi một loài biến mất." },
   },
   en: {
     buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
@@ -38,6 +39,7 @@ const text = defineText({
     lever: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Lever equilibrium", description: "Explore force, distance, torque and balance." },
     thermal: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Thermal energy", description: "Measure electrical input and water temperature rise in an ideal calorimeter model." },
     ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
+    foodWeb: { subject: "BIOLOGY", tag: "SIMULATION", title: "Food webs", description: "Build a food chain, follow energy through the levels and see what happens when a species disappears." },
   },
 });
 const t = text();
@@ -93,6 +95,7 @@ const catalogEntries = [
   { id: "thermal-energy", ...t.thermal, className: "physics", number: "10", grade: 8 },
   { id: "ecology-tolerance", ...t.ecology, className: "biology", number: "09", grade: 8 },
   { id: "eye-optics", ...t.eyeOptics, className: "biology", number: "10", grade: 8 },
+  { id: "food-web", ...t.foodWeb, className: "biology", number: "11", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({

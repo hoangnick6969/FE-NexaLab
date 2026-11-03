@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, PerformanceMonitor } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { defineText } from "../../../../../i18n";
+import "./EcoStage.css";
 import { usePrefersReducedMotion } from "../../../shared/motion/usePrefersReducedMotion";
 import { ECO_MOTION } from "./eco-motion";
 import { ECO_SCENE } from "./eco-palette";

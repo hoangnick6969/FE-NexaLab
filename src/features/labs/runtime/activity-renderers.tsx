@@ -84,6 +84,20 @@ const renderers: readonly LabActivityRenderer[] = [
     },
   },
   {
+    // FL-21 food-web, 2D only.
+    key: "food-web", labId: "food-web", modelRefs: ["food-web@1.0.0"], envelope: "checkpoints",
+    defaultState: () => checkpointViewForRenderer("food-web")!.defaultEvidence(),
+    Activity: ({ state, onChange }) => {
+      const view = checkpointViewForRenderer("food-web")!;
+      return <view.Activity state={state} onChange={onChange} />;
+    },
+    guided: {
+      ready: (state) => checkpointViewForRenderer("food-web")!.ready(state),
+      copy: circuitBulbCopy,
+      Result: ({ result, verdict }) => <CircuitBulbResult result={result} verdict={verdict} describeObservation={checkpointViewForRenderer("food-web")!.describeResult} />,
+    },
+  },
+  {
     key: "circuit", labId: "circuit", modelRefs: ["circuit@1.0.0"], envelope: "labState",
     defaultState: defaultCircuit,
     Activity: ({ state, onChange, resetKey }) => <Circuit key={resetKey} initial={state.nodes ? state : defaultCircuit()} onChange={onChange} />,
