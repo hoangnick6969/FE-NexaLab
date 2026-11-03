@@ -75,4 +75,8 @@ For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/
 - Fixture: `dev/lab-thumbnail-capture.tsx` renders the EX-A `AnatomyStage` with the sectioned `EyeModel` (normal eye, lens 20 D) and the ray fan focused on the retina. The framing belongs only to the fixture.
 - Output: `assets/thumbnails/eye-optics.webp`. Refresh with `npm run capture:lab-thumbnails -- eye-optics` after changing the eye model.
 
+### FL-20 (`ecology-tolerance`)
+- Fixture: `dev/lab-thumbnail-capture.tsx` renders the production K8 `PondView3D` at 28 °C with the cá rô phi school swimming inside its tolerance range. The framing belongs only to the fixture.
+- Output: `assets/thumbnails/ecology-tolerance.webp`. Refresh with `npm run capture:lab-thumbnails -- ecology-tolerance` after changing the pond kit.
+
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.
