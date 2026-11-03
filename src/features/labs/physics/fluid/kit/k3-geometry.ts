@@ -15,6 +15,12 @@ export function cylinderLevelMm(cylinder: Cylinder, volumeMl: number) {
   return (Math.max(0, volumeMl) * 1000) / (Math.PI * radius * radius);
 }
 
+/** Displaced liquid height for a constant-area vessel. Inputs and output are mm/mL. */
+export function displacedLevelRiseMm(volumeSubmergedMl: number, innerDiameterMm: number) {
+  const radius = innerDiameterMm / 2;
+  return Math.max(0, volumeSubmergedMl) * 1000 / (Math.PI * radius * radius);
+}
+
 export function cylinderHeightMm(cylinder: Cylinder) {
   return cylinder.baseMm + cylinderLevelMm(cylinder, cylinder.capacityMl) + cylinder.headroomMm;
 }

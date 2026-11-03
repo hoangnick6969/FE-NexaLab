@@ -19,10 +19,12 @@ import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
 
 // Development-only K3 apparatus bench; the branch is removed from production builds.
 const K3KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/kit/dev/K3KitPreview")) : null;
+const ThermalFixturePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/thermal/ThermalFixturePreview")) : null;
 const DensityPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/density/dev/DensityPilotPreview")) : null;
 const K7KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/kit/dev/K7KitPreview")) : null;
 const K8KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/ecology/kit/dev/K8KitPreview")) : null;
 const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/gene-protein/dev/GeneProteinPilotPreview")) : null;
+const EyeOpticsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/anatomy/eye-optics/dev/EyeOpticsPreview")) : null;
 
 const PublicLanding = lazy(() =>
   import("../features/landing/PublicLanding").then((m) => ({ default: m.PublicLanding }))
@@ -207,6 +209,8 @@ export default function App() {
     );
   if (K3KitPreview && location.pathname === "/dev/lab-kits/k3")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K3KitPreview /></Suspense>;
+  if (ThermalFixturePreview && location.pathname === "/dev/lab-kits/thermal-energy")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><ThermalFixturePreview /></Suspense>;
   if (DensityPilotPreview && location.pathname === "/dev/lab-kits/density")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><DensityPilotPreview /></Suspense>;
   if (K7KitPreview && location.pathname === "/dev/lab-kits/k7")
@@ -215,6 +219,8 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K8KitPreview /></Suspense>;
   if (GeneProteinPilotPreview && location.pathname === "/dev/lab-kits/gene-protein")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><GeneProteinPilotPreview /></Suspense>;
+  if (EyeOpticsPreview && location.pathname === "/dev/lab-kits/eye-optics")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><EyeOpticsPreview /></Suspense>;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {

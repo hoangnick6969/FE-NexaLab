@@ -6,7 +6,30 @@ export const K3_MOTION = {
   balanceSettleMs: 750,
   panSpring: { stiffness: 300, damping: 26 },
   liquidLevelLambda: 6,
+  dynamometerSpring: { stiffness: 180, damping: 22, massKg: 0.035 },
+  specimenSpring: { stiffness: 240, damping: 26, minimumMassKg: 0.025, maximumMassKg: 0.4 },
+  surfaceSpring: { stiffness: 34, damping: 7, massKg: 0.12 },
+  overflowFlowTimeConstant: 0.24,
 } as const;
+
+/** Semi-implicit damped spring step, stable with bounded frame substeps. */
+export function dampedSpringStep(position: number, velocity: number, target: number, deltaSeconds: number, config: { stiffness: number; damping: number; massKg: number }) {
+  const steps = Math.max(1, Math.ceil(Math.max(0, deltaSeconds) / (1 / 120)));
+  const dt = Math.min(Math.max(deltaSeconds, 0), 0.1) / steps;
+  let x = position;
+  let v = velocity;
+  for (let index = 0; index < steps; index += 1) {
+    const acceleration = (config.stiffness * (target - x) - config.damping * v) / config.massKg;
+    v += acceleration * dt;
+    x += v * dt;
+  }
+  return { position: x, velocity: v };
+}
+
+export function dampedFlowStep(rate: number, targetRate: number, deltaSeconds: number, timeConstant: number) {
+  const alpha = 1 - Math.exp(-Math.max(0, deltaSeconds) / Math.max(timeConstant, 0.001));
+  return rate + (targetRate - rate) * alpha;
+}
 
 const query = "(prefers-reduced-motion: reduce)";
 

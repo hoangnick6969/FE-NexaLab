@@ -22,7 +22,8 @@ labs/
     optics/                       K6: FL-23 (planned)
   chemistry/                     chemistry compatibility fixture renderer
     wet-bench/                    K2: FL-10 candidate; FL-11–15 planned
-  biology/anatomy/               existing Eye learning resource (FL-16 is NO LAB)
+  biology/anatomy/               EX-A kit (FL-16 LAB, FL-17 later): kit/ shared studio, camera focus, callouts, sagittal section;
+                                 eye-optics/ = FL-16 activity (rubric eye-anatomy-optics@1.0.0); Eye.tsx = legacy eye@1.0.0 resource
   biology/ecology/                K8: shared 3D pond kit; FL-20 tolerance (released v1, 3D diorama since v1.1); FL-21 food web
   biology/genetics/               K8: FL-26 (planned)
   biology/molecular/              K7: kit/ (bench entry + molecular scene) + gene-protein/ = FL-27 technical candidate
@@ -42,7 +43,7 @@ labs/
 |---|---|---|---|
 | K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit; FL-25 private prototype in `induction/` (not released) |
 | K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Shared kit and FL-03 density 2D/3D renderer with server-pinned specimens; FL-04 and FL-05 not implemented |
-| K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
+| K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | FL-07 run-bound 2D/3D technical candidate; FL-08 not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
 | K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |
 | K8 Ecology light scene + HUD | FL-20, FL-21 | `biology/ecology/` | K8 kit (`kit/`: EcoStage, pond diorama, instanced fish, thermometer; preview `/dev/lab-kits/k8`). FL-20 released v1, renderer v1.1 uses the 3D diorama with the 2D scene as option and fallback; FL-21 on its own branch |
@@ -51,6 +52,8 @@ labs/
 | K7 Molecular / gene-to-protein scene | FL-27 (FL-28, FL-30 deferred) | `biology/molecular/` | Technical candidate: K7 kit (bench entry in the shared room with microscope, PCR machine and tube rack → `MolecularStage` without a room; schematic and ball-and-stick views; 2D read view) and FL-27 (`gene-protein/`) running through the lab run host against BE `gene-expression@1.0.0` / `gene-protein-stations@1.0.0`. Not released; previews `/dev/lab-kits/k7`, `/dev/lab-kits/gene-protein` |
 
 ## Catalog scene thumbnails
+
+FL-07 uses the production `ThermalBench3D` at the 50 s observation in the shared capture harness. Refresh with `npm run capture:lab-thumbnails -- thermal-energy`. Its 1280×720 WebP is discovered automatically by the exact Lab ID and is excluded from release digests.
 
 The catalog uses static WebP captures from the corresponding 3D stage; cards never mount WebGL. The images load lazily and the existing icon art remains the fallback if no matching image exists or an image fails to load. Vite discovers all `assets/thumbnails/<lab-id>.webp` files automatically, so adding an image with the same ID as a `labInfo` entry wires it into the card without editing image imports.
 
@@ -67,5 +70,9 @@ For an already-running capture page, set `THUMBNAIL_CAPTURE_URL` to its local `/
 - Fixture: `dev/lab-thumbnail-capture.tsx` renders `K5Stage3D` in a deterministic balanced state with two hanging weights. The close framing belongs only to the capture fixture; it does not change the activity camera.
 - Output: `assets/thumbnails/lever-equilibrium.webp`, 1280×720 WebP under 120 KiB. `lab-info.ts` discovers it automatically by the exact Lab ID.
 - To refresh after changing the K5 scene: `npm run capture:lab-thumbnails -- lever-equilibrium`; inspect the resulting image and confirm the bar, O pivot, position labels, support and both hanging weights are visible. Capture runs against production stage components with `/api/**` blocked and does not create LabRuns, events, or database writes.
+
+### FL-16 (`eye-optics`)
+- Fixture: `dev/lab-thumbnail-capture.tsx` renders the EX-A `AnatomyStage` with the sectioned `EyeModel` (normal eye, lens 20 D) and the ray fan focused on the retina. The framing belongs only to the fixture.
+- Output: `assets/thumbnails/eye-optics.webp`. Refresh with `npm run capture:lab-thumbnails -- eye-optics` after changing the eye model.
 
 The kit folders without Lab components currently contain only a short README with member IDs and the intended reuse boundary. Add code when an implementation begins; do not put a Lab in a group just because it can reuse the room shell. Reuse the physical room across physical-scene kits, and keep each Lab's apparatus, model, activity, rubric and identity separate.

@@ -34,7 +34,7 @@ function Settle({ from, to, children }: { from: number; to: number; children: Re
  * K3 apparatus. Motion only presents values the activity already holds; no
  * reading or score is computed here.
  */
-export function Density3DStage({ station, evidence, bench, view }: { station: StationId; evidence: DensityEvidence; bench: Bench; view?: StageView }) {
+export function Density3DStage({ station, evidence, bench, view, active = true }: { station: StationId; evidence: DensityEvidence; bench: Bench; view?: StageView; active?: boolean }) {
   const sceneRoot = useContext(LabSceneContext);
   useEffect(() => {
     // The canvas is decorative: every reading is also in the DOM controls and notebook.
@@ -54,7 +54,7 @@ export function Density3DStage({ station, evidence, bench, view }: { station: St
   // Load on the pan: the cup for the water station, otherwise the selected specimen (dropped pebbles sit in the cylinder).
   const panLoad = bench.onPan && !pebbleSunk ? <Settle from={70} to={0}><Specimen3D specimen={specimen} material={material} /></Settle> : null;
 
-  return <FluidBench3D view={view}>
+  return <FluidBench3D view={view} active={active}>
     {station === "water" ? <DensityWaterScene evidence={evidence} bench={bench} /> : <>
     <K3Slot at="balance">
       <DigitalBalance3D instrument={balance} readingG={reading}>{panLoad}</DigitalBalance3D>
