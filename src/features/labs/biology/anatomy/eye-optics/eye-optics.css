@@ -1,0 +1,239 @@
+/* FL-16 eye anatomy and optics. Shared anatomy kit styles live here too (.anatomy-stage, .anatomy-pin). */
+
+.anatomy-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #d6dcd2;
+  background: #eef2ee;
+}
+
+.anatomy-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+.anatomy-pin {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #2f6b52;
+  background: #ffffff;
+  color: #1f3a2d;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.anatomy-pin:hover {
+  transform: translateY(-1px);
+}
+
+.anatomy-pin.is-active {
+  background: #2f6b52;
+  color: #ffffff;
+}
+
+.anatomy-pin:focus-visible,
+.eye-optics button:focus-visible,
+.eye-optics input:focus-visible,
+.eye-optics select:focus-visible {
+  outline: 3px solid #1e4fd1;
+  outline-offset: 2px;
+}
+
+.eye-optics {
+  display: grid;
+  gap: 0.75rem;
+  color: #1f2a24;
+}
+
+.eye-optics-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.eye-optics-phases button,
+.eye-optics-scenarios button,
+.eye-optics-parts button {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #b9c4b8;
+  background: #ffffff;
+  color: #1f2a24;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.eye-optics-phases button.is-active,
+.eye-optics-scenarios button.is-active {
+  background: #2f6b52;
+  border-color: #2f6b52;
+  color: #ffffff;
+}
+
+.eye-optics-phases button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.eye-optics-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.eye-optics-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #d6dcd2;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.eye-optics-parts {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eye-optics-parts li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: end;
+  padding: 0.4rem;
+  border-radius: 8px;
+}
+
+.eye-optics-parts li.is-active {
+  background: #eaf3ec;
+}
+
+.eye-optics-parts label,
+.eye-optics .field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.92rem;
+}
+
+.eye-optics input[type="text"],
+.eye-optics-parts input,
+.eye-optics select {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #b9c4b8;
+  border-radius: 8px;
+  font: inherit;
+  background: #ffffff;
+}
+
+.eye-optics input[type="range"] {
+  width: 100%;
+  accent-color: #2f6b52;
+  min-height: 2.5rem;
+}
+
+.eye-optics-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.92rem;
+}
+
+.eye-optics-toggles input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #2f6b52;
+}
+
+.eye-optics-readout {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid #2f6b52;
+  background: #f1f6f2;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.eye-optics-scenarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.eye-optics-result {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.eye-optics-criteria {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eye-optics-criteria li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.eye-optics-preview {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.eye-optics .muted {
+  color: #5b665e;
+}
+
+.eye-optics .tiny {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .eye-optics-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .anatomy-stage {
+    min-height: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anatomy-pin,
+  .eye-optics-phases button,
+  .eye-optics-scenarios button {
+    transition: none;
+  }
+}

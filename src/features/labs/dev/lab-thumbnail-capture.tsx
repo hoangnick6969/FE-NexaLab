@@ -11,6 +11,10 @@ import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evid
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
 import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
+import { AnatomyStage } from "../biology/anatomy/kit/AnatomyStage";
+import { EyeModel } from "../biology/anatomy/kit/EyeModel";
+import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry";
+import { EYE_CENTRE, EYE_ROTATION, OpticsRays } from "../biology/anatomy/eye-optics/EyeOpticsActivity";
 import "../shared/LabSpace.css";
 
 const densityThumbnailView: StageView = {
@@ -19,7 +23,19 @@ const densityThumbnailView: StageView = {
   minDistance: 1, maxDistance: 3,
 };
 
+/** FL-16: sectioned eye with a ray fan focused on the retina (normal eye, object at 25 cm, lens 20 D). Capture-only framing. */
+const eyeOpticsThumbnail = () => <div className="eye-thumbnail">
+  <AnatomyStage label="FL-16 eye" focus={null} cameraPosition={[0.85, 0.6, -6.2]} target={EYE_CENTRE}>
+    <group rotation={EYE_ROTATION}>
+      <EyeModel axialMm={22.6} accommodation={accommodationFromLensPower(20)} pupilMm={2.5} sectioned highlight={null} />
+      <OpticsRays axialMm={22.6} objectDistanceM={0.25} providedPowerD={63} inFocus />
+    </group>
+  </AnatomyStage>
+  <style>{`.eye-thumbnail .anatomy-stage { width: 1280px; height: 720px; aspect-ratio: auto; min-height: 0; border: 0; border-radius: 0; }`}</style>
+</div>;
+
 const scenes: Record<string, () => ReactNode> = {
+  "eye-optics": eyeOpticsThumbnail,
   circuit: () => <CircuitBulb3DStage closed switchIsActive={false} onToggleSwitch={() => undefined} isLit />,
   "em-induction": () => <EmInduction3DStage
     cue={{ action: null, nonce: 0, startedAt: 0 }}

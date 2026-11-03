@@ -18,6 +18,7 @@ const text = defineText({
     induction: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM 3D", title: "Cảm ứng điện từ", description: "Đẩy, kéo nam châm và quay máy phát để thấy khi nào có dòng điện cảm ứng." },
     density: { subject: "VẬT LÝ", tag: "THỰC HÀNH", title: "Xác định khối lượng riêng", description: "Cân, đo thể tích và tính khối lượng riêng của khối gỗ, nước và hòn sỏi." },
     geneProtein: { subject: "SINH HỌC", tag: "MÔ HÌNH 3D", title: "Từ gene đến protein", description: "Tái bản DNA, phiên mã, dịch mã và quan sát một đột biến điểm làm thay đổi protein." },
+    eyeOptics: { subject: "SINH HỌC", tag: "THÍ NGHIỆM 3D", title: "Mắt và điều tiết", description: "Gọi tên các bộ phận của mắt, rồi chỉnh thể thủy tinh và kính để ảnh rơi đúng màng lưới." },
     massConservation: { subject: "HÓA HỌC", tag: "THÍ NGHIỆM", title: "Bảo toàn khối lượng", description: "Quan sát phản ứng tạo kết tủa và đối chiếu khối lượng trước, sau phản ứng." },
     lever: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Moment lực và đòn bẩy", description: "Đo moment lực, tìm vị trí cân bằng và vận dụng đòn bẩy." },
     ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
@@ -29,6 +30,7 @@ const text = defineText({
     induction: { subject: "PHYSICS", tag: "3D EXPERIMENT", title: "Electromagnetic induction", description: "Push and pull a magnet and turn a generator to see when an induced current appears." },
     density: { subject: "PHYSICS", tag: "PRACTICAL", title: "Measuring density", description: "Weigh, measure volume and work out the density of a wooden block, water and a pebble." },
     geneProtein: { subject: "BIOLOGY", tag: "3D MODEL", title: "From gene to protein", description: "Replicate DNA, transcribe and translate a gene, and see how one point mutation changes the protein." },
+    eyeOptics: { subject: "BIOLOGY", tag: "3D EXPERIMENT", title: "The eye and accommodation", description: "Name the parts of the eye, then adjust the lens and glasses so the image lands on the retina." },
     massConservation: { subject: "CHEMISTRY", tag: "EXPERIMENT", title: "Conservation of mass", description: "Observe a precipitation reaction and compare the mass before and after." },
     lever: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Lever equilibrium", description: "Explore force, distance, torque and balance." },
     ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
@@ -84,6 +86,7 @@ const catalogEntries = [
   },
   { id: "lever-equilibrium", ...t.lever, className: "physics", number: "08", grade: 8 },
   { id: "ecology-tolerance", ...t.ecology, className: "biology", number: "09", grade: 8 },
+  { id: "eye-optics", ...t.eyeOptics, className: "biology", number: "10", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({

@@ -10,9 +10,13 @@ import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from ".
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
 import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
 import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
+import { defaultEyeOpticsEvidence, eyeOpticsEvidenceReady } from "../biology/anatomy/eye-optics/eye-optics-evidence";
+import { EyeOpticsResult, eyeOpticsCopy } from "../biology/anatomy/eye-optics/EyeOpticsResult";
 
 const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…", loadingGene: "Đang nạp mô hình phân tử DNA…" }, en: { loadingEye: "Loading the 3D eye anatomy model…", loadingGene: "Loading the DNA molecule scene…" } });
 const Eye = lazy(() => import("../biology/anatomy/Eye"));
+// FL-16 eye anatomy and optics. Pulls in the anatomy kit only when this Lab opens.
+const EyeOpticsActivity = lazy(() => import("../biology/anatomy/eye-optics/EyeOpticsActivity").then((module) => ({ default: module.EyeOpticsActivity })));
 // FL-27 pulls in the K7 molecular kit; load it only when that Lab opens.
 const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
 
@@ -119,6 +123,15 @@ const renderers: readonly LabActivityRenderer[] = [
     Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
       <Eye key={resetKey} state={state} onChange={onChange} />
     </Suspense>,
+  },
+  {
+    // FL-16 eye structure (phase 1) and accommodation with corrective lenses (phase 2). Rubric eye-anatomy-optics@1.0.0.
+    key: "eye-anatomy-optics", labId: "eye-optics", modelRefs: ["eye-optics@1.0.0"], envelope: "evidence",
+    defaultState: defaultEyeOpticsEvidence,
+    Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
+      <EyeOpticsActivity state={state} onChange={onChange} resetKey={resetKey} />
+    </Suspense>,
+    guided: { ready: eyeOpticsEvidenceReady, copy: eyeOpticsCopy, Result: EyeOpticsResult },
   },
 ];
 
