@@ -10,6 +10,8 @@ import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtei
 import { defaultGeneEvidence } from "../biology/molecular/gene-protein/gene-evidence";
 import { initialGeneBench } from "../biology/molecular/gene-protein/gene-bench";
 import { initialBench } from "../physics/fluid/density/Density2DStage";
+import { FluidBench3D, OverflowCan3D, SpringDynamometer3D, ForceVectorOverlay3D, Specimen3D, k3Specimen, k3Material } from "../physics/fluid/kit";
+import { fl03DensityConfig } from "../physics/fluid/density/fl03-density.config";
 import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
 import { AnatomyStage } from "../biology/anatomy/kit/AnatomyStage";
 import { EyeModel } from "../biology/anatomy/kit/EyeModel";
@@ -35,6 +37,15 @@ const eyeOpticsThumbnail = () => <div className="eye-thumbnail">
 </div>;
 
 const scenes: Record<string, () => ReactNode> = {
+  buoyancy: () => {
+    const kit = fl03DensityConfig;
+    const specimen = k3Specimen(kit, "iron-1v");
+    return <FluidBench3D view={{ position: [.45, 1.8, 2.8], target: [0, .65, .1], narrowPosition: [.45, 1.8, 2.8], narrowTarget: [0, .65, .1], minDistance: .6, maxDistance: 4 }}>
+      <OverflowCan3D collectedMl={10} />
+      <group position={[0, 160, 0]}><SpringDynamometer3D forceN={.667} /></group>
+      <group position={[0, 48, 0]}><Specimen3D specimen={specimen} material={k3Material(kit, specimen.materialId)} /><ForceVectorOverlay3D weightN={.765} buoyantForceN={.098} position={[20, 20, 50]} /></group>
+    </FluidBench3D>;
+  },
   "eye-optics": eyeOpticsThumbnail,
   circuit: () => <CircuitBulb3DStage closed switchIsActive={false} onToggleSwitch={() => undefined} isLit />,
   "em-induction": () => <EmInduction3DStage
