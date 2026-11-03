@@ -7,7 +7,7 @@ import { accommodationFromLensPower } from "../kit/eye-geometry";
 import { CORNEA_POWER_D, FOCUS_TOLERANCE_D, paraxialFan, paraxialFocus, requiredPowerD, traceEye, type Vec2 } from "../kit/optics";
 import {
   DISTANCE_OPTIONS_M, EYE_OPTICS_SCENARIOS, GLASSES_RANGE_D, LENS_RANGE_D, POWER_STEP_D,
-  eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt, type ScenarioId,
+  eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt,
 } from "./eye-optics-evidence";
 import "./eye-optics.css";
 
@@ -63,14 +63,14 @@ const pick = <T,>(list: readonly T[], index: number) => list[Math.min(Math.max(i
  * as in the textbook figures.
  */
 const scene = ([x, y]: Vec2): [number, number, number] => [x * MM, y * MM, 0];
-const EYE_ROTATION: [number, number, number] = [0, 0, -Math.PI / 2];
+export const EYE_ROTATION: [number, number, number] = [0, 0, -Math.PI / 2];
 /** Orbit centre between the cornea and the optic nerve, so the whole eye and nerve fit in view. */
-const EYE_CENTRE: [number, number, number] = [-0.3, 0, 0];
+export const EYE_CENTRE: [number, number, number] = [-0.3, 0, 0];
 /** The same point in world space, for the camera focus rig. */
 const world = ([x, y]: Vec2): [number, number, number] => [y * MM, -x * MM, 0];
 const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
 
-function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
+export function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
   const fan = useMemo(() => paraxialFan({ axialMm, objectDistanceM, providedPowerD }), [axialMm, objectDistanceM, providedPowerD]);
   // Off the retina, mark where the rays really meet: the gap is under 1 mm on a 23 mm eye and hard to see otherwise.
   const focus = inFocus ? null : paraxialFocus({ objectDistanceM, providedPowerD });
