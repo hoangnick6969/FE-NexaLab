@@ -121,6 +121,10 @@ const renderers: readonly LabActivityRenderer[] = [
     defaultState: () => ({}), Activity: () => null, // Run-bound K5 activity renders in Lab.
   },
   {
+    key: "thermal-bench", labId: "thermal-energy", modelRefs: ["thermal-bench@1.0.0"], envelope: "labState",
+    defaultState: () => ({}), Activity: () => null, // Run-bound K4 activity renders in Lab.
+  },
+  {
     key: "chemistry", labId: "chemistry", modelRefs: ["chemistry@1.0.0"], envelope: "labState",
     defaultState: () => ({ reactionId: "mg-hcl", molesA: 0.1, molesB: 0.2 }),
     Activity: ({ state, onChange, result }) => <Chemistry state={state} onChange={onChange} result={result} />,

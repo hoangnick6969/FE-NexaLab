@@ -43,7 +43,7 @@ labs/
 |---|---|---|---|
 | K1 Electricity and magnetism | FL-01, FL-25 | `physics/electricity/` | FL-01 Circuit; FL-25 private prototype in `induction/` (not released) |
 | K3 Fluids | FL-03, FL-04, FL-05 | `physics/fluid/` | Shared kit and FL-03 density 2D/3D renderer with server-pinned specimens; FL-04 and FL-05 not implemented |
-| K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | Not implemented |
+| K4 Thermal bench | FL-07, FL-08 | `physics/thermal/` | FL-07 run-bound 2D/3D technical candidate; FL-08 not implemented |
 | K5 Mechanics | FL-06, FL-24 | `physics/mechanics/` | Not implemented |
 | K2 Wet chemistry | FL-10–FL-15 | `chemistry/wet-bench/` | K2 candidate bench active for FL-10 Mass Conservation candidate activity; FL-11–15 apparatus not implemented; K2 remains pre-production |
 | K8 Ecology HUD | FL-20, FL-21 | `biology/ecology/` | FL-20 built (2D, not released); FL-21 not implemented |
@@ -52,6 +52,8 @@ labs/
 | K7 Molecular / gene-to-protein scene | FL-27 (FL-28, FL-30 deferred) | `biology/molecular/` | Technical candidate: K7 kit (bench entry in the shared room with microscope, PCR machine and tube rack → `MolecularStage` without a room; schematic and ball-and-stick views; 2D read view) and FL-27 (`gene-protein/`) running through the lab run host against BE `gene-expression@1.0.0` / `gene-protein-stations@1.0.0`. Not released; previews `/dev/lab-kits/k7`, `/dev/lab-kits/gene-protein` |
 
 ## Catalog scene thumbnails
+
+FL-07 uses the production `ThermalBench3D` at the 50 s observation in the shared capture harness. Refresh with `npm run capture:lab-thumbnails -- thermal-energy`. Its 1280×720 WebP is discovered automatically by the exact Lab ID and is excluded from release digests.
 
 The catalog uses static WebP captures from the corresponding 3D stage; cards never mount WebGL. The images load lazily and the existing icon art remains the fallback if no matching image exists or an image fails to load. Vite discovers all `assets/thumbnails/<lab-id>.webp` files automatically, so adding an image with the same ID as a `labInfo` entry wires it into the card without editing image imports.
 

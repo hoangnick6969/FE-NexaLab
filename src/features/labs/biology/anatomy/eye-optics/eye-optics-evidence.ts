@@ -93,4 +93,3 @@ export const eyeOpticsEvidenceReady = (state: unknown) => {
   const evidence = eyeOpticsEvidenceFrom(state);
   return EYE_PART_IDS.every((id) => (evidence.phase1.labels[id] ?? "").trim().length > 0);
 };
-

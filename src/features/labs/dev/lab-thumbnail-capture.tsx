@@ -13,6 +13,7 @@ import { initialBench } from "../physics/fluid/density/Density2DStage";
 import { FluidBench3D, OverflowCan3D, SpringDynamometer3D, ForceVectorOverlay3D, Specimen3D, k3Specimen, k3Material } from "../physics/fluid/kit";
 import { fl03DensityConfig } from "../physics/fluid/density/fl03-density.config";
 import { K5Stage3D } from "../physics/mechanics/kit/K5Stage";
+import { ThermalBench3D } from "../physics/thermal/kit/ThermalBenchStage";
 import { AnatomyStage } from "../biology/anatomy/kit/AnatomyStage";
 import { EyeModel } from "../biology/anatomy/kit/EyeModel";
 import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry";
@@ -37,6 +38,7 @@ const eyeOpticsThumbnail = () => <div className="eye-thumbnail">
 </div>;
 
 const scenes: Record<string, () => ReactNode> = {
+  "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
   buoyancy: () => {
     const kit = fl03DensityConfig;
     const specimen = k3Specimen(kit, "iron-1v");
