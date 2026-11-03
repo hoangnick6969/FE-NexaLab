@@ -34,6 +34,8 @@ async function setRange(page: Page, label: RegExp, value: string) {
 
 test("FL-16 eye Lab: 8 names, 3 optics scenarios, server rubric passes 11/11", async ({ page }) => {
   test.skip(!existsSync(BE_EVALUATOR), `Sibling BE checkout not found at ${BE_EVALUATOR}`);
+  // The full-screen room renders slowly on headless software WebGL; the flow itself takes about a minute there.
+  test.setTimeout(180_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 

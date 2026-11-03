@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Line } from "@react-three/drei";
+import { Html, Line } from "@react-three/drei";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { defineText } from "../../../../../i18n";
 import { AnatomyStage, CalloutPins, type Callout, type FocusTarget } from "../kit/AnatomyStage";
 import { EYE_PART_ANCHORS, EYE_PART_IDS, EyeModel, MM, type EyePartId } from "../kit/EyeModel";
@@ -35,6 +36,7 @@ const text = defineText({
     roomTitle: "Phòng thí nghiệm sinh học",
     roomIntro: "Trên bàn có mô hình nhãn cầu phóng to khoảng 8 lần, bảng đo thị lực và hộp kính thử. Bấm vào mô hình mắt hoặc nút bên dưới để quan sát gần.",
     enter: "Quan sát mô hình mắt", entering: "Đang tiến lại gần…", backToRoom: "Nhìn toàn phòng",
+    title: "Mắt và điều tiết", roomLabel: "Bấm để quan sát mắt", showGuide: "Mở hướng dẫn", hideGuide: "Thu gọn hướng dẫn",
   },
   en: {
     phaseNames: "1. Name the parts", phaseOptics: "2. Accommodation and lenses",
@@ -58,6 +60,7 @@ const text = defineText({
     roomTitle: "Biology lab",
     roomIntro: "The bench holds an eyeball model enlarged about 8 times, a visual-acuity chart and a trial lens case. Click the eye model, or the button below, to look closer.",
     enter: "Look at the eye model", entering: "Moving closer…", backToRoom: "View the whole room",
+    title: "The eye and accommodation", roomLabel: "Click to look at the eye", showGuide: "Show guide", hideGuide: "Collapse guide",
   },
 });
 
@@ -77,7 +80,7 @@ export const EYE_CENTRE: [number, number, number] = [-0.3, 0, 0];
 const world = ([x, y]: Vec2): [number, number, number] => [y * MM, -x * MM, 0];
 const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
 /** Working view on the section, and the opening view from across the room. */
-const CLOSE_VIEW: [number, number, number] = [0.9, 0.7, -6.2];
+const CLOSE_VIEW: [number, number, number] = [1.3, 1.0, -9.2];
 const ROOM_VIEW: [number, number, number] = [3.2, 3.6, -18];
 
 export function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
@@ -124,6 +127,7 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
   // 3D opens in the lab room; the eye model on the bench is the way in (presentation only, like the K7 microscope).
   const [view, setView] = useState<"room" | "approach" | "eye">("room");
   const atEye = view === "eye";
+  const [hudOpen, setHudOpen] = useState(true);
 
   useEffect(() => { setPhase("names"); setPart("cornea"); setFocus(null); setScenarioIndex(0); setView("room"); }, [resetKey]);
   useEffect(() => { if (optionalLocked && phase === "optics") setPhase("names"); }, [optionalLocked, phase]);
@@ -169,17 +173,14 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
 
   return (
     <div className="eye-optics">
-      <div className="eye-optics-phases" role="tablist" aria-label={t.phaseNames}>
-        <button type="button" role="tab" aria-selected={phase === "names"} className={phase === "names" ? "is-active" : ""} onClick={() => setPhase("names")}>{t.phaseNames}</button>
-        <button type="button" role="tab" aria-selected={phase === "optics"} className={phase === "optics" ? "is-active" : ""} disabled={optionalLocked} onClick={() => setPhase("optics")}>{t.phaseOptics}</button>
-        {atEye && <button type="button" className="secondary eye-optics-room-button" onClick={backToRoom}>{t.backToRoom}</button>}
-      </div>
-      {optionalLocked && phase === "names" && atEye && <p className="tiny muted">{t.lockedOptics}</p>}
-
-      <div className="eye-optics-layout">
         <AnatomyStage label={t.stageLabel} focus={focus} cameraPosition={ROOM_VIEW} target={EYE_CENTRE} room>
           <EyeLabRoom pulse={view === "room"} />
           <EntryFlight entered={view !== "room"} room={ROOM_VIEW} close={CLOSE_VIEW} target={EYE_CENTRE} onArrive={() => setView("eye")} />
+          {view === "room" && (
+            <Html position={[-0.3, 1.75, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: "auto" }}>
+              <button type="button" className="eye-room-label" tabIndex={-1} onClick={approach}>{t.roomLabel}</button>
+            </Html>
+          )}
           <group rotation={EYE_ROTATION}>
           <EyeModel
             axialMm={phase === "optics" ? scenario.axialMm : 22.6}
@@ -196,9 +197,25 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
           </group>
         </AnatomyStage>
 
+      <aside className={`eye-optics-hud ${hudOpen ? "is-open" : "is-closed"}`} aria-label={t.title}>
+        <header className="eye-optics-hud-header">
+          <h2>{t.title}</h2>
+          <button type="button" className="eye-optics-icon-button" aria-expanded={hudOpen} onClick={() => setHudOpen(!hudOpen)}>
+            {hudOpen ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
+            <span className="visually-hidden">{hudOpen ? t.hideGuide : t.showGuide}</span>
+          </button>
+        </header>
+        <div className="eye-optics-hud-body" hidden={!hudOpen}>
+        <div className="eye-optics-phases" role="tablist" aria-label={t.phaseNames}>
+          <button type="button" role="tab" aria-selected={phase === "names"} className={phase === "names" ? "is-active" : ""} onClick={() => setPhase("names")}>{t.phaseNames}</button>
+          <button type="button" role="tab" aria-selected={phase === "optics"} className={phase === "optics" ? "is-active" : ""} disabled={optionalLocked} onClick={() => setPhase("optics")}>{t.phaseOptics}</button>
+        </div>
+        {optionalLocked && phase === "names" && atEye && <p className="tiny muted">{t.lockedOptics}</p>}
+        {atEye && <button type="button" className="secondary eye-optics-room-button" onClick={backToRoom}>{t.backToRoom}</button>}
+
         {!atEye ? (
           <section className="eye-optics-panel eye-optics-intro" aria-label={t.roomTitle}>
-            <h2>{t.roomTitle}</h2>
+            <h3>{t.roomTitle}</h3>
             <p className="tiny muted">{t.roomIntro}</p>
             <button type="button" className="primary" disabled={view === "approach"} onClick={approach}>{view === "approach" ? t.entering : t.enter}</button>
           </section>
@@ -257,8 +274,9 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
             {attempt.objectDistanceM !== null && attempt.objectDistanceM < 0.25 && <p className="tiny muted">{t.drawnNear}</p>}
           </section>
         )}
-      </div>
-      <p className="tiny muted">{t.fallback}</p>
+        <p className="tiny muted">{t.fallback}</p>
+        </div>
+      </aside>
     </div>
   );
 }

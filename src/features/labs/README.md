@@ -35,7 +35,7 @@ labs/
 - `physics/electricity/` contains the Circuit bulb and topology views. `Circuit2DEditor.tsx` preserves the original React Flow editor from the pre-Lab-Space `Circuit.tsx`; `Circuit.tsx` selects it or the shared-room 3D apparatus. Both map to the FL-01 candidate family. `induction/` contains the FL-25 scene and uses the same room shell; release availability is controlled by the backend catalog.
 - `shared/` is presentation shell/UI shared across disciplines; it does not contain scientific models or scoring.
 - `chemistry/Chemistry.tsx` remains `TECHNICAL_FIXTURE_ONLY`; it is not one of the approved/provisional released Lab experiences.
-- `biology/anatomy/Eye.tsx` is the legacy Lesson resource. FL-16 (`eye-optics/`) opens in the shared room scaled 3× around the enlarged eye model (`kit/EyeLabRoom.tsx`: stand, acuity chart, trial lens case); clicking the model or its DOM button flies the camera in to the section, as the K7 microscope does.
+- `biology/anatomy/Eye.tsx` is the legacy Lesson resource. FL-16 (`eye-optics/`) opens in the shared room scaled 3× around the enlarged eye model, full screen behind a floating guide panel as FL-27 does (`kit/EyeLabRoom.tsx`: stand, acuity chart, trial lens case); clicking the model or its DOM button flies the camera in to the section, as the K7 microscope does.
 
 ## Provisional 20-slot grouping and code destination
 

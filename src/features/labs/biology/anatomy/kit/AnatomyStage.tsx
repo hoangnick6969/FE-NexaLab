@@ -1,7 +1,9 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useContext, useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+import { LabSceneContext } from "../../../shared/LabSpace";
 
 /** Shared studio for the anatomy kit (FL-16 and FL-17): lights, orbit camera, focus rig, callouts. */
 export type FocusTarget = { point: [number, number, number]; key: number } | null;
@@ -149,7 +151,8 @@ export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.
   /** The children draw a room (EyeLabRoom), so the studio backdrop is not painted and the camera may stand further back. */
   room?: boolean;
 }) {
-  return (
+  const sceneRoot = useContext(LabSceneContext);
+  const stage = (
     <div className={`anatomy-stage${room ? " has-room" : ""}`} role="img" aria-label={label}>
       <Canvas
         frameloop="demand"
@@ -167,7 +170,32 @@ export function AnatomyStage({ label, focus, children, cameraPosition = [5.5, 2.
         <FocusRig target={focus} />
         {import.meta.env.DEV && <DevStageProbe />}
         <OrbitControls makeDefault enablePan={false} minDistance={3} maxDistance={room ? 22 : 18} target={target} />
+        {room && sceneRoot && <HudInset />}
       </Canvas>
     </div>
   );
+  // In a Lab space the room fills the screen behind the guide panel, as the K7 bench does.
+  if (!room) return stage;
+  return sceneRoot ? createPortal(stage, sceneRoot) : sceneRoot === null ? null : stage;
+}
+
+/**
+ * Shifts the projection so the orbit centre sits in the part of the screen the
+ * guide panel leaves free: left of it on wide screens, above it on narrow ones.
+ * Numbers follow `.eye-optics-hud` in eye-optics.css.
+ */
+function HudInset() {
+  const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
+  const width = useThree((state) => state.size.width);
+  const height = useThree((state) => state.size.height);
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    const narrow = width <= 640;
+    const right = narrow ? 0 : Math.min(448, width * 0.42);
+    const bottom = narrow ? height * 0.5 : 0;
+    camera.setViewOffset(width, height, right / 2, bottom / 2, width, height);
+    invalidate();
+    return () => { camera.clearViewOffset(); };
+  }, [camera, width, height, invalidate]);
+  return null;
 }

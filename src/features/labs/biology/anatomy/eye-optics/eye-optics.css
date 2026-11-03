@@ -21,17 +21,110 @@
   to { opacity: 1; transform: none; }
 }
 
-.eye-optics-intro h2 {
-  margin: 0;
-  font-size: 1.1rem;
+/* In a Lab space the room fills the screen behind the guide, like the K7 bench (FL-27). */
+.lab-space-scene .anatomy-stage {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  pointer-events: auto;
 }
 
-.eye-optics-intro .primary {
+.eye-optics-intro h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.eye-optics-intro .primary,
+.eye-optics-room-button {
   justify-self: start;
 }
 
-.eye-optics-room-button {
-  margin-left: auto;
+.eye-room-label {
+  padding: 0.35rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(31, 111, 120, 0.92);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(6, 22, 30, 0.25);
+}
+
+.eye-optics-hud {
+  display: grid;
+  align-content: start;
+  border: 1px solid #d6dcd2;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.eye-optics-hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 8px 16px;
+}
+
+.eye-optics-hud-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.eye-optics-hud-body {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 16px 16px;
+}
+
+.eye-optics-hud-body[hidden] {
+  display: none;
+}
+
+.eye-optics-hud .eye-optics-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.eye-optics-icon-button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.lab-space .eye-optics {
+  pointer-events: none;
+}
+
+/* The Lab space gives every button 44px; the pins stay round. */
+.lab-space .anatomy-pin {
+  min-height: 2rem;
+}
+
+.lab-space .eye-optics-hud {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  top: 76px;
+  z-index: 12;
+  width: min(416px, calc(100% - 32px));
+  max-height: calc(100dvh - 96px);
+  overflow: auto;
+  pointer-events: auto;
+  box-shadow: 0 12px 36px rgba(6, 22, 30, 0.22);
+  backdrop-filter: blur(14px);
 }
 
 .anatomy-stage canvas {
@@ -73,9 +166,12 @@
   outline-offset: 2px;
 }
 
+/* Outside a Lab space (inline host): model and guide side by side. */
 .eye-optics {
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
   color: #1f2a24;
 }
 
@@ -109,13 +205,6 @@
 .eye-optics-phases button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.eye-optics-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
 }
 
 .eye-optics-panel {
@@ -219,10 +308,21 @@
   gap: 0.45rem;
 }
 
-.eye-optics-preview {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1.25rem;
+.eye-optics-preview-controls {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 12;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100% - 32px));
+  max-height: 45dvh;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px solid #d6dcd2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  pointer-events: auto;
 }
 
 .eye-optics .muted {
@@ -243,8 +343,18 @@
   white-space: nowrap;
 }
 
+@media (max-width: 640px) {
+  .lab-space .eye-optics-hud {
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: 12px;
+    width: calc(100% - 24px);
+    max-height: 50dvh;
+  }
+}
+
 @media (max-width: 760px) {
-  .eye-optics-layout {
+  .eye-optics {
     grid-template-columns: minmax(0, 1fr);
   }
 
