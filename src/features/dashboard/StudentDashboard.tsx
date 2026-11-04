@@ -159,7 +159,7 @@ export function StudentDashboard({
 }) {
   const reduceMotion = useReducedMotion();
   const t = text();
-  const assignment = assignments.data?.[0];
+  const assignment = assignments.data?.find((item: any) => !["completed", "COMPLETED"].includes(item.status) && !stats.data?.progress?.some((entry: any) => entry.contentId === item.contentId && entry.status === "completed"));
   const assignmentDetail = useQuery<any>({
     queryKey: ["assignment", assignment?.id],
     queryFn: () => api("/assignments/" + assignment.id),
@@ -174,6 +174,16 @@ export function StudentDashboard({
     enabled: Boolean(lessonId),
   });
   const progress = stats.data?.progress ?? [];
+  const openLessons = useQuery<any[]>({
+    queryKey: ["dashboard-open-lessons"],
+    queryFn: () => api("/lessons"),
+    enabled: !assignment && progress.some((item: any) => item.status === "in_progress"),
+    staleTime: 60_000,
+  });
+  const resumeRow = [...progress]
+    .filter((item: any) => item.status === "in_progress" && openLessons.data?.some((lesson) => lesson.id === item.contentId))
+    .sort((a: any, b: any) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
+  const resume = resumeRow ? { ...resumeRow, lessonId: resumeRow.contentId, lesson: openLessons.data?.find((lesson) => lesson.id === resumeRow.contentId) } : null;
   const attempts = stats.data?.attempts ?? [];
   const pathway = pathwayQuery.data;
   const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
@@ -266,7 +276,7 @@ export function StudentDashboard({
                   ? pathway?.lesson.title || assignmentDetail.data?.content?.title || assignment.title
                   : assignments.isLoading
                     ? t.findingNext
-                    : t.yourNext}
+                    : resume?.lesson?.title || t.yourNext}
               </h2>
               <p>
                 {assignment
@@ -284,7 +294,7 @@ export function StudentDashboard({
               {pathway && !nextStep && <p className="student-step-position">{t.allSeen}</p>}
               <Link
                 className="student-continue-action"
-                to={assignment ? (nextStep?.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : "/assignments/" + assignment.id) : "/lessons"}
+                to={assignment ? (nextStep?.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : "/assignments/" + assignment.id) : resume ? `/lessons/${encodeURIComponent(resume.lessonId || resume.lesson.id)}` : "/lessons"}
               >
                 {assignment
                   ? nextStep
@@ -292,7 +302,7 @@ export function StudentDashboard({
                     : pathway
                       ? t.reviewPathway
                       : t.openAssignment
-                  : t.chooseLesson}
+                  : resume ? t.lessonGroup : t.chooseLesson}
                 <ArrowRight size={18} />
               </Link>
               {assignmentDetail.error && <ErrorBox error={assignmentDetail.error} />}
@@ -420,7 +430,7 @@ export function StudentDashboard({
                 {recentAttempts.map((attempt: any) => {
                   const lab = labInfo.find((item) => item.id === attempt.challengeId);
                   return (
-                    <Link className="student-attempt-row" key={attempt.id} to="/progress">
+                    <Link className="student-attempt-row" key={attempt.id} to={`/progress?tab=history&attemptId=${encodeURIComponent(attempt.id)}#progress-history`}>
                       <span><FlaskConical size={18} /></span>
                       <span className="student-attempt-copy"><b>{lab?.title || t.practiceAttempt}</b><small>{formatDate(attempt.createdAt)}</small></span>
                       <Badge tone={attempt.verdict}>{verdictLabel(attempt.verdict)}</Badge>

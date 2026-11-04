@@ -87,7 +87,7 @@
 }
 @media (max-width: 700px) {
   .ebook-reader-page { margin: -18px -12px -28px; }
-  .ebook-reader-layout { height: calc(100dvh - 76px); min-height: 540px; border-width: 1px 0 0; border-radius: 0; }
+  .ebook-reader-layout { height: calc(100dvh - 76px); min-height: min(540px, calc(100dvh - 76px)); border-width: 1px 0 0; border-radius: 0; }
   .ebook-toolbar { gap: 6px; padding: 6px 8px; }
   .ebook-book-identity small { display: none; }
   .ebook-toolbar-actions { gap: 0; }
@@ -107,3 +107,5 @@
   .ebook-book.turn-next, .ebook-book.turn-previous { animation: none; }
   .ebook-annotation-panel, .ebook-pdf-page.companion-page canvas { transition: none; }
 }
+
+@media (max-height: 500px) { .ebook-reader-layout { min-height: 0; height: calc(100dvh - 76px); } .ebook-page-viewport { min-height: 0; padding-block: 12px; } .ebook-modes { position: static; flex-shrink: 0; } }

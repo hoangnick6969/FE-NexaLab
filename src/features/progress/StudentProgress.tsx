@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
@@ -755,6 +755,7 @@ function CourseDetailModal({ course, onClose }: { course: any; onClose: () => vo
 }
 
 export function StudentProgress() {
+  const [searchParams] = useSearchParams();
   const progress = useQuery<MyProgressResponse>({ queryKey: ["me-progress"], queryFn: () => api("/me/progress") });
   const foundational = useQuery<any>({ queryKey: ["me-foundational-progress"], queryFn: () => api("/me/foundational-progress") });
   const activity = useInfiniteQuery<ActivityPage>({
@@ -765,6 +766,11 @@ export function StudentProgress() {
   });
   const [sheet, setSheet] = useState<SheetView[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "courses" | "assignments" | "history">("all");
+  useEffect(() => {
+    if (searchParams.get("tab") === "history") setActiveTab("history");
+    const id = searchParams.get("attemptId");
+    if (id) setSheet([{ kind: "practical", id }]);
+  }, [searchParams]);
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed">("all");
   const [sortBy, setSortBy] = useState<"progress_desc" | "progress_asc" | "title">("progress_desc");

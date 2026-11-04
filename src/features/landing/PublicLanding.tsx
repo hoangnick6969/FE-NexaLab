@@ -310,10 +310,10 @@ export function PublicLanding() {
           {/* ---------------- 3 LABS: CURIOSITY SHOWCASE ---------------- */}
           <section className="landing-apple-labs" id="phong-lab">
             <div className="apple-section-header">
-              <h2 {...headingProps(0.05)}>
+              <m.h2 {...headingProps(0.05)}>
                 <Words text={t.labsTitle} />
-              </h2>
-              <p {...reveal}>{t.labsSubtitle}</p>
+              </m.h2>
+              <m.p {...reveal}>{t.labsSubtitle}</m.p>
             </div>
 
             <div className="apple-labs-grid">
@@ -346,10 +346,10 @@ export function PublicLanding() {
           {/* ---------------- HOW IT WORKS ---------------- */}
           <section className="landing-how-apple" id="cach-hoc">
             <div className="apple-section-header">
-              <h2 {...headingProps(0.05)}>
+              <m.h2 {...headingProps(0.05)}>
                 <Words text={t.howTitle} />
-              </h2>
-              <p {...reveal}>{t.howSubtitle}</p>
+              </m.h2>
+              <m.p {...reveal}>{t.howSubtitle}</m.p>
             </div>
 
             <div className="how-cards-row">
@@ -372,7 +372,7 @@ export function PublicLanding() {
           {/* ---------------- FINAL CTA ---------------- */}
           <m.section className="landing-apple-final" {...reveal}>
             <div className="apple-final-box">
-              <h2 {...headingProps(0.05)}><Words text={t.ctaTitle} /></h2>
+              <m.h2 {...headingProps(0.05)}><Words text={t.ctaTitle} /></m.h2>
               <p>{t.ctaBody}</p>
               <Magnetic disabled={reduce}>
                 <Link className="landing-apple-btn" to="/login">

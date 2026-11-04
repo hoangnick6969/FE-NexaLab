@@ -274,6 +274,9 @@ function LessonGroups({ lessons, emptyCopy }: { lessons: StudentLessonCard[]; em
   );
 }
 
+function handleRadioKeys(event: React.KeyboardEvent<HTMLDivElement>) { if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return; const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')); const index = buttons.indexOf(document.activeElement as HTMLButtonElement); const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (index + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1) + buttons.length) % buttons.length; event.preventDefault(); buttons[next]?.focus(); buttons[next]?.click();
+}
+
 export function StudentLessonsHub() {
   const t = text();
   const { pathname } = useLocation();
@@ -424,10 +427,11 @@ export function StudentLessonsHub() {
       <div className="student-lesson-filter-panel" role="search" aria-label={t.filterLabel}>
         <div className="filter-chip-row">
           <span className="filter-label-group">Khối:</span>
-          <div className="chip-group" role="radiogroup" aria-label="Lọc theo khối">
+          <div className="chip-group" role="radiogroup" onKeyDown={handleRadioKeys} aria-label="Lọc theo khối">
             <button
               type="button"
-              className={`chip${selectedGrade === "all" ? " is-active" : ""}`}
+              role="radio" aria-checked={selectedGrade === "all"} tabIndex={selectedGrade === "all" ? 0 : -1}
+                className={`chip${selectedGrade === "all" ? " is-active" : ""}`}
               onClick={() => setSelectedGrade("all")}
             >
               {t.allGrades}
@@ -439,10 +443,11 @@ export function StudentLessonsHub() {
                 <button
                   type="button"
                   key={g}
+                  role="radio" aria-checked={isActive} tabIndex={isActive ? 0 : -1}
                   className={`chip${isActive ? " is-active" : ""}${!hasData ? " is-disabled" : ""}`}
                   disabled={!hasData}
                   onClick={() => {
-                    setSelectedGrade(isActive ? "all" : String(g));
+                    setSelectedGrade(String(g));
                     setSelectedSubjectId("all");
                   }}
                   title={!hasData ? "Chưa có bài học phát hành" : undefined}
@@ -457,9 +462,10 @@ export function StudentLessonsHub() {
         {availableSubjects.length > 1 && (
           <div className="filter-chip-row">
             <span className="filter-label-group">Môn:</span>
-            <div className="chip-group" role="radiogroup" aria-label="Lọc theo môn học">
+            <div className="chip-group" role="radiogroup" onKeyDown={handleRadioKeys} aria-label="Lọc theo môn học">
               <button
                 type="button"
+                role="radio" aria-checked={selectedSubjectId === "all"} tabIndex={selectedSubjectId === "all" ? 0 : -1}
                 className={`chip${selectedSubjectId === "all" ? " is-active" : ""}`}
                 onClick={() => setSelectedSubjectId("all")}
               >
@@ -469,8 +475,9 @@ export function StudentLessonsHub() {
                 <button
                   type="button"
                   key={sId}
+                  role="radio" aria-checked={selectedSubjectId === sId} tabIndex={selectedSubjectId === sId ? 0 : -1}
                   className={`chip${selectedSubjectId === sId ? " is-active" : ""}`}
-                  onClick={() => setSelectedSubjectId(selectedSubjectId === sId ? "all" : sId)}
+                  onClick={() => setSelectedSubjectId(sId)}
                 >
                   {sName}
                 </button>
