@@ -1,0 +1,14 @@
+/* SAI-02A: one row per stuck step; bars show the share of submitted students who have not met it. */
+.class-hint-insight { margin: 16px 0; padding: 16px; border: 1px solid var(--line, rgba(18, 38, 30, 0.12)); border-radius: 14px; }
+.class-hint-insight h3 { margin-top: 0; }
+.class-hint-insight-steps { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 14px; }
+.class-hint-insight-steps > li { display: grid; gap: 6px; min-width: 0; }
+.class-hint-insight-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; }
+.class-hint-insight-bar { height: 8px; border-radius: 999px; background: var(--surface-muted, rgba(18, 38, 30, 0.08)); overflow: hidden; }
+.class-hint-insight-bar i { display: block; height: 100%; border-radius: inherit; background: var(--warning, #c98a1b); }
+.class-hint-insight-unmet, .class-hint-insight-misconception p { margin: 0; overflow-wrap: anywhere; }
+.class-hint-insight-misconception { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 12px; padding: 8px 10px; border-radius: 10px; background: var(--surface-muted, rgba(18, 38, 30, 0.04)); }
+.class-hint-insight-misconception > div { min-width: 0; flex: 1 1 200px; }
+.class-hint-insight-misconception[data-disagreed="true"] { opacity: 0.75; }
+.class-hint-insight-form { flex: 1 1 100%; display: grid; gap: 6px; }
+.class-hint-insight-form textarea { width: 100%; }
