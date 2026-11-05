@@ -26,35 +26,35 @@ async function mockApp(page: Page, role: "STUDENT" | "TEACHER" = "STUDENT") {
   });
 }
 
-test("sidebar collapses and expands with toggle button and persists in localStorage", async ({ page }) => {
+test("top navigation marks the current section and opens the account menu", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await mockApp(page, "STUDENT");
   await page.goto("/labs");
 
-  const appShell = page.locator(".app-shell");
-  const sidebar = page.locator(".sidebar");
-  const sidebarToggle = page.locator(".sidebar-toggle-btn");
-  const topbarToggle = page.locator(".topbar-sidebar-toggle");
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  const mainNav = page.getByRole("navigation", { name: "Điều hướng chính" });
+  await expect(mainNav).toBeVisible();
+  await expect(mainNav.locator("a.active")).toHaveAttribute("href", "/labs");
 
-  await expect(sidebar).toBeVisible();
-  await expect(appShell).not.toHaveClass(/sidebar-collapsed/);
-  await expect(sidebar).not.toHaveClass(/is-collapsed/);
+  await mainNav.getByRole("link", { name: /Bài học/ }).click();
+  await expect(page).toHaveURL(/\/lessons$/);
+  await expect(mainNav.locator("a.active")).toHaveAttribute("href", "/lessons");
 
-  // Click collapse button on sidebar
-  await sidebarToggle.click();
-  await expect(appShell).toHaveClass(/sidebar-collapsed/);
-  await expect(sidebar).toHaveClass(/is-collapsed/);
+  const trigger = page.getByRole("button", { name: "Mở menu tài khoản" });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("menuitem", { name: /Đăng xuất/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
 
-  // Verify localStorage updated
-  const storedValue = await page.evaluate(() => localStorage.getItem("nexalab:sidebar-collapsed"));
-  expect(storedValue).toBe("true");
+test("students get a bottom tab bar on phones instead of the top links", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApp(page, "STUDENT");
+  await page.goto("/");
 
-  // Click expand button on topbar
-  await topbarToggle.click();
-  await expect(appShell).not.toHaveClass(/sidebar-collapsed/);
-  await expect(sidebar).not.toHaveClass(/is-collapsed/);
-
-  const storedValueExpanded = await page.evaluate(() => localStorage.getItem("nexalab:sidebar-collapsed"));
-  expect(storedValueExpanded).toBe("false");
+  await expect(page.getByRole("navigation", { name: "Điều hướng chính" })).toBeHidden();
+  await expect(page.getByRole("navigation", { name: "Điều hướng nhanh" })).toBeVisible();
 });
 test("lab library filters by grade and subject, searches, and resets", async ({ page }) => {
   await mockApp(page, "STUDENT");

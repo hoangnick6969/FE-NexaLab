@@ -1,0 +1,466 @@
+/* Horizontal top navigation shell (trial). Replaces the fixed left sidebar: brand, primary links and
+   account actions share one sticky bar; the breadcrumb moves to a slim context row under it. */
+
+.app-shell.app-shell-topnav {
+  display: block;
+  min-height: 100vh;
+}
+
+.app-shell-topnav .main-wrap {
+  margin-left: 0;
+  width: 100%;
+}
+
+/* ---------- Bar ---------- */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 6px 18px var(--shadow-blue-24-a7);
+}
+
+.topnav-inner {
+  max-width: 1500px;
+  margin: 0 auto;
+  height: 64px;
+  padding: 0 clamp(16px, 3vw, 40px);
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2.4vw, 32px);
+}
+
+/* Prefixed: the legacy ≤960px sidebar rules zero `.brand` font-size and hide its dot. */
+.app-shell-topnav .topnav-brand {
+  font-size: 22px;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+
+.app-shell-topnav .topnav-brand .brand-text {
+  overflow: visible;
+}
+
+.app-shell-topnav .topnav-brand .brand-dot {
+  display: inline;
+  margin-left: 1px;
+}
+
+.topnav-brand .brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+/* ---------- Primary links ---------- */
+.topnav-links {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topnav-links::-webkit-scrollbar {
+  display: none;
+}
+
+.topnav-links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--ink-neutral-60);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.topnav-links a svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.7;
+  flex-shrink: 0;
+}
+
+.topnav-links a:hover {
+  background: var(--fill-neutral-97);
+  color: var(--ink-green-43);
+}
+
+.topnav-links a.active {
+  color: var(--ink-green-43);
+  font-weight: 600;
+  background: var(--fill-neutral-96);
+}
+
+/* Active underline sits on the bar's bottom edge so the current section reads at a glance. */
+.topnav-links a.active::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -12px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: currentColor;
+}
+
+.topnav-links a:focus-visible,
+.topnav-user-trigger:focus-visible,
+.topnav-user-item:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+}
+
+.nav-text-short {
+  display: none;
+}
+
+/* ---------- Actions ---------- */
+.topnav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.topnav-user {
+  position: relative;
+}
+
+.topnav-user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 10px 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.topnav-user-trigger:hover,
+.topnav-user-trigger[aria-expanded="true"] {
+  background: var(--fill-neutral-97);
+  border-color: var(--line-focus);
+}
+
+.topnav-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 12px;
+}
+
+.topnav-user-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topnav-user-caret {
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.topnav-user-trigger[aria-expanded="true"] .topnav-user-caret {
+  transform: rotate(180deg);
+}
+
+.topnav-user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 264px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 40px var(--shadow-blue-24-a13);
+  display: grid;
+  gap: 2px;
+  z-index: 50;
+}
+
+.topnav-user-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 12px;
+}
+
+.topnav-user-head b {
+  display: block;
+  font-size: 13px;
+}
+
+.topnav-user-head small,
+.topnav-user-workspace small {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-neutral-65);
+}
+
+.topnav-user-workspace {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 6px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.topnav-user-workspace svg {
+  margin-top: 2px;
+  color: var(--brand-ink);
+}
+
+.topnav-user-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topnav-user-item:hover {
+  background: var(--fill-neutral-97);
+}
+
+.topnav-user-item.is-danger {
+  color: var(--ink-red-57);
+}
+
+/* ---------- Context row (breadcrumb + status) ---------- */
+.topnav-context {
+  max-width: 1500px;
+  margin: 0 auto;
+  min-height: 44px;
+  padding: 0 clamp(16px, 3vw, 40px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.topnav-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.app-shell-topnav .main {
+  padding-top: 8px;
+  min-height: calc(100vh - 64px - 44px - 42px);
+}
+
+/* ---------- Student theme: the bar carries the brand colour the old sidebar had ---------- */
+.app-shell-student .topnav {
+  background: var(--brand);
+  border-color: var(--line-neutral-100-a16);
+  color: var(--on-accent);
+}
+
+.app-shell-student .topnav-brand,
+.app-shell-student .topnav-links a,
+.app-shell-student .topnav-actions {
+  color: var(--on-accent);
+}
+
+.app-shell-student .topnav-brand .brand-icon {
+  background: var(--fill-neutral-100-a14);
+  color: var(--ink-amber-85);
+}
+
+.app-shell-student .topnav-links a {
+  opacity: 0.86;
+}
+
+.app-shell-student .topnav-links a:hover,
+.app-shell-student .topnav-links a.active {
+  opacity: 1;
+  background: var(--fill-neutral-100-a14);
+  color: var(--on-accent);
+}
+
+.app-shell-student .topnav-links a.active::after {
+  background: var(--ink-amber-85);
+}
+
+.app-shell-student .topnav-actions .notification-bell:hover,
+.app-shell-student .topnav-actions .notification-bell[aria-expanded="true"],
+.app-shell-student .topnav-user-trigger:hover,
+.app-shell-student .topnav-user-trigger[aria-expanded="true"] {
+  background: var(--fill-neutral-100-a14);
+  color: var(--on-accent);
+}
+
+.app-shell-student .topnav-user-trigger {
+  border-color: var(--line-neutral-100-a16);
+}
+
+.app-shell-student .topnav a:focus-visible,
+.app-shell-student .topnav button:focus-visible {
+  outline-color: var(--ink-amber-85);
+}
+
+/* ---------- Phone tab bar (students only) ---------- */
+.bottom-tabs {
+  display: none;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1280px) {
+  .topnav-user-name {
+    display: none;
+  }
+
+  .nav-text-full:has(+ .nav-text-short) {
+    display: none;
+  }
+
+  .nav-text-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 1080px) {
+  .topnav-links a {
+    padding: 0 10px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .topnav-links a.active::after {
+    left: 10px;
+    right: 10px;
+  }
+
+  .topnav-brand .brand-text {
+    display: none;
+  }
+}
+
+/* Staff and parents: the links drop to a scrollable second row instead of disappearing. */
+@media (max-width: 760px) {
+  .topnav-inner {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-top: 10px;
+  }
+
+  .topnav-brand .brand-text {
+    display: inline;
+  }
+
+  .topnav-links {
+    order: 3;
+    flex-basis: 100%;
+    height: 48px;
+  }
+
+  .topnav-links a.active::after {
+    bottom: -4px;
+  }
+
+  .topnav-context {
+    min-height: 38px;
+  }
+
+  .topnav-status {
+    display: none;
+  }
+
+  /* Students switch to the thumb-reach tab bar; the top row keeps brand + actions only. */
+  .app-shell-student .topnav-inner {
+    padding-bottom: 10px;
+  }
+
+  .app-shell-student .topnav-links {
+    display: none;
+  }
+
+  .app-shell-student .bottom-tabs {
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 3px;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding: 4px 8px env(safe-area-inset-bottom);
+    background: var(--brand);
+    border-top: 1px solid var(--line-neutral-100-a16);
+    box-shadow: 0 -8px 24px var(--shadow-blue-24-a13);
+  }
+
+  .bottom-tabs a {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 12px;
+    color: var(--on-accent);
+    opacity: 0.86;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .bottom-tabs a span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bottom-tabs a svg {
+    width: 19px;
+    height: 19px;
+    stroke-width: 1.8;
+  }
+
+  .bottom-tabs a.active {
+    opacity: 1;
+    background: var(--fill-neutral-100-a14);
+  }
+
+  .app-shell-student.app-shell-topnav .main-wrap {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}

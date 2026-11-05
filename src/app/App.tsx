@@ -1,6 +1,5 @@
-import { Atom, LayoutDashboard, FlaskConical, BookOpen, Users, ChartNoAxesCombined, LogOut, Settings, GraduationCap, ClipboardList, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Suspense, lazy, useEffect, useLayoutEffect, useState } from "react";
-import { Routes, Route, NavLink, Navigate, useLocation, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { api, useAuth, restore } from "../lib/api";
 import { PageLoader } from "../components/ui";
 import { Login } from "../features/auth/Login";
@@ -8,14 +7,12 @@ import { EmailVerification } from "../features/auth/EmailVerification";
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
-import { Avatar } from "../components/Avatar";
 import { PROFILE_KEY, useProfile, type Profile } from "../lib/profile";
 import { setThemePreference } from "../lib/theme";
 import { defineText, getLocale, setLocale, takeLocaleChosenBeforeSignIn } from "../i18n";
-import { commonText } from "../i18n/common";
-import { NotificationBell } from "../features/notifications/NotificationBell";
 import { PasswordGate } from "./PasswordGate";
 import { TopbarBreadcrumb } from "./TopbarBreadcrumb";
+import { AppHeader } from "./AppHeader";
 
 // Development-only K3 apparatus bench; the branch is removed from production builds.
 const K3KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/kit/dev/K3KitPreview")) : null;
@@ -83,28 +80,8 @@ const text = defineText({
     startingCaption: "NexaLab · Chạm vào khoa học",
     openingLanding: "Đang mở trang giới thiệu…",
     landingCaption: "NexaLab · Phòng thí nghiệm mô phỏng",
-    workspace: "Không gian học tập",
-    workspaceScope: "Khoa học tự nhiên · THCS",
-    navCaption: "KHÁM PHÁ & HỌC TẬP",
-    home: "Trang chủ",
-    lessons: "Bài học",
     labsLabel: "Phòng thí nghiệm",
-    labsShort: "Lab",
-    assignments: "Bài tập",
-    classSpace: "Class Space",
-    progress: "Tiến độ",
-    overview: "Tổng quan",
-    lessonLibrary: "Thư viện bài học",
-    myClasses: "Lớp học của tôi",
-    childProgress: "Tiến độ của con",
-    learningProgress: "Tiến độ học tập",
-    admin: "Quản trị",
-    settings: "Cài đặt tài khoản",
-    signOut: "Đăng xuất",
     ready: "Sẵn sàng khám phá",
-    account: "Tài khoản",
-    collapseSidebar: "Thu gọn menu",
-    expandSidebar: "Mở rộng menu",
     loadingSpace: "Đang nạp không gian học tập…",
     footerLeft: "NexaLab · Chạm vào khoa học",
     footerRight: "Quan sát. Thử nghiệm. Thấu hiểu.",
@@ -114,28 +91,8 @@ const text = defineText({
     startingCaption: "NexaLab · Touch science",
     openingLanding: "Opening the welcome page…",
     landingCaption: "NexaLab · Simulation lab",
-    workspace: "Learning space",
-    workspaceScope: "Natural science · Lower secondary",
-    navCaption: "EXPLORE & LEARN",
-    home: "Home",
-    lessons: "Lessons",
     labsLabel: "Labs",
-    labsShort: "Lab",
-    assignments: "Assignments",
-    classSpace: "Class Space",
-    progress: "Progress",
-    overview: "Overview",
-    lessonLibrary: "Lesson library",
-    myClasses: "My classes",
-    childProgress: "My child's progress",
-    learningProgress: "Learning progress",
-    admin: "Administration",
-    settings: "Account settings",
-    signOut: "Sign out",
     ready: "Ready to explore",
-    account: "Account",
-    collapseSidebar: "Collapse sidebar",
-    expandSidebar: "Expand sidebar",
     loadingSpace: "Loading your learning space…",
     footerLeft: "NexaLab · Touch science",
     footerRight: "Observe. Experiment. Understand.",
@@ -170,25 +127,6 @@ export default function App() {
   }, [profileLoaded, savedLocale]);
   const t = text();
   const [ready, setReady] = useState(_restoreSettled);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem("nexalab:sidebar-collapsed") === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("nexalab:sidebar-collapsed", String(next));
-      } catch {
-        // Safe fallback when storage is inaccessible
-      }
-      return next;
-    });
-  };
   useLayoutEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [location.pathname, location.hash]);
@@ -246,113 +184,15 @@ export default function App() {
     <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
   </Suspense>;
   return (
-    <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
-      <aside className={`sidebar${sidebarCollapsed ? " is-collapsed" : ""}`}>
-        <div className="sidebar-header">
-          <Link to="/" className="brand" title="NexaLab">
-            <span className="brand-icon">
-              <Atom size={25} />
-            </span>
-            <span className="brand-text">
-              NexaLab<span className="brand-dot">.</span>
-            </span>
-          </Link>
-          <button
-            type="button"
-            className="sidebar-toggle-btn"
-            onClick={toggleSidebar}
-            title={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
-            aria-label={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
-            aria-expanded={!sidebarCollapsed}
-          >
-            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
-        </div>
-        <div className="workspace">
-          <span className="workspace-icon">
-            <GraduationCap size={20} />
-          </span>
-          <div className="workspace-info">
-            <b>{t.workspace}</b>
-            <small>{t.workspaceScope}</small>
-          </div>
-        </div>
-        <p className="nav-caption">{t.navCaption}</p>
-        <nav>
-          {user.role === "STUDENT" ? (
-            <>
-              <NavLink end to="/" aria-label={t.home} title={t.home}><LayoutDashboard /><span className="nav-text">{t.home}</span></NavLink>
-              <NavLink to="/lessons" aria-label={t.lessons} title={t.lessons}><BookOpen /><span className="nav-text">{t.lessons}</span></NavLink>
-              <NavLink to="/labs" aria-label={t.labsLabel} title={t.labsLabel}><FlaskConical /><span className="nav-text">{t.labsShort}</span></NavLink>
-              <NavLink to="/assignments" aria-label={t.assignments} title={t.assignments}><ClipboardList /><span className="nav-text">{t.assignments}</span></NavLink>
-              <NavLink to="/classes" aria-label={t.classSpace} title={t.classSpace}><Users /><span className="nav-text">{t.classSpace}</span></NavLink>
-              <NavLink to="/progress" aria-label={t.progress} title={t.progress}><ChartNoAxesCombined /><span className="nav-text">{t.progress}</span></NavLink>
-            </>
-          ) : (
-            <>
-              <NavLink end to="/" title={t.overview}><LayoutDashboard /><span className="nav-text">{t.overview}</span></NavLink>
-              {user.role === "TEACHER" && <NavLink to="/labs" title={t.labsLabel}><FlaskConical /><span className="nav-text">{t.labsLabel}</span></NavLink>}
-              {user.role !== "PARENT" && <NavLink to="/lessons" title={t.lessonLibrary}><BookOpen /><span className="nav-text">{t.lessonLibrary}</span></NavLink>}
-              {user.role === "TEACHER" && <NavLink to="/classes" title={t.myClasses}><Users /><span className="nav-text">{t.myClasses}</span></NavLink>}
-              {user.role === "PARENT" && <NavLink to="/progress" title={t.childProgress}><ChartNoAxesCombined /><span className="nav-text">{t.childProgress}</span></NavLink>}
-              {user.role === "ADMIN" && <NavLink to="/admin" title={t.admin}><Settings /><span className="nav-text">{t.admin}</span></NavLink>}
-            </>
-          )}
-        </nav>
-        <NavLink className="settings-link" to="/settings" title={t.settings}>
-          <Settings size={18} />
-          <span className="nav-text">{t.settings}</span>
-        </NavLink>
-        <div className="user-card">
-          <Avatar name={user.fullName} url={profile.data?.avatarUrl} />
-          <div className="user-card-info">
-            <b>{user.fullName}</b>
-            <small>{commonText().roles[user.role]}</small>
-          </div>
-          <button
-            title={t.signOut}
-            aria-label={t.signOut}
-            className="icon-button"
-            onClick={async () => {
-              try {
-                await api("/auth/logout", "POST");
-              } finally {
-                useAuth.getState().set(null, null);
-                queryClient.clear();
-              }
-            }}
-          >
-            <LogOut size={17} />
-          </button>
-        </div>
-      </aside>
+    <div className={`app-shell app-shell-topnav${user.role === "STUDENT" ? " app-shell-student" : ""}`}>
+      <AppHeader user={user} avatarUrl={profile.data?.avatarUrl} />
       <div className="main-wrap">
-        <header className="topbar">
-          <div className="topbar-left">
-            <button
-              type="button"
-              className="topbar-sidebar-toggle"
-              onClick={toggleSidebar}
-              title={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
-              aria-label={sidebarCollapsed ? t.expandSidebar : t.collapseSidebar}
-              aria-expanded={!sidebarCollapsed}
-            >
-              {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            </button>
-            <TopbarBreadcrumb pathname={location.pathname} user={user} />
-          </div>
-          <div>
-            <span className="online-dot" /> {t.ready}{" "}
-            <NotificationBell />
-            <Link
-              to="/settings"
-              aria-label={t.account}
-              className="avatar-link"
-            >
-              <Avatar name={user.fullName} url={profile.data?.avatarUrl} className="avatar small" />
-            </Link>
-          </div>
-        </header>
+        <div className="topnav-context">
+          <TopbarBreadcrumb pathname={location.pathname} user={user} />
+          <span className="topnav-status">
+            <span className="online-dot" /> {t.ready}
+          </span>
+        </div>
         <main className="main">
           <Suspense fallback={<PageLoader message={t.loadingSpace} />}>
             <Routes>
