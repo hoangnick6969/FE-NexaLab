@@ -157,6 +157,8 @@ const text = defineText({
   },
 });
 const t = text();
+/** Station Labs with after-submit hints (SAI-01A step 2); checkpoint Labs are covered by their envelope. */
+const STATION_HINT_RENDERERS = new Set(["density-bench", "gene-expression", "eye-anatomy-optics", "buoyancy-bench"]);
 
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -464,7 +466,7 @@ export default function Lab() {
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && guided && renderer?.envelope === "checkpoints" && attempt?.id && result && attempt.verdict !== "passed" && (
+          {user.role === "STUDENT" && guided && renderer && (renderer.envelope === "checkpoints" || STATION_HINT_RENDERERS.has(renderer.key)) && attempt?.id && result && attempt.verdict !== "passed" && (
             <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />
           )}
           {user.role === "STUDENT" && runtimeReady && !guided && (
