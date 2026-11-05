@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Search, CheckCircle2, AlertCircle, Filter, FileSpreadsheet } from "lucide-react";
 import { api, idempotencyKey, mutate } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field } from "../../components/ui";
 import { defineText } from "../../i18n";
@@ -53,6 +54,22 @@ const text = defineText({
     flip: "Lật thẻ",
     ungraded: "Luyện tập không chấm điểm.",
     practiceSaved: "Đã lưu lượt luyện tập",
+    modeDirect: "Tạo nội dung trực tiếp",
+    modeImport: "Nhập từ file CSV",
+    downloadTemplate: "Tải file mẫu CSV",
+    csvTemplateTip: (kind: string) => `Tải file mẫu định dạng CSV chuẩn UTF-8 cho ${kind}`,
+    requiredColumns: "Các cột bắt buộc trong CSV:",
+    csvColumnsDeck: "front (Mặt trước), back (Mặt sau)",
+    csvColumnsQuiz: "prompt (Câu hỏi), optionA, optionB (bắt buộc), optionC, optionD, explanation (tuỳ chọn)",
+    csvColumnsTest: "prompt (Câu hỏi), optionA, optionB (bắt buộc), optionC, optionD, correctOption (A/B/C/D), explanation",
+    previewReady: "Tệp hợp lệ · Đầy đủ điều kiện tạo tài nguyên",
+    selectFileFirst: "Vui lòng chọn tệp CSV trước khi kiểm tra.",
+    missingLessonOrTitle: "Vui lòng nhập tên tài nguyên và chọn bài học liên kết trước khi nhập bản nháp.",
+    searchResourcePlaceholder: "Tìm kiếm tài nguyên theo tên…",
+    allKinds: "Tất cả loại",
+    allStatuses: "Tất cả trạng thái",
+    showingResources: (n: number, total: number) => `Đang hiển thị ${n} / ${total} tài nguyên`,
+    noMatchingResources: "Không có tài nguyên nào phù hợp với bộ lọc.",
   },
   en: {
     names: { DECK: "Study cards", STUDY_QUIZ: "Ungraded practice quiz", TEST: "Test waiting to be assigned" },
@@ -102,6 +119,22 @@ const text = defineText({
     flip: "Flip card",
     ungraded: "Practice is not scored.",
     practiceSaved: "Practice saved",
+    modeDirect: "Create directly",
+    modeImport: "Import from CSV",
+    downloadTemplate: "Download CSV template",
+    csvTemplateTip: (kind: string) => `Download standard UTF-8 CSV template for ${kind}`,
+    requiredColumns: "Required columns in CSV:",
+    csvColumnsDeck: "front (Front side), back (Back side)",
+    csvColumnsQuiz: "prompt (Question), optionA, optionB (required), optionC, optionD, explanation (optional)",
+    csvColumnsTest: "prompt (Question), optionA, optionB (required), optionC, optionD, correctOption (A/B/C/D), explanation",
+    previewReady: "Valid file · Ready to import resource",
+    selectFileFirst: "Please select a CSV file first.",
+    missingLessonOrTitle: "Please enter resource name and choose linked lesson before importing.",
+    searchResourcePlaceholder: "Search resources by name…",
+    allKinds: "All types",
+    allStatuses: "All statuses",
+    showingResources: (n: number, total: number) => `Showing ${n} / ${total} resources`,
+    noMatchingResources: "No resources match the selected filters.",
   },
 });
 const t = text();
@@ -116,63 +149,378 @@ const sample: Record<Kind, object> = {
   TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
 };
 
+function downloadSampleCsv(kind: Kind) {
+  let content = "";
+  let filename = "";
+  if (kind === "DECK") {
+    content = "front,back\r\nKhái niệm 1,Giải thích khái niệm 1\r\nKhái niệm 2,Giải thích khái niệm 2\r\n";
+    filename = "mau_the_hoc.csv";
+  } else if (kind === "STUDY_QUIZ") {
+    content = "prompt,optionA,optionB,optionC,optionD,explanation\r\nCâu hỏi luyện tập 1?,Lựa chọn A,Lựa chọn B,Lựa chọn C,Lựa chọn D,Giải thích đáp án câu 1\r\n";
+    filename = "mau_quiz_luyen_tap.csv";
+  } else {
+    content = "prompt,optionA,optionB,optionC,optionD,correctOption,explanation\r\nCâu hỏi kiểm tra 1?,Lựa chọn A,Lựa chọn B,Lựa chọn C,Lựa chọn D,A,Giải thích đáp án câu 1\r\n";
+    filename = "mau_bai_kiem_tra.csv";
+  }
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function TeacherClassResources({ classId, disabled }: { classId: string; disabled: boolean }) {
   const qc = useQueryClient();
   const list = useQuery<Resource[]>({ queryKey: ["class-resources", classId], queryFn: () => api(`/classes/${classId}/resources`) });
   const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classId], queryFn: () => api(`/classes/${classId}/assignable-content`) });
+  
+  // Creation Mode
+  const [creationMode, setCreationMode] = useState<"direct" | "import">("direct");
+  
+  // Direct creation state
   const [kind, setKind] = useState<Kind>("DECK");
   const [title, setTitle] = useState("");
   const [lessonId, setLessonId] = useState("");
   const [source, setSource] = useState<ResourceContent>(sample.DECK);
-  const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
-  const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<unknown>(null);
-  const action = useMutation({ mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+
+  // Dedicated Import state
+  const [importKind, setImportKind] = useState<Kind>("DECK");
+  const [importTitle, setImportTitle] = useState("");
+  const [importLessonId, setImportLessonId] = useState("");
+  const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
+  const [importPreview, setImportPreview] = useState<any>(null);
+  const [importError, setImportError] = useState<unknown>(null);
+
+  // List Search & Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  const action = useMutation({
+    mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }),
+  });
+
   const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: resourceInput(kind, source) });
+  
   const create = async (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
-    try { const body = resourceBody(); await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() }); setTitle(""); setSource(sample[kind]); }
-    catch (e) { setError(e); }
+    try {
+      const body = resourceBody();
+      await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() });
+      setTitle("");
+      setSource(sample[kind]);
+    } catch (e) {
+      setError(e);
+    }
   };
+
   const previewImport = async () => {
-    setError(null); setPreview(null);
-    if (!file) return setError(new Error(t.chooseCsv));
-    try { setPreview(await api(`/classes/${classId}/resources/import/preview`, "POST", { kind, filename: file.name, csv: file.csv })); }
-    catch (e) { setError(e); }
+    setImportError(null);
+    setImportPreview(null);
+    if (!importFile) return setImportError(new Error(t.selectFileFirst));
+    try {
+      setImportPreview(await api(`/classes/${classId}/resources/import/preview`, "POST", { kind: importKind, filename: importFile.name, csv: importFile.csv }));
+    } catch (e) {
+      setImportError(e);
+    }
   };
-  const importFile = async () => {
-    if (!file) return;
-    setError(null);
-    try { await action.mutateAsync({ path: `/classes/${classId}/resources/import`, body: { kind, title: title.trim() || file.name.replace(/\.csv$/i, ""), lessonId, filename: file.name, csv: file.csv }, key: idempotencyKey() }); setFile(null); setPreview(null); setTitle(""); }
-    catch (e) { setError(e); }
+
+  const submitImport = async () => {
+    if (!importFile) return;
+    if (!importTitle.trim() || !importLessonId) {
+      setImportError(new Error(t.missingLessonOrTitle));
+      return;
+    }
+    setImportError(null);
+    try {
+      await action.mutateAsync({
+        path: `/classes/${classId}/resources/import`,
+        body: { kind: importKind, title: importTitle.trim(), lessonId: importLessonId, filename: importFile.name, csv: importFile.csv },
+        key: idempotencyKey(),
+      });
+      setImportFile(null);
+      setImportPreview(null);
+      setImportTitle("");
+      setImportLessonId("");
+    } catch (e) {
+      setImportError(e);
+    }
   };
-  return <section className="panel" aria-labelledby={`resources-${classId}`}>
-    <div className="section-heading"><div><p className="eyebrow">{t.onlyThisClass}</p><h2 id={`resources-${classId}`}>{t.resources}</h2></div></div>
-    {!disabled && <div className="class-resource-create">
-      <h3>{t.createDirect}</h3>
-      <form onSubmit={create}>
-        {/* Locked while saving: the post-save reset would otherwise wipe edits made meanwhile, including a kind switch. */}
-        <fieldset className="form-lock" disabled={action.isPending}>
-        <label className="field"><span>{t.contentType}</span><select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); setPreview(null); }}><option value="DECK">{t.deck}</option><option value="STUDY_QUIZ">{t.practiceQuiz}</option><option value="TEST">{t.testUnassigned}</option></select></label>
-        <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
-        <label className="field"><span>{t.linkedLesson}</span><select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}><option value="">{t.chooseLesson}</option>{lessons.data?.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}</option>)}</select></label>
-        <ResourceEditor kind={kind} value={source} onChange={setSource} />
-        <p className="tiny muted">{t.draftHint}</p>
-        <ErrorBox error={error} /><button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
-        </fieldset>
-      </form>
-      <details className="class-resource-import"><summary>{t.importCsv}</summary>
-        <p className="tiny muted">{t.csvRules}</p>
-        <label className="field"><span>{t.csvFile}</span><input type="file" accept=".csv,text/csv" onChange={async (e) => { const next = e.target.files?.[0]; setFile(next ? { name: next.name, csv: await next.text() } : null); setPreview(null); }} /></label>
-        <button type="button" className="secondary" onClick={previewImport}>{t.checkPreview}</button>
-        {preview && <div role="status" className={preview.valid ? "notice" : "error"}>{preview.valid ? <><b>{t.valid(preview.itemCount)}</b><p>{t.validHint}</p></> : <><b>{t.fileErrors}</b>{preview.errors?.map((item: any, i: number) => <p key={i}>{t.row(item.row)}, {item.field}: {item.message}</p>)}</>}</div>}
-        <ErrorBox error={error} /><button type="button" className="primary" disabled={!preview?.valid || action.isPending} onClick={importFile}>{t.importDraft}</button>
-      </details>
-    </div>}
-    {list.isLoading && <p className="muted">{t.loading}</p>}{list.error && <ErrorBox error={list.error} />}
-    {list.data?.length === 0 && <Empty>{t.none}</Empty>}
-    {list.data?.map((r) => <TeacherResourceRow key={r.id} resource={r} classId={classId} disabled={disabled} />)}
-  </section>;
+
+  const filteredResources = (list.data ?? []).filter((r) => {
+    if (searchQuery.trim() && !r.title.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
+      return false;
+    }
+    if (kindFilter !== "ALL" && r.kind !== kindFilter) {
+      return false;
+    }
+    if (statusFilter !== "ALL" && r.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  return (
+    <section className="panel" aria-labelledby={`resources-${classId}`}>
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">{t.onlyThisClass}</p>
+          <h2 id={`resources-${classId}`}>{t.resources}</h2>
+        </div>
+      </div>
+
+      {!disabled && (
+        <div className="class-resource-create">
+          <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={creationMode === "direct"}
+              className={creationMode === "direct" ? "active" : ""}
+              onClick={() => setCreationMode("direct")}
+            >
+              {t.modeDirect}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={creationMode === "import"}
+              className={creationMode === "import" ? "active" : ""}
+              onClick={() => setCreationMode("import")}
+            >
+              <FileSpreadsheet size={15} aria-hidden="true" />
+              {t.modeImport}
+            </button>
+          </div>
+
+          {creationMode === "direct" ? (
+            <form onSubmit={create}>
+              <fieldset className="form-lock" disabled={action.isPending}>
+                <label className="field">
+                  <span>{t.contentType}</span>
+                  <select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
+                    <option value="DECK">{t.deck}</option>
+                    <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+                    <option value="TEST">{t.testUnassigned}</option>
+                  </select>
+                </label>
+                <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
+                <label className="field">
+                  <span>{t.linkedLesson}</span>
+                  <select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+                    <option value="">{t.chooseLesson}</option>
+                    {lessons.data?.lessons.map((lesson) => (
+                      <option key={lesson.id} value={lesson.id}>
+                        {t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <ResourceEditor kind={kind} value={source} onChange={setSource} />
+                <p className="tiny muted">{t.draftHint}</p>
+                <ErrorBox error={error} />
+                <button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
+              </fieldset>
+            </form>
+          ) : (
+            <div className="class-resource-import-flow">
+              <div className="import-step-header">
+                <div>
+                  <h4>{t.importCsv}</h4>
+                  <p className="tiny muted">{t.csvRules}</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary button-compact"
+                  onClick={() => downloadSampleCsv(importKind)}
+                  title={t.csvTemplateTip(names[importKind])}
+                >
+                  <Download size={15} aria-hidden="true" />
+                  {t.downloadTemplate} ({names[importKind]})
+                </button>
+              </div>
+
+              <div className="import-meta-grid">
+                <label className="field">
+                  <span>{t.contentType}</span>
+                  <select
+                    value={importKind}
+                    onChange={(e) => {
+                      const next = e.target.value as Kind;
+                      setImportKind(next);
+                      setImportPreview(null);
+                    }}
+                  >
+                    <option value="DECK">{t.deck}</option>
+                    <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+                    <option value="TEST">{t.testUnassigned}</option>
+                  </select>
+                </label>
+
+                <label className="field">
+                  <span>{t.linkedLesson} *</span>
+                  <select required value={importLessonId} onChange={(e) => setImportLessonId(e.target.value)}>
+                    <option value="">{t.chooseLesson}</option>
+                    {lessons.data?.lessons.map((lesson) => (
+                      <option key={lesson.id} value={lesson.id}>
+                        {t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <Field
+                label={t.resourceName}
+                value={importTitle}
+                onChange={(e: any) => setImportTitle(e.target.value)}
+                placeholder={importFile ? importFile.name.replace(/\.csv$/i, "") : ""}
+                required
+                maxLength={160}
+              />
+
+              <div className="import-columns-hint">
+                <small>
+                  <strong>{t.requiredColumns} </strong>
+                  <code>
+                    {importKind === "DECK"
+                      ? t.csvColumnsDeck
+                      : importKind === "STUDY_QUIZ"
+                      ? t.csvColumnsQuiz
+                      : t.csvColumnsTest}
+                  </code>
+                </small>
+              </div>
+
+              <div className="import-file-row">
+                <label className="field file-field">
+                  <span>{t.csvFile}</span>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={async (e) => {
+                      const next = e.target.files?.[0];
+                      setImportFile(next ? { name: next.name, csv: await next.text() } : null);
+                      setImportPreview(null);
+                      if (next && !importTitle) {
+                        setImportTitle(next.name.replace(/\.csv$/i, ""));
+                      }
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={!importFile}
+                  onClick={previewImport}
+                >
+                  {t.checkPreview}
+                </button>
+              </div>
+
+              {importPreview && (
+                <div role="status" className={`import-preview-box ${importPreview.valid ? "notice" : "error"}`}>
+                  {importPreview.valid ? (
+                    <div className="preview-valid-row">
+                      <CheckCircle2 size={18} className="text-success" aria-hidden="true" />
+                      <div>
+                        <b>{t.valid(importPreview.itemCount)}</b>
+                        <p className="tiny">{t.previewReady}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="preview-error-list">
+                      <div className="preview-error-header">
+                        <AlertCircle size={18} aria-hidden="true" />
+                        <b>{t.fileErrors}</b>
+                      </div>
+                      {importPreview.errors?.map((item: any, i: number) => (
+                        <p key={i} className="tiny">
+                          {t.row(item.row)}, cột <code>{item.field}</code>: {item.message}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {importFile && importPreview?.valid && (!importTitle.trim() || !importLessonId) && (
+                <p className="tiny muted warning-text">{t.missingLessonOrTitle}</p>
+              )}
+
+              <ErrorBox error={importError} />
+
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!importPreview?.valid || !importLessonId || !importTitle.trim() || action.isPending}
+                  onClick={submitImport}
+                >
+                  {action.isPending ? t.saving : t.importDraft}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Resource list controls */}
+      <div className="resource-list-toolbar">
+        <div className="resource-search-input">
+          <Search size={16} aria-hidden="true" />
+          <input
+            type="search"
+            placeholder={t.searchResourcePlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Tìm kiếm tài nguyên"
+          />
+        </div>
+        <div className="resource-filters">
+          <label className="filter-select-wrap">
+            <Filter size={14} aria-hidden="true" />
+            <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="Lọc theo loại">
+              <option value="ALL">{t.allKinds}</option>
+              <option value="DECK">{t.deck}</option>
+              <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+              <option value="TEST">{t.testUnassigned}</option>
+            </select>
+          </label>
+          <label className="filter-select-wrap">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Lọc theo trạng thái">
+              <option value="ALL">{t.allStatuses}</option>
+              <option value="PUBLISHED">{t.shared}</option>
+              <option value="DRAFT">{t.draft}</option>
+              <option value="ARCHIVED">{t.archived}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {list.data && list.data.length > 0 && (
+        <p className="tiny muted resource-count-badge">
+          {t.showingResources(filteredResources.length, list.data.length)}
+        </p>
+      )}
+
+      {list.isLoading && <p className="muted">{t.loading}</p>}
+      {list.error && <ErrorBox error={list.error} />}
+      {list.data?.length === 0 && <Empty>{t.none}</Empty>}
+      {list.data && list.data.length > 0 && filteredResources.length === 0 && (
+        <Empty>{t.noMatchingResources}</Empty>
+      )}
+      {filteredResources.map((r) => (
+        <TeacherResourceRow key={r.id} resource={r} classId={classId} disabled={disabled} />
+      ))}
+    </section>
+  );
 }
 
 function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState, useMemo } from "react";
 import { api, useAuth } from "../../lib/api";
+import { Skeleton } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
 import { labInfo } from "./lab-info";
 import { defineText } from "../../i18n";
@@ -17,6 +18,9 @@ const text = defineText({
     relatedLesson: "Bài học liên quan",
     moreRelatedLessons: (count: number) => `Xem thêm ${count} bài học liên quan`,
     nonePublished: "Chưa có phòng thực hành nền tảng nào được phát hành.",
+    loading: "Đang tải danh sách phòng thí nghiệm…",
+    loadFailed: "Chưa tải được danh sách phòng thí nghiệm.",
+    retry: "Thử lại",
     eyebrow: "HỌC QUA TRẢI NGHIỆM",
     title: "Phòng thí nghiệm",
     description: "Tự đặt câu hỏi, tự thử nghiệm và kiểm chứng bằng kết quả.",
@@ -47,6 +51,9 @@ const text = defineText({
     relatedLesson: "Related lesson",
     moreRelatedLessons: (count: number) => `Show ${count} more related lessons`,
     nonePublished: "No foundation labs are published yet.",
+    loading: "Loading labs…",
+    loadFailed: "Labs could not be loaded.",
+    retry: "Try again",
     eyebrow: "LEARN BY EXPERIENCE",
     title: "Labs",
     description: "Ask your own questions, experiment and check against the results.",
@@ -73,7 +80,29 @@ const text = defineText({
 });
 const t = text();
 
-export function LabCards({ guided = false, showFilters = false }: { guided?: boolean; showFilters?: boolean } = {}) {
+function LabCardsSkeleton({ showFilters, message }: { showFilters: boolean; message: string }) {
+  return (
+    <div className="lab-library-loading" role="status" aria-live="polite" aria-busy="true" aria-label={message}>
+      {showFilters && <section className="lab-filter-section lab-filter-skeleton" aria-hidden="true">
+        <Skeleton variant="rect" className="lab-filter-skeleton-search" />
+        <div className="lab-filter-skeleton-chips">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} variant="rect" className="lab-filter-skeleton-chip" />)}</div>
+      </section>}
+      <div className="lab-grid lab-library-skeleton" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => <article key={i} className="lab-card lab-card-skeleton">
+          <Skeleton variant="rect" className="lab-card-skeleton-image" />
+          <div className="lab-card-skeleton-copy">
+            <Skeleton variant="text" className="lab-card-skeleton-tag" />
+            <Skeleton variant="text" className="lab-card-skeleton-title" />
+            <Skeleton variant="text" className="lab-card-skeleton-description" />
+            <Skeleton variant="text" className="lab-card-skeleton-footer" />
+          </div>
+        </article>)}
+      </div>
+    </div>
+  );
+}
+
+export function LabCards({ guided = false, showFilters = false, showDisclaimer = false }: { guided?: boolean; showFilters?: boolean; showDisclaimer?: boolean } = {}) {
   const role = useAuth((s) => s.user!.role);
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(role) });
 
@@ -141,12 +170,19 @@ export function LabCards({ guided = false, showFilters = false }: { guided?: boo
 
   const isFiltered = selectedGrade !== "all" || selectedSubject !== "all" || searchQuery.trim().length > 0 || sortBy !== "default";
 
+  if (labs.isLoading) return <LabCardsSkeleton showFilters={showFilters} message={t.loading} />;
+
   const handleResetFilters = () => {
     setSelectedGrade("all");
     setSelectedSubject("all");
     setSearchQuery("");
     setSortBy("default");
   };
+
+  if (labs.isError && labs.data === undefined) return <div className="notice lab-library-load-error" role="alert">
+    <span>{t.loadFailed}</span>
+    <button type="button" className="secondary" onClick={() => void labs.refetch()}>{t.retry}</button>
+  </div>;
 
   return (
     <div className="lab-library-container">
@@ -338,6 +374,7 @@ export function LabCards({ guided = false, showFilters = false }: { guided?: boo
         )}
         {role === "STUDENT" && labs.isSuccess && cards.length === 0 && <p className="notice">{t.nonePublished}</p>}
       </div>
+      {showDisclaimer && labs.data !== undefined && <div className="notice">{t.disclaimer}</div>}
     </div>
   );
 }
@@ -350,10 +387,7 @@ export function LabLibrary() {
         title={t.title}
         description={t.description}
       />
-      <LabCards showFilters />
-      <div className="notice">
-        {t.disclaimer}
-      </div>
+      <LabCards showFilters showDisclaimer />
     </>
   );
 }
