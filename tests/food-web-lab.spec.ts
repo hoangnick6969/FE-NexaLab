@@ -14,6 +14,8 @@ async function mockShell(page: Page) {
   } }));
   await page.route("**/api/me/notifications/unread-count", (route) => route.fulfill({ json: { count: 0 } }));
   await page.route("**/api/tutor/status", (route) => route.fulfill({ json: { provider: "rules" } }));
+  // SAI-01A: the in-run hint toggle asks whether the last observed step was mispredicted.
+  await page.route("**/api/lab-runs/*/hints/check", (route) => route.fulfill({ status: 201, json: { mismatch: false } }));
   await page.route("**/api/labs", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/assignments/assignment-fw", (route) => route.fulfill({ json: {
     id: "assignment-fw", title: "Lưới thức ăn", contentType: "lab", dueDate: null, overdue: false,

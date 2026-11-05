@@ -12,6 +12,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { useLabRunHost } from "./runtime/lab-run-host";
+import { CheckpointHintPanel } from "./runtime/CheckpointHintPanel";
+import { RunHintPanel } from "./runtime/RunHintPanel";
+import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
@@ -332,6 +335,14 @@ export default function Lab() {
           {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} runtimeConfig={labRun.launch?.runtimeConfig} />}
           {runtimeReady && !(guided && user.role === "TEACHER") && <div className="lab-actions">
             <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer?.envelope === "checkpoints" && (() => {
+              const view = checkpointViewForRenderer(renderer.key);
+              if (!view) return null;
+              const step = view.hintStep(state);
+              return <RunHintPanel key={`${step.ask?.criterion ?? ""}|${step.reflect?.criterion ?? ""}`} runId={labRun.launch.runId} step={step}
+                labelOf={(criterion) => view.stepLabel(criterion.replace(/^prediction:/, ""))} />;
+            })()}
+
             <button
               className="primary"
               data-testid="lab-run-submit"
@@ -453,6 +464,9 @@ export default function Lab() {
               </p>
             )}
           </section>
+          {user.role === "STUDENT" && guided && renderer?.envelope === "checkpoints" && attempt?.id && result && attempt.verdict !== "passed" && (
+            <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />
+          )}
           {user.role === "STUDENT" && runtimeReady && !guided && (
             <section className="panel tutor-panel">
               <h3>
