@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import { Users, BookOpen, Layers, BarChart2 } from "lucide-react";
 import { api, idempotencyKey, useAuth } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -37,6 +37,10 @@ const text = defineText({
     approvalRule: "Học sinh vào bằng mã cần giáo viên duyệt",
     creating: "Đang tạo…",
     create: "Tạo lớp",
+    studentsShortcut: "Học sinh",
+    assignmentsShortcut: "Bài giao",
+    resourcesShortcut: "Tài nguyên",
+    progressShortcut: "Theo dõi",
   },
   en: {
     title: "My classes",
@@ -63,6 +67,10 @@ const text = defineText({
     approvalRule: "Students joining with a code need teacher approval",
     creating: "Creating…",
     create: "Create class",
+    studentsShortcut: "Students",
+    assignmentsShortcut: "Assignments",
+    resourcesShortcut: "Resources",
+    progressShortcut: "Progress",
   },
 });
 const t = text();
@@ -75,7 +83,14 @@ export function TeacherClasses() {
   const { classId: selected } = useParams();
   const [searchParams] = useSearchParams();
   const status = searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
-  const setSelected = (id: string) => navigate(`/classes/${encodeURIComponent(id)}${status === "ARCHIVED" ? "?status=ARCHIVED" : ""}`);
+  const setSelected = (id: string, tab?: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (tab) params.set("tab", tab);
+    else params.delete("tab");
+    if (status === "ARCHIVED") params.set("status", "ARCHIVED");
+    const query = params.toString();
+    navigate(`/classes/${encodeURIComponent(id)}${query ? `?${query}` : ""}`);
+  };
   const [creating, setCreating] = useState(false);
   const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const createKey = useRef(idempotencyKey());
@@ -136,29 +151,95 @@ export function TeacherClasses() {
         <div className="class-grid">
           {list.isLoading && <CardSkeleton count={3} />}
           {list.data?.map((c) => (
-            <button
+            <article
               key={c.id}
-              type="button"
               className={"panel class-card " + (selected === c.id ? "selected" : "")}
-              aria-pressed={selected === c.id}
-              onClick={() => setSelected(c.id)}
             >
-              <Users size={20} aria-hidden="true" />
-              <h3>{c.name}</h3>
-              <p>
-                {t.grade(c.grade)} · {t.members(c.members.approved)}
-                 {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
-              </p>
-              <p>{t.activeWork(c.assignments.active)}</p>
-              <div className="badge-row">
-                {c.status === "ARCHIVED" ? (
-                  <Badge tone="outline">{t.archivedBadge}</Badge>
-                ) : (
-                  <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
-                )}
-                {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
+              <div
+                role="button"
+                tabIndex={0}
+                className="class-card-main"
+                aria-pressed={selected === c.id}
+                onClick={() => setSelected(c.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(c.id);
+                  }
+                }}
+              >
+                <div className="class-card-head">
+                  <Users size={20} aria-hidden="true" />
+                  <h3>{c.name}</h3>
+                </div>
+                <p>
+                  {t.grade(c.grade)} · {t.members(c.members.approved)}
+                  {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
+                </p>
+                <p>{t.activeWork(c.assignments.active)}</p>
+                <div className="badge-row">
+                  {c.status === "ARCHIVED" ? (
+                    <Badge tone="outline">{t.archivedBadge}</Badge>
+                  ) : (
+                    <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
+                  )}
+                  {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
+                </div>
               </div>
-            </button>
+              <div className="class-card-shortcuts" aria-label={`Lối tắt quản lý ${c.name}`}>
+                <button
+                  type="button"
+                  className="class-shortcut-btn"
+                  title={t.studentsShortcut}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(c.id, "students");
+                  }}
+                >
+                  <Users size={13} aria-hidden="true" />
+                  <span>{t.studentsShortcut}</span>
+                  {c.members.pending > 0 && <span className="shortcut-counter-badge">{c.members.pending}</span>}
+                </button>
+                <button
+                  type="button"
+                  className="class-shortcut-btn"
+                  title={t.assignmentsShortcut}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(c.id, "work");
+                  }}
+                >
+                  <BookOpen size={13} aria-hidden="true" />
+                  <span>{t.assignmentsShortcut}</span>
+                </button>
+                <button
+                  type="button"
+                  className="class-shortcut-btn"
+                  title={t.resourcesShortcut}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(c.id, "resources");
+                  }}
+                >
+                  <Layers size={13} aria-hidden="true" />
+                  <span>{t.resourcesShortcut}</span>
+                </button>
+                {c.status !== "ARCHIVED" && (
+                  <button
+                    type="button"
+                    className="class-shortcut-btn"
+                    title={t.progressShortcut}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelected(c.id, "progress");
+                    }}
+                  >
+                    <BarChart2 size={13} aria-hidden="true" />
+                    <span>{t.progressShortcut}</span>
+                  </button>
+                )}
+              </div>
+            </article>
           ))}
         </div>
         {selected && teacher && list.data?.some((c) => c.id === selected) && (

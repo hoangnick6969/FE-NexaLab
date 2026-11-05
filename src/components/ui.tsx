@@ -129,21 +129,15 @@ export function PageLoader({
       role="status"
       aria-live="polite"
       aria-busy="true"
+      aria-label={[message, caption].filter(Boolean).join(" ")}
     >
-      <div className="loader-core">
-        <div className="loader-indicator" aria-hidden="true">
-          <svg className="apple-spinner" viewBox="0 0 36 36" width="34" height="34">
-            <circle className="apple-spinner-track" cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" />
-            <circle className="apple-spinner-blade" cx="18" cy="18" r="14" fill="none" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
+      <div className="page-loader-content" aria-hidden="true">
+        <div className="page-loader-heading">
+          <Skeleton variant="text" className="page-loader-eyebrow" />
+          <Skeleton variant="text" className="page-loader-title" />
+          <Skeleton variant="text" className="page-loader-description" />
         </div>
-        <div className="loader-copy">
-          <b className="loader-message">{message}</b>
-          {caption && <p className="loader-caption">{caption}</p>}
-        </div>
-        <div className="loader-meter" aria-hidden="true">
-          <span className="loader-meter-bar" />
-        </div>
+        <div className="page-loader-grid"><CardSkeleton count={3} /></div>
       </div>
     </div>
   );

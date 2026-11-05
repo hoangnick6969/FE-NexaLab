@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Search, ArrowUpDown, CheckCheck } from "lucide-react";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type ClassSummary, type Enrollment } from "./class-types";
@@ -58,6 +59,14 @@ const text = defineText({
     expires: "Hạn dùng:",
     shareOnce: "Hãy lưu và gửi riêng cho học sinh. Mật khẩu sẽ không hiển thị lại.",
     saved: "Đã lưu thông tin",
+    searchStudentPlaceholder: "Tìm học sinh theo họ tên hoặc tài khoản…",
+    sortByNameAsc: "Tên (A → Z)",
+    sortByNameDesc: "Tên (Z → A)",
+    sortByUsername: "Tài khoản (A → Z)",
+    showingStudents: (n: number, total: number) => `Hiển thị ${n} / ${total} học sinh`,
+    noMatchingStudents: "Không tìm thấy học sinh nào phù hợp.",
+    approveAll: (n: number) => `Duyệt tất cả (${n})`,
+    approvingAll: "Đang duyệt tất cả…",
   },
   en: {
     members: "Class members",
@@ -109,6 +118,14 @@ const text = defineText({
     expires: "Expires:",
     shareOnce: "Save it and give it to the student privately. The password will not be shown again.",
     saved: "I saved the details",
+    searchStudentPlaceholder: "Search student by name or username…",
+    sortByNameAsc: "Name (A → Z)",
+    sortByNameDesc: "Name (Z → A)",
+    sortByUsername: "Username (A → Z)",
+    showingStudents: (n: number, total: number) => `Showing ${n} / ${total} students`,
+    noMatchingStudents: "No students match your search.",
+    approveAll: (n: number) => `Approve all (${n})`,
+    approvingAll: "Approving all…",
   },
 });
 const t = text();
@@ -128,7 +145,44 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
     queryFn: () => api(`/classes/${classroom.id}/students`),
   });
   const act = useMutate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "username">("name_asc");
+  const [isApprovingAll, setIsApprovingAll] = useState(false);
+
   const rows = roster.data?.filter((e) => e.status === tab) ?? [];
+  const filteredRows = rows
+    .filter((e) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        e.student.fullName.toLowerCase().includes(q) ||
+        e.student.username.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "name_asc") {
+        return a.student.fullName.localeCompare(b.student.fullName, "vi");
+      }
+      if (sortBy === "name_desc") {
+        return b.student.fullName.localeCompare(a.student.fullName, "vi");
+      }
+      return a.student.username.localeCompare(b.student.username);
+    });
+
+  const handleApproveAll = async () => {
+    const pendingList = rows.filter((e) => e.status === "pending");
+    if (!pendingList.length || isApprovingAll) return;
+    setIsApprovingAll(true);
+    try {
+      for (const item of pendingList) {
+        await api(`/classes/${classroom.id}/students/${item.studentId}`, "PUT", { status: "approved" });
+      }
+      await roster.refetch();
+    } finally {
+      setIsApprovingAll(false);
+    }
+  };
+
   const open = (next: typeof modal) => {
     formKey.current = idempotencyKey();
     act.reset();
@@ -166,6 +220,53 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
         </Empty>
       )}
       {rows.length > 0 && (
+        <div className="roster-toolbar">
+          <div className="roster-search-box">
+            <Search size={16} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder={t.searchStudentPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Tìm kiếm học sinh"
+            />
+          </div>
+          <div className="roster-actions-wrap">
+            <label className="filter-select-wrap">
+              <ArrowUpDown size={14} aria-hidden="true" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                aria-label="Sắp xếp danh sách"
+              >
+                <option value="name_asc">{t.sortByNameAsc}</option>
+                <option value="name_desc">{t.sortByNameDesc}</option>
+                <option value="username">{t.sortByUsername}</option>
+              </select>
+            </label>
+            {!archived && tab === "pending" && rows.length >= 2 && (
+              <button
+                type="button"
+                className="primary button-compact"
+                disabled={isApprovingAll || act.isPending}
+                onClick={handleApproveAll}
+              >
+                <CheckCheck size={16} aria-hidden="true" />
+                {isApprovingAll ? t.approvingAll : t.approveAll(rows.length)}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {rows.length > 0 && (
+        <p className="tiny muted roster-count-badge">
+          {t.showingStudents(filteredRows.length, rows.length)}
+        </p>
+      )}
+      {rows.length > 0 && filteredRows.length === 0 && (
+        <Empty>{t.noMatchingStudents}</Empty>
+      )}
+      {filteredRows.length > 0 && (
         <div className="table-wrap">
           <table>
             <thead>
@@ -176,7 +277,7 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((e) => (
+              {filteredRows.map((e) => (
                 <tr key={e.studentId}>
                   <td className="roster-student">
                     <Avatar name={e.student.fullName} url={e.student.avatarUrl} className="avatar small" />

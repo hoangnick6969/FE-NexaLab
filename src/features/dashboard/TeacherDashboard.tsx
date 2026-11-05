@@ -40,13 +40,18 @@ export function TeacherDashboard() {
   });
 
   const totalPending = (classes.data ?? []).reduce((count, classroom) => count + classroom.members.pending, 0);
+  const pendingClasses = (classes.data ?? []).filter((classroom) => classroom.members.pending > 0);
+
+  const lateClasses = (classes.data ?? []).map((classroom, index) => ({
+    classroom,
+    late: summaries[index]?.data?.late ?? 0,
+  })).filter((item) => item.late > 0);
+
   const totalLate = summaries.reduce((count, summary) => count + (summary.data?.late ?? 0), 0);
   const totalLabs = summaries.reduce((count, summary) => count + (summary.data?.labs ?? 0), 0);
   const summariesLoading = summaries.some((summary) => summary.isPending);
   const summariesError = summaries.some((summary) => summary.isError);
   const summaryValue = (value: number) => summariesLoading ? "…" : summariesError ? "—" : value;
-  const pendingClass = classes.data?.find((classroom) => classroom.members.pending > 0);
-  const lateClassIndex = summaries.findIndex((summary) => (summary.data?.late ?? 0) > 0);
   const classHref = (id?: string, tab = "students") => id
     ? `/classes/${encodeURIComponent(id)}?tab=${tab}`
     : "/classes";
@@ -71,23 +76,80 @@ export function TeacherDashboard() {
           <section className="teacher-dashboard-section" aria-labelledby="teacher-actions-title">
             <div className="teacher-dashboard-section-head">
               <h2 id="teacher-actions-title">Cần xử lý</h2>
-              <p>Các mục cần sự chú ý của giáo viên.</p>
+              <p>Các mục cần sự chú ý của giáo viên theo từng lớp.</p>
             </div>
             <div className="teacher-action-list">
-              <Link className="teacher-action-item" to={classHref(pendingClass?.id, "students")}>
-                <span>Yêu cầu tham gia chờ duyệt</span>
-                <strong>{totalPending}</strong>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className="teacher-action-item" to={classHref(lateClassIndex >= 0 ? classes.data[lateClassIndex]?.id : undefined, "work")}>
-                <span>Bài nộp trễ chờ xem xét</span>
-                <strong>{summaryValue(totalLate)}</strong>
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className="teacher-action-item" to="/class-labs">
-                <span>Lab đang giao trong các lớp</span>
-                <strong>{summaryValue(totalLabs)}</strong>
-                <ArrowRight size={18} aria-hidden="true" />
+              <div className="teacher-action-card">
+                <div className="teacher-action-header">
+                  <span>Yêu cầu tham gia chờ duyệt</span>
+                  <strong>{totalPending}</strong>
+                  {pendingClasses.length === 1 ? (
+                    <Link to={classHref(pendingClasses[0].id, "students")} className="teacher-action-arrow" title={`Mở lớp ${pendingClasses[0].name}`}>
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
+                  ) : (
+                    <Link to="/classes" className="teacher-action-arrow" title="Mở danh sách lớp">
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
+                  )}
+                </div>
+                {pendingClasses.length === 0 ? (
+                  <p className="tiny muted">Tất cả học sinh đã được duyệt</p>
+                ) : pendingClasses.length === 1 ? (
+                  <p className="tiny muted">
+                    Lớp: <Link to={classHref(pendingClasses[0].id, "students")}><b>{pendingClasses[0].name}</b> ({pendingClasses[0].members.pending} học sinh)</Link>
+                  </p>
+                ) : (
+                  <div className="teacher-action-pills" aria-label="Các lớp có yêu cầu chờ duyệt">
+                    {pendingClasses.map((c) => (
+                      <Link key={c.id} to={classHref(c.id, "students")} className="teacher-class-pill">
+                        {c.name}: <b>{c.members.pending}</b>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="teacher-action-card">
+                <div className="teacher-action-header">
+                  <span>Bài nộp trễ chờ xem xét</span>
+                  <strong>{summaryValue(totalLate)}</strong>
+                  {lateClasses.length === 1 ? (
+                    <Link to={classHref(lateClasses[0].classroom.id, "work")} className="teacher-action-arrow" title={`Mở lớp ${lateClasses[0].classroom.name}`}>
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
+                  ) : (
+                    <Link to="/classes" className="teacher-action-arrow" title="Mở quản lý bài">
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
+                  )}
+                </div>
+                {summariesLoading ? (
+                  <p className="tiny muted">Đang tổng hợp bài trễ…</p>
+                ) : lateClasses.length === 0 ? (
+                  <p className="tiny muted">Không có bài trễ cần duyệt</p>
+                ) : lateClasses.length === 1 ? (
+                  <p className="tiny muted">
+                    Lớp: <Link to={classHref(lateClasses[0].classroom.id, "work")}><b>{lateClasses[0].classroom.name}</b> ({lateClasses[0].late} bài)</Link>
+                  </p>
+                ) : (
+                  <div className="teacher-action-pills" aria-label="Các lớp có bài nộp trễ">
+                    {lateClasses.map((item) => (
+                      <Link key={item.classroom.id} to={classHref(item.classroom.id, "work")} className="teacher-class-pill">
+                        {item.classroom.name}: <b>{item.late}</b>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link className="teacher-action-card teacher-action-item" to="/class-labs">
+                <div className="teacher-action-header">
+                  <span>Lab đang giao trong các lớp</span>
+                  <strong>{summaryValue(totalLabs)}</strong>
+                  <ArrowRight size={18} aria-hidden="true" />
+                </div>
+                <p className="tiny muted">Quản lý bài thực hành phòng lab ảo</p>
               </Link>
             </div>
           </section>
