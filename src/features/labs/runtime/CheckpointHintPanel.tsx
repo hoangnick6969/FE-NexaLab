@@ -3,6 +3,7 @@ import { Lightbulb, X } from "lucide-react";
 import { api } from "../../../lib/api";
 import { Badge, ErrorBox, useAction } from "../../../components/ui";
 import { defineText } from "../../../i18n";
+import { VerdictExplanationPanel } from "./VerdictExplanationPanel";
 import "./CheckpointHintPanel.css";
 
 /** SAI-01A rules-only hint for a not-passed checkpoint Lab attempt (BE spec-student-ai-checkpoint-hints). */
@@ -20,6 +21,7 @@ const text = defineText({
     title: "Gợi ý từng bước",
     collapse: "Thu gọn gợi ý",
     expand: "Gợi ý",
+    expandPassed: "Giải thích",
     intro: "Chưa đạt? Nhận một gợi ý cho bước đầu tiên em còn sai. Gợi ý không cho đáp án.",
     getHint: "Nhận gợi ý",
     level: (n: number) => `Mức ${n}/4 · ${["Câu hỏi gợi mở", "Gợi ý khái niệm", "Gợi ý thao tác", "Giải thích"][n - 1]}`,
@@ -32,6 +34,7 @@ const text = defineText({
     title: "Step-by-step hint",
     collapse: "Collapse the hint",
     expand: "Hint",
+    expandPassed: "Explanation",
     intro: "Not there yet? Get a hint for the first step you still have wrong. Hints never give the answer.",
     getHint: "Get a hint",
     level: (n: number) => `Level ${n}/4 · ${["Guiding question", "Concept hint", "Action hint", "Explanation"][n - 1]}`,
@@ -73,8 +76,11 @@ export function CheckpointHintPanel({ attemptId }: { attemptId: string }) {
   );
 }
 
-/** Event-scored Labs draw their own full-screen layout: the hint floats and can be collapsed to a pill. */
-export function FloatingCheckpointHint({ attemptId }: { attemptId: string }) {
+/**
+ * Event-scored Labs draw their own full-screen layout: the B2 explanation (any verdict) and, when not passed,
+ * the hint float beside it and can be collapsed to a pill.
+ */
+export function FloatingCheckpointHint({ attemptId, passed = false }: { attemptId: string; passed?: boolean }) {
   const t = text();
   const [open, setOpen] = useState(true);
   return (
@@ -82,9 +88,10 @@ export function FloatingCheckpointHint({ attemptId }: { attemptId: string }) {
       {/* Kept mounted while collapsed so the hint already received is still there when reopened. */}
       <div hidden={!open}>
         <button type="button" className="event-lab-hint-close" aria-label={t.collapse} onClick={() => setOpen(false)}><X size={16} aria-hidden /></button>
-        <CheckpointHintPanel attemptId={attemptId} />
+        <VerdictExplanationPanel attemptId={attemptId} passed={passed} />
+        {!passed && <CheckpointHintPanel attemptId={attemptId} />}
       </div>
-      {!open && <button type="button" className="secondary event-lab-hint-pill" onClick={() => setOpen(true)}><Lightbulb size={15} aria-hidden /> {t.expand}</button>}
+      {!open && <button type="button" className="secondary event-lab-hint-pill" onClick={() => setOpen(true)}><Lightbulb size={15} aria-hidden /> {passed ? t.expandPassed : t.expand}</button>}
     </div>
   );
 }

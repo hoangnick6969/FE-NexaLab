@@ -13,6 +13,7 @@ import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { useLabRunHost } from "./runtime/lab-run-host";
 import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
+import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
 import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
@@ -265,9 +266,9 @@ export default function Lab() {
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
   if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
-  // SAI-01A step 3: event-scored Labs render their own result, so the after-submit hint floats beside it.
-  const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict && labRun.attempt.verdict !== "passed"
-    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} /> : null;
+  // SAI-01A step 3 + B2: event-scored Labs render their own result, so the explanation and hint float beside it.
+  const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
+    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"} /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
     : !labRun.launch || !labRun.rendererKey
@@ -469,8 +470,11 @@ export default function Lab() {
               </p>
             )}
           </section>
-          {user.role === "STUDENT" && guided && renderer && (renderer.envelope === "checkpoints" || STATION_HINT_RENDERERS.has(renderer.key)) && attempt?.id && result && attempt.verdict !== "passed" && (
-            <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />
+          {user.role === "STUDENT" && guided && renderer && (renderer.envelope === "checkpoints" || STATION_HINT_RENDERERS.has(renderer.key)) && attempt?.id && result && (
+            <>
+              <VerdictExplanationPanel key={"why-" + attempt.id} attemptId={attempt.id} passed={attempt.verdict === "passed"} />
+              {attempt.verdict !== "passed" && <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />}
+            </>
           )}
           {user.role === "STUDENT" && runtimeReady && !guided && (
             <section className="panel tutor-panel">

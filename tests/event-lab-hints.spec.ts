@@ -19,6 +19,12 @@ test("FL-06 not passed: the after-submit hint panel asks for a hint and stays on
   const hintCalls: string[] = [];
   await page.route("**/api/attempts/attempt-fl06/hint", route => { hintCalls.push(route.request().method());
     route.fulfill({ status: 201, json: { id: "h1", level: 1, content: "Cánh tay đòn được đo từ đâu đến đâu?", label: "Đo moment lực", escalated: false, repeatReason: null } }); });
+  const explained: string[] = [];
+  await page.route("**/api/attempts/attempt-fl06/explanation", route => { explained.push(route.request().method());
+    route.fulfill({ json: { attemptId: "attempt-fl06", verdict: "not_passed", summary: "Em chưa đạt vì còn 1 bước chưa đúng yêu cầu.", provider: "rules", items: [
+      { criterion: "rotation", label: "Dự đoán chiều quay", met: true, why: "Moment lực bên nào lớn hơn thì đòn bẩy quay về phía đó." },
+      { criterion: "moment", label: "Đo moment lực", met: false, why: null },
+    ] } }); });
   let submitted: any;
   await page.route("**/api/attempts", route => { submitted = route.request().postDataJSON(); route.fulfill({ json: { attempt: { id: "attempt-fl06", verdict: "needs_practice", simulationResult: { criteria: { rotation: true, moment: false } } } } }); });
   await page.goto("/labs/lever-equilibrium?assignmentId=assignment-fl06");
@@ -66,6 +72,16 @@ test("FL-06 not passed: the after-submit hint panel asks for a hint and stays on
   await page.getByRole("button", { name: "Nộp bài" }).click();
   const panel = page.locator(".event-lab-hint");
   await expect(panel).toContainText("Gợi ý từng bước");
+  // B2: the explanation is fetched only when asked; an unmet step shows its name, never its answer.
+  expect(explained).toEqual([]);
+  await panel.getByRole("button", { name: "Vì sao em chưa đạt?" }).click();
+  const why = panel.getByTestId("verdict-explanation");
+  await expect(why).toContainText("Em chưa đạt vì còn 1 bước");
+  await expect(why.locator('li[data-met="true"]')).toContainText("Moment lực bên nào lớn hơn");
+  await expect(why.locator('li[data-met="false"]')).toContainText("Đo moment lực");
+  await expect(why.locator('li[data-met="false"]')).toContainText("chỉ ghi tên để em tự tìm lại");
+  expect(explained).toEqual(["GET"]);
+  await why.getByRole("button", { name: "Ẩn giải thích" }).click();
   await panel.getByRole("button", { name: "Nhận gợi ý" }).click();
   await expect(panel).toContainText("Mức 1/4");
   await expect(panel).toContainText("Về bước: Đo moment lực");
