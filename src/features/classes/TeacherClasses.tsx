@@ -83,6 +83,7 @@ export function TeacherClasses() {
   const { classId: selected } = useParams();
   const [searchParams] = useSearchParams();
   const status = searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE";
+  const currentTab = searchParams.get("tab") || "students";
   const setSelected = (id: string, tab?: string) => {
     const params = new URLSearchParams(searchParams);
     if (tab) params.set("tab", tab);
@@ -107,8 +108,11 @@ export function TeacherClasses() {
     if (!selected || !list.data?.some((c) => c.id === selected)) return;
     const title = document.getElementById("class-detail-title");
     focusedClass.current = selected;
-    title?.focus();
-    title?.scrollIntoView({ block: "start", behavior: "auto" });
+    title?.focus({ preventScroll: true });
+    // On small mobile screens only, scroll into view smoothly
+    if (window.innerWidth < 768) {
+      title?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
   }, [selected, list.data]);
   return (
     <div className="teacher-workspace teacher-class-listing">
@@ -189,7 +193,7 @@ export function TeacherClasses() {
               <div className="class-card-shortcuts" aria-label={`Lối tắt quản lý ${c.name}`}>
                 <button
                   type="button"
-                  className="class-shortcut-btn"
+                  className={`class-shortcut-btn${selected === c.id && currentTab === "students" ? " active" : ""}`}
                   title={t.studentsShortcut}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -202,7 +206,7 @@ export function TeacherClasses() {
                 </button>
                 <button
                   type="button"
-                  className="class-shortcut-btn"
+                  className={`class-shortcut-btn${selected === c.id && currentTab === "work" ? " active" : ""}`}
                   title={t.assignmentsShortcut}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -214,7 +218,7 @@ export function TeacherClasses() {
                 </button>
                 <button
                   type="button"
-                  className="class-shortcut-btn"
+                  className={`class-shortcut-btn${selected === c.id && currentTab === "resources" ? " active" : ""}`}
                   title={t.resourcesShortcut}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -227,7 +231,7 @@ export function TeacherClasses() {
                 {c.status !== "ARCHIVED" && (
                   <button
                     type="button"
-                    className="class-shortcut-btn"
+                    className={`class-shortcut-btn${selected === c.id && currentTab === "progress" ? " active" : ""}`}
                     title={t.progressShortcut}
                     onClick={(e) => {
                       e.stopPropagation();

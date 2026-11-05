@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "../../lib/api";
 import { Empty, verdictLabel } from "../../components/ui";
 import { type TeacherAssignment } from "./class-types";
@@ -78,27 +79,100 @@ export function PracticeAnalytics({ classId }: { classId: string }) {
   });
   const flags = new Map((support.data ?? []).map((row: any) => [row.student.id, row.flags]));
   return (
-    <section className="panel">
-      <div className="section-heading"><div><p className="eyebrow">{t.eyebrow}</p><h2>{t.title}</h2></div></div>
-      <label className="field"><span>{t.assigned}</span><select value={selectedId} onChange={(event) => { setAssignmentId(event.target.value); setOpenStudent(null); }}>
-        <option value="">{t.choose}</option>
-        {assignments.data?.map((item) => <option key={item.id} value={item.id}>{item.title}{item.status === "ARCHIVED" ? t.archivedSuffix : ""}</option>)}
-      </select></label>
+    <section className="panel teacher-analytics-panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">{t.eyebrow}</p>
+          <h2>{t.title}</h2>
+        </div>
+      </div>
+      
+      <div className="analytics-filter-bar">
+        <label className="field analytics-field">
+          <span>{t.assigned}</span>
+          <select value={selectedId} onChange={(event) => { setAssignmentId(event.target.value); setOpenStudent(null); }}>
+            <option value="">{t.choose}</option>
+            {assignments.data?.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title}{item.status === "ARCHIVED" ? t.archivedSuffix : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <LoadError query={assignments} what={t.assignedList} />
       <LoadError query={board} what={t.board} />
       {selectedId && board.data?.length === 0 && <Empty>{t.noStudents}</Empty>}
-      {board.data?.map((row: any) => (
-        <div className="analytics-student" key={row.student.id}>
-          <div className="section-heading"><div><h3>{row.student.fullName}</h3><p>{typeof row.percent === "number" ? t.steps(row.completedRequired, row.totalRequired, row.percent) : t.practicals(row.attempts, row.passed ? t.passedLabel : verdictLabel(row.latestVerdict))}</p></div>
-          <button className="secondary" onClick={() => setOpenStudent(openStudent === row.student.id ? null : row.student.id)}>{t.seeEvidence}</button></div>
-          {(flags.get(row.student.id) as any[] | undefined)?.map((flag: any) => <div className="notice" key={flag.code}><b>{t.needsHelp}</b> {t.flag(flag.code, flag.message)}<small>{flag.evidenceIds?.length ? ` · ${t.evidence(flag.evidenceIds.length)}` : ""}</small></div>)}
-          {openStudent === row.student.id && <div className="attempt-evidence"><LoadError query={evidence} what={t.learningEvidence} />{evidence.data && <>
-            <p>{t.evidenceSummary(evidence.data.stepProgress.length, evidence.data.quizAttempts.length, evidence.data.practicalAttempts.length)}</p>
-            {evidence.data.quizAttempts.map((item: any) => <p key={item.id}>{t.quiz} {item.score}% · {item.passed ? t.passed : t.notPassed} · {formatDateTime(item.createdAt)}</p>)}
-            {evidence.data.practicalAttempts.map((item: any) => <p key={item.id}>{t.practice} · {verdictLabel(item.verdict)} · {formatDateTime(item.createdAt)}</p>)}
-          </>}</div>}
-        </div>
-      ))}
+
+      <div className="analytics-student-list">
+        {board.data?.map((row: any) => {
+          const studentFlags = (flags.get(row.student.id) as any[] | undefined) ?? [];
+          const isOpen = openStudent === row.student.id;
+          return (
+            <div className="analytics-student-card" key={row.student.id}>
+              <div className="analytics-student-header">
+                <div className="analytics-student-meta">
+                  <h3>{row.student.fullName}</h3>
+                  <div className="analytics-student-stats">
+                    {typeof row.percent === "number"
+                      ? t.steps(row.completedRequired, row.totalRequired, row.percent)
+                      : t.practicals(row.attempts, row.passed ? t.passedLabel : verdictLabel(row.latestVerdict))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`evidence-action-btn${isOpen ? " open" : ""}`}
+                  onClick={() => setOpenStudent(isOpen ? null : row.student.id)}
+                >
+                  <FileText size={14} aria-hidden="true" />
+                  <span>{t.seeEvidence}</span>
+                  {isOpen ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+                </button>
+              </div>
+
+              {studentFlags.map((flag: any) => (
+                <div className="analytics-notice-box" key={flag.code}>
+                  <AlertTriangle size={15} className="notice-icon" aria-hidden="true" />
+                  <div className="notice-content">
+                    <b>{t.needsHelp}</b> {t.flag(flag.code, flag.message)}
+                    {flag.evidenceIds?.length ? <small> · {t.evidence(flag.evidenceIds.length)}</small> : null}
+                  </div>
+                </div>
+              ))}
+
+              {isOpen && (
+                <div className="attempt-evidence">
+                  <LoadError query={evidence} what={t.learningEvidence} />
+                  {evidence.data && (
+                    <>
+                      <p className="evidence-summary-line">
+                        {t.evidenceSummary(evidence.data.stepProgress.length, evidence.data.quizAttempts.length, evidence.data.practicalAttempts.length)}
+                      </p>
+                      <div className="evidence-attempts-grid">
+                        {evidence.data.quizAttempts.map((item: any) => (
+                          <div key={item.id} className="evidence-attempt-chip">
+                            <span>{t.quiz} {item.score}%</span>
+                            <span className={item.passed ? "chip-pass" : "chip-fail"}>{item.passed ? t.passed : t.notPassed}</span>
+                            <small>{formatDateTime(item.createdAt)}</small>
+                          </div>
+                        ))}
+                        {evidence.data.practicalAttempts.map((item: any) => (
+                          <div key={item.id} className="evidence-attempt-chip">
+                            <span>{t.practice}</span>
+                            <span className="chip-verdict">{verdictLabel(item.verdict)}</span>
+                            <small>{formatDateTime(item.createdAt)}</small>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

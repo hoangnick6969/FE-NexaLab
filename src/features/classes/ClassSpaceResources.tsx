@@ -276,27 +276,30 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
       </div>
 
       {!disabled && (
-        <div className="class-resource-create">
-          <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={creationMode === "direct"}
-              className={creationMode === "direct" ? "active" : ""}
-              onClick={() => setCreationMode("direct")}
-            >
-              {t.modeDirect}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={creationMode === "import"}
-              className={creationMode === "import" ? "active" : ""}
-              onClick={() => setCreationMode("import")}
-            >
-              <FileSpreadsheet size={15} aria-hidden="true" />
-              {t.modeImport}
-            </button>
+        <div className="class-resource-create class-resource-create-card">
+          <div className="resource-create-header">
+            <h4 className="resource-create-title">{creationMode === "direct" ? t.createDirect : t.importCsv}</h4>
+            <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={creationMode === "direct"}
+                className={creationMode === "direct" ? "active" : ""}
+                onClick={() => setCreationMode("direct")}
+              >
+                {t.modeDirect}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={creationMode === "import"}
+                className={creationMode === "import" ? "active" : ""}
+                onClick={() => setCreationMode("import")}
+              >
+                <FileSpreadsheet size={15} aria-hidden="true" />
+                {t.modeImport}
+              </button>
+            </div>
           </div>
 
           {creationMode === "direct" ? (
@@ -471,8 +474,21 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
         </div>
       )}
 
-      {/* Resource list controls */}
-      <div className="resource-list-toolbar">
+      {/* Resource list section */}
+      <div className="class-resource-library-section">
+        <div className="resource-library-header">
+          <div>
+            <h3>{t.classResources}</h3>
+            {list.data && list.data.length > 0 && (
+              <span className="resource-count-badge">
+                {t.showingResources(filteredResources.length, list.data.length)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Resource list controls */}
+        <div className="resource-list-toolbar">
         <div className="resource-search-input">
           <Search size={16} aria-hidden="true" />
           <input
@@ -504,12 +520,6 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
         </div>
       </div>
 
-      {list.data && list.data.length > 0 && (
-        <p className="tiny muted resource-count-badge">
-          {t.showingResources(filteredResources.length, list.data.length)}
-        </p>
-      )}
-
       {list.isLoading && <p className="muted">{t.loading}</p>}
       {list.error && <ErrorBox error={list.error} />}
       {list.data?.length === 0 && <Empty>{t.none}</Empty>}
@@ -519,6 +529,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
       {filteredResources.map((r) => (
         <TeacherResourceRow key={r.id} resource={r} classId={classId} disabled={disabled} />
       ))}
+      </div>
     </section>
   );
 }
