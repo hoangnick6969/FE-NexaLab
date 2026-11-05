@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
@@ -113,6 +114,8 @@ const contentTypeLabel: Record<AssignableType, string> = t.types;
 
 export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedLabAssignment = searchParams.get("assign") === "lab" && !archived;
   const [assigning, setAssigning] = useState(false);
   const [editing, setEditing] = useState<TeacherAssignment | null>(null);
   const [archiving, setArchiving] = useState<TeacherAssignment | null>(null);
@@ -123,6 +126,17 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
     queryFn: () => api(`/classes/${classroom.id}/assignments`),
   });
   const act = useMutate();
+  useEffect(() => {
+    if (requestedLabAssignment) setAssigning(true);
+  }, [requestedLabAssignment]);
+  const closeAssignModal = () => {
+    setAssigning(false);
+    if (searchParams.has("assign")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("assign");
+      setSearchParams(next, { replace: true });
+    }
+  };
   const active = list.data?.filter((a) => a.status === "ACTIVE") ?? [];
   const past = list.data?.filter((a) => a.status === "ARCHIVED") ?? [];
   const row = (a: TeacherAssignment) => (
@@ -181,10 +195,11 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       {assigning && (
         <AssignModal
           classroom={classroom}
-          onClose={() => setAssigning(false)}
+          initialContentType={requestedLabAssignment ? "lab" : undefined}
+          onClose={closeAssignModal}
           onAssigned={(message) => {
             setNotice(message);
-            setAssigning(false);
+            closeAssignModal();
           }}
         />
       )}
@@ -238,8 +253,8 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   );
 }
 
-function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void }) {
-  const [contentType, setContentType] = useState<AssignableType>("lesson");
+function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void; initialContentType?: AssignableType }) {
+  const [contentType, setContentType] = useState<AssignableType>(initialContentType ?? "lesson");
   const [scope, setScope] = useState<"CLASS" | "SUBSET">("CLASS");
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [contentId, setContentId] = useState("");
@@ -365,7 +380,7 @@ function AssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSumma
         <ErrorBox error={validation} />
         <p className="tiny muted">{t.recipientsFixed}</p>
         <ErrorBox error={act.error} />
-        <button className="primary wide" disabled={act.isPending || !contentId || !options.length || (scope === "SUBSET" && studentIds.length === 0)}>
+        <button className="primary wide" disabled={act.isPending || !contentId || !options.length || (contentType === "lab" && !labChallengeId) || (scope === "SUBSET" && studentIds.length === 0)}>
           {act.isPending ? t.assigning : t.assign}
         </button>
       </form>

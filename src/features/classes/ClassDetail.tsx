@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { KeyRound, Archive } from "lucide-react";
 import { ErrorBox, Field, Modal } from "../../components/ui";
 import { TeacherClassResources } from "./ClassSpaceResources";
@@ -9,6 +10,7 @@ import { LateQueue } from "./TestAssignments";
 import { Assignments } from "./Assignments";
 import { PracticeAnalytics } from "./PracticeAnalytics";
 import { defineText } from "../../i18n";
+import "./teacher-operations.css";
 
 const text = defineText({
   vi: {
@@ -30,6 +32,11 @@ const text = defineText({
     newCodeDetail: "Mã cũ sẽ ngừng hoạt động ngay. Học sinh đã trong lớp không bị ảnh hưởng.",
     archiveAction: "lưu trữ lớp",
     archiveDetail: "Học sinh mất quyền vào mọi bài của lớp ngay lập tức. Lớp không nhận thêm thành viên hay bài giao. Dữ liệu và kết quả học tập được giữ nguyên.",
+    tabsLabel: "Quản lý lớp",
+    studentsTab: "Học sinh",
+    workTab: "Bài đã giao",
+    resourcesTab: "Tài nguyên lớp",
+    progressTab: "Theo dõi",
   },
   en: {
     grade: (g: number) => `Grade ${g}`,
@@ -50,12 +57,26 @@ const text = defineText({
     newCodeDetail: "The old code stops working at once. Students already in the class are not affected.",
     archiveAction: "archive the class",
     archiveDetail: "Students lose access to all class work at once. The class takes no new members or assignments. Data and results are kept.",
+    tabsLabel: "Manage class",
+    studentsTab: "Students",
+    workTab: "Assigned work",
+    resourcesTab: "Class resources",
+    progressTab: "Progress",
   },
 });
 const t = text();
 
 export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const tabs = [
+    { id: "students", label: t.studentsTab },
+    { id: "work", label: t.workTab },
+    { id: "resources", label: t.resourcesTab },
+    ...(!archived ? [{ id: "progress", label: t.progressTab }] : []),
+  ];
+  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : "students";
   const [modal, setModal] = useState<"" | "edit" | "rotate" | "archive" | "code">("");
   const [code, setCode] = useState<string | null>(null);
   const act = useMutate();
@@ -63,9 +84,14 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
     act.reset();
     setModal("");
   };
+  const selectTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", tab);
+    setSearchParams(next);
+  };
   return (
     <>
-      <section className="panel" aria-labelledby="class-detail-title">
+      <section className="panel teacher-class-detail-header" aria-labelledby="class-detail-title">
         <div className="section-heading">
           <div>
             <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
@@ -106,11 +132,30 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
         {code && <ShownOnce code={code} onDone={() => setCode(null)} />}
         <ErrorBox error={!modal ? act.error : null} />
       </section>
-      <Roster classroom={classroom} />
-      <TeacherClassResources classId={classroom.id} disabled={archived} />
-      <LateQueue classroom={classroom} />
-      <Assignments classroom={classroom} />
-      {!archived && <PracticeAnalytics classId={classroom.id} />}
+      <div className="teacher-class-tabs" role="tablist" aria-label={t.tabsLabel}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            id={`class-tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`class-panel-${tab.id}`}
+            onClick={() => selectTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <section className="teacher-class-tabpanel" id={`class-panel-${activeTab}`} role="tabpanel" aria-labelledby={`class-tab-${activeTab}`}>
+        {activeTab === "students" && <Roster classroom={classroom} />}
+        {activeTab === "work" && <>
+          <LateQueue classroom={classroom} />
+          <Assignments classroom={classroom} />
+        </>}
+        {activeTab === "resources" && <TeacherClassResources classId={classroom.id} disabled={archived} />}
+        {activeTab === "progress" && !archived && <PracticeAnalytics classId={classroom.id} />}
+      </section>
       {modal === "edit" && (
         <Modal title={t.editClass} onClose={close}>
           <form

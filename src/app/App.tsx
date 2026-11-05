@@ -58,6 +58,10 @@ const Classes = lazy(() =>
   import("../features/classes/Classes").then((m) => ({ default: m.Classes }))
 );
 
+const ClassLabs = lazy(() =>
+  import("../features/classes/ClassLabs").then((m) => ({ default: m.ClassLabs }))
+);
+
 const ProgressPage = lazy(() =>
   import("../features/progress/ProgressPage").then((m) => ({ default: m.ProgressPage }))
 );
@@ -84,12 +88,15 @@ const text = defineText({
     openingLanding: "Đang mở trang giới thiệu…",
     landingCaption: "NexaLab · Phòng thí nghiệm mô phỏng",
     workspace: "Không gian học tập",
+    teacherWorkspace: "Không gian giáo viên",
     workspaceScope: "Khoa học tự nhiên · THCS",
     navCaption: "KHÁM PHÁ & HỌC TẬP",
+    teacherNavCaption: "Quản lý lớp học",
     home: "Trang chủ",
     lessons: "Bài học",
     labsLabel: "Phòng thí nghiệm",
     labsShort: "Lab",
+    classLab: "Class Lab",
     assignments: "Bài tập",
     classSpace: "Class Space",
     progress: "Tiến độ",
@@ -102,6 +109,7 @@ const text = defineText({
     settings: "Cài đặt tài khoản",
     signOut: "Đăng xuất",
     ready: "Sẵn sàng khám phá",
+    teacherReady: "Không gian giáo viên sẵn sàng",
     account: "Tài khoản",
     collapseSidebar: "Thu gọn menu",
     expandSidebar: "Mở rộng menu",
@@ -115,12 +123,15 @@ const text = defineText({
     openingLanding: "Opening the welcome page…",
     landingCaption: "NexaLab · Simulation lab",
     workspace: "Learning space",
+    teacherWorkspace: "Teacher workspace",
     workspaceScope: "Natural science · Lower secondary",
     navCaption: "EXPLORE & LEARN",
+    teacherNavCaption: "Class management",
     home: "Home",
     lessons: "Lessons",
     labsLabel: "Labs",
     labsShort: "Lab",
+    classLab: "Class Lab",
     assignments: "Assignments",
     classSpace: "Class Space",
     progress: "Progress",
@@ -133,6 +144,7 @@ const text = defineText({
     settings: "Account settings",
     signOut: "Sign out",
     ready: "Ready to explore",
+    teacherReady: "Teacher workspace ready",
     account: "Account",
     collapseSidebar: "Collapse sidebar",
     expandSidebar: "Expand sidebar",
@@ -250,7 +262,7 @@ export default function App() {
     );
   }
   if (user.mustChangePassword) return <PasswordGate />;
-  if (/^\/labs\/[^/]+\/?$/.test(location.pathname)) return <Suspense fallback={<div className="lab-space"><Link className="secondary" to="/labs">{t.labsLabel}</Link><PageLoader fullScreen message={t.starting} /></div>}>
+  if (/^\/labs\/[^/]+\/?$/.test(location.pathname)) return <Suspense fallback={<div className="lab-space"><Link className="secondary" to={user.role === "TEACHER" ? "/class-labs" : "/labs"}>{user.role === "TEACHER" ? t.classLab : t.labsLabel}</Link><PageLoader fullScreen message={t.starting} /></div>}>
     <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
   </Suspense>;
   return (
@@ -281,11 +293,11 @@ export default function App() {
             <GraduationCap size={20} />
           </span>
           <div className="workspace-info">
-            <b>{t.workspace}</b>
+            <b>{user.role === "TEACHER" ? t.teacherWorkspace : t.workspace}</b>
             <small>{t.workspaceScope}</small>
           </div>
         </div>
-        <p className="nav-caption">{t.navCaption}</p>
+        <p className="nav-caption">{user.role === "TEACHER" ? t.teacherNavCaption : t.navCaption}</p>
         <nav>
           {user.role === "STUDENT" ? (
             <>
@@ -299,9 +311,9 @@ export default function App() {
           ) : (
             <>
               <NavLink end to="/" title={t.overview}><LayoutDashboard /><span className="nav-text">{t.overview}</span></NavLink>
-              {user.role === "TEACHER" && <NavLink to="/labs" title={t.labsLabel}><FlaskConical /><span className="nav-text">{t.labsLabel}</span></NavLink>}
-              {user.role !== "PARENT" && <NavLink to="/lessons" title={t.lessonLibrary}><BookOpen /><span className="nav-text">{t.lessonLibrary}</span></NavLink>}
+              {user.role === "TEACHER" && <NavLink to="/class-labs" title={t.classLab}><FlaskConical /><span className="nav-text">{t.classLab}</span></NavLink>}
               {user.role === "TEACHER" && <NavLink to="/classes" title={t.myClasses}><Users /><span className="nav-text">{t.myClasses}</span></NavLink>}
+              {user.role !== "PARENT" && <NavLink to="/lessons" title={t.lessonLibrary}><BookOpen /><span className="nav-text">{t.lessonLibrary}</span></NavLink>}
               {user.role === "PARENT" && <NavLink to="/progress" title={t.childProgress}><ChartNoAxesCombined /><span className="nav-text">{t.childProgress}</span></NavLink>}
               {user.role === "ADMIN" && <NavLink to="/admin" title={t.admin}><Settings /><span className="nav-text">{t.admin}</span></NavLink>}
             </>
@@ -350,7 +362,7 @@ export default function App() {
             <TopbarBreadcrumb pathname={location.pathname} user={user} />
           </div>
           <div>
-            <span className="online-dot" /> {t.ready}{" "}
+            <span className="online-dot" /> {user.role === "TEACHER" ? t.teacherReady : t.ready}{" "}
             <NotificationBell />
             <Link
               to="/settings"
@@ -368,7 +380,8 @@ export default function App() {
                 path="/"
                 element={user.role === "ADMIN" ? <AdminPage /> : <Dashboard />}
               />
-              <Route path="/labs" element={<LabLibrary />} />
+              <Route path="/class-labs" element={user.role === "TEACHER" ? <ClassLabs /> : <Navigate to={user.role === "STUDENT" ? "/labs" : "/"} replace />} />
+              <Route path="/labs" element={user.role === "TEACHER" ? <Navigate to="/class-labs" replace /> : <LabLibrary />} />
               <Route
                 path="/labs/:id"
                 element={

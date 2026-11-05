@@ -9,10 +9,10 @@ import { type ClassSummary } from "./class-types";
 import { LoadError, ShownOnce, useMutate } from "./class-ui";
 import { ClassDetail } from "./ClassDetail";
 import { defineText } from "../../i18n";
+import "./teacher-operations.css";
 
 const text = defineText({
   vi: {
-    eyebrow: "CÙNG NHAU KHÁM PHÁ",
     title: "Lớp học của tôi",
     description: "Quản lý thành viên, mã tham gia và bài được giao cho từng lớp.",
     createClass: "Tạo lớp",
@@ -39,7 +39,6 @@ const text = defineText({
     create: "Tạo lớp",
   },
   en: {
-    eyebrow: "EXPLORING TOGETHER",
     title: "My classes",
     description: "Manage members, join codes and assigned work for each class.",
     createClass: "Create class",
@@ -97,9 +96,8 @@ export function TeacherClasses() {
     title?.scrollIntoView({ block: "start", behavior: "auto" });
   }, [selected, list.data]);
   return (
-    <>
+    <div className="teacher-workspace teacher-class-listing">
       <PageHeading
-        eyebrow={t.eyebrow}
         title={t.title}
         description={t.description}
         action={
@@ -118,56 +116,61 @@ export function TeacherClasses() {
           ) : null
         }
       />
-      <div className="tabs" role="tablist" aria-label={t.classStatus}>
-        {(["ACTIVE", "ARCHIVED"] as const).map((value) => (
-          <button
-            key={value}
-            role="tab"
-            aria-selected={status === value}
-            className={status === value ? "active" : ""}
-            onClick={() => {
-              navigate(value === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes");
-            }}
-          >
-            {value === "ACTIVE" ? t.active : t.archived}
-          </button>
-        ))}
+      <div className="teacher-workspace-toolbar">
+        <div className="teacher-workspace-tabs" role="tablist" aria-label={t.classStatus}>
+          {(["ACTIVE", "ARCHIVED"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={status === value}
+              onClick={() => navigate(value === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes")}
+            >
+              {value === "ACTIVE" ? t.active : t.archived}
+            </button>
+          ))}
+        </div>
       </div>
       <LoadError query={list} what={t.classList} />
-      <div className="class-grid">
-        {list.isLoading && <CardSkeleton count={3} />}
-        {list.data?.map((c) => (
-          <button
-            key={c.id}
-            className={"panel class-card " + (selected === c.id ? "selected" : "")}
-            aria-pressed={selected === c.id}
-            onClick={() => setSelected(c.id)}
-          >
-            <Users size={24} />
-            <h3>{c.name}</h3>
-            <p>
-              {t.grade(c.grade)} · {t.members(c.members.approved)}
-               {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
-            </p>
-            <p>{t.activeWork(c.assignments.active)}</p>
-            <div className="badge-row">
-              {c.status === "ARCHIVED" ? (
-                <Badge tone="outline">{t.archivedBadge}</Badge>
-              ) : (
-                <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
-              )}
-              {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
-            </div>
-          </button>
-        ))}
+      <div className={`teacher-class-content${selected && list.data?.some((classroom) => classroom.id === selected) ? " has-selection" : ""}`}>
+        <div className="class-grid">
+          {list.isLoading && <CardSkeleton count={3} />}
+          {list.data?.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={"panel class-card " + (selected === c.id ? "selected" : "")}
+              aria-pressed={selected === c.id}
+              onClick={() => setSelected(c.id)}
+            >
+              <Users size={20} aria-hidden="true" />
+              <h3>{c.name}</h3>
+              <p>
+                {t.grade(c.grade)} · {t.members(c.members.approved)}
+                 {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
+              </p>
+              <p>{t.activeWork(c.assignments.active)}</p>
+              <div className="badge-row">
+                {c.status === "ARCHIVED" ? (
+                  <Badge tone="outline">{t.archivedBadge}</Badge>
+                ) : (
+                  <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
+                )}
+                {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
+              </div>
+            </button>
+          ))}
+        </div>
+        {selected && teacher && list.data?.some((c) => c.id === selected) && (
+          <div className="teacher-class-detail">
+            <ClassDetail key={selected} classroom={list.data.find((c) => c.id === selected)!} />
+          </div>
+        )}
+        {selected && list.data && !list.data.some((c) => c.id === selected) && <Empty>Không tìm thấy lớp trong danh sách này. Hãy chọn trạng thái lớp phù hợp hoặc quay lại danh sách.</Empty>}
       </div>
       {list.data && list.data.length === 0 && (
         <Empty>{status === "ACTIVE" ? t.noClasses : t.noArchived}</Empty>
       )}
-      {selected && teacher && list.data?.some((c) => c.id === selected) && (
-        <ClassDetail key={selected} classroom={list.data.find((c) => c.id === selected)!} />
-      )}
-      {selected && list.data && !list.data.some((c) => c.id === selected) && <Empty>Không tìm thấy lớp trong danh sách này. Hãy chọn trạng thái lớp phù hợp hoặc quay lại danh sách.</Empty>}
       {creating && (
         <Modal title={t.newClass} onClose={() => setCreating(false)}>
           {issuedCode ? (
@@ -220,6 +223,6 @@ export function TeacherClasses() {
           )}
         </Modal>
       )}
-    </>
+    </div>
   );
 }

@@ -16,6 +16,7 @@ const text = defineText({
     ebookLibrary: "Thư viện Ebook",
     ebookReader: "Trình đọc ebook",
     labs: "Phòng thí nghiệm",
+    classLab: "Class Lab",
     practice: "Thực hành",
     assignments: "Bài tập",
     classes: "Lớp học",
@@ -33,6 +34,7 @@ const text = defineText({
     explore: "Khám phá",
     pagePath: "Đường dẫn trang",
     workspace: "Không gian học tập",
+    teacherWorkspace: "Không gian giáo viên",
   },
   en: {
     home: "Home",
@@ -45,6 +47,7 @@ const text = defineText({
     ebookLibrary: "Ebook library",
     ebookReader: "Ebook reader",
     labs: "Labs",
+    classLab: "Class Lab",
     practice: "Practice",
     assignments: "Assignments",
     classes: "Classes",
@@ -62,6 +65,7 @@ const text = defineText({
     explore: "Explore",
     pagePath: "Page path",
     workspace: "Learning space",
+    teacherWorkspace: "Teacher workspace",
   },
 });
 
@@ -75,6 +79,7 @@ export function TopbarBreadcrumb({
   const isStudent = user.role === "STUDENT";
   const t = text();
   const homeLabel = isStudent ? t.home : t.overview;
+  const workspaceLabel = user.role === "TEACHER" ? t.teacherWorkspace : t.workspace;
 
   const getBreadcrumbs = () => {
     if (pathname === "/") {
@@ -120,12 +125,20 @@ export function TopbarBreadcrumb({
         { label: t.labs, isCurrent: true },
       ];
     }
+    if (pathname === "/class-labs") {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: t.classLab, isCurrent: true },
+      ];
+    }
     if (pathname.startsWith("/labs/")) {
       const labId = pathname.replace("/labs/", "");
       const lab = labInfo.find((l) => l.id === labId);
+      const labsLabel = user.role === "TEACHER" ? t.classLab : t.labs;
+      const labsHref = user.role === "TEACHER" ? "/class-labs" : "/labs";
       return [
         { label: homeLabel, to: "/" },
-        { label: t.labs, to: "/labs" },
+        { label: labsLabel, to: labsHref },
         { label: lab ? lab.title : t.practice, isCurrent: true },
       ];
     }
@@ -209,7 +222,7 @@ export function TopbarBreadcrumb({
   return (
     <nav aria-label={t.pagePath} className="topbar-breadcrumb">
       <Link to="/" className="breadcrumb-root">
-        {t.workspace}
+        {workspaceLabel}
       </Link>
       {crumbs.map((crumb, idx) => (
         <span
