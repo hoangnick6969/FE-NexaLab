@@ -214,7 +214,7 @@ export function TopbarBreadcrumb({
       {crumbs.map((crumb, idx) => (
         <span
           key={idx}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+          className="topbar-crumb"
         >
           <ChevronRight size={13} className="breadcrumb-sep" aria-hidden="true" />
           {crumb.isCurrent ? (

@@ -1,4 +1,4 @@
-import { EYE_PART_IDS, type EyePartId } from "../kit/EyeModel";
+import { EYE_PART_IDS, type EyePartId } from "../kit/eye-parts";
 
 /**
  * FL-16 evidence draft (`eye-anatomy-optics`, model `eye-optics@1.0.0`). The

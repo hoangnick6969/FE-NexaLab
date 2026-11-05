@@ -274,7 +274,17 @@ function LessonGroups({ lessons, emptyCopy }: { lessons: StudentLessonCard[]; em
   );
 }
 
-function handleRadioKeys(event: React.KeyboardEvent<HTMLDivElement>) { if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return; const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')); const index = buttons.indexOf(document.activeElement as HTMLButtonElement); const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (index + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1) + buttons.length) % buttons.length; event.preventDefault(); buttons[next]?.focus(); buttons[next]?.click();
+function handleRadioKeys(event: React.KeyboardEvent<HTMLDivElement>) {
+  const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+  if (!keys.includes(event.key)) return;
+  const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
+  const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+    : (index + (forward ? 1 : -1) + buttons.length) % buttons.length;
+  event.preventDefault();
+  buttons[next]?.focus();
+  buttons[next]?.click();
 }
 
 export function StudentLessonsHub() {

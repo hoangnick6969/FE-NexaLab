@@ -1,6 +1,6 @@
 import { Check, X } from "lucide-react";
 import { defineText } from "../../../../../i18n";
-import { EYE_PART_IDS, type EyePartId } from "../kit/EyeModel";
+import { EYE_PART_IDS, type EyePartId } from "../kit/eye-parts";
 import { EYE_PART_LABELS } from "./eye-optics-evidence";
 
 const text = defineText({

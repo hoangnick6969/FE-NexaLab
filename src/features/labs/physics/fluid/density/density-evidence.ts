@@ -1,5 +1,5 @@
 import { fl03DensityConfig } from "./fl03-density.config";
-import { k3Specimen } from "../kit";
+import { k3Specimen } from "../kit/k3-config";
 
 /**
  * FL-03 evidence draft. Its shape matches the server's `density-stations@1`

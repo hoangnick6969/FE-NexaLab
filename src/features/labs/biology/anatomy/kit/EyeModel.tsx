@@ -1,3 +1,5 @@
+import { type EyePartId } from "./eye-parts";
+export { EYE_PART_IDS, type EyePartId } from "./eye-parts";
 import { useEffect, useMemo, type ReactElement } from "react";
 import * as THREE from "three";
 import {
@@ -7,9 +9,6 @@ import {
   type Profile,
 } from "./eye-geometry";
 
-/** Part ids match `eyeParts` in the server model; the rubric uses these ids. */
-export const EYE_PART_IDS = ["cornea", "aqueous", "pupil", "lens", "vitreous", "retina", "nerve", "sclera"] as const;
-export type EyePartId = (typeof EYE_PART_IDS)[number];
 
 const NERVE_ANCHOR = opticNervePath(22.6)[3];
 

@@ -2,17 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { FlaskConical, BookOpen, ArrowUpRight, ArrowRight, Check, Lock, ClipboardList, Clock3 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router-dom";
-import { api, type StudentPathway, type User } from "../../lib/api";
+import { api, type MyProgressResponse, type StudentPathway, type StudentLearningStep, type User } from "../../lib/api";
 import { Badge, Empty, ErrorBox, verdictLabel, InlineLoader } from "../../components/ui";
 import { LabCards } from "../labs/LabLibrary";
 import { labInfo } from "../labs/lab-info";
 import { defineText, formatDate } from "../../i18n";
+import { lessonActivityHref, lessonReviewHref } from "../lessons/lesson-navigation";
 import { commonText } from "../../i18n/common";
+import { openResumeAction, selectAssignedWork, selectOpenResume, type OpenCurriculumSubject } from "./dashboard-continue";
 
 const text = defineText({
   vi: {
-    stepNames: { READING: "Đọc nội dung", VIDEO: "Xem video", STUDY_CARDS: "Ôn thẻ ghi nhớ", QUIZ: "Làm bài kiểm tra nhỏ", LAB: "Bắt đầu thực hành", CHALLENGE: "Mở thử thách" } as Record<string, string>,
-    continueNames: { READING: "Bắt đầu đọc bài", VIDEO: "Xem nội dung video", STUDY_CARDS: "Bắt đầu ôn thẻ", QUIZ: "Làm bài kiểm tra nhỏ", LAB: "Bắt đầu thực hành", CHALLENGE: "Bắt đầu thử thách" } as Record<string, string>,
+    stepNames: { READING: "Đọc nội dung", VIDEO: "Xem video", BASIC_EXERCISE: "Làm bài luyện tập", STUDY_CARDS: "Ôn thẻ ghi nhớ", QUIZ: "Làm bài kiểm tra nhỏ", LAB: "Bắt đầu thực hành", CHALLENGE: "Mở thử thách" } as Record<string, string>,
     weekdays: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
     eyebrow: (grade: number) => `KHÔNG GIAN HỌC TẬP · LỚP ${grade}`,
     hello: (name: string) => `Chào ${name}`,
@@ -38,7 +39,14 @@ const text = defineText({
     findingNext: "Đang tìm bài học tiếp theo",
     yourNext: "Bài học tiếp theo của em",
     checking: "Đang kiểm tra bài tập của em.",
-    howTo: "Đọc, xem nội dung và làm bài kiểm tra nhỏ trước khi mở phần thực hành.",
+    howTo: "Chọn một bài để đọc, xem video hoặc thực hành theo nhịp của em.",
+    resumeLabel: "TIẾP TỤC HỌC",
+    reviewLabel: "XEM LẠI BÀI HỌC",
+    reviewCopy: "Mở lại bài học để xem nội dung và tiến độ đã lưu.",
+    reviewLesson: "Xem lại bài học",
+    assignmentProgressUnavailable: "Chưa kiểm tra được tiến độ bài được giao. Em vẫn có thể học tiếp nội dung mở hoặc xem danh sách bài tập.",
+    continueLearning: "Tiếp tục",
+    resumeCopy: "Tiếp tục từ hoạt động đang học dở. Tiến độ đã lưu của em được giữ lại.",
     stepOf: (n: number, total: number) => `Bước ${n}/${total}`,
     allSeen: "Em đã xem hết các bước trong bài này.",
     lessonGroup: "Bài học",
@@ -64,7 +72,7 @@ const text = defineText({
     afterLearning: "SAU KHI ĐÃ HỌC",
     simAndPractice: "Mô phỏng và thực hành",
     seeAssignments: "Xem bài tập",
-    relatedIntro: "Mỗi mô phỏng gắn với kiến thức em vừa học. Hoàn thành các bước nền tảng để mở phần thực hành phù hợp.",
+    relatedIntro: "Mỗi mô phỏng gắn với kiến thức em vừa học. Em có thể mở phần thực hành phù hợp để khám phá thêm.",
     byDueDate: "THEO HẠN HOÀN THÀNH",
     loadingAssignedLong: "Đang nạp bài được giao…",
     retry: "Thử lại",
@@ -79,8 +87,7 @@ const text = defineText({
     noRecordedAttempts: "Chưa có lần thử nào được ghi lại.",
   },
   en: {
-    stepNames: { READING: "Read the content", VIDEO: "Watch the video", STUDY_CARDS: "Review study cards", QUIZ: "Take the short quiz", LAB: "Start the practice", CHALLENGE: "Open the challenge" },
-    continueNames: { READING: "Start reading", VIDEO: "Watch the video", STUDY_CARDS: "Start the study cards", QUIZ: "Take the short quiz", LAB: "Start the practice", CHALLENGE: "Start the challenge" },
+    stepNames: { READING: "Read the content", VIDEO: "Watch the video", BASIC_EXERCISE: "Practice exercises", STUDY_CARDS: "Review study cards", QUIZ: "Take the short quiz", LAB: "Start the practice", CHALLENGE: "Open the challenge" },
     weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     eyebrow: (grade: number) => `LEARNING SPACE · GRADE ${grade}`,
     hello: (name: string) => `Hi ${name}`,
@@ -106,7 +113,14 @@ const text = defineText({
     findingNext: "Finding your next lesson",
     yourNext: "Your next lesson",
     checking: "Checking your assignments.",
-    howTo: "Read, watch and take the short quiz before the practice opens.",
+    howTo: "Choose a lesson to read, watch or practice at your own pace.",
+    resumeLabel: "CONTINUE LEARNING",
+    reviewLabel: "REVIEW THE LESSON",
+    reviewCopy: "Reopen the lesson to review its content and saved progress.",
+    reviewLesson: "Review the lesson",
+    assignmentProgressUnavailable: "Assigned progress could not be checked. You can still open your lessons or view the assignment list.",
+    continueLearning: "Continue",
+    resumeCopy: "Continue the unfinished activity with your saved progress.",
     stepOf: (n: number, total: number) => `Step ${n}/${total}`,
     allSeen: "You have seen every step of this lesson.",
     lessonGroup: "Lesson",
@@ -132,7 +146,7 @@ const text = defineText({
     afterLearning: "AFTER LEARNING",
     simAndPractice: "Simulations and practice",
     seeAssignments: "See assignments",
-    relatedIntro: "Each simulation builds on what you just learned. Finish the basic steps to open the matching practice.",
+    relatedIntro: "Each simulation builds on what you just learned. Open the matching practice to explore further.",
     byDueDate: "BY DUE DATE",
     loadingAssignedLong: "Loading assigned work…",
     retry: "Try again",
@@ -159,7 +173,12 @@ export function StudentDashboard({
 }) {
   const reduceMotion = useReducedMotion();
   const t = text();
-  const assignment = assignments.data?.find((item: any) => !["completed", "COMPLETED"].includes(item.status) && !stats.data?.progress?.some((entry: any) => entry.contentId === item.contentId && entry.status === "completed"));
+  const officialProgress = useQuery<MyProgressResponse>({
+    queryKey: ["me-progress"], queryFn: () => api("/me/progress"),
+  });
+  const assignment = officialProgress.data
+    ? selectAssignedWork<any>(assignments.data ?? [], officialProgress.data.assignments)
+    : undefined;
   const assignmentDetail = useQuery<any>({
     queryKey: ["assignment", assignment?.id],
     queryFn: () => api("/assignments/" + assignment.id),
@@ -174,22 +193,37 @@ export function StudentDashboard({
     enabled: Boolean(lessonId),
   });
   const progress = stats.data?.progress ?? [];
-  const openLessons = useQuery<any[]>({
-    queryKey: ["dashboard-open-lessons"],
-    queryFn: () => api("/lessons"),
+  const openCurriculum = useQuery<{ subjects?: OpenCurriculumSubject[] }>({
+    queryKey: ["student-open-curriculum"],
+    queryFn: () => api("/open-curriculum"),
     enabled: !assignment && progress.some((item: any) => item.status === "in_progress"),
     staleTime: 60_000,
   });
-  const resumeRow = [...progress]
-    .filter((item: any) => item.status === "in_progress" && openLessons.data?.some((lesson) => lesson.id === item.contentId))
-    .sort((a: any, b: any) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0];
-  const resume = resumeRow ? { ...resumeRow, lessonId: resumeRow.contentId, lesson: openLessons.data?.find((lesson) => lesson.id === resumeRow.contentId) } : null;
+  const resume = selectOpenResume(progress, openCurriculum.data?.subjects ?? []);
+  const resumeLesson = useQuery<{ steps: Array<Omit<StudentLearningStep, "state"> & { state: string }> }>({
+    queryKey: ["open-curriculum-lesson", resume?.id],
+    queryFn: () => api(`/open-curriculum/lessons/${encodeURIComponent(resume!.id)}`),
+    enabled: !assignment && Boolean(resume),
+  });
+  const resumeAction = resume ? openResumeAction(resume.id, resumeLesson.data?.steps ?? []) : undefined;
+  const resumeStep = resumeAction?.step;
   const attempts = stats.data?.attempts ?? [];
   const pathway = pathwayQuery.data;
   const nextStep = pathway?.steps.find((step) => step.id === pathway.nextStepId);
   const stepNames: Record<string, string> = t.stepNames;
-  const continueNames: Record<string, string> = t.continueNames;
-  const subjectName = pathway?.lesson.subject.name;
+  const continueIsLoading = (!assignment && !resume && ((assignments.isPending && !assignments.data) || (officialProgress.isPending && !officialProgress.data))) || (assignment
+    ? (assignmentDetail.isPending && !assignmentDetail.data) || (Boolean(lessonId) && pathwayQuery.isPending && !pathwayQuery.data)
+    : (stats.isPending && !stats.data) || (openCurriculum.isPending && openCurriculum.isFetching && !openCurriculum.data) || (Boolean(resume) && resumeLesson.isPending && !resumeLesson.data));
+  const continueError = assignments.error || (assignment
+    ? assignmentDetail.error || pathwayQuery.error
+    : stats.error || openCurriculum.error || resumeLesson.error);
+  const continueHref = assignment
+    ? nextStep?.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}`
+      : nextStep && ["READING", "VIDEO"].includes(nextStep.type) && lessonId
+        ? lessonActivityHref(lessonId, nextStep.type, assignment.id) ?? lessonReviewHref(lessonId)
+        : `/assignments/${encodeURIComponent(assignment.id)}${nextStep ? `#step-${encodeURIComponent(nextStep.id)}` : ""}`
+    : resumeAction?.href ?? "/lessons";
+  const subjectName = pathway?.lesson.subject.name ?? resume?.subjectName;
   const subjectTone = subjectName?.includes("Vật lý")
     ? "physics"
     : subjectName?.includes("Hóa học")
@@ -269,21 +303,21 @@ export function StudentDashboard({
           <section className={`student-continue-card subject-${subjectTone}`}>
             <div className="student-continue-copy">
               <span className="student-card-kicker">
-                {assignment ? subjectName || t.lessonsAndAssignments : t.startFromBasics}
+                {assignment ? subjectName || t.lessonsAndAssignments : resume ? resumeAction?.review ? t.reviewLabel : t.resumeLabel : t.startFromBasics}
               </span>
               <h2>
                 {assignment
                   ? pathway?.lesson.title || assignmentDetail.data?.content?.title || assignment.title
-                  : assignments.isLoading
+                  : continueIsLoading
                     ? t.findingNext
-                    : resume?.lesson?.title || t.yourNext}
+                    : resume?.title || t.yourNext}
               </h2>
               <p>
                 {assignment
                   ? pathway?.lesson.learningObjective || assignmentDetail.data?.content?.learningObjective || assignment.classroom.name
-                  : assignments.isLoading
+                  : continueIsLoading
                     ? t.checking
-                    : t.howTo}
+                    : resume ? resumeAction?.review ? t.reviewCopy : t.resumeCopy : t.howTo}
               </p>
               {pathway && nextStep && (
                 <p className="student-step-position">
@@ -292,21 +326,35 @@ export function StudentDashboard({
                 </p>
               )}
               {pathway && !nextStep && <p className="student-step-position">{t.allSeen}</p>}
-              <Link
-                className="student-continue-action"
-                to={assignment ? (nextStep?.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : nextStep && ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) && lessonId ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : "/assignments/" + assignment.id) : resume ? `/lessons/${encodeURIComponent(resume.lessonId || resume.lesson.id)}` : "/lessons"}
-              >
-                {assignment
-                  ? nextStep
-                    ? ["READING", "VIDEO", "STUDY_CARDS"].includes(nextStep.type) ? `${t.lessonGroup} · ${continueNames[nextStep.type]}` : `${t.assignmentGroup} · ${continueNames[nextStep.type]}`
-                    : pathway
-                      ? t.reviewPathway
-                      : t.openAssignment
-                  : resume ? t.lessonGroup : t.chooseLesson}
+              {continueError && (
+                <div role="alert">
+                  <ErrorBox error={continueError} />
+                  <button type="button" className="secondary" onClick={() => {
+                    if (assignments.error) assignments.refetch();
+                    if (stats.error) stats.refetch();
+                    if (openCurriculum.error) openCurriculum.refetch();
+                    if (resumeLesson.error) resumeLesson.refetch();
+                    if (assignmentDetail.error) assignmentDetail.refetch();
+                    if (pathwayQuery.error) pathwayQuery.refetch();
+                  }}>{t.retry}</button>
+                </div>
+              )}
+              {officialProgress.error && <div role="alert">
+                <p>{t.assignmentProgressUnavailable}</p>
+                <ErrorBox error={officialProgress.error} />
+                <div className="button-row">
+                  <button type="button" className="secondary" onClick={() => officialProgress.refetch()}>{t.retry}</button>
+                  <Link className="secondary" to="/assignments">{t.openAssignmentList}</Link>
+                </div>
+              </div>}
+              {continueIsLoading ? <InlineLoader message={t.findingNext} size="sm" /> : <Link className="student-continue-action" to={continueHref}>
+                {assignment ? nextStep
+                  ? `${t.continueLearning} · ${stepNames[nextStep.type]}`
+                  : t.openAssignment
+                  : resume ? resumeAction?.review ? t.reviewLesson : `${t.continueLearning} · ${stepNames[resumeStep!.type] ?? t.lessonGroup}` : t.chooseLesson}
                 <ArrowRight size={18} />
-              </Link>
-              {assignmentDetail.error && <ErrorBox error={assignmentDetail.error} />}
-              {pathwayQuery.error && <ErrorBox error={pathwayQuery.error} />}
+              </Link>}
+
             </div>
             {assignment && (
               <div className="student-continue-art" aria-hidden="true">
@@ -341,7 +389,7 @@ export function StudentDashboard({
                           <Lock size={15} strokeWidth={1.75} /><span>{stepNames[step.type]}</span>
                         </button>
                       ) : (
-                        <Link to={step.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : lessonId && ["READING", "VIDEO"].includes(step.type) ? `/lessons/${encodeURIComponent(lessonId)}?assignmentId=${encodeURIComponent(assignment.id)}` : `/assignments/${assignment.id}#step-${step.id}`}>
+                        <Link to={step.type === "STUDY_CARDS" ? `/classes?tab=resources&assignmentId=${encodeURIComponent(assignment.id)}` : lessonId && ["READING", "VIDEO"].includes(step.type) ? (lessonActivityHref(lessonId, step.type, assignment.id) ?? lessonReviewHref(lessonId)) : `/assignments/${assignment.id}#step-${step.id}`}>
                           {step.state === "COMPLETED" ? <Check size={15} strokeWidth={2} /> : <Clock3 size={15} strokeWidth={1.75} />}
                           <span>{stepNames[step.type]}</span>
                         </Link>

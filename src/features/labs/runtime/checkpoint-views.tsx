@@ -1,12 +1,15 @@
 import type { ComponentType } from "react";
 import { defineText } from "../../../i18n";
-import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "../physics/electricity/CircuitBulbActivity";
-import { EmInductionActivity } from "../physics/electricity/induction/EmInductionActivity";
+import { bulbEvidenceReady, defaultBulbEvidence } from "../physics/electricity/circuit-bulb-evidence";
+import { loadLabActivity } from "./lazy-lab-activity";
 import { defaultEmEvidence, emEvidenceReady } from "../physics/electricity/induction/em-evidence";
-import { EcologyToleranceActivity } from "../biology/ecology/tolerance/EcologyToleranceActivity";
 import { defaultEcoEvidence, ecoEvidenceReady } from "../biology/ecology/tolerance/eco-evidence";
-import { FoodWebActivity } from "../biology/ecology/food-web/FoodWebActivity";
 import { defaultFwEvidence, fwEvidenceReady } from "../biology/ecology/food-web/fw-evidence";
+
+const CircuitBulbActivity = loadLabActivity(() => import("../physics/electricity/CircuitBulbActivity").then((module) => ({ default: module.CircuitBulbActivity })));
+const EmInductionActivity = loadLabActivity(() => import("../physics/electricity/induction/EmInductionActivity").then((module) => ({ default: module.EmInductionActivity })));
+const EcologyToleranceActivity = loadLabActivity(() => import("../biology/ecology/tolerance/EcologyToleranceActivity").then((module) => ({ default: module.EcologyToleranceActivity })));
+const FoodWebActivity = loadLabActivity(() => import("../biology/ecology/food-web/FoodWebActivity").then((module) => ({ default: module.FoodWebActivity })));
 
 // Checkpoint activities: each renderer key maps to its view, default evidence,
 // submit readiness and the wording of one server observation in the result list.

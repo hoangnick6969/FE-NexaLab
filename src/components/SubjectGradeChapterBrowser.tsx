@@ -83,7 +83,7 @@ export function SubjectCover({ subjectId, subjectName, versionId }: { subjectId:
     return () => { active = false; revoke(); };
   }, [versionId]);
   return <span className={`subject-icon ${subjectId}`} aria-hidden="true">
-    {src ? <img src={src} alt="" onError={() => setSrc(null)} /> : <BookOpen />}
+    {src ? <img src={src} alt="" width="400" height="600" loading="lazy" decoding="async" onError={() => setSrc(null)} /> : <BookOpen />}
     <span className="sr-only">{subjectName}</span>
   </span>;
 }
@@ -136,7 +136,6 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
     return [...groups.entries()].sort(([, a], [, b]) => compareOrder(a.order, b.order) || a.title.localeCompare(b.title, "vi", { numeric: true }));
   }, [scopedItems]);
   const selectedChapter = chapters.find(([, chapter]) => chapter.title === chapterTitle);
-  const grades = useMemo(() => [...new Set(subjectGrades.map((item) => item.grade))], [subjectGrades]);
   const chapterItems = selectedChapter ? scopedItems
     .filter((item) => (item.chapter || commonText().noChapter).toLocaleLowerCase("vi") === selectedChapter[0])
     .sort((a, b) => compareOrder(a.itemOrder, b.itemOrder) || a.title.localeCompare(b.title, "vi", { numeric: true })) : [];
@@ -183,14 +182,11 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
         </>
       )}
     </nav>
-    {!selected ? <div className="hierarchy-grade-sections">
-      {grades.map((gradeValue) => <section className="hierarchy-grade-section" key={gradeValue} aria-labelledby={`catalog-grade-${gradeValue}`}>
-        <h3 id={`catalog-grade-${gradeValue}`}>{t.grade(gradeValue)}</h3>
-        <div className="hierarchy-grade-section-grid">{subjectGrades.filter((group) => group.grade === gradeValue).map((group) => <Link className="hierarchy-choice" key={`${group.grade}:${group.subjectId}`} to={`${basePath}/grades/${group.grade}/subjects/${encodeURIComponent(group.subjectId)}`}>
-          <SubjectCover subjectId={group.subjectId} subjectName={group.subjectName} versionId={group.coverAssetVersionId} />
-          <span className="hierarchy-choice-copy"><b>{group.subjectName}</b><small>{t.items(group.count)}</small></span><ArrowRight size={18} aria-hidden="true" />
-        </Link>)}</div>
-      </section>)}
+    {!selected ? <div className="hierarchy-subject-grid">
+      {subjectGrades.map((group) => <Link className="hierarchy-choice" key={`${group.grade}:${group.subjectId}`} to={`${basePath}/grades/${group.grade}/subjects/${encodeURIComponent(group.subjectId)}`}>
+        <SubjectCover subjectId={group.subjectId} subjectName={group.subjectName} versionId={group.coverAssetVersionId} />
+        <span className="hierarchy-choice-copy"><span className="hierarchy-choice-grade">{t.grade(group.grade)}</span><b>{group.subjectName}</b><small>{t.items(group.count)}</small></span><ArrowRight size={18} aria-hidden="true" />
+      </Link>)}
     </div> : !selectedChapter ? <>
       <header className="hierarchy-screen-heading"><span className="eyebrow">{t.grade(selected.grade).toLocaleUpperCase()}</span><h2>{selected.subjectName}</h2><p>{t.chapterIndex} · {scopedItems.length} {itemLabel}</p></header>
       {chapters.length ? <ol className="hierarchy-chapter-list" aria-label={t.chapterIndexLabel}>

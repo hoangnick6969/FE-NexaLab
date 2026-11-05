@@ -11,14 +11,17 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
-import { MassConservationActivity } from "./chemistry/wet-bench/MassConservationActivity";
-import { ThermalEnergyActivity } from "./physics/thermal/ThermalEnergyActivity";
-import { LeverInvestigationActivity } from "./physics/mechanics/LeverInvestigationActivity";
 import { useLabRunHost } from "./runtime/lab-run-host";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { LabSpace } from "./shared/LabSpace";
+
+import { loadLabActivity } from "./runtime/lazy-lab-activity";
+
+const MassConservationActivity = loadLabActivity(() => import("./chemistry/wet-bench/MassConservationActivity").then((module) => ({ default: module.MassConservationActivity })));
+const ThermalEnergyActivity = loadLabActivity(() => import("./physics/thermal/ThermalEnergyActivity").then((module) => ({ default: module.ThermalEnergyActivity })));
+const LeverInvestigationActivity = loadLabActivity(() => import("./physics/mechanics/LeverInvestigationActivity").then((module) => ({ default: module.LeverInvestigationActivity })));
 
 const text = defineText({
   vi: {

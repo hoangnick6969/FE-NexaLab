@@ -1,3 +1,4 @@
+import { chapterLessonHref } from "./lesson-navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
@@ -339,9 +340,7 @@ export function LessonDetail() {
           <ol id="lesson-chapter-toc-list" className={`toc-sidebar-list${chapterListOpen ? " is-open" : ""}`}>
             {chapterLessons.map((item: any, index: number) => {
               const isCurrent = item.id === id;
-              const linkUrl = assignmentId
-                ? `/lessons/${encodeURIComponent(item.id)}?assignmentId=${encodeURIComponent(assignmentId)}`
-                : `/lessons/${encodeURIComponent(item.id)}`;
+              const linkUrl = chapterLessonHref(item.id, id, assignmentId);
               return (
                 <li key={item.id}>
                   <Link
@@ -367,7 +366,7 @@ export function LessonDetail() {
             {prevLesson ? (
               <Link
                 className="lesson-nav-btn prev"
-                to={assignmentId ? `/lessons/${encodeURIComponent(prevLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(prevLesson.id)}`}
+                to={chapterLessonHref(prevLesson.id, id, assignmentId)}
               >
                 ← {t.prevLesson}: {prevLesson.title}
               </Link>
@@ -375,7 +374,7 @@ export function LessonDetail() {
             {nextLesson && (
               <Link
                 className="lesson-nav-btn next"
-                to={assignmentId ? `/lessons/${encodeURIComponent(nextLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(nextLesson.id)}`}
+                to={chapterLessonHref(nextLesson.id, id, assignmentId)}
               >
                 {t.nextLesson}: {nextLesson.title} →
               </Link>
@@ -440,7 +439,7 @@ export function LessonDetail() {
             {prevLesson ? (
               <Link
                 className="lesson-nav-btn prev"
-                to={assignmentId ? `/lessons/${encodeURIComponent(prevLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(prevLesson.id)}`}
+                to={chapterLessonHref(prevLesson.id, id, assignmentId)}
               >
                 ← {t.prevLesson}: {prevLesson.title}
               </Link>
@@ -448,7 +447,7 @@ export function LessonDetail() {
             {nextLesson && (
               <Link
                 className="lesson-nav-btn next"
-                to={assignmentId ? `/lessons/${encodeURIComponent(nextLesson.id)}?assignmentId=${encodeURIComponent(assignmentId)}` : `/lessons/${encodeURIComponent(nextLesson.id)}`}
+                to={chapterLessonHref(nextLesson.id, id, assignmentId)}
               >
                 {t.nextLesson}: {nextLesson.title} →
               </Link>
@@ -532,9 +531,24 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
       const label = reference.pdfPage ? `PDF trang ${reference.pdfPage}` : "";
       const printed = reference.printedPageLabel ? `trang in ${reference.printedPageLabel}` : "";
       const text = [label, printed].filter(Boolean).join(" · ");
-      return text ? [[`${reference.pdfPage ?? "printed"}:${reference.printedPageLabel ?? ""}`, { text, page: reference.pdfPage }] as const] : [];
+      return text ? [[`${reference.pdfPage ?? "printed"}:${reference.printedPageLabel ?? ""}`, { text, page: reference.pdfPage, printedPage: reference.printedPageLabel }] as const] : [];
     })).values()];
-    return <span className="lesson-structured-sources">{references.length ? references.map((reference) => <small className="lesson-structured-source" key={`${reference.page}:${reference.text}`}><span>Nguồn {reference.text}</span>{reference.page && <>{sourceAvailable ? <button type="button" className="source-sgk-light-btn" onClick={() => onOpenSource(reference.page!)}><BookOpen size={13} /> Xem trong SGK</button> : <><button type="button" className="source-sgk-light-btn is-disabled" disabled title="Bản PDF nguồn hiện chưa khả dụng"><BookOpen size={13} /> Xem trong SGK</button><span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span></>}</>}</small>) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}</span>;
+    return <span className="lesson-structured-sources">
+      {references.length ? references.map((reference) => (
+        <small className="lesson-structured-source" key={`${reference.page}:${reference.text}`}>
+          {reference.page ? <>
+            <button type="button" className={`source-sgk-light-btn${sourceAvailable ? "" : " is-disabled"}`}
+              disabled={!sourceAvailable}
+              title={sourceAvailable ? `Nguồn ${reference.text}` : `Nguồn ${reference.text} · Bản PDF nguồn hiện chưa khả dụng`}
+              aria-label={`Xem trong SGK · ${reference.text}`}
+              onClick={() => onOpenSource(reference.page!)}>
+              <BookOpen size={13} aria-hidden="true" /> SGK · {reference.printedPage ? `Trang ${reference.printedPage}` : `PDF ${reference.page}`}
+            </button>
+            {!sourceAvailable && <span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span>}
+          </> : <span>Nguồn SGK · {reference.text}</span>}
+        </small>
+      )) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}
+    </span>;
   };
   const textOf = (item: any) => typeof item === "string" ? item : item?.text ?? item?.content ?? item?.prompt ?? "";
   const coveredBlocks = new Set<string>();

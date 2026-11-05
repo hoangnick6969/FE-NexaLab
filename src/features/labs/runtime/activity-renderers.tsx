@@ -1,26 +1,25 @@
-import { lazy, Suspense, type ComponentType } from "react";
-import { InlineLoader } from "../../../components/ui";
-import { defineText } from "../../../i18n";
-import { Circuit, defaultCircuit } from "../physics/electricity/Circuit";
-import { bulbEvidenceReady, CircuitBulbActivity, defaultBulbEvidence } from "../physics/electricity/CircuitBulbActivity";
+import type { ComponentType } from "react";
+import { loadLabActivity } from "./lazy-lab-activity";
+import { defaultCircuit } from "../physics/electricity/circuit-state";
+import { bulbEvidenceReady, defaultBulbEvidence } from "../physics/electricity/circuit-bulb-evidence";
 import { circuitBulbCopy, CircuitBulbResult } from "../physics/electricity/CircuitBulbResult";
-import { Chemistry } from "../chemistry/Chemistry";
 import { checkpointViewForRenderer } from "./checkpoint-views";
-import { DensityActivity, defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/DensityActivity";
+import { defaultDensityEvidence, densityEvidenceReady } from "../physics/fluid/density/density-evidence";
 import { DensityResult, densityCopy } from "../physics/fluid/density/DensityResult";
-import { BuoyancyActivity } from "../physics/fluid/buoyancy/BuoyancyActivity";
 import { defaultBuoyancyEvidence, buoyancyEvidenceReady, BuoyancyResult, buoyancyCopy } from "../physics/fluid/buoyancy/BuoyancyEvidence";
 import { defaultGeneEvidence, geneEvidenceReady } from "../biology/molecular/gene-protein/gene-evidence";
 import { GeneResult, geneResultCopy } from "../biology/molecular/gene-protein/GeneResult";
 import { defaultEyeOpticsEvidence, eyeOpticsEvidenceReady } from "../biology/anatomy/eye-optics/eye-optics-evidence";
 import { EyeOpticsResult, eyeOpticsCopy } from "../biology/anatomy/eye-optics/EyeOpticsResult";
 
-const text = defineText({ vi: { loadingEye: "Đang nạp mô hình 3D giải phẫu mắt…", loadingGene: "Đang nạp mô hình phân tử DNA…" }, en: { loadingEye: "Loading the 3D eye anatomy model…", loadingGene: "Loading the DNA molecule scene…" } });
-const Eye = lazy(() => import("../biology/anatomy/Eye"));
-// FL-16 eye anatomy and optics. Pulls in the anatomy kit only when this Lab opens.
-const EyeOpticsActivity = lazy(() => import("../biology/anatomy/eye-optics/EyeOpticsActivity").then((module) => ({ default: module.EyeOpticsActivity })));
-// FL-27 pulls in the K7 molecular kit; load it only when that Lab opens.
-const GeneProteinActivity = lazy(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
+const Circuit = loadLabActivity(() => import("../physics/electricity/Circuit").then((module) => ({ default: module.Circuit })));
+const CircuitBulbActivity = loadLabActivity(() => import("../physics/electricity/CircuitBulbActivity").then((module) => ({ default: module.CircuitBulbActivity })));
+const Chemistry = loadLabActivity(() => import("../chemistry/Chemistry").then((module) => ({ default: module.Chemistry })));
+const DensityActivity = loadLabActivity(() => import("../physics/fluid/density/DensityActivity").then((module) => ({ default: module.DensityActivity })));
+const BuoyancyActivity = loadLabActivity(() => import("../physics/fluid/buoyancy/BuoyancyActivity").then((module) => ({ default: module.BuoyancyActivity })));
+const Eye = loadLabActivity(() => import("../biology/anatomy/Eye"));
+const EyeOpticsActivity = loadLabActivity(() => import("../biology/anatomy/eye-optics/EyeOpticsActivity").then((module) => ({ default: module.EyeOpticsActivity })));
+const GeneProteinActivity = loadLabActivity(() => import("../biology/molecular/gene-protein/GeneProteinActivity").then((module) => ({ default: module.GeneProteinActivity })));
 
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
@@ -70,7 +69,7 @@ const renderers: readonly LabActivityRenderer[] = [
     },
   },
   {
-    // FL-20 ecology-tolerance, 2D only.
+    // FL-20 ecology-tolerance; its scene loads when selected.
     key: "ecology-tolerance", labId: "ecology-tolerance", modelRefs: ["ecology-tolerance@1.0.0"], envelope: "checkpoints",
     defaultState: () => checkpointViewForRenderer("ecology-tolerance")!.defaultEvidence(),
     Activity: ({ state, onChange }) => {
@@ -84,7 +83,7 @@ const renderers: readonly LabActivityRenderer[] = [
     },
   },
   {
-    // FL-21 food-web, 2D only.
+    // FL-21 food-web; its scene loads when selected.
     key: "food-web", labId: "food-web", modelRefs: ["food-web@1.0.0"], envelope: "checkpoints",
     defaultState: () => checkpointViewForRenderer("food-web")!.defaultEvidence(),
     Activity: ({ state, onChange }) => {
@@ -120,9 +119,7 @@ const renderers: readonly LabActivityRenderer[] = [
     // and marks the evidence with rubric gene-protein-stations@1.0.0.
     key: "gene-expression", labId: "gene-protein", modelRefs: ["gene-expression@1.0.0"], envelope: "evidence",
     defaultState: defaultGeneEvidence,
-    Activity: ({ state, onChange, resetKey, runtimeParams }) => <Suspense fallback={<InlineLoader message={text().loadingGene} />}>
-      <GeneProteinActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />
-    </Suspense>,
+    Activity: ({ state, onChange, resetKey, runtimeParams }) => <GeneProteinActivity state={state} onChange={onChange} resetKey={resetKey} runtimeParams={runtimeParams} />,
     guided: { ready: geneEvidenceReady, copy: geneResultCopy, Result: GeneResult },
   },
   {
@@ -146,17 +143,13 @@ const renderers: readonly LabActivityRenderer[] = [
   {
     key: "eye", labId: "eye", modelRefs: ["eye@1.0.0"], envelope: "labState",
     defaultState: () => ({ answers: {} }),
-    Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
-      <Eye key={resetKey} state={state} onChange={onChange} />
-    </Suspense>,
+    Activity: ({ state, onChange, resetKey }) => <Eye key={resetKey} state={state} onChange={onChange} />,
   },
   {
     // FL-16 eye structure (phase 1) and accommodation with corrective lenses (phase 2). Rubric eye-anatomy-optics@1.0.0.
     key: "eye-anatomy-optics", labId: "eye-optics", modelRefs: ["eye-optics@1.0.0"], envelope: "evidence",
     defaultState: defaultEyeOpticsEvidence,
-    Activity: ({ state, onChange, resetKey }) => <Suspense fallback={<InlineLoader message={text().loadingEye} />}>
-      <EyeOpticsActivity state={state} onChange={onChange} resetKey={resetKey} />
-    </Suspense>,
+    Activity: ({ state, onChange, resetKey }) => <EyeOpticsActivity state={state} onChange={onChange} resetKey={resetKey} />,
     guided: { ready: eyeOpticsEvidenceReady, copy: eyeOpticsCopy, Result: EyeOpticsResult },
   },
 ];
