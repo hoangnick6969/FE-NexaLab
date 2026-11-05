@@ -68,7 +68,7 @@ Backend có hướng dẫn tạo database, migration và seed tại [README BE](
 | Phụ huynh | `parent@nexalab.local` |
 | Admin | `admin@nexalab.local` |
 
-Mật khẩu do người thiết lập backend chọn qua `SEED_PASSWORD`. Mã lớp mẫu là `NEXA8A`.
+Mật khẩu do người thiết lập backend chọn qua `SEED_PASSWORD`. Lớp mẫu chưa có mã tham gia; giáo viên tạo mã trong trang chi tiết lớp.
 
 ### Cấu hình API
 
