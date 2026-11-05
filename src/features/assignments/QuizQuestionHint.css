@@ -1,0 +1,5 @@
+/* SAI-03A: the hint sits under the options, inside the question card. */
+.quiz-question-hint { display: grid; gap: 6px; margin: 10px 0; justify-items: start; }
+.quiz-question-hint .text-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.quiz-question-hint-body { justify-self: stretch; padding: 10px 12px; border-left: 3px solid var(--accent, #2d7a5f); border-radius: 8px; background: var(--surface-muted, rgba(18, 38, 30, 0.04)); }
+.quiz-question-hint-body p { margin: 4px 0; overflow-wrap: anywhere; }
