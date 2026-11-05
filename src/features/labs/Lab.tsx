@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { useLabRunHost } from "./runtime/lab-run-host";
-import { CheckpointHintPanel } from "./runtime/CheckpointHintPanel";
+import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
 import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
@@ -265,23 +265,26 @@ export default function Lab() {
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
   if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
+  // SAI-01A step 3: event-scored Labs render their own result, so the after-submit hint floats beside it.
+  const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict && labRun.attempt.verdict !== "passed"
+    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu hoạt động bảo toàn khối lượng. Số cân chỉ mở sau khi em ghi dự đoán.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
+      : <><MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
           onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()}
-          attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+          attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
   if (id === "lever-equilibrium") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-06 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành đòn bẩy. Dự đoán được ghi trước khi mở kết quả.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+      : <><LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
   if (id === "thermal-energy") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-07 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành năng lượng nhiệt.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />);
+      : <><ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />{eventHint}</>);
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
