@@ -189,6 +189,14 @@ export default function App() {
       return next;
     });
   };
+  useEffect(() => {
+    if (!/^\/lessons\/[^/]+/.test(location.pathname)) return;
+    setSidebarCollapsed((collapsed) => {
+      if (collapsed) return collapsed;
+      try { localStorage.setItem("nexalab:sidebar-collapsed", "true"); } catch { /* Storage is optional. */ }
+      return true;
+    });
+  }, [location.pathname]);
   useLayoutEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [location.pathname, location.hash]);
@@ -246,7 +254,7 @@ export default function App() {
     <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
   </Suspense>;
   return (
-    <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+    <div className={`app-shell${user.role === "STUDENT" ? " app-shell-student" : ""}${sidebarCollapsed ? " sidebar-collapsed" : ""}${/^\/lessons\/[^/]+/.test(location.pathname) ? " lesson-focus-mode" : ""}`}>
       <aside className={`sidebar${sidebarCollapsed ? " is-collapsed" : ""}`}>
         <div className="sidebar-header">
           <Link to="/" className="brand" title="NexaLab">

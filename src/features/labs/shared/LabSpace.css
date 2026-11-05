@@ -4,7 +4,7 @@
 .lab-space-header h1 { margin: 0; font-size: 16px; font-weight: 650; max-width: 45vw; letter-spacing: -0.2px; }
 .lab-space-header .secondary { min-height: 36px; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 10px; }
 .lab-space button, .lab-space select, .lab-space summary, .lab-space input, .lab-space a { min-height: 44px; }
-.lab-space button:focus-visible, .lab-space summary:focus-visible, .lab-space a:focus-visible { outline: 3px solid #287875; outline-offset: 3px; }
+.lab-space button:focus-visible, .lab-space summary:focus-visible, .lab-space a:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
 .lab-space-body { position: absolute; inset: 0; overflow: auto; padding: 94px 18px 18px; }
 .lab-space .lab-layout { display: block; }
 .lab-space .lab-workspace { border: 0; background: transparent; overflow: visible; }
@@ -139,7 +139,7 @@
 .lab-space [data-testid="lab-draft-restore"] .lab-actions .primary {
   background: var(--brand-green);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(36, 91, 71, 0.2);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 20%, transparent);
 }
 .lab-space [data-testid="lab-draft-restore"] .lab-actions .primary:hover {
   background: var(--brand-green-hover);
@@ -193,7 +193,7 @@
   font-size: 13px;
   background: var(--brand-green);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(36, 91, 71, 0.25);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 25%, transparent);
   transition: all 0.16s ease;
 }
 .lab-space .lab-workspace > .lab-actions .primary:hover:not(:disabled) {

@@ -5,8 +5,8 @@
   color-scheme: light;
   --text-base: #233c34;
   --green: #245b47;
-  --brand-green: #245b47;
-  --brand-green-hover: #194c38;
+  --brand-green: var(--brand);
+  --brand-green-hover: var(--brand-hover);
   --dark: #183f35;
   --muted: #7a857c;
   --line: #e4e8df;
@@ -18,8 +18,6 @@
   color-scheme: dark;
   --text-base: #d6e3dd;
   --green: #7cc3a4;
-  --brand-green: #2b6b53;
-  --brand-green-hover: #347c61;
   --dark: #d2e6dc;
   --muted: #9aa79e;
   --line: #2e3a37;
@@ -31,6 +29,7 @@
   --bg: #f6f7f3;
   --bg-student: #c9d3e3;
   --brand: #1f6f78;
+  --brand-hover: #185b63;
   --brand-ink: #1f6f78;
   --fill-amber-68: #bd914d;
   --fill-amber-76: #d7a92c;
@@ -322,6 +321,27 @@
   --text: #14202b;
   --text-green: #233c34;
   --text-muted: #506070;
+  --lesson-page: var(--fill-neutral-97);
+  --lesson-surface: var(--surface);
+  --lesson-sky: var(--fill-sky-93);
+  --lesson-blue: var(--ink-sky-44);
+  --lesson-navy: var(--text);
+  --lesson-muted: var(--text-muted);
+  --lesson-action: var(--brand);
+  --lesson-border: var(--line-neutral-93-2);
+  --student-sidebar-bg: var(--surface);
+  --student-sidebar-surface: var(--fill-neutral-92);
+  --student-sidebar-ink: var(--text);
+  --student-sidebar-muted: var(--muted);
+  --student-sidebar-accent: var(--brand);
+  --action-toast-surface: var(--surface);
+  --action-toast-ink: var(--text);
+  --action-toast-muted: var(--text-muted);
+  --action-toast-border: var(--line-neutral-93-2);
+  --action-toast-hover: var(--fill-neutral-97);
+  --action-toast-success-ink: var(--ink-green-43);
+  --action-toast-info-ink: var(--ink-sky-44);
+  --action-toast-error-ink: var(--fill-red-54);
   /* UI component tokens */
   --fill-neutral-98: #f8faf7;
   --line-focus: #89bda0;

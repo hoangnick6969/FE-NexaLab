@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Calendar, ArrowRight, BookOpen, PlayCircle, HelpCircle, FlaskConical, FileText, ExternalLink, Play, CheckCircle2, Atom } from "lucide-react";
+import { Calendar, ArrowRight, BookOpen, PlayCircle, HelpCircle, FlaskConical, FileText, ExternalLink, CheckCircle2 } from "lucide-react";
 import { type MyProgressAssignment } from "../../lib/api";
 import { Badge } from "../../components/ui";
 import { type SheetView, stateNames, stateTones, stepLink, stepNames, time } from "./progress-format";
@@ -69,115 +69,65 @@ function getStepIcon(type: string) {
   }
 }
 
-  export function SubjectIcon({ subjectId, size = 30, className }: { subjectId: string; size?: number; className?: string }) {
-    if (subjectId.includes("chem")) return <FlaskConical size={size} strokeWidth={1.8} className={className} />;
-    if (subjectId.includes("bio")) return <Atom size={size} strokeWidth={1.8} className={className} />;
-    return <BookOpen size={size} strokeWidth={1.8} className={className} />;
-  }
+export function AssignmentProgress({
+  assignment,
+  onOpen,
+}: {
+  assignment: MyProgressAssignment;
+  onOpen: (view: SheetView, event: React.MouseEvent<HTMLElement>) => void;
+}) {
+  const next = assignment.steps.find((step) => step.stepId === assignment.nextStepId);
+  const percent = assignment.percent;
+  const isCompleted = assignment.completed;
+  const targetLink = stepLink(assignment.assignmentId, assignment.nextStepId)!;
 
-  export function WatchProgressBar({ percent }: { percent: number | null }) {
-    if (percent === null) return null;
-    return (
-      <div className="youtube-watch-progress" aria-hidden="true">
-        <div className="youtube-watch-bar" style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
-      </div>
-    );
-  }
-
-  export function AssignmentProgress({
-    assignment,
-    onOpen,
-  }: {
-    assignment: MyProgressAssignment;
-    onOpen: (view: SheetView, event: React.MouseEvent<HTMLElement>) => void;
-  }) {
-    const next = assignment.steps.find((step) => step.stepId === assignment.nextStepId);
-    const percent = assignment.percent;
-    const isCompleted = assignment.completed;
-    const subjectId = (assignment.subject?.id || "physics").toLowerCase();
-    const targetLink = stepLink(assignment.assignmentId, assignment.nextStepId)!;
-
-    return (
-      <article className="panel assignment-progress">
-        <div className="assignment-progress-card-inner">
-          {/* Lesson Thumbnail with YouTube Watch Progression Line */}
-          <Link
-            to={targetLink}
-            className="assignment-thumb-link"
-            tabIndex={-1}
-            aria-hidden="true"
-          >
-            <div className={`assignment-progression-thumb subject-thumb-${subjectId}`}>
-              <div className="thumb-top-badges">
-                <span className="lesson-order-pill">
-                  {assignment.subject.name}
-                </span>
-                {isCompleted ? (
-                  <span className="thumb-status-badge status-completed">
-                    <CheckCircle2 size={12} /> {t.completed}
-                  </span>
-                ) : percent !== null && percent > 0 ? (
-                  <span className="thumb-status-badge status-doing">
-                    <Play size={10} fill="currentColor" /> {percent}%
-                  </span>
-                ) : null}
-              </div>
-
-                <div className="thumb-graphic-pattern" aria-hidden="true">
-                  <SubjectIcon subjectId={subjectId} size={52} className="thumb-watermark-icon" />
-                </div>
-
-                <WatchProgressBar percent={percent} />
-              </div>
-          </Link>
-
-          {/* Info & Completion Section */}
-          <div className="assignment-progress-info">
-            <header>
-              <div className="assignment-progress-meta">
-                <p className="eyebrow">{assignment.subject.name} · {assignment.chapter}</p>
-                <h3>{assignment.title}</h3>
-                <div className="assignment-meta-row tiny muted">
-                  {assignment.dueDate ? (
-                    <span className="due-date-tag">
-                      <Calendar size={13} aria-hidden="true" />
-                      <span>{t.due(formatDate(assignment.dueDate))}</span>
-                    </span>
-                  ) : (
-                    <span>{commonText().noDueDate}</span>
-                  )}{" "}
-                  {assignment.kind === "LAB" && <Badge tone="outline">{t.practice}</Badge>}{" "}
-                  {assignment.contentArchived && <Badge tone="outline">{t.archived}</Badge>}{" "}
-                  {assignment.overdue && !assignment.completed && <Badge tone="not_passed">{t.overdue}</Badge>}
-                </div>
-              </div>
-              <Link className="primary assignment-action-link" to={targetLink}>
-                <span>{assignment.completed ? t.review : next ? t.continue(stepNames[next.type]) : t.open}</span>
-                <ArrowRight size={15} aria-hidden="true" />
-              </Link>
-            </header>
-
-            <div className="completion-meter">
-              <span className="completion-ratio">
-                <b>{assignment.completedRequired}/{assignment.totalRequired}</b> {t.requiredSteps}
+  return (
+    <article className="panel assignment-progress">
+      <header className="assignment-progress-header">
+        <div className="assignment-progress-meta">
+          <p className="eyebrow">{assignment.subject.name} · {assignment.chapter}</p>
+          <h3>{assignment.title}</h3>
+          <div className="assignment-meta-row tiny muted">
+            {assignment.dueDate ? (
+              <span className="due-date-tag">
+                <Calendar size={13} aria-hidden="true" />
+                <span>{t.due(formatDate(assignment.dueDate))}</span>
               </span>
-              {assignment.percent === null ? (
-                <span className="tiny muted">{t.noRequired}</span>
-              ) : (
-                <div
-                  className="progress-track assignment-progress-track"
-                  role="progressbar"
-                  aria-label={t.ratio}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={assignment.percent}
-                >
-                  <i style={{ width: assignment.percent + "%" }} />
-                </div>
-              )}
-            </div>
+            ) : (
+              <span>{commonText().noDueDate}</span>
+            )}
+            {isCompleted && <Badge tone="passed">{t.completed}</Badge>}
+            {assignment.kind === "LAB" && <Badge tone="outline">{t.practice}</Badge>}
+            {assignment.contentArchived && <Badge tone="outline">{t.archived}</Badge>}
+            {assignment.overdue && !assignment.completed && <Badge tone="not_passed">{t.overdue}</Badge>}
           </div>
         </div>
+        <Link className="primary assignment-action-link" to={targetLink}>
+          <span>{assignment.completed ? t.review : next ? t.continue(stepNames[next.type]) : t.open}</span>
+          <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </header>
+
+      <div className="completion-meter">
+        <span className="completion-ratio">
+          <b>{assignment.completedRequired}/{assignment.totalRequired}</b> {t.requiredSteps}
+          {percent !== null && ` (${percent}%)`}
+        </span>
+        {assignment.percent === null ? (
+          <span className="tiny muted">{t.noRequired}</span>
+        ) : (
+          <div
+            className="progress-track assignment-progress-track"
+            role="progressbar"
+            aria-label={t.ratio}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={assignment.percent}
+          >
+            <i style={{ width: assignment.percent + "%" }} />
+          </div>
+        )}
+      </div>
 
         {assignment.steps.length > 0 && (
           <div className="table-wrap">

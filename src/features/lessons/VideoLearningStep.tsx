@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { api, streamMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 import { defineText } from "../../i18n";
+import { useActionToast } from "../../components/ActionToasts";
 
 const text = defineText({
   vi: {
@@ -24,6 +25,8 @@ const text = defineText({
     resumeFrom: (s: number) => `tiếp tục từ ${s} giây`,
     unsaved: (s: number) => `Chưa lưu: ${s} giây`,
     saveAgain: "Thử lưu lại",
+    loadErrorBody: "Hãy tải lại video hoặc báo cho giáo viên.",
+    progressErrorBody: "Hãy thử lưu lại tiến độ.",
   },
   en: {
     loadFailed: "The video could not be loaded",
@@ -45,6 +48,8 @@ const text = defineText({
     resumeFrom: (s: number) => `resume from ${s} s`,
     unsaved: (s: number) => `Not saved: ${s} s`,
     saveAgain: "Try saving again",
+    loadErrorBody: "Reload the video or let your teacher know.",
+    progressErrorBody: "Try saving your progress again.",
   },
 });
 const t = text();
@@ -68,6 +73,7 @@ export function VideoLearningStep({
   onReconciled: (pathway: StudentPathway) => void;
   progressPath?: string;
 }) {
+  const toast = useActionToast();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const confirmedPositionRef = useRef(step.lastPosition ?? 0);
   const unsentRef = useRef<VideoObservation | null>(null);
@@ -118,6 +124,7 @@ export function VideoLearningStep({
         setSourceLoading(false);
         setMediaUnavailable(true);
         setSaveError(error instanceof Error ? error.message : t.loadFailed);
+        toast({ title: t.loadFailed, description: t.loadErrorBody, tone: "error" });
       });
     return () => {
       active = false;
@@ -157,6 +164,7 @@ export function VideoLearningStep({
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof Error ? error.message : t.saveFailed);
+      toast({ title: t.saveFailed, description: t.progressErrorBody, tone: "error" });
     } finally {
       pendingRef.current = false;
       if (succeeded && flushRequestedRef.current && unsentRef.current) {
@@ -205,6 +213,7 @@ export function VideoLearningStep({
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof Error ? error.message : t.saveFailed);
+      toast({ title: t.saveFailed, description: t.progressErrorBody, tone: "error" });
     } finally {
       pendingRef.current = false;
     }
@@ -300,8 +309,8 @@ export function VideoLearningStep({
       <div className="video-save-status" role={saveState === "error" ? "alert" : "status"}>
         {saveState === "saving" && t.saving}
         {saveState === "saved" && t.saved(step.progressValue)}
-        {saveState === "idle" && `${t.saved(step.progressValue)}${officialPosition ? ` · ${t.resumeFrom(officialPosition)}` : ""}`}
-        {hasUnsentEvidence && saveState !== "saving" && saveState !== "error" && ` · ${t.unsaved(localPosition)}`}
+        {saveState === "idle" && `${t.saved(step.progressValue)}${officialPosition ? `, ${t.resumeFrom(officialPosition)}` : ""}`}
+        {hasUnsentEvidence && saveState !== "saving" && saveState !== "error" && `, ${t.unsaved(localPosition)}`}
         {saveState === "error" && (
           <><span>{saveError || t.saveFailed}</span><button type="button" onClick={retry}>{t.saveAgain}</button></>
         )}

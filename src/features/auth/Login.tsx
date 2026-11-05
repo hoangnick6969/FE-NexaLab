@@ -148,7 +148,6 @@ export function Login() {
       </section>
       <section className="login-form">
         <div>
-          <Badge>{t.welcome}</Badge>
           <h2>
             {mode === "admin-login"
               ? t.adminPortal
@@ -239,7 +238,7 @@ export function Login() {
             </button>
           </form>
           <div className="login-links">
-            <button
+            {(["login", "student-login"].includes(mode)) && <button
               onClick={() => {
                 setMode(mode === "student-login" ? "login" : "student-login");
                 setMessage("");
@@ -248,23 +247,23 @@ export function Login() {
               {mode === "student-login"
                 ? t.adultLogin
                 : t.studentByUsername}
-            </button>
-            <button
+            </button>}
+            {(["login", "student-login", "admin-login"].includes(mode)) && <button
               onClick={() => {
                 setMode(mode === "forgot" ? "login" : "forgot");
                 setMessage("");
               }}
             >
               {t.forgotLink}
-            </button>
-            <button
+            </button>}
+            {(["forgot", "reset", "register"].includes(mode)) && <button
               onClick={() => {
-                setMode(mode === "login" ? "register" : "login");
+                setMode("login");
                 setMessage("");
               }}
             >
-              {mode === "login" ? t.registerParent : t.backToLogin}
-            </button>
+              {t.backToLogin}
+            </button>}
           </div>
           <p className="tiny muted">
             {t.noCamera}

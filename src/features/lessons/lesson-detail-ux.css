@@ -1,0 +1,670 @@
+/* Hallmark · checked: 2026-11-05 · genre: modern-minimal (inferred) · scope: app · redesign: full · v2.0.0 */
+/* critique: tabs overemphasized; chapter list misaligned; reading CTA green; materials lack hierarchy */
+/* floor: 0 FAIL · 0 WARN · 1 WAIVED (28b) · kept: lesson title, content, route and progress actions */
+/* built: the project · redesign: full */
+/* Hallmark · waive 28b · below the fold and not LCP · video lesson is opened from its tab; data has no poster */
+
+.app-shell-student .lesson-detail-page .page-heading,
+.app-shell-student .lesson-detail-page .lesson-detail-tabs,
+.app-shell-student .lesson-detail-page .lesson-detail-two-col {
+  width: min(100%, 1240px);
+  margin-inline: auto;
+}
+
+.app-shell-student .lesson-detail-page .lesson-detail-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--lesson-border);
+  scroll-padding-inline: 16px;
+  scrollbar-width: thin;
+}
+
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lesson-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+}
+
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button:hover { color: var(--lesson-navy); }
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button.active {
+  border-bottom-color: var(--brand);
+  color: var(--brand);
+  font-weight: 600;
+}
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button:active { transform: translateY(1px); }
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button:disabled { cursor: not-allowed; opacity: .55; }
+.app-shell-student .lesson-detail-page .lesson-detail-tabs button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.app-shell-student .lesson-detail-page .page-heading h1,
+.app-shell-student .toc-sidebar-header h2,
+.app-shell-student .lesson-materials-heading h2 { text-wrap: balance; }
+
+.app-shell-student .lesson-detail-page .lesson-detail-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.app-shell-student .lesson-detail-page .lesson-detail-two-col.has-chapter-rail {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-areas: "main rail";
+}
+
+.app-shell-student .lesson-detail-main-col { grid-area: main; min-width: 0; }
+.app-shell-student .lesson-reading-progress-bar { width: min(100%, 760px); height: 2px; margin: 0 auto 16px; }
+.app-shell-student .lesson-progress-indicator {
+  width: 100%;
+  background: var(--lesson-blue);
+  opacity: .7;
+  transform-origin: left center;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.app-shell-student .lesson-chapter-picker {
+  grid-area: rail;
+  position: sticky;
+  top: 24px;
+  width: auto;
+  max-height: calc(100dvh - 48px);
+  margin: 0;
+  padding: 14px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--lesson-border);
+  border-radius: 14px;
+  background: var(--lesson-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 6px 16px rgba(0, 0, 0, 0.015);
+  scrollbar-width: thin;
+  scrollbar-color: var(--lesson-border) transparent;
+}
+
+.app-shell-student .lesson-chapter-picker::-webkit-scrollbar {
+  width: 4px;
+}
+.app-shell-student .lesson-chapter-picker::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-shell-student .lesson-chapter-picker::-webkit-scrollbar-thumb {
+  background: var(--lesson-border);
+  border-radius: 4px;
+}
+
+.app-shell-student .toc-sidebar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 2px 4px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--lesson-border);
+}
+
+.app-shell-student .toc-sidebar-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-shell-student .toc-sidebar-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--lesson-muted);
+  line-height: 1.2;
+}
+
+.app-shell-student .toc-sidebar-header h2 {
+  margin: 0;
+  color: var(--lesson-navy);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.app-shell-student .toc-sidebar-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.app-shell-student .toc-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  background: var(--fill-neutral-96);
+  color: var(--lesson-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell-student .toc-meta-pos {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lesson-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.app-shell-student .toc-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--lesson-border);
+  border-radius: 7px;
+  background: var(--fill-neutral-97);
+  color: var(--lesson-muted);
+  cursor: pointer;
+  transition: all var(--dur-micro) var(--ease-out);
+}
+.app-shell-student .toc-sidebar-toggle .toc-toggle-label { display: none; }
+.app-shell-student .toc-sidebar-toggle:hover {
+  background: var(--fill-neutral-92);
+  color: var(--lesson-navy);
+  border-color: var(--lesson-muted);
+}
+.app-shell-student .toc-sidebar-toggle:active {
+  transform: scale(0.96);
+}
+.app-shell-student .toc-sidebar-toggle:focus-visible {
+  outline: 2px solid var(--lesson-blue);
+  outline-offset: 2px;
+}
+.app-shell-student .toc-sidebar-toggle svg {
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+.app-shell-student .toc-sidebar-toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+.app-shell-student .toc-sidebar-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.app-shell-student .toc-sidebar-list:not(.is-open) { display: none; }
+.app-shell-student .toc-sidebar-list.is-open { padding: 0; border: 0; border-radius: 0; background: transparent; }
+
+.app-shell-student .toc-sidebar-link {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-height: 40px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--lesson-muted);
+  text-decoration: none;
+  transition: all var(--dur-micro) var(--ease-out);
+}
+
+.app-shell-student .toc-sidebar-link:hover {
+  background: var(--fill-neutral-97);
+  color: var(--lesson-navy);
+  transform: translateX(2px);
+}
+.app-shell-student .toc-sidebar-link:hover .toc-item-num {
+  background: var(--fill-neutral-92);
+  color: var(--lesson-navy);
+}
+.app-shell-student .toc-sidebar-link:hover .toc-item-title {
+  color: var(--lesson-navy);
+}
+
+.app-shell-student .toc-sidebar-link:focus-visible {
+  outline: 2px solid var(--lesson-blue);
+  outline-offset: 1px;
+}
+
+.app-shell-student .toc-sidebar-link.is-current {
+  background: var(--lesson-sky);
+  border-color: rgba(31, 111, 120, 0.18);
+  box-shadow: 0 1px 3px rgba(31, 111, 120, 0.06);
+}
+:root[data-theme="dark"] .app-shell-student .toc-sidebar-link.is-current {
+  background: rgba(31, 111, 120, 0.2);
+  border-color: rgba(109, 183, 193, 0.35);
+}
+
+.app-shell-student .toc-item-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--fill-neutral-96);
+  color: var(--lesson-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  transition: all var(--dur-micro) var(--ease-out);
+}
+
+.app-shell-student .toc-sidebar-link.is-current .toc-item-num {
+  background: var(--brand, #1f6f78);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(31, 111, 120, 0.3);
+}
+
+.app-shell-student .toc-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.app-shell-student .toc-item-title {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--lesson-muted);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.app-shell-student .toc-sidebar-link.is-current .toc-item-title {
+  color: var(--lesson-navy);
+  font-weight: 600;
+}
+
+.app-shell-student .toc-item-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  background: rgba(31, 111, 120, 0.12);
+  color: var(--brand, #1f6f78);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+:root[data-theme="dark"] .app-shell-student .toc-item-current {
+  background: rgba(109, 183, 193, 0.2);
+  color: var(--brand-ink, #6db7c1);
+}
+
+.app-shell-student .toc-current-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--brand, #1f6f78);
+  flex-shrink: 0;
+}
+:root[data-theme="dark"] .app-shell-student .toc-current-dot {
+  background: var(--brand-ink, #6db7c1);
+}
+
+.app-shell-student .lesson-detail-reading.lesson-tab-panel {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell-student .lesson-reading-scroll {
+  height: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  overscroll-behavior: auto;
+  scrollbar-gutter: auto;
+}
+.app-shell-student .lesson-open-curriculum-note {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: min(100%, 760px);
+  margin: 0 auto 24px;
+  padding: 12px 0;
+  border-top: 1px solid var(--lesson-border);
+  border-bottom: 1px solid var(--lesson-border);
+  color: var(--lesson-navy);
+}
+.app-shell-student .lesson-open-curriculum-note > svg { margin-top: 2px; color: var(--lesson-blue); }
+.app-shell-student .lesson-open-curriculum-note > span { display: grid; gap: 4px; min-width: 0; }
+.app-shell-student .lesson-open-curriculum-note strong { font-size: 14px; line-height: 1.4; }
+.app-shell-student .lesson-open-curriculum-note span span { color: var(--lesson-muted); font-size: 14px; line-height: 1.55; }
+.app-shell-student .lesson-objective-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--lesson-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.app-shell-student .lesson-detail-reading .reading-completion {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: min(100%, 760px);
+  margin: 24px auto 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--lesson-border);
+}
+.app-shell-student .lesson-reading-complete {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--lesson-border);
+  border-radius: 8px;
+  background: var(--lesson-surface);
+  color: var(--lesson-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+}
+.app-shell-student .lesson-reading-complete svg { color: var(--brand); }
+.app-shell-student .lesson-reading-complete:hover { border-color: var(--brand); background: var(--lesson-sky); }
+.app-shell-student .lesson-reading-complete:active { background: var(--lesson-sky); }
+.app-shell-student .lesson-reading-complete:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.app-shell-student .lesson-reading-complete:disabled { cursor: not-allowed; opacity: .55; }
+
+.app-shell-student .lesson-progress-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 760px);
+  margin: 28px auto 0;
+  padding: 14px 18px;
+  border: 1px solid var(--lesson-border);
+  border-left: 3.5px solid var(--brand-green);
+  border-radius: 12px;
+  background: var(--fill-neutral-99);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+:root[data-theme="dark"] .app-shell-student .lesson-progress-confirmation {
+  background: var(--surface);
+  border-left-color: var(--green);
+}
+
+.app-shell-student .lesson-progress-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--fill-green-94);
+  color: var(--brand-green);
+}
+
+:root[data-theme="dark"] .app-shell-student .lesson-progress-icon-wrap {
+  background: rgba(124, 195, 164, 0.16);
+  color: var(--green);
+}
+
+.app-shell-student .lesson-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-shell-student .lesson-progress-title {
+  color: var(--lesson-navy);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.app-shell-student .lesson-progress-desc {
+  color: var(--lesson-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.app-shell-student .lesson-materials-panel {
+  display: grid;
+  align-content: start;
+  gap: 28px;
+  width: 100%;
+  max-width: none;
+  padding: 8px 0 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell-student .lesson-materials-heading h2 {
+  margin: 0 0 8px;
+  color: var(--lesson-navy);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.app-shell-student .lesson-materials-heading p { margin: 0; color: var(--lesson-muted); font-size: 14px; line-height: 1.55; }
+.app-shell-student .lesson-resource-group { display: grid; gap: 12px; min-width: 0; }
+.app-shell-student .lesson-resource-group h3 { margin: 0; color: var(--lesson-muted); font-size: 13px; font-weight: 600; line-height: 1.4; }
+.app-shell-student .lesson-material-card,
+.app-shell-student .lesson-material-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid var(--lesson-border);
+  border-radius: 10px;
+  background: var(--lesson-surface);
+  color: var(--lesson-navy);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.app-shell-student .lesson-material-card { cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out); }
+.app-shell-student .lesson-material-card:hover { border-color: var(--brand); background: var(--fill-neutral-97); }
+.app-shell-student .lesson-material-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.app-shell-student .lesson-material-card.is-unavailable { cursor: not-allowed; opacity: .6; }
+.app-shell-student .lesson-material-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--fill-neutral-97);
+  color: var(--brand);
+}
+.app-shell-student .lesson-material-copy { display: grid; gap: 4px; min-width: 0; }
+.app-shell-student .lesson-material-copy strong { font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: break-word; }
+.app-shell-student .lesson-material-copy small { color: var(--lesson-muted); font-size: 12px; line-height: 1.4; }
+.app-shell-student .lesson-material-action { display: inline-flex; min-height: 44px; align-items: center; justify-content: flex-end; gap: 8px; color: var(--brand); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.app-shell-student .lesson-material-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.app-shell-student .lesson-material-list li + li { border-top: 1px solid var(--lesson-border); }
+.app-shell-student .lesson-material-row { border: 0; border-radius: 0; background: transparent; cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out); }
+.app-shell-student .lesson-material-row:hover { background: var(--fill-neutral-97); }
+.app-shell-student .lesson-material-row:focus-visible { position: relative; outline: 2px solid var(--brand); outline-offset: -2px; }
+.app-shell-student .lesson-material-row:disabled { background: var(--fill-neutral-97); color: var(--lesson-muted); cursor: not-allowed; opacity: .8; }
+.app-shell-student .lesson-material-row.is-unavailable { background: var(--fill-neutral-97); color: var(--lesson-muted); cursor: not-allowed; opacity: .8; }
+
+@media (max-width: 960px) {
+  .app-shell-student .lesson-detail-page .lesson-detail-two-col.has-chapter-rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "rail" "main";
+    gap: 20px;
+  }
+  .app-shell-student .lesson-chapter-picker { position: static; max-height: none; overflow: visible; }
+  .app-shell-student .toc-sidebar-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .app-shell-student .toc-sidebar-heading { grid-column: 1; grid-row: 1; }
+  .app-shell-student .toc-sidebar-toggle { display: inline-flex; width: auto; min-width: 44px; align-items: center; justify-content: center; gap: 8px; grid-column: 2; grid-row: 1; padding-inline: 8px; }
+  .app-shell-student .toc-sidebar-toggle span { display: inline; }
+  .app-shell-student .lesson-detail-two-col.has-chapter-rail .toc-sidebar-list.is-open { max-height: min(42vh, 320px); overflow-y: auto; margin-top: 8px; }
+}
+
+@media (max-width: 640px) {
+  .app-shell-student .lesson-detail-page .page-heading,
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs,
+  .app-shell-student .lesson-detail-page .lesson-detail-two-col { width: 100%; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs { gap: 4px; margin-bottom: 20px; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs button { gap: 8px; min-height: 44px; padding-inline: 12px; font-size: 12px; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs { scrollbar-width: none; }
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs::-webkit-scrollbar { display: none; }
+  .app-shell-student .lesson-detail-reading .reading-completion { margin-top: 20px; }
+  .app-shell-student .lesson-material-card,
+  .app-shell-student .lesson-material-row { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; padding-inline: 8px; }
+  .app-shell-student .lesson-material-icon { width: 36px; height: 36px; }
+  .app-shell-student .lesson-material-action { font-size: 0; }
+  .app-shell-student .lesson-material-action svg { width: 16px; height: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-student .lesson-detail-page .lesson-detail-tabs button,
+  .app-shell-student .toc-sidebar-toggle,
+  .app-shell-student .toc-sidebar-toggle svg,
+  .app-shell-student .toc-sidebar-link,
+  .app-shell-student .toc-item-num,
+  .app-shell-student .toc-item-title,
+  .app-shell-student .lesson-progress-indicator,
+  .app-shell-student .lesson-reading-complete,
+  .app-shell-student .lesson-material-card,
+  .app-shell-student .lesson-material-row { transition: none; }
+}
+
+/* Lesson reading status & progress confirmation (Anti-AI-slop, balanced spacing) */
+.app-shell-student .lesson-progress-confirmation {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  background: rgba(36, 91, 71, 0.08);
+  border: 1px solid rgba(36, 91, 71, 0.2);
+  color: var(--green, #245b47);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+
+:root[data-theme="dark"] .app-shell-student .lesson-progress-confirmation {
+  background: rgba(124, 195, 164, 0.12);
+  border-color: rgba(124, 195, 164, 0.28);
+  color: #7cc3a4;
+}
+
+.app-shell-student .lesson-progress-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #16a34a;
+}
+
+:root[data-theme="dark"] .app-shell-student .lesson-progress-icon-wrap {
+  color: #4ade80;
+}
+
+.app-shell-student .lesson-progress-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.app-shell-student .lesson-progress-title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.app-shell-student .lesson-progress-sep {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.app-shell-student .lesson-progress-desc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.app-shell-student .lesson-reading-action-bar {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-shell-student .lesson-reading-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: var(--brand);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.app-shell-student .lesson-reading-complete:hover:not(:disabled) {
+  background: var(--brand-hover);
+  transform: translateY(-1px);
+}
+
+.app-shell-student .lesson-reading-complete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

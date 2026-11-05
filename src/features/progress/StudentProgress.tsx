@@ -178,7 +178,7 @@ const text = defineText({
 });
 const t = text();
 
-function CourseraSubjectCard({ course, onSelect }: { course: any; onSelect: (c: any) => void }) {
+function CourseProgressCard({ course, onSelect }: { course: any; onSelect: (c: any) => void }) {
   const percent = course.summary?.percent ?? 0;
   const isCompleted = percent === 100;
   const subjectId = course.subject.id;
@@ -188,7 +188,7 @@ function CourseraSubjectCard({ course, onSelect }: { course: any; onSelect: (c: 
 
   return (
     <article
-      className="coursera-subject-card"
+      className="progress-course-card"
       tabIndex={0}
       role="button"
       aria-label={`${course.subject.name}, ${t.gradePill(course.grade)}, ${course.summary?.percent == null ? t.progressUnavailable : `${percent}% ${t.stateDone}`}`}
@@ -202,26 +202,26 @@ function CourseraSubjectCard({ course, onSelect }: { course: any; onSelect: (c: 
     >
       <div className="progress-course-cover">
         <SubjectCover subjectId={subjectId} subjectName={course.subject.name} versionId={course.coverAssetVersionId} />
-        <span className="coursera-grade-pill">{t.gradePill(course.grade)}</span>
+        <span className="progress-course-grade-pill">{t.gradePill(course.grade)}</span>
       </div>
-        <div className="coursera-card-body">
-          <h3 className="coursera-card-heading">{course.subject.name}</h3>
+      <div className="progress-course-body">
+        <h3 className="progress-course-heading">{course.subject.name}</h3>
 
-          <div className="coursera-card-stats">
-            <span><BookOpen size={13} aria-hidden="true" /> {t.lessonsCount(lessonsCount)}</span>
-            {videosCount > 0 && <span><Play size={13} aria-hidden="true" /> {t.videosCount(videosCount)}</span>}
-            {labsCount > 0 && <span><FlaskConical size={13} aria-hidden="true" /> {t.labsCount(labsCount)}</span>}
-          </div>
+        <div className="progress-course-stats">
+          <span><BookOpen size={13} aria-hidden="true" /> {t.lessonsCount(lessonsCount)}</span>
+          {videosCount > 0 && <span><Play size={13} aria-hidden="true" /> {t.videosCount(videosCount)}</span>}
+          {labsCount > 0 && <span><FlaskConical size={13} aria-hidden="true" /> {t.labsCount(labsCount)}</span>}
+        </div>
 
-          {course.summary?.percent != null && <progress className="progress-course-track" value={percent} max={100} aria-label={t.overallProgress} />}
-          <div className="coursera-card-footer">
-            <div className="coursera-progress-percent">
-              <strong>{course.summary?.percent == null ? "—" : `${percent}%`}</strong>
-                <span className={`coursera-status-dot ${isCompleted ? "is-completed" : percent > 0 ? "is-in-progress" : "is-todo"}`}>
-                  {course.summary?.percent == null ? t.progressUnavailable : isCompleted ? t.stateDone : percent > 0 ? t.stateDoing : t.stateTodo}
+        {course.summary?.percent != null && <progress className="progress-course-track" value={percent} max={100} aria-label={t.overallProgress} />}
+        <div className="progress-course-footer">
+          <div className="progress-course-percent">
+            <strong>{course.summary?.percent == null ? "—" : `${percent}%`}</strong>
+            <span className={`progress-course-status ${isCompleted ? "is-completed" : percent > 0 ? "is-in-progress" : "is-todo"}`}>
+              {course.summary?.percent == null ? t.progressUnavailable : isCompleted ? t.stateDone : percent > 0 ? t.stateDoing : t.stateTodo}
             </span>
           </div>
-          <span className="coursera-detail-btn">
+          <span className="progress-course-action">
             <span>{t.courseDetails}</span>
             <ChevronRight size={14} aria-hidden="true" />
           </span>
@@ -288,14 +288,14 @@ function CourseDetailModal({ course, onClose }: { course: any; onClose: () => vo
         <header className="course-modal-header">
           <div className="course-modal-title-row">
             <div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "6px" }}>
-                <span className="coursera-grade-pill" style={{ color: "var(--brand-ink)", background: "var(--fill-neutral-90)" }}>
+              <div className="course-modal-badge-row">
+                <span className="progress-course-grade-pill course-modal-pill">
                   {t.gradePill(course.grade)}
                 </span>
                 <span className="tiny muted">{course.version ? `Phiên bản ${course.version}` : ""}</span>
               </div>
               <h3 id="course-detail-modal-title">{course.subject.name}</h3>
-              {course.subtitle && <p className="tiny muted" style={{ margin: "4px 0 0" }}>{course.subtitle}</p>}
+              {course.subtitle && <p className="tiny muted course-modal-subtitle">{course.subtitle}</p>}
             </div>
             <button
               type="button"
@@ -304,14 +304,14 @@ function CourseDetailModal({ course, onClose }: { course: any; onClose: () => vo
               onClick={onClose}
               aria-label={t.close}
             >
-              ×
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
 
-          <div style={{ marginTop: "14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <span className="tiny muted" style={{ fontWeight: 650 }}>{t.overallProgress}</span>
-              <strong style={{ fontSize: "14px", color: "var(--brand-ink)" }}>
+          <div className="course-modal-progress-wrap">
+            <div className="course-modal-progress-row">
+              <span className="tiny muted course-modal-progress-label">{t.overallProgress}</span>
+              <strong className="course-modal-progress-value">
                 {course.summary?.percent == null ? t.progressUnavailable : `${percent}% (${t.steps(course.summary?.completedEvidenceItems ?? 0, course.summary?.totalEvidenceItems ?? 0)})`}
               </strong>
             </div>
@@ -320,12 +320,12 @@ function CourseDetailModal({ course, onClose }: { course: any; onClose: () => vo
         </header>
 
         <div className="course-modal-body">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 700 }}>{t.courseSyllabus}</h4>
+          <div className="course-modal-syllabus-header">
+            <h4 className="course-modal-syllabus-title">{t.courseSyllabus}</h4>
             <span className="tiny muted">{t.lessonsCount(lessons.length)}</span>
           </div>
 
-          <div style={{ display: "grid", gap: "12px" }}>
+          <div className="course-modal-lesson-list">
             {lessons.map((lesson: any, index: number) => {
               const evidence: any[] = lesson.evidence || [];
               const hasLab = Boolean(lesson.requiredLabId);
@@ -508,18 +508,15 @@ export function StudentProgress() {
         <Empty>{t.loading}</Empty>
       ) : summary ? (
         <>
-                {/* Executive Learning Progress Ribbon */}
+                {/* Learning Progress Summary Ribbon */}
                 <div className="progress-metric-ribbon">
                   <div className="progress-ribbon-header">
-                    <div className="progress-ribbon-title">
-                      <span className="progress-ribbon-live-dot" aria-hidden="true" />
-                      <span className="progress-ribbon-eyebrow">{t.overviewEyebrow}</span>
+                    <span className="progress-ribbon-eyebrow">{t.overviewEyebrow}</span>
+                    <div className="progress-ribbon-sync">
+                      <Clock size={13} aria-hidden="true" />
+                      <span>{t.computed(time(summary.updatedAt))}</span>
                     </div>
-                      <div className="progress-ribbon-sync">
-                        <Clock size={12} aria-hidden="true" />
-                        <span>{t.computed(time(summary.updatedAt))}</span>
-                      </div>
-                </div>
+                  </div>
 
                 <div className="stats progress-stats progress-ribbon-grid">
                   <button
@@ -721,9 +718,9 @@ export function StudentProgress() {
                   ) : !activeCourses.length ? (
                     <Empty>{foundational.data?.courseVersionConfigured === false ? t.noCurriculum : t.curriculumEmpty}</Empty>
                   ) : filteredCourses.length ? (
-                    <div className="coursera-subject-grid">
+                    <div className="progress-courses-grid">
                       {filteredCourses.map((course: any) => (
-                        <CourseraSubjectCard
+                        <CourseProgressCard
                           key={course.id}
                           course={course}
                           onSelect={(c) => setSelectedCourse(c)}

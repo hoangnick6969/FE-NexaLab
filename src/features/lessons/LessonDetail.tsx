@@ -1,4 +1,5 @@
 import { chapterLessonHref } from "./lesson-navigation";
+import { groupLabOutcomes, markMissingFigureReferences, normalizeLessonMarkdown, stripRepeatedSectionHeading } from "./lesson-content-format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
@@ -8,9 +9,10 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { ArrowRight, BookOpen, Check, ExternalLink, FileText, FlaskConical, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, ExternalLink, FileText, FlaskConical, Play } from "lucide-react";
 import { api, idempotencyKey, isAssetUrl, openMaterial, useAuth, type StudentPathway } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
+import { useActionToast } from "../../components/ActionToasts";
 import { PageHeading } from "../../components/PageHeading";
 import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
@@ -19,6 +21,8 @@ import { withAssignmentContext } from "./lesson-catalog";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
 import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
+import { labInfo } from "../labs/lab-info";
+import "./lesson-detail-ux.css";
 
 const text = defineText({
   vi: {
@@ -33,7 +37,7 @@ const text = defineText({
     cards: "Thẻ ôn tập",
     materials: "Tài liệu",
     practiceLabs: "Thực hành Lab",
-    supplementaryLab: "LAB BỔ TRỢ BÀI HỌC",
+    supplementaryLab: "Lab gắn với bài học",
     labIntro: "Vận dụng kiến thức vừa học qua dự đoán, quan sát và giải thích trong mô phỏng.",
     openLab: "Mở hoạt động Lab",
     viewLabLibrary: "Xem Lab trong thư viện",
@@ -44,20 +48,32 @@ const text = defineText({
     contentTabs: "Nội dung bài học",
     completed: "Đã hoàn thành",
     readingRegion: "Nội dung bài đọc",
-    objective: "MỤC TIÊU BÀI HỌC",
+    objective: "Mục tiêu bài học",
     prerequisites: "Kiến thức nền",
     loadingContent: "Đang tải nội dung và tiến độ bài học…",
-    openNotice: "Đây là nội dung chương trình mở; tiến độ đọc và video được lưu riêng, không cần bài được giao.",
+    openNoticeTitle: "Bài học thuộc chương trình mở",
+    openNotice: "Tiến độ đọc và video được lưu riêng. Em có thể học mà không cần bài tập được giao.",
     savingProgress: "Đang lưu tiến độ…",
     saveAgain: "Thử lưu lại",
     finishReading: "Hoàn thành phần đọc",
-    readingDone: "Đã hoàn thành phần đọc. Tiến độ đã được lưu.",
+    readingDoneTitle: "Đã hoàn thành phần đọc",
+    readingDoneBody: "Tiến độ đã được lưu.",
+    readingToastTitle: "Đã lưu tiến độ đọc",
+    videoToastTitle: "Đã hoàn thành video",
+    videoToastBody: "Tiến độ xem đã được lưu.",
+    materialToastTitle: "Tài liệu đã mở",
+    materialToastBody: "Tài liệu đang mở trong tab mới.",
+    materialErrorToast: "Không mở được tài liệu",
+    materialErrorBody: "Hãy thử mở lại hoặc báo cho giáo viên.",
+    exercisePassedToast: "Đã lưu kết quả luyện tập",
+    exerciseRetryToast: "Đã lưu kết quả. Em có thể thử lại.",
+    progressErrorToast: "Chưa lưu được tiến độ",
     loadingVideo: "Đang tải video bài giảng…",
     videoUnavailable: "Video bài giảng hiện chưa khả dụng.",
     cardsLocked: "Hoàn thành nội dung và video trước để mở thẻ ghi nhớ.",
     lessonMaterials: "Tài liệu bài học",
     textbook: "Sách giáo khoa",
-    externalNote: "Tài liệu tham khảo bên ngoài · trang in và trang PDF có thể khác nhau.",
+    externalNote: "Tài liệu tham khảo bên ngoài. Trang in và trang PDF có thể khác nhau.",
     material: (n: number) => `Tài liệu ${n}`,
     nextHint: "Sau khi hoàn thành nội dung bài, tiếp tục với video bài giảng. Thẻ ôn tập nằm trong Class Space.",
     openCards: "Mở thẻ ôn tập trong Class Space",
@@ -71,6 +87,12 @@ const text = defineText({
     prevLesson: "Bài trước",
     nextLesson: "Bài sau",
     chapterLessons: "Mục lục chương",
+    currentLesson: "Đang học",
+    supplementaryMaterials: "Tài liệu bổ sung",
+    openMaterial: "Mở tài liệu",
+    openingMaterial: "Đang mở…",
+    materialResource: "Tài liệu của bài học",
+    materialsIntro: "Sách giáo khoa và tài liệu tham khảo cho bài học này.",
     showChapterLessons: "Xem danh sách bài",
     hideChapterLessons: "Ẩn danh sách bài",
   },
@@ -86,7 +108,7 @@ const text = defineText({
     cards: "Review cards",
     materials: "Materials",
     practiceLabs: "Lab practice",
-    supplementaryLab: "LESSON LAB ACTIVITY",
+    supplementaryLab: "Lab linked to this lesson",
     labIntro: "Apply what you have learned through prediction, observation and explanation in a simulation.",
     openLab: "Open Lab activity",
     viewLabLibrary: "View Lab in the library",
@@ -97,20 +119,32 @@ const text = defineText({
     contentTabs: "Lesson content",
     completed: "Completed",
     readingRegion: "Reading content",
-    objective: "LESSON OBJECTIVE",
+    objective: "Lesson objective",
     prerequisites: "Prerequisites",
     loadingContent: "Loading the lesson content and progress…",
-    openNotice: "This is open curriculum content; reading and video progress are saved on their own, no assignment needed.",
+    openNoticeTitle: "Open curriculum lesson",
+    openNotice: "Reading and video progress are saved separately. No assigned task is needed.",
     savingProgress: "Saving progress…",
     saveAgain: "Try saving again",
     finishReading: "Finish the reading",
-    readingDone: "Reading finished. Progress saved.",
+    readingDoneTitle: "Reading completed",
+    readingDoneBody: "Your progress has been saved.",
+    readingToastTitle: "Reading progress saved",
+    videoToastTitle: "Video completed",
+    videoToastBody: "Your viewing progress has been saved.",
+    materialToastTitle: "Material opened",
+    materialToastBody: "The material opened in a new tab.",
+    materialErrorToast: "The material could not be opened",
+    materialErrorBody: "Try again or let your teacher know.",
+    exercisePassedToast: "Practice result saved",
+    exerciseRetryToast: "Result saved. You can try again.",
+    progressErrorToast: "Progress could not be saved",
     loadingVideo: "Loading the lesson video…",
     videoUnavailable: "The lesson video is not available yet.",
     cardsLocked: "Finish the content and video first to open the study cards.",
     lessonMaterials: "Lesson materials",
     textbook: "Textbook",
-    externalNote: "External reference · printed and PDF page numbers may differ.",
+    externalNote: "External reference. Printed and PDF page numbers may differ.",
     material: (n: number) => `Material ${n}`,
     nextHint: "After the lesson content, continue with the lesson video. Review cards are in Class Space.",
     openCards: "Open review cards in Class Space",
@@ -124,6 +158,12 @@ const text = defineText({
     prevLesson: "Previous lesson",
     nextLesson: "Next lesson",
     chapterLessons: "Chapter lessons",
+    currentLesson: "Current",
+    supplementaryMaterials: "Additional materials",
+    openMaterial: "Open material",
+    openingMaterial: "Opening…",
+    materialResource: "Lesson resource",
+    materialsIntro: "Textbook and reference materials for this lesson.",
     showChapterLessons: "Show lesson list",
     hideChapterLessons: "Hide lesson list",
   },
@@ -135,8 +175,15 @@ export function LessonDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const assignmentId = searchParams.get("assignmentId") || undefined;
-  const [chapterListOpen, setChapterListOpen] = useState(false);
+  const [chapterListOpen, setChapterListOpen] = useState(() => typeof window === "undefined" || window.matchMedia("(min-width: 961px)").matches);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 961px)");
+    const syncChapterRail = () => setChapterListOpen(desktop.matches);
+    desktop.addEventListener("change", syncChapterRail);
+    return () => desktop.removeEventListener("change", syncChapterRail);
+  }, []);
   const user = useAuth((state) => state.user)!;
+  const toast = useActionToast();
   type LessonTab = "reading" | "video" | "exercise" | "labs" | "materials";
   const requestedTab = searchParams.get("tab");
   const selectedTab: LessonTab = ["reading", "video", "exercise", "labs", "materials"].includes(requestedTab ?? "") ? requestedTab as LessonTab : "reading";
@@ -175,7 +222,11 @@ export function LessonDetail() {
     queryFn: () => api<{ items?: any[] }>(libraryQuery({ grade: "", domain: "", outcome: "", scope: "ALL" })),
     enabled: canViewAttribution,
   });
-  const materialOpen = useMutation({ mutationFn: openMaterial });
+  const materialOpen = useMutation({
+    mutationFn: openMaterial,
+    onSuccess: () => toast({ title: t.materialToastTitle, description: t.materialToastBody, tone: "info" }),
+    onError: () => toast({ title: t.materialErrorToast, description: t.materialErrorBody, tone: "error" }),
+  });
   const videoPathway = useQuery<StudentPathway>({
     queryKey: ["lesson-pathway", id, assignmentId],
     queryFn: () => api(withAssignmentContext(`/lessons/${encodeURIComponent(id)}/pathway`, assignmentId)),
@@ -191,10 +242,19 @@ export function LessonDetail() {
   const studyCardsStep = videoPathway.data?.steps.find((step) => step.type === "STUDY_CARDS");
   const basicExerciseStep = lesson?.steps?.find((step: any) => step.type === "BASIC_EXERCISE");
   const hasVideo = Boolean(videoMaterial || videoStep || (user.role === "STUDENT" && videoPathway.isLoading));
-  const hasMaterials = Boolean(httpsUrl(lesson?.subject?.ebookUrl) || lesson?.materials?.length || canViewAttribution);
+  const hasMaterials = Boolean(
+    httpsUrl(lesson?.subject?.ebookUrl)
+    || lesson?.ebookEditions?.some((edition: any) => httpsUrl(edition.url))
+    || lesson?.materials?.some((material: any) => material.type !== "video")
+    || canViewAttribution
+  );
   const hasLabs = Boolean(foundationalLabs.data?.length || (selectedTab === "labs" && foundationalLabs.isPending));
   const available = { reading: true, video: hasVideo, exercise: Boolean(basicExerciseStep), labs: hasLabs, materials: hasMaterials };
   const activeTab = !lesson || available[selectedTab] ? selectedTab : "reading";
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => document.getElementById(`lesson-tab-${activeTab}`)?.scrollIntoView({ block: "nearest", inline: "nearest" }));
+    return () => cancelAnimationFrame(frame);
+  }, [activeTab]);
   useEffect(() => { setSourcePage(null); }, [id, activeTab]);
   useEffect(() => {
     if (activeTab !== "reading" || !lesson?.id || !location.hash) return;
@@ -239,10 +299,22 @@ export function LessonDetail() {
     onSuccess: (response: any) => {
       if (response.pathway) queryClient.setQueryData(["lesson-pathway", id, assignmentId], response.pathway);
       else queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === response.step.id ? { ...step, state: "COMPLETED", progressValue: 100 } : step) }));
+      toast({ title: t.readingToastTitle, description: t.readingDoneBody });
     },
+    onError: () => toast({ title: t.progressErrorToast, description: t.saveAgain, tone: "error" }),
   });
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
   const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url));
+  const reconcileVideo = (updated: any) => {
+    const pathway = updated.pathway ?? updated;
+    const videoCompleted = pathway.steps?.some((step: any) => step.id === videoStep?.id && step.state === "COMPLETED");
+    if (videoStep?.state !== "COMPLETED" && videoCompleted)
+      toast({ title: t.videoToastTitle, description: t.videoToastBody });
+    if (updated.pathway || updated.steps)
+      queryClient.setQueryData(["lesson-pathway", id, assignmentId], pathway);
+    else
+      queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }));
+  };
 
   if ((assignmentId ? videoPathway.isLoading : lessons.isLoading)) return <PageLoader message={t.opening} />;
   if ((assignmentId ? videoPathway.error : lessons.error) && !lesson) return <><ErrorBox error={assignmentId ? videoPathway.error : lessons.error} /><Link className="text-button" to="/lessons">{t.backToLibrary}</Link></>;
@@ -265,6 +337,7 @@ export function LessonDetail() {
     tabRefs.current[nextIndex]?.focus();
   };
   const materialsTab = tabs.some((tab) => tab.id === "materials");
+  const supplementaryMaterials = lesson.materials?.filter((material: any) => material.type !== "video") ?? [];
   const sections = structuredContent?.learningContent?.sections ?? [];
   const waitingForSection = !structuredContent && linkedPublicLesson.isFetching;
   const sectionFor = (lab: LessonLab) => {
@@ -272,41 +345,26 @@ export function LessonDetail() {
     if (!sectionId) return undefined;
     return sections.find((section: any) => section.id === sectionId);
   };
-  const labCard = (lab: LessonLab, inline = false) => {
+  const labCard = (lab: LessonLab, inline = false, primary = false) => {
     const section = sectionFor(lab);
+    const preview = labInfo.find((item) => item.id === lab.labId)?.thumbnail;
     return <article className={`lesson-lab-card${inline ? " is-inline" : ""}`} key={lab.releaseId}>
-      <span className="eyebrow"><FlaskConical size={15} /> {t.supplementaryLab}</span>
-      <h3>{lab.title}</h3>
-      {lab.objective && <p>{lab.objective}</p>}
-      {section && <p className="lesson-lab-section-label">{t.relatedSection}: <strong>{section.heading}</strong></p>}
-      <div className="button-row">
-        {waitingForSection ? <button className="primary" type="button" disabled aria-busy="true">{t.loadingContent}</button> : <Link className="primary" to={user.role === "ADMIN" ? `/labs#lab-${encodeURIComponent(lab.labId)}` : lessonLabHref(lab, id, assignmentId, section?.id)}>{user.role === "ADMIN" ? t.viewLabLibrary : t.openLab}<ArrowRight size={15} /></Link>}
-        {!inline && section && <Link className="secondary" to={relatedLessonHref(id, "reading", assignmentId, section.id)}>{t.readSection}</Link>}
+      {preview && <img className="lesson-lab-preview" src={preview} alt="" loading="lazy" decoding="async" />}
+      <div className="lesson-lab-copy">
+        <span className="lesson-lab-chip">{t.supplementaryLab}</span>
+        <h3>{lab.title}</h3>
+        {lab.objective && <ul>{groupLabOutcomes(lab.objective).map((outcome) => <li key={outcome}>Em sẽ {outcome.charAt(0).toLocaleLowerCase("vi") + outcome.slice(1)}</li>)}</ul>}
+        {section && <p className="lesson-lab-section-label">{t.relatedSection}: <strong>{section.heading}</strong></p>}
+        <div className="button-row">
+          {waitingForSection ? <button className={primary && !inline ? "primary" : "lesson-lab-link"} type="button" disabled aria-busy="true">{t.loadingContent}</button> : <Link className={primary && !inline ? "primary" : "lesson-lab-link"} to={user.role === "ADMIN" ? `/labs#lab-${encodeURIComponent(lab.labId)}` : lessonLabHref(lab, id, assignmentId, section?.id)}>{user.role === "ADMIN" ? t.viewLabLibrary : t.openLab}<ArrowRight size={15} /></Link>}
+          {!inline && section && <Link className="lesson-lab-link" to={relatedLessonHref(id, "reading", assignmentId, section.id)}>{t.readSection}</Link>}
+        </div>
       </div>
     </article>;
   };
 
   return <div className="lesson-detail-page">
-    {/* 1. Breadcrumb: Bài học › Khối › Môn › Chương › Bài */}
-    <nav className="lesson-detail-breadcrumb" aria-label="Đường dẫn bài học">
-      <Link to="/lessons">Bài học</Link>
-      <span aria-hidden="true" className="breadcrumb-sep">›</span>
-      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}`}>
-        Khối {lesson.grade}
-      </Link>
-      <span aria-hidden="true" className="breadcrumb-sep">›</span>
-      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}`}>
-        {lesson.subject.name}
-      </Link>
-      <span aria-hidden="true" className="breadcrumb-sep">›</span>
-      <Link to={`/lessons/catalog/grades/${lesson.grade}/subjects/${encodeURIComponent(lesson.subjectId)}/chapters/${encodeURIComponent(lesson.chapter)}`}>
-        {lesson.chapter}
-      </Link>
-      <span aria-hidden="true" className="breadcrumb-sep">›</span>
-      <span aria-current="page" className="breadcrumb-current">{lesson.title}</span>
-    </nav>
-
-    <PageHeading eyebrow={`${lesson.subject.name} · ${t.grade(lesson.grade)}`} title={lesson.title} description={lesson.chapter} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
+    <PageHeading title={lesson.title} action={lesson.synthetic && user.role !== "STUDENT" ? <span className="badge outline">{t.sample}</span> : undefined} />
 
     <ErrorBox error={foundationalLabs.error} />
     <ErrorBox error={linkedPublicLesson.error} />
@@ -318,23 +376,36 @@ export function LessonDetail() {
       })}
     </div>
 
-    {/* Two-column layout container for Student */}
-    <div className="lesson-detail-two-col">
-      {/* Left column: chapter TOC sidebar */}
+    {/* Lesson content and chapter navigation */}
+    <div className={`lesson-detail-two-col${user.role === "STUDENT" && chapterLessons.length > 1 ? " has-chapter-rail" : ""}`}>
       {user.role === "STUDENT" && chapterLessons.length > 1 && (
-        <aside className="lesson-chapter-toc-sidebar" aria-label={t.chapterLessons}>
+        <aside className="lesson-chapter-picker" aria-labelledby="lesson-chapter-title">
           <div className="toc-sidebar-header">
-            <span className="eyebrow">{lesson.chapter}</span>
-            <h3>{t.chapterLessons}</h3>
-            <small>{chapterLessons.length} bài học</small>
+            <div className="toc-sidebar-heading">
+              <span className="toc-sidebar-kicker">{t.chapterLessons}</span>
+              <h2 id="lesson-chapter-title">{lesson.chapter || t.chapterLessons}</h2>
+              <div className="toc-sidebar-meta">
+                <span className="toc-meta-badge">
+                  {chapterLessons.length} {t.chapterLessons.toLowerCase().includes("mục lục") ? "bài" : "lessons"}
+                </span>
+                {currentLessonIndex >= 0 && (
+                  <span className="toc-meta-pos">
+                    {t.chapterLessons.toLowerCase().includes("mục lục") ? `Bài ${currentLessonIndex + 1}/${chapterLessons.length}` : `${currentLessonIndex + 1}/${chapterLessons.length}`}
+                  </span>
+                )}
+              </div>
+            </div>
             <button
               type="button"
               className="toc-sidebar-toggle"
+              aria-label={chapterListOpen ? t.hideChapterLessons : t.showChapterLessons}
               aria-expanded={chapterListOpen}
               aria-controls="lesson-chapter-toc-list"
               onClick={() => setChapterListOpen((open) => !open)}
+              title={chapterListOpen ? t.hideChapterLessons : t.showChapterLessons}
             >
-              {chapterListOpen ? t.hideChapterLessons : t.showChapterLessons}
+              <span className="toc-toggle-label">{chapterListOpen ? t.hideChapterLessons : t.showChapterLessons}</span>
+              <ChevronDown size={15} aria-hidden="true" />
             </button>
           </div>
           <ol id="lesson-chapter-toc-list" className={`toc-sidebar-list${chapterListOpen ? " is-open" : ""}`}>
@@ -347,9 +418,20 @@ export function LessonDetail() {
                     to={linkUrl}
                     className={`toc-sidebar-link${isCurrent ? " is-current" : ""}`}
                     aria-current={isCurrent ? "page" : undefined}
+                    title={item.title}
                   >
-                    <span className="toc-item-num">{index + 1}</span>
-                    <span className="toc-item-title">{item.title}</span>
+                    <span className="toc-item-num" aria-hidden="true">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="toc-item-body">
+                      <span className="toc-item-title">{item.title}</span>
+                      {isCurrent && (
+                        <span className="toc-item-current">
+                          <span className="toc-current-dot" aria-hidden="true" />
+                          {t.currentLesson}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 </li>
               );
@@ -358,62 +440,56 @@ export function LessonDetail() {
         </aside>
       )}
 
-      {/* Right column: Main reading or media content */}
+      {/* Main lesson content */}
       <div className="lesson-detail-main-col">
-        {/* Top navigation for prev/next lesson */}
-        {user.role === "STUDENT" && (prevLesson || nextLesson) && (
-          <nav className="lesson-prev-next-nav top" aria-label="Điều hướng bài học">
-            {prevLesson ? (
-              <Link
-                className="lesson-nav-btn prev"
-                to={chapterLessonHref(prevLesson.id, id, assignmentId)}
-              >
-                ← {t.prevLesson}: {prevLesson.title}
-              </Link>
-            ) : <span />}
-            {nextLesson && (
-              <Link
-                className="lesson-nav-btn next"
-                to={chapterLessonHref(nextLesson.id, id, assignmentId)}
-              >
-                {t.nextLesson}: {nextLesson.title} →
-              </Link>
-            )}
-          </nav>
-        )}
-
         {/* Thin progress bar */}
-        {user.role === "STUDENT" && (
+        {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && (
           <div className="lesson-reading-progress-bar" role="progressbar" aria-valuenow={readingStep?.state === "COMPLETED" ? 100 : (readingStep?.progressValue ?? 0)} aria-valuemin={0} aria-valuemax={100}>
             <div
               className="lesson-progress-indicator"
-              style={{ width: `${readingStep?.state === "COMPLETED" ? 100 : (readingStep?.progressValue ?? 0)}%` }}
+              style={{ transform: `scaleX(${(readingStep?.state === "COMPLETED" ? 100 : (readingStep?.progressValue ?? 0)) / 100})` }}
             />
           </div>
         )}
 
         {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
           <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
-            {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="eyebrow">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites} · {prerequisites}</small>}</div>}
-            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : structuredContent?.learningContent ? <StructuredLessonBody value={structuredContent} title={lesson.title} sourceAvailable={Boolean(sourceDocument)} onOpenSource={setSourcePage} renderSectionLabs={(sectionId) => foundationalLabs.data?.filter((lab) => sectionFor(lab)?.id === sectionId).map((lab) => labCard(lab, true))} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
-            {user.role === "STUDENT" && !assignmentId && <p className="notice">{t.openNotice}</p>}
+            {user.role === "STUDENT" && !assignmentId && <div className="lesson-open-curriculum-note" role="note">
+              <BookOpen size={20} aria-hidden="true" />
+              <span><strong>{t.openNoticeTitle}</strong><span>{t.openNotice}</span></span>
+            </div>}
+            {(learningObjective || prerequisites) && <div className="lesson-objective">{learningObjective && <><span className="lesson-objective-label">{t.objective}</span><div className="lesson-objective-content"><LessonMarkdown value={objectiveMarkdown(learningObjective)} /></div></>}{prerequisites && <small>{t.prerequisites}: {prerequisites}</small>}</div>}
+            {user.role === "STUDENT" && assignmentId && videoPathway.isLoading ? <p className="muted" role="status">{t.loadingContent}</p> : user.role === "STUDENT" && assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} /> : structuredContent?.learningContent ? <StructuredLessonBody value={structuredContent} sourceAvailable={Boolean(sourceDocument)} onOpenSource={setSourcePage} renderSectionLabs={(sectionId) => foundationalLabs.data?.filter((lab) => sectionFor(lab)?.id === sectionId).map((lab) => labCard(lab, true))} /> : <LessonBody content={readingStep?.resource?.html || lesson.content} title={lesson.title} chapter={lesson.chapter} />}
           </div>
           {user.role === "STUDENT" && readingStep && readingStep.state !== "COMPLETED" && <div className="reading-completion">
             {completeReading.error && <ErrorBox error={completeReading.error} />}
-            <button className="primary" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} onClick={() => completeReading.mutate()}>{completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}</button>
+            <button className="lesson-reading-complete" type="button" disabled={completeReading.isPending || readingStep.state === "LOCKED"} aria-busy={completeReading.isPending} onClick={() => completeReading.mutate()}>
+              <Check size={16} aria-hidden="true" />
+              {completeReading.isPending ? t.savingProgress : completeReading.error ? t.saveAgain : t.finishReading}
+            </button>
           </div>}
-          {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && <p className="notice" role="status">{t.readingDone}</p>}
+          {user.role === "STUDENT" && readingStep?.state === "COMPLETED" && (
+            <div className="lesson-progress-confirmation" role="status">
+              <span className="lesson-progress-icon-wrap" aria-hidden="true">
+                <CheckCircle2 size={17} />
+              </span>
+              <div className="lesson-progress-text">
+                <strong className="lesson-progress-title">{t.readingDoneTitle}</strong>
+                <span className="lesson-progress-sep" aria-hidden="true">·</span>
+                <span className="lesson-progress-desc">{t.readingDoneBody}</span>
+              </div>
+            </div>
+          )}
         </section>{sourcePage && sourceDocument && <SourcePdfViewer assetVersionId={sourceDocument.assetVersionId} sourceDigest={sourceDocument.sourceDigest} initialPage={sourcePage} onClose={() => setSourcePage(null)} />}</div>}
 
         {activeTab === "labs" && <section id="lesson-panel-labs" role="tabpanel" aria-labelledby="lesson-tab-labs" className="panel lesson-tab-panel lesson-labs-panel">
-          <h2 className="lesson-tab-title"><FlaskConical size={21} /> {t.practiceLabs}</h2>
           <p className="muted">{t.labIntro}</p>
-          {foundationalLabs.data?.map((lab) => labCard(lab))}
+          <div className="lesson-lab-list">{foundationalLabs.data?.map((lab, index) => labCard(lab, false, index === 0))}</div>
         </section>}
 
         {activeTab === "video" && <section id="lesson-panel-video" role="tabpanel" aria-labelledby="lesson-tab-video" className="panel lesson-video-feature lesson-tab-panel">
           <h2 className="lesson-tab-title">{t.video}</h2>
-          {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={(updated: any) => updated.pathway || updated.steps ? queryClient.setQueryData(["lesson-pathway", id, assignmentId], updated.pathway ?? updated) : queryClient.setQueryData(["open-curriculum-lesson", id], (previous: any) => ({ ...previous, steps: previous.steps.map((step: any) => step.id === updated.step.id ? { ...step, state: updated.step.state, progressValue: updated.step.progressValue, lastPosition: updated.step.lastPosition } : step) }))} />
+          {videoStep && user.role === "STUDENT" ? <VideoLearningStep lessonId={id} step={videoStep} progressPath={assignmentId ? withAssignmentContext(`/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`, assignmentId) : `/open-curriculum/lessons/${encodeURIComponent(id)}/steps/${videoStep.id}/progress`} hideTranscript={/dùng chung|kiểm thử|kiểm tra giao diện/i.test(`${videoStep.resource?.title ?? ""} ${videoStep.resource?.transcript ?? ""}`)} onReconciled={reconcileVideo} />
             : videoMaterial ? <video className="video-player" controls preload="metadata" src={httpsUrl(videoMaterial.url) ?? undefined} aria-label={t.video} />
               : videoPathway.isLoading ? <p className="video-placeholder" role="status">{t.loadingVideo}</p>
                 : assignmentId && videoPathway.error ? <ErrorBox error={videoPathway.error} />
@@ -426,9 +502,37 @@ export function LessonDetail() {
         </section>}
 
         {activeTab === "materials" && materialsTab && <section id="lesson-panel-materials" role="tabpanel" aria-labelledby="lesson-tab-materials" className="panel lesson-tab-panel lesson-materials-panel">
-          <h2>{t.lessonMaterials}</h2>
-          {(ebookEdition || ebookUrl) && <Link className="lesson-material-link" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}><BookOpen size={20} /><span><b>{t.textbook} · {lesson.subject.name}</b><small>{t.externalNote}</small></span><ArrowRight size={18} /></Link>}
-          {lesson.materials?.filter((material: any) => material.type !== "video").map((material: any, index: number) => isAssetUrl(material.url) ? <button className="reader-material" type="button" key={`${material.url}-${index}`} onClick={() => materialOpen.mutate(material.url)}>{material.title || t.material(index + 1)} <ExternalLink size={14} /></button> : <a className="reader-material" key={`${material.url}-${index}`} href={httpsUrl(material.url) ?? undefined} target="_blank" rel="noopener noreferrer">{material.title || t.material(index + 1)} <ExternalLink size={14} /></a>)}
+          <header className="lesson-materials-heading">
+            <h2>{t.lessonMaterials}</h2>
+            <p>{t.materialsIntro}</p>
+          </header>
+          {(ebookEdition || ebookUrl) && <section className="lesson-resource-group">
+            <h3>{t.textbook}</h3>
+            <Link className="lesson-material-card" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}>
+              <span className="lesson-material-icon"><BookOpen size={18} aria-hidden="true" /></span>
+              <span className="lesson-material-copy"><strong>{lesson.subject.name}</strong><small>{t.externalNote}</small></span>
+              <span className="lesson-material-action">{t.openMaterial}<ArrowRight size={16} aria-hidden="true" /></span>
+            </Link>
+          </section>}
+          {supplementaryMaterials.length > 0 && <section className="lesson-resource-group">
+            <h3>{t.supplementaryMaterials}</h3>
+            <ul className="lesson-material-list">
+              {supplementaryMaterials.map((material: any, index: number) => {
+                const title = material.title || t.material(index + 1);
+                const url = httpsUrl(material.url);
+                return <li key={`${material.url}-${index}`}>
+                  <MaterialRow
+                    title={title}
+                    description={t.materialResource}
+                    actionLabel={materialOpen.isPending ? t.openingMaterial : t.openMaterial}
+                    onOpen={isAssetUrl(material.url) ? () => materialOpen.mutate(material.url) : undefined}
+                    href={!isAssetUrl(material.url) ? url ?? undefined : undefined}
+                    disabled={materialOpen.isPending}
+                  />
+                </li>;
+              })}
+            </ul>
+          </section>}
           <ErrorBox error={materialOpen.error} />
           {canViewAttribution && <AttributionNote value={library.data?.items?.find((item) => item.id === lesson.id)?.attribution} />}
         </section>}
@@ -441,7 +545,7 @@ export function LessonDetail() {
                 className="lesson-nav-btn prev"
                 to={chapterLessonHref(prevLesson.id, id, assignmentId)}
               >
-                ← {t.prevLesson}: {prevLesson.title}
+                <ArrowLeft size={16} aria-hidden="true" /> {t.prevLesson}: {prevLesson.title}
               </Link>
             ) : <span />}
             {nextLesson && (
@@ -449,7 +553,7 @@ export function LessonDetail() {
                 className="lesson-nav-btn next"
                 to={chapterLessonHref(nextLesson.id, id, assignmentId)}
               >
-                {t.nextLesson}: {nextLesson.title} →
+                {t.nextLesson}: {nextLesson.title} <ArrowRight size={16} aria-hidden="true" />
               </Link>
             )}
           </nav>
@@ -459,18 +563,54 @@ export function LessonDetail() {
         {user.role === "STUDENT" && studyCardsStep && assignmentId && <p><Link className="secondary" to={`/classes?tab=resources&assignmentId=${encodeURIComponent(assignmentId)}`}>{t.openCards}</Link></p>}
         {user.role === "STUDENT" && lessonComplete && <div className="lesson-next-action"><p>{t.lessonDone}</p>{assignmentId && <Link className="primary" to={`/assignments/${encodeURIComponent(assignmentId)}`}>{t.continueAssignment} <ArrowRight size={16} /></Link>}</div>}
       </div>
+
     </div>
   </div>;
 }
 
+function MaterialRow({
+  title,
+  description,
+  actionLabel,
+  href,
+  onOpen,
+  disabled = false,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  href?: string;
+  onOpen?: () => void;
+  disabled?: boolean;
+}) {
+  const content = <>
+    <span className="lesson-material-icon"><FileText size={18} aria-hidden="true" /></span>
+    <span className="lesson-material-copy"><strong>{title}</strong><small>{description}</small></span>
+    <span className="lesson-material-action">{actionLabel}<ExternalLink size={15} aria-hidden="true" /></span>
+  </>;
+
+  if (onOpen) {
+    return <button className="lesson-material-row" type="button" aria-label={`${actionLabel}: ${title}`} disabled={disabled} aria-busy={disabled} onClick={onOpen}>{content}</button>;
+  }
+  if (href) {
+    return <a className="lesson-material-row" aria-label={`${actionLabel}: ${title}`} href={href} target="_blank" rel="noopener noreferrer">{content}</a>;
+  }
+  return <div className="lesson-material-row is-unavailable" aria-disabled="true">{content}</div>;
+}
+
 function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step: any; onSubmitted: (result: any) => void }) {
+  const toast = useActionToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const attempt = useMutation({
     mutationFn: () => api<any>(`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/exercises/${encodeURIComponent(step.id)}/attempts`, "POST", {
       answers: step.resource.questions.map((question: any) => ({ questionId: question.id, optionId: answers[question.id] })),
       idempotencyKey: idempotencyKey(),
     }),
-    onSuccess: (result) => onSubmitted(result),
+    onSuccess: (result) => {
+      onSubmitted(result);
+      toast({ title: result.passed ? t.exercisePassedToast : t.exerciseRetryToast, tone: result.passed ? "success" : "info" });
+    },
+    onError: () => toast({ title: t.progressErrorToast, description: t.saveAgain, tone: "error" }),
   });
   const exercise = step.resource;
   return <form onSubmit={(event) => { event.preventDefault(); attempt.mutate(); }}>
@@ -479,7 +619,7 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
       {question.options.map((option: any) => <label className="check" key={option.id}><input type="radio" name={question.id} value={option.id} checked={answers[question.id] === option.id} onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))} required />{option.text}</label>)}
     </fieldset>)}
     <ErrorBox error={attempt.error} />
-    {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}% · {t.needs(step.exercise.passThreshold)}</p>}
+    {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}%. {t.needs(step.exercise.passThreshold)}</p>}
     <button className="primary" type="submit" disabled={attempt.isPending || Object.keys(answers).length !== exercise.questions.length}>{attempt.isPending ? t.grading : t.submitExercise}</button>
   </form>;
 }
@@ -492,13 +632,14 @@ function objectiveMarkdown(value: string) {
 }
 
 function LessonMarkdown({ value, displayMath = false }: { value: string; displayMath?: boolean }) {
-  const hasDelimitedMath = /\$[^$]+\$/.test(value);
-  const trimmedValue = value.trim();
+  const lessonText = normalizeLessonMarkdown(value);
+  const hasDelimitedMath = /\$[^$]+\$/.test(lessonText);
+  const trimmedValue = lessonText.trim();
   const displayValue = displayMath && hasDelimitedMath
-    ? value.replace(/\$([^$]+)\$/g, (_match, formula: string) => `\n\n$$\n${formula}\n$$\n\n`)
+    ? lessonText.replace(/\$([^$]+)\$/g, (_match, formula: string) => `\n\n$$\n${formula}\n$$\n\n`)
     : displayMath && /^\\[A-Za-z]+/.test(trimmedValue)
       ? `$$\n${trimmedValue}\n$$`
-      : value;
+      : lessonText;
   let inDisplayMath = false;
   const markdown = displayValue.split(/\r?\n/).map((line) => {
     const trimmed = line.trim();
@@ -512,7 +653,7 @@ function LessonMarkdown({ value, displayMath = false }: { value: string; display
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[[rehypeKatex, { throwOnError: false, trust: false }]]}>{markdown}</ReactMarkdown>;
 }
 
-function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, renderSectionLabs }: { value: any; title: string; sourceAvailable: boolean; onOpenSource: (page: number) => void; renderSectionLabs?: (sectionId: string) => React.ReactNode }) {
+function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSectionLabs }: { value: any; sourceAvailable: boolean; onOpenSource: (page: number) => void; renderSectionLabs?: (sectionId: string) => React.ReactNode }) {
   const content = value.learningContent ?? {};
   const pageByBlock = new Map<string, { pdfPage?: number; printedPageLabel?: string }>();
   for (const block of value.sourceBlocks ?? []) {
@@ -530,7 +671,7 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
       if (!reference) return [];
       const label = reference.pdfPage ? `PDF trang ${reference.pdfPage}` : "";
       const printed = reference.printedPageLabel ? `trang in ${reference.printedPageLabel}` : "";
-      const text = [label, printed].filter(Boolean).join(" · ");
+      const text = [label, printed].filter(Boolean).join(", ");
       return text ? [[`${reference.pdfPage ?? "printed"}:${reference.printedPageLabel ?? ""}`, { text, page: reference.pdfPage, printedPage: reference.printedPageLabel }] as const] : [];
     })).values()];
     return <span className="lesson-structured-sources">
@@ -539,13 +680,13 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
           {reference.page ? <>
             <button type="button" className={`source-sgk-light-btn${sourceAvailable ? "" : " is-disabled"}`}
               disabled={!sourceAvailable}
-              title={sourceAvailable ? `Nguồn ${reference.text}` : `Nguồn ${reference.text} · Bản PDF nguồn hiện chưa khả dụng`}
-              aria-label={`Xem trong SGK · ${reference.text}`}
+              title={sourceAvailable ? `Nguồn ${reference.text}` : `Nguồn ${reference.text}. Bản PDF nguồn hiện chưa khả dụng.`}
+              aria-label={`Xem trong SGK, ${reference.text}`}
               onClick={() => onOpenSource(reference.page!)}>
-              <BookOpen size={13} aria-hidden="true" /> SGK · {reference.printedPage ? `Trang ${reference.printedPage}` : `PDF ${reference.page}`}
+              SGK, {reference.printedPage ? `trang ${reference.printedPage}` : `PDF trang ${reference.page}`}
             </button>
             {!sourceAvailable && <span className="lesson-source-unavailable" role="note">Bản PDF nguồn hiện chưa khả dụng.</span>}
-          </> : <span>Nguồn SGK · {reference.text}</span>}
+          </> : <span>Nguồn SGK: {reference.text}</span>}
         </small>
       )) : <small className="lesson-structured-source"><span>Nguồn sách giáo khoa</span></small>}
     </span>;
@@ -579,16 +720,16 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
     renderedText.add(normalized);
     ids.forEach((id: string) => coveredBlocks.add(id));
     const itemTitle = typeof item?.title === "string" ? item.title.trim() : typeof item?.label === "string" ? item.label.trim() : "";
-    return <div className="lesson-structured-item" key={item?.id ?? key}>{itemTitle && normalize(itemTitle) !== normalized && <h4>{itemTitle}</h4>}<LessonMarkdown value={uniqueText} displayMath={displayMath} />{evidence(ids)}</div>;
+    return <div className="lesson-structured-item" key={item?.id ?? key}>{itemTitle && normalize(itemTitle) !== normalized && <h4>{itemTitle}</h4>}<LessonMarkdown value={markMissingFigureReferences(uniqueText)} displayMath={displayMath} />{evidence(ids)}</div>;
   };
   const range = value.pdfPageRange ? `PDF ${value.pdfPageRange.start}–${value.pdfPageRange.end}` : "";
   return <div className="lesson-content lesson-structured-content">
-    <header className="lesson-structured-heading"><h2>Bài học: {title}</h2></header>
     {content.summary && !summaryDuplicatesSection && <section className="lesson-structured-summary" aria-label="Tóm tắt bài học"><h3>Tóm tắt bài học</h3><div className="lesson-structured-summary-content"><LessonMarkdown value={content.summary} /></div></section>}
     {sections.map((section: any, index: number) => {
       const ids = Array.isArray(section.sourceBlockIds) ? section.sourceBlockIds : [];
       ids.forEach((id: unknown) => { if (typeof id === "string") coveredBlocks.add(id); });
-      const body = typeof section.content === "string" ? section.content : "";
+      let body = typeof section.content === "string" ? section.content : "";
+      if (section.heading) body = stripRepeatedSectionHeading(body, String(section.heading));
       const comparable = (text: string) => normalize(text).replace(/^\d+[.)]\s*/, "");
       const bodyRepeatsHeading = Boolean(section.heading && body && comparable(section.heading) === comparable(body));
       renderedText.add(normalize(`${section.heading ?? ""} ${body}`));
@@ -601,6 +742,7 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
       });
       const rawHeading = typeof section.heading === "string" ? section.heading.trim() : "";
       const displayHeading = rawHeading === "?" ? "Câu hỏi & Thảo luận" : rawHeading.replace(/^#{1,6}\s+/, "").trim();
+      body = markMissingFigureReferences(body);
       const sectionId = section.id ?? `lesson-section-${index}`;
       const headingId = `${sectionId}-heading`;
       return <section key={section.id ?? index} id={sectionId} aria-labelledby={headingId} tabIndex={-1}>
@@ -624,7 +766,7 @@ function StructuredLessonBody({ value, title, sourceAvailable, onOpenSource, ren
       const headingId = `lesson-supplement-${String(heading).toLowerCase().replace(/[^a-z0-9]+/g, "-")}-heading`;
       return rendered.length ? <section key={String(heading)} aria-labelledby={headingId}><h3 id={headingId}>{heading}</h3>{rendered}</section> : null;
     })}
-    {(value.book?.title || range) && <small className="lesson-structured-provenance">Nguồn: {value.book?.title ?? ""}{value.book?.author ? ` · ${value.book.author}` : ""}{value.book?.version ? ` · ${value.book.version}` : ""}{range ? ` · ${range}` : ""}</small>}
+    {(value.book?.title || range) && <small className="lesson-structured-provenance">Nguồn: {[value.book?.title, value.book?.author, value.book?.version, range].filter(Boolean).join(", ")}</small>}
   </div>;
 }
 

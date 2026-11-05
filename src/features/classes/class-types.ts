@@ -40,5 +40,7 @@ export type StudentClass = {
   grade: number;
   status: "ACTIVE" | "ARCHIVED";
   enrollmentStatus: "approved" | "pending";
+  teacher?: { id: string; fullName: string; username: string } | null;
+  subject?: string | null;
   assignments: Array<{ id: string; title: string; contentType: string; dueDate: string | null; overdue: boolean }>;
 };

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, BookOpen } from "lucide-react";
+import { Archive, ArrowUpRight, BookOpen, ClipboardCheck, Clock3, FlaskConical } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
@@ -27,6 +27,12 @@ const text = defineText({
     ungroupedBody: "Các bài này vẫn mở được, nhưng chưa có liên kết môn/chương để đưa vào mục lục.",
     archived: "Nội dung đã lưu trữ",
     unavailable: "Nội dung hiện không thể mở.",
+    totalAssigned: (n: number) => `${n} bài được giao`,
+    totalTests: (n: number) => `${n} bài kiểm tra`,
+    overdueCount: (n: number) => `${n} quá hạn`,
+    badgeLesson: "Bài học lý thuyết",
+    badgeLab: "Thí nghiệm ảo",
+    badgeTest: "Bài kiểm tra",
   },
   en: {
     loading: "Loading assignments…",
@@ -45,6 +51,12 @@ const text = defineText({
     ungroupedBody: "These still open, but they have no subject or chapter link for the index.",
     archived: "Archived content",
     unavailable: "This content cannot be opened right now.",
+    totalAssigned: (n: number) => `${n} ${n === 1 ? "assigned item" : "assigned items"}`,
+    totalTests: (n: number) => `${n} ${n === 1 ? "test" : "tests"}`,
+    overdueCount: (n: number) => `${n} overdue`,
+    badgeLesson: "Theory lesson",
+    badgeLab: "Virtual lab",
+    badgeTest: "Assessment",
   },
 });
 
@@ -65,6 +77,7 @@ export function StudentAssignments() {
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>{t.retry}</button></div>;
   const assignments = (query.data ?? []) as any[];
   const dueSoon = assignments.filter((item) => item.testStatus?.dueSoon);
+  const overdueItems = assignments.filter((item) => item.overdue);
   const hierarchical = assignments.filter((item) => item.canOpen && item.subject && item.grade).map((item) => ({
     ...item,
     subjectId: item.subject.id,
@@ -79,8 +92,30 @@ export function StudentAssignments() {
   return (
     <>
       <PageHeading eyebrow={t.eyebrow} title={t.title} description={t.description} />
+      <div className="assignments-overview-strip" aria-label="Tổng quan bài tập">
+        <span className="assignments-overview-chip">
+          <BookOpen size={14} aria-hidden="true" />
+          <span>{t.totalAssigned(hierarchical.length)}</span>
+        </span>
+        {tests.length > 0 && (
+          <span className="assignments-overview-chip">
+            <ClipboardCheck size={14} aria-hidden="true" />
+            <span>{t.totalTests(tests.length)}</span>
+          </span>
+        )}
+        {overdueItems.length > 0 && (
+          <span className="assignments-overview-chip is-alert">
+            <Clock3 size={14} aria-hidden="true" />
+            <span>{t.overdueCount(overdueItems.length)}</span>
+          </span>
+        )}
+      </div>
+
       {dueSoon.length > 0 && (
-        <p className="notice" role="status">{t.dueSoon(dueSoon.length, dueSoon.map((item: any) => item.title).join(", "))}</p>
+        <div className="assignments-due-soon-banner" role="status">
+          <Clock3 size={16} aria-hidden="true" className="assignments-due-soon-icon" />
+          <span>{t.dueSoon(dueSoon.length, dueSoon.map((item: any) => item.title).join(", "))}</span>
+        </div>
       )}
       <SubjectGradeChapterBrowser
         items={hierarchical}
@@ -88,21 +123,110 @@ export function StudentAssignments() {
         rootPath="/assignments"
         itemLabel={t.itemLabel}
         emptyCopy={ungroupedTests.length ? t.emptyUngrouped : t.emptyAll}
-        renderItem={(item) => <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
-          <BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.dueDate ? commonText().due(formatDate(item.dueDate)) : commonText().noDueDate}</small>{item.contentType === "test" && <Badge tone="outline">{t.test}</Badge>}{item.testStatus && <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>{testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}{item.testStatus.extended ? t.extended : ""}</Badge>}{item.overdue && <small className="student-overdue">{t.overdue}</small>}</span><ArrowUpRight size={17} />
-        </Link>}
+        renderItem={(item) => (
+          <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+            <span className="student-assignment-icon-wrap" aria-hidden="true">
+              {item.contentType === "lab" ? (
+                <FlaskConical size={18} />
+              ) : item.contentType === "test" ? (
+                <ClipboardCheck size={18} />
+              ) : (
+                <BookOpen size={18} />
+              )}
+            </span>
+            <span className="student-assignment-copy">
+              <span className="student-assignment-title-line">
+                <strong className="student-assignment-title">{item.title}</strong>
+                <span className={`student-content-badge ${item.contentType}`}>
+                  {item.contentType === "lab"
+                    ? t.badgeLab
+                    : item.contentType === "test"
+                      ? t.badgeTest
+                      : t.badgeLesson}
+                </span>
+                {item.testStatus && (
+                  <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>
+                    {testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}
+                    {item.testStatus.extended ? t.extended : ""}
+                  </Badge>
+                )}
+              </span>
+              <div className="student-assignment-meta-row">
+                <span className="student-assignment-meta-text">
+                  {item.classroom.name} · {item.dueDate ? commonText().due(formatDate(item.dueDate)) : commonText().noDueDate}
+                </span>
+                {item.overdue && (
+                  <span className="student-assignment-overdue-pill">
+                    {t.overdue}
+                  </span>
+                )}
+              </div>
+            </span>
+            <ArrowUpRight size={17} className="student-assignment-arrow" aria-hidden="true" />
+          </Link>
+        )}
       />
-      {ungroupedTests.length > 0 && <section className="student-closed-assignments" aria-labelledby="ungrouped-tests-heading">
-        <h2 id="ungrouped-tests-heading">{t.ungroupedTitle}</h2>
-        <p className="hierarchy-empty">{t.ungroupedBody}</p>
-        <div className="student-list student-assignment-list">{ungroupedTests.map((item) => <Link key={item.id} className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
-          <BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{item.classroom.name} · {item.dueDate ? commonText().due(formatDateTime(item.dueDate)) : commonText().noDueDate}</small><Badge tone="outline">{t.test}</Badge>{item.testStatus && <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>{testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}{item.testStatus.extended ? t.extended : ""}</Badge>}</span><ArrowUpRight size={17} />
-        </Link>)}</div>
-      </section>}
-      {closed.length > 0 && <section className="student-closed-assignments" aria-labelledby="closed-assignment-heading">
-        <h2 id="closed-assignment-heading">{t.archived}</h2>
-        {closed.map((item) => <article key={item.id} className="student-assignment-row" aria-disabled="true"><BookOpen size={18} /><span className="student-assignment-copy"><b>{item.title}</b><small>{item.notice ?? t.unavailable}</small></span></article>)}
-      </section>}
+      {ungroupedTests.length > 0 && (
+        <section className="student-closed-assignments" aria-labelledby="ungrouped-tests-heading">
+          <h2 id="ungrouped-tests-heading">{t.ungroupedTitle}</h2>
+          <p className="hierarchy-empty">{t.ungroupedBody}</p>
+          <div className="student-list student-assignment-list">
+            {ungroupedTests.map((item) => (
+              <Link key={item.id} className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+                <span className="student-assignment-icon-wrap" aria-hidden="true">
+                  <ClipboardCheck size={18} />
+                </span>
+                <span className="student-assignment-copy">
+                  <span className="student-assignment-title-line">
+                    <strong className="student-assignment-title">{item.title}</strong>
+                    <span className="student-content-badge test">{t.badgeTest}</span>
+                    {item.testStatus && (
+                      <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>
+                        {testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}
+                        {item.testStatus.extended ? t.extended : ""}
+                      </Badge>
+                    )}
+                  </span>
+                  <div className="student-assignment-meta-row">
+                    <span className="student-assignment-meta-text">
+                      {item.classroom.name} · {item.dueDate ? commonText().due(formatDateTime(item.dueDate)) : commonText().noDueDate}
+                    </span>
+                    {item.overdue && (
+                      <span className="student-assignment-overdue-pill">
+                        {t.overdue}
+                      </span>
+                    )}
+                  </div>
+                </span>
+                <ArrowUpRight size={17} className="student-assignment-arrow" aria-hidden="true" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      {closed.length > 0 && (
+        <section className="student-closed-assignments" aria-labelledby="closed-assignment-heading">
+          <h2 id="closed-assignment-heading">{t.archived}</h2>
+          <div className="student-list student-assignment-list">
+            {closed.map((item) => (
+              <article key={item.id} className="student-assignment-row is-archived" aria-disabled="true">
+                <span className="student-assignment-icon-wrap" aria-hidden="true">
+                  <Archive size={18} />
+                </span>
+                <span className="student-assignment-copy">
+                  <span className="student-assignment-title-line">
+                    <strong className="student-assignment-title">{item.title}</strong>
+                    <Badge tone="outline">{t.archived}</Badge>
+                  </span>
+                  <div className="student-assignment-meta-row">
+                    <span className="student-assignment-meta-text">{item.notice ?? t.unavailable}</span>
+                  </div>
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }
