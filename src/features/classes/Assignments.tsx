@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { FlaskConical, BookOpen, ClipboardCheck, Edit3, Archive, Clock, Users, BarChart2, Plus } from "lucide-react";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
@@ -138,68 +139,116 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
     if (searchParams.has("assign")) {
       const next = new URLSearchParams(searchParams);
       next.delete("assign");
+      next.delete("labId");
       setSearchParams(next, { replace: true });
     }
   };
   const active = list.data?.filter((a) => a.status === "ACTIVE") ?? [];
   const past = list.data?.filter((a) => a.status === "ARCHIVED") ?? [];
-  const row = (a: TeacherAssignment) => (
-    <div className="assignment-row" key={a.id}>
-      <div>
-        <b>{a.title}</b>
-        <small>
-          {contentTypeLabel[a.contentType]} · {dueLabel(a.dueDate)} · {t.students(a.recipientCount)}
-          {a.audience === "SUBSET" ? t.group : t.wholeClass}
-        </small>
-        {a.testSummary && (
-          <small>
-            {t.counts(a.testSummary.counts.SUBMITTED, a.testSummary.counts.LATE_REVIEW_PENDING, a.testSummary.counts.REJECTED, a.testSummary.counts.OVERDUE_UNSUBMITTED)}
-          </small>
-        )}
-        {a.testSummary?.extended && <Badge tone="gold">{t.extendedTimes(a.testSummary.revision - 1)}</Badge>}
-        {a.overdue && a.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
-      </div>
-      {a.contentType === "test" && (
-        <button className="text-button" onClick={() => setTracking(a)}>
-          {t.trackSubmissions}
-        </button>
-      )}
-      {a.status === "ACTIVE" && !archived && (
-        <div className="button-row">
-          <button className="text-button" onClick={() => { act.reset(); setEditing(a); }}>
-            {t.edit}
-          </button>
-          <button className="danger-text" onClick={() => { act.reset(); setArchiving(a); }}>
-            {t.archive}
-          </button>
+  const getAssignmentIcon = (type: AssignableType) => {
+    switch (type) {
+      case "lab":
+        return FlaskConical;
+      case "test":
+        return ClipboardCheck;
+      case "lesson":
+      default:
+        return BookOpen;
+    }
+  };
+
+  const row = (a: TeacherAssignment) => {
+    const Icon = getAssignmentIcon(a.contentType);
+    return (
+      <article className="panel teacher-assignment-card" key={a.id}>
+        <div className="assignment-card-lead">
+          <div className={`assignment-type-icon is-${a.contentType}`} aria-hidden="true">
+            <Icon size={20} />
+          </div>
+          <div className="assignment-card-info">
+            <div className="assignment-title-row">
+              <h3 className="assignment-card-title">{a.title}</h3>
+              <span className={`assignment-type-pill is-${a.contentType}`}>{contentTypeLabel[a.contentType]}</span>
+              {a.overdue && a.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
+              {a.testSummary?.extended && <Badge tone="gold">{t.extendedTimes(a.testSummary.revision - 1)}</Badge>}
+            </div>
+            <div className="assignment-meta-row">
+              <span className="assignment-meta-item">
+                <Clock size={13} aria-hidden="true" />
+                <span>{dueLabel(a.dueDate)}</span>
+              </span>
+              <span className="assignment-meta-divider" aria-hidden="true">·</span>
+              <span className="assignment-meta-item">
+                <Users size={13} aria-hidden="true" />
+                <span>{t.students(a.recipientCount)}{a.audience === "SUBSET" ? t.group : t.wholeClass}</span>
+              </span>
+            </div>
+            {a.testSummary && (
+              <p className="tiny muted assignment-test-counts">
+                {t.counts(a.testSummary.counts.SUBMITTED, a.testSummary.counts.LATE_REVIEW_PENDING, a.testSummary.counts.REJECTED, a.testSummary.counts.OVERDUE_UNSUBMITTED)}
+              </p>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+        <div className="assignment-card-actions">
+          {a.contentType === "test" && (
+            <button type="button" className="secondary button-compact" onClick={() => setTracking(a)}>
+              <BarChart2 size={14} aria-hidden="true" />
+              <span>{t.trackSubmissions}</span>
+            </button>
+          )}
+          {a.status === "ACTIVE" && !archived && (
+            <div className="button-row">
+              <button type="button" className="secondary button-compact" onClick={() => { act.reset(); setEditing(a); }}>
+                <Edit3 size={14} aria-hidden="true" />
+                <span>{t.edit}</span>
+              </button>
+              <button type="button" className="danger-text button-compact" onClick={() => { act.reset(); setArchiving(a); }}>
+                <Archive size={14} aria-hidden="true" />
+                <span>{t.archive}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </article>
+    );
+  };
   return (
-    <section className="panel" aria-labelledby="assignments-title">
-      <div className="section-heading">
-        <h2 id="assignments-title">{t.assigned}</h2>
+    <section className="panel assignments-panel" aria-labelledby="assignments-title">
+      <div className="section-heading assignment-section-heading">
+        <div className="section-title-wrap">
+          <h2 id="assignments-title">{t.assigned}</h2>
+          <span className="section-count-pill">{active.length}</span>
+        </div>
         {!archived && (
-          <button className="primary" onClick={() => { setNotice(null); setAssigning(true); }}>
-            {t.assign}
+          <button type="button" className="primary button-compact" onClick={() => { setNotice(null); setAssigning(true); }}>
+            <Plus size={15} aria-hidden="true" />
+            <span>{t.assign}</span>
           </button>
         )}
       </div>
       {notice && <p className="notice" role="status">{notice}</p>}
       <LoadError query={list} what={t.assignedList} />
       {list.data && active.length === 0 && <Empty>{t.noneActive}</Empty>}
-      {active.map(row)}
+      <div className="teacher-assignment-list">
+        {active.map(row)}
+      </div>
       {past.length > 0 && (
-        <details>
-          <summary>{t.archivedCount(past.length)}</summary>
-          {past.map(row)}
+        <details className="teacher-archived-section">
+          <summary className="teacher-archived-summary">
+            <Archive size={15} aria-hidden="true" />
+            <span>{t.archivedCount(past.length)}</span>
+          </summary>
+          <div className="teacher-archived-list">
+            {past.map(row)}
+          </div>
         </details>
       )}
       {assigning && (
         <AssignModal
           classroom={classroom}
           initialContentType={requestedLabAssignment ? "lab" : undefined}
+          initialLabId={requestedLabAssignment ? searchParams.get("labId") ?? undefined : undefined}
           onClose={closeAssignModal}
           onAssigned={(message) => {
             setNotice(message);
@@ -257,11 +306,12 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   );
 }
 
-function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void; initialContentType?: AssignableType }) {
+function AssignModal({ classroom, onClose, onAssigned, initialContentType, initialLabId }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void; initialContentType?: AssignableType; initialLabId?: string }) {
+  const navigate = useNavigate();
   const [contentType, setContentType] = useState<AssignableType>(initialContentType ?? "lesson");
   const [scope, setScope] = useState<"CLASS" | "SUBSET">("CLASS");
   const [studentIds, setStudentIds] = useState<string[]>([]);
-  const [contentId, setContentId] = useState("");
+  const [contentId, setContentId] = useState(initialLabId ?? "");
   const [labChallengeId, setLabChallengeId] = useState("");
   const [validation, setValidation] = useState("");
   const key = useRef(idempotencyKey());
@@ -277,6 +327,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
   const act = useMutate<{ recipientCount: number; message: string }>();
   const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : content.data?.tests ?? [];
   const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
+  useEffect(() => { if (initialLabId && selectedLab && !labChallengeId) setLabChallengeId(selectedLab.challenges[0]?.id ?? ""); }, [initialLabId, selectedLab, labChallengeId]);
   const selectedPrivateLab = contentType === "lab" ? content.data?.classLabs?.find((item) => `resource:${item.id}` === contentId) : undefined;
   const isTest = contentType === "test";
   return (
@@ -292,6 +343,10 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
           setValidation("");
           const due = String(form.get("dueDate") ?? "");
           const title = String(form.get("title") ?? "").trim();
+          if (contentType === "lab" && selectedLab) {
+            navigate(`/labs/${encodeURIComponent(selectedLab.id)}?classId=${encodeURIComponent(classroom.id)}&customize=1`, { state: { labDraft: { kind: "LAB", title: title || selectedLab.title, lessonId: "", content: { source: { labId: selectedLab.id, releaseId: selectedLab.release.id, challengeId: labChallengeId }, learningObjective: selectedLab.challenges.find((challenge: any) => challenge.id === labChallengeId)?.objective || selectedLab.title, instructions: "Thực hiện thí nghiệm và ghi lại bằng chứng.", reportPrompts: [] }, assignment: { studentIds: scope === "SUBSET" ? studentIds : [], dueDate: due ? new Date(due).toISOString() : null } } } });
+            return;
+          }
           act.mutate(
             {
               path: `/classes/${classroom.id}/assignments`,
@@ -388,7 +443,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
         <p className="tiny muted">{t.recipientsFixed}</p>
         <ErrorBox error={act.error} />
         <button className="primary wide" disabled={act.isPending || !contentId || (!options.length && !selectedPrivateLab) || (contentType === "lab" && !selectedPrivateLab && !labChallengeId) || (scope === "SUBSET" && studentIds.length === 0)}>
-          {act.isPending ? t.assigning : t.assign}
+          {act.isPending ? t.assigning : contentType === "lab" && selectedLab ? "Mở phòng thí nghiệm để giao bài" : t.assign}
         </button>
       </form>
     </Modal>

@@ -28,6 +28,7 @@ export type TeacherAssignment = {
   audience: "CLASS" | "SUBSET";
   status: "ACTIVE" | "ARCHIVED";
   recipientCount: number;
+  targetStudentIds?: string[];
   testSummary?: { revision: number; extended: boolean; counts: Record<"SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED" | "OVERDUE_UNSUBMITTED" | "NOT_SUBMITTED", number> };
 };
 

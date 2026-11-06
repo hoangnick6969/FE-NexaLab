@@ -38,10 +38,10 @@ const text = defineText({
   },
 });
 
-export type ResourceContent = { source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
+export type ResourceContent = { customParams?: Record<string, number>; source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
 
 export function resourceInput(kind: ResourceKind, value: ResourceContent) {
-  if (kind === "LAB") return { source: value.source, learningObjective: value.learningObjective, instructions: value.instructions, reportPrompts: value.reportPrompts?.filter((prompt) => prompt.trim()) ?? [] };
+  if (kind === "LAB") return { source: value.source, learningObjective: value.learningObjective, instructions: value.instructions, reportPrompts: value.reportPrompts?.filter((prompt) => prompt.trim()) ?? [], ...(value.customParams ? { customParams: value.customParams } : {}) };
   if (kind === "DOCUMENT" || kind === "REPORT_TEMPLATE") return { description: value.description ?? "", source: value.source };
   if (kind === "LINK") return { url: value.url, description: value.description ?? "" };
   return kind === "DECK" ? { cards: value.cards?.map(({ front, back }) => ({ front, back })) } : {

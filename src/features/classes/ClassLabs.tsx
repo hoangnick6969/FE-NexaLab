@@ -1,8 +1,8 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, FlaskConical } from "lucide-react";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowRight, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
 import { api } from "../../lib/api";
-import { Badge, CardSkeleton, Empty } from "../../components/ui";
+import { Badge, CardSkeleton, Empty, ErrorBox } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
 import { defineText } from "../../i18n";
 import { dueLabel, LoadError } from "./class-ui";
@@ -10,11 +10,13 @@ import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import "./teacher-operations.css";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { labInfo } from "../labs/lab-info";
+import { resourceInput } from "./ResourceEditor";
+import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
 
 const text = defineText({
   vi: {
     title: "Class Lab",
-    description: "Tạo hoạt động riêng từ Lab đã duyệt, chia sẻ để luyện tập và giao bài cho từng lớp.",
+    description: "Mở phòng thí nghiệm, chỉnh đề bài trong giới hạn đã duyệt rồi giao cho lớp.",
     manageClasses: "Quản lý lớp",
     active: "Đang giao",
     archived: "Đã lưu trữ",
@@ -22,9 +24,9 @@ const text = defineText({
     grade: (grade: number) => `Khối ${grade}`,
     students: (count: number) => `${count} học sinh đã duyệt`,
     assign: "Giao lab",
-    privateActivities: "Hoạt động Lab riêng của lớp: tạo, xem trước và sửa phiên bản",
+    privateActivities: "Đề bài Lab đã lưu: xem trước và sửa bản nháp",
     none: "Chưa có bài lab nào được giao.",
-    noneHelp: "Chọn lab nền tảng trong mục giao bài của lớp. Bài được giao chỉ mở cho học sinh thuộc danh sách nhận bài.",
+    noneHelp: "Bấm Giao lab, chọn Lab nguồn rồi thiết kế đề bài ngay trong phòng thí nghiệm.",
     noClasses: "Chưa có lớp phù hợp.",
     noActiveClasses: "Tạo lớp trước khi giao bài thực hành.",
     noArchived: "Chưa có bài lab lưu trữ.",
@@ -188,9 +190,21 @@ export function ClassLabs() {
                       <b>{dueLabel(assignment.dueDate) || t.noDue}</b>
                     </div>
                     {view === "active" && assignment.overdue && assignment.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
-                    <Link className="teacher-class-lab-open" to={classHref} aria-label={t.openAssignment(assignment.title)}>
-                      <ArrowRight size={18} aria-hidden="true" />
-                    </Link>
+                    <div className="teacher-class-lab-actions">
+                      <Link className="secondary button-compact" to={`/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`}>
+                        <Eye size={13} aria-hidden="true" />
+                        <span>{assignment.classLabSnapshot ? "Xem Lab Space" : "Xem Lab nguồn"}</span>
+                      </Link>
+                      {assignment.classLabSnapshot && view === "active" && <EditAssignedLab classId={classroom.id} assignment={assignment} />}
+                      {!assignment.classLabSnapshot && view === "active" && (
+                        <Link className="secondary button-compact" to={`/classes/${encodeURIComponent(classroom.id)}?tab=work&assign=lab&labId=${encodeURIComponent(assignment.contentId)}`}>
+                          <Sparkles size={13} aria-hidden="true" />
+                          <span>Tạo đề bài riêng</span>
+                        </Link>
+                      )}
+                      <Link className="teacher-class-lab-open" to={classHref} aria-label={t.openAssignment(assignment.title)}><ArrowRight size={18} aria-hidden="true" /></Link>
+                    </div>
+                    {assignment.classLabSnapshot && view === "active" && <TeacherClassLabAdditionalResponses classId={classroom.id} resourceId={assignment.classLabSnapshot.resourceId} assignmentId={assignment.id} />}
                   </article>
                 ))}
               </div>
@@ -203,5 +217,24 @@ export function ClassLabs() {
         <Empty>{t.noArchived}</Empty>
       )}
     </div>
+  );
+}
+
+function EditAssignedLab({ classId, assignment }: { classId: string; assignment: TeacherAssignment }) {
+  const navigate = useNavigate();
+  const revise = useMutation({ mutationFn: () => {
+    if (assignment.audience === "SUBSET" && !assignment.targetStudentIds?.length) throw new Error("Không tải được danh sách học sinh của bài cũ. Hãy tải lại trang trước khi giao bản mới.");
+    return api<any>(`/classes/${encodeURIComponent(classId)}/resources/${encodeURIComponent(assignment.classLabSnapshot!.resourceId)}/revise`, "POST", {});
+  }, onSuccess: (draft) => {
+    navigate(`/labs/${encodeURIComponent(assignment.contentId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: draft.title, lessonId: draft.lessonId, resourceId: draft.id, content: resourceInput("LAB", draft.content), assignment: { studentIds: assignment.targetStudentIds ?? [], dueDate: assignment.dueDate } } } });
+  } });
+  return (
+    <>
+      <button type="button" className="secondary button-compact" disabled={revise.isPending} onClick={() => revise.mutate()}>
+        <Edit3 size={13} aria-hidden="true" />
+        <span>{revise.isPending ? "Đang mở…" : "Sửa câu hỏi và giao bản mới"}</span>
+      </button>
+      <ErrorBox error={revise.error} />
+    </>
   );
 }

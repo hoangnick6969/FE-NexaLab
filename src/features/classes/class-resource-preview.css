@@ -13,3 +13,276 @@
 .rich-resource-editor button:active, .resource-preview :is(button, a):active { opacity: 0.85; }
 .rich-resource-editor :is(button, input, select, textarea):disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width: 640px) { .resource-preview { padding: 12px; } .class-lab-instructions { margin: 8px; } }
+
+/* Apple-style Compact Attachment & Resource Cards */
+.compact-resource-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.compact-resource-preview h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.compact-attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.compact-attachment-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.compact-attachment-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.compact-badge-ext {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.compact-attachment-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.compact-attachment-filename {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-attachment-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.compact-status-ready {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--brand) 9%, white);
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, white);
+  letter-spacing: 0.02em;
+}
+
+.compact-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.compact-action-row .button-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface, #ffffff);
+  color: var(--text-base, #1e293b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.compact-action-row .button-compact:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Student Class Resources Toolbar & Categories */
+.student-resource-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.student-resource-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  padding-bottom: 12px;
+}
+
+.student-resource-categories {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.student-resource-categories button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.student-resource-categories button:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.student-resource-categories button.active,
+.student-resource-categories button[aria-selected="true"] {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.student-resource-categories .cat-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.student-resource-categories button.active .cat-count {
+  background: color-mix(in srgb, var(--brand) 14%, white);
+  color: var(--brand);
+}
+
+.student-resource-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.apple-resource-card {
+  background: #ffffff;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+}
+
+.class-resource-row.student-resource {
+  align-items: stretch;
+  gap: 12px;
+}
+
+.class-resource-row.student-resource > .student-resource-header {
+  flex: 0 0 auto;
+}
+
+.apple-resource-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+}
+
+.student-resource-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.resource-kind-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--brand) 26%, white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.student-resource-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.student-resource-info h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.student-resource-info small {
+  color: #64748b;
+  font-size: 12.5px;
+}

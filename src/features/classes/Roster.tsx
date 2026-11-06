@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ArrowUpDown, CheckCheck } from "lucide-react";
+import { Search, ArrowUpDown, CheckCheck, KeyRound, ImageOff, QrCode, UserMinus, Check, Plus } from "lucide-react";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type ClassSummary, type Enrollment } from "./class-types";
@@ -190,24 +190,29 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
     setModal(next);
   };
   return (
-    <section className="panel" aria-labelledby="roster-title">
-      <div className="section-heading">
-        <h2 id="roster-title">{t.members}</h2>
+    <section className="panel roster-panel" aria-labelledby="roster-title">
+      <div className="section-heading roster-section-heading">
+        <div className="section-title-wrap">
+          <h2 id="roster-title">{t.members}</h2>
+          <span className="section-count-pill">{roster.data?.length ?? 0}</span>
+        </div>
         {!archived && (
           <div className="button-row">
-            <button className="secondary" onClick={() => open("enroll")}>
+            <button type="button" className="secondary button-compact" onClick={() => open("enroll")}>
               {t.enrolExisting}
             </button>
-            <button className="primary" onClick={() => open("provision")}>
-              {t.issueAccount}
+            <button type="button" className="primary button-compact" onClick={() => open("provision")}>
+              <Plus size={14} aria-hidden="true" />
+              <span>{t.issueAccount}</span>
             </button>
           </div>
         )}
       </div>
-      <div className="tabs" role="tablist" aria-label={t.memberStatus}>
+      <div className="tabs roster-tabs" role="tablist" aria-label={t.memberStatus}>
         {(["approved", "pending", "removed"] as const).map((value) => (
           <button key={value} role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} onClick={() => setTab(value)}>
-            {statusLabel[value]} ({roster.data?.filter((e) => e.status === value).length ?? 0})
+            <span>{statusLabel[value]}</span>
+            <span className="cat-count">{roster.data?.filter((e) => e.status === value).length ?? 0}</span>
           </button>
         ))}
       </div>
@@ -290,57 +295,67 @@ export function Roster({ classroom }: { classroom: ClassSummary }) {
                     <Badge tone={e.status === "approved" ? "" : "outline"}>{statusLabel[e.status]}</Badge>
                     {e.student.mustChangePassword && <small>{t.tempNotChanged}</small>}
                   </td>
-                  <td>
-                    {!archived && e.status === "pending" && (
-                      <button
-                        className="text-button"
-                        disabled={act.isPending}
-                        onClick={() => act.mutate({ path: `/classes/${classroom.id}/students/${e.studentId}`, method: "PUT", body: { status: "approved" } })}
-                      >
-                        {t.approve}
-                      </button>
-                    )}
-                    {!archived && e.status !== "removed" && (
-                      <>
-                        {e.status === "approved" && (
-                          <button
-                            className="text-button"
-                            onClick={() => {
-                              act.reset();
-                              setCredentials(null);
-                              setModal("credentials");
-                              act.mutate(
-                                { path: `/classes/${classroom.id}/students/${e.studentId}/reset-password` },
-                                { onSuccess: (data: any) => setCredentials(data.credentials) },
-                              );
-                            }}
-                          >
-                            {t.resetPassword}
-                          </button>
-                        )}
-                        {e.status === "approved" && e.student.avatarUrl && (
-                          <button className="danger-text" onClick={() => setAvatarTarget(e)}>
-                            {t.removeAvatar}
-                          </button>
-                        )}
-                        {e.status === "approved" && (
-                          <button
-                            className="text-button"
-                            onClick={() => {
-                              act.reset();
-                              setParentCode(null);
-                              setParentTarget(e);
-                              setModal("parent-code");
-                            }}
-                          >
-                            {t.parentCode}
-                          </button>
-                        )}
-                        <button className="danger-text" onClick={() => setConfirm(e)}>
-                          {e.status === "pending" ? t.reject : t.remove}
+                  <td className="roster-actions-cell-wrap">
+                    <div className="roster-actions-cell">
+                      {!archived && e.status === "pending" && (
+                        <button
+                          type="button"
+                          className="button-compact primary"
+                          disabled={act.isPending}
+                          onClick={() => act.mutate({ path: `/classes/${classroom.id}/students/${e.studentId}`, method: "PUT", body: { status: "approved" } })}
+                        >
+                          <Check size={13} aria-hidden="true" />
+                          <span>{t.approve}</span>
                         </button>
-                      </>
-                    )}
+                      )}
+                      {!archived && e.status !== "removed" && (
+                        <>
+                          {e.status === "approved" && (
+                            <button
+                              type="button"
+                              className="button-compact secondary"
+                              onClick={() => {
+                                act.reset();
+                                setCredentials(null);
+                                setModal("credentials");
+                                act.mutate(
+                                  { path: `/classes/${classroom.id}/students/${e.studentId}/reset-password` },
+                                  { onSuccess: (data: any) => setCredentials(data.credentials) },
+                                );
+                              }}
+                            >
+                              <KeyRound size={13} aria-hidden="true" />
+                              <span>{t.resetPassword}</span>
+                            </button>
+                          )}
+                          {e.status === "approved" && e.student.avatarUrl && (
+                            <button type="button" className="button-compact secondary danger-hover" onClick={() => setAvatarTarget(e)}>
+                              <ImageOff size={13} aria-hidden="true" />
+                              <span>{t.removeAvatar}</span>
+                            </button>
+                          )}
+                          {e.status === "approved" && (
+                            <button
+                              type="button"
+                              className="button-compact secondary"
+                              onClick={() => {
+                                act.reset();
+                                setParentCode(null);
+                                setParentTarget(e);
+                                setModal("parent-code");
+                              }}
+                            >
+                              <QrCode size={13} aria-hidden="true" />
+                              <span>{t.parentCode}</span>
+                            </button>
+                          )}
+                          <button type="button" className="button-compact danger-text" onClick={() => setConfirm(e)}>
+                            <UserMinus size={13} aria-hidden="true" />
+                            <span>{e.status === "pending" ? t.reject : t.remove}</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

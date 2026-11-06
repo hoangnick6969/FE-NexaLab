@@ -8,6 +8,7 @@ import { testStatusLabel, testStatusTone } from "../../lib/test-status";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { defineText, formatDate, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
+import { labInfo } from "../labs/lab-info";
 
 const text = defineText({
   vi: {
@@ -33,6 +34,8 @@ const text = defineText({
     badgeLesson: "Bài học lý thuyết",
     badgeLab: "Thí nghiệm ảo",
     badgeTest: "Bài kiểm tra",
+    teacher: "GV",
+    assignedAt: (date: string) => `Giao lúc ${date}`,
   },
   en: {
     loading: "Loading assignments…",
@@ -57,15 +60,19 @@ const text = defineText({
     badgeLesson: "Theory lesson",
     badgeLab: "Virtual lab",
     badgeTest: "Assessment",
+    teacher: "Teacher",
+    assignedAt: (date: string) => `Assigned ${date}`,
   },
 });
 
 type AssignmentItem = HierarchyItem & {
+  contentId: string;
+  createdAt: string;
   contentType: string;
   dueDate: string | null;
   overdue: boolean;
   canOpen: boolean;
-  classroom: { id: string; name: string };
+  classroom: { id: string; name: string; teacher?: { fullName?: string | null; username?: string | null } | null };
   notice?: string | null;
   testStatus?: { status: string; dueSoon?: boolean; extended?: boolean } | null;
 };
@@ -85,6 +92,7 @@ export function StudentAssignments() {
     grade: Number(item.grade),
     chapter: item.chapter || commonText().noChapter,
     itemOrder: item.curriculumOrder ?? item.topicOrder,
+    thumbnail: item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined,
   })) as AssignmentItem[];
   const tests = assignments.filter((item) => item.contentType === "test");
   const ungroupedTests = tests.filter((item) => item.canOpen !== false && (!item.subject || !item.grade));
@@ -123,8 +131,10 @@ export function StudentAssignments() {
         rootPath="/assignments"
         itemLabel={t.itemLabel}
         emptyCopy={ungroupedTests.length ? t.emptyUngrouped : t.emptyAll}
-        renderItem={(item) => (
-          <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+        renderItem={(item) => {
+          const thumbnail = item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined;
+          return <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+            {thumbnail && <img className="student-assignment-thumbnail" src={thumbnail} alt="" loading="lazy" />}
             <span className="student-assignment-icon-wrap" aria-hidden="true">
               {item.contentType === "lab" ? (
                 <FlaskConical size={18} />
@@ -155,6 +165,8 @@ export function StudentAssignments() {
                 <span className="student-assignment-meta-text">
                   {item.classroom.name} · {item.dueDate ? commonText().due(formatDate(item.dueDate)) : commonText().noDueDate}
                 </span>
+                {item.classroom.teacher && <span className="student-assignment-meta-text">{t.teacher}: {item.classroom.teacher.fullName || item.classroom.teacher.username}</span>}
+                {item.createdAt && <span className="student-assignment-meta-text">{t.assignedAt(formatDateTime(item.createdAt))}</span>}
                 {item.overdue && (
                   <span className="student-assignment-overdue-pill">
                     {t.overdue}
@@ -164,7 +176,7 @@ export function StudentAssignments() {
             </span>
             <ArrowUpRight size={17} className="student-assignment-arrow" aria-hidden="true" />
           </Link>
-        )}
+        }}
       />
       {ungroupedTests.length > 0 && (
         <section className="student-closed-assignments" aria-labelledby="ungrouped-tests-heading">

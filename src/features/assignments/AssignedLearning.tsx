@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Clock3, GraduationCap } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { api, type StudentPathway } from "../../lib/api";
@@ -9,8 +9,9 @@ import { PracticalPathwayStep } from "../labs/pathways/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
 import { AssignedTest } from "./AssignedTest";
 import { QuizLearningStep } from "./QuizLearningStep";
-import { defineText, formatDate } from "../../i18n";
+import { defineText, formatDate, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
+import { labInfo } from "../labs/lab-info";
 
 const text = defineText({
   vi: {
@@ -39,6 +40,8 @@ const text = defineText({
     step: (n: number) => `Bước ${n}`,
     stepUnavailable: "Bước học chưa khả dụng",
     openLab: "Mở phòng lab",
+    teacher: "Giáo viên",
+    assignedAt: (date: string) => `Giao lúc ${date}`,
   },
   en: {
     loading: "Loading the assignment…",
@@ -66,6 +69,8 @@ const text = defineText({
     step: (n: number) => `Step ${n}`,
     stepUnavailable: "This step is not available yet",
     openLab: "Open the lab",
+    teacher: "Teacher",
+    assignedAt: (date: string) => `Assigned ${date}`,
   },
 });
 
@@ -100,6 +105,8 @@ export function AssignedLearning() {
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>{t.retry}</button></div>;
   const assignment = query.data;
   const content = assignment.content;
+  const teacherName = assignment.classroom.teacher?.fullName || (assignment.classroom.teacher?.username ? `@${assignment.classroom.teacher.username}` : t.teacher);
+  const sourceLab = assignment.contentType === "lab" ? labInfo.find((lab) => lab.id === content.id) : undefined;
   if (assignment.contentType === "test") return <AssignedTest assignment={assignment} />;
   if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
     return <PageLoader message={t.loadingPathway} caption={t.pathwayCaption} />;
@@ -120,6 +127,12 @@ export function AssignedLearning() {
         description={`${assignment.classroom.name} · ${assignment.dueDate ? commonText().due(formatDate(assignment.dueDate)) : commonText().noDueDate}`}
       />
       <section className="panel lesson-content">
+        {sourceLab?.thumbnail && <img className="assigned-lab-thumbnail" src={sourceLab.thumbnail} alt={sourceLab.title} />}
+        {assignment.contentType === "lab" && <div className="assigned-lab-meta">
+          <span><GraduationCap size={15} aria-hidden="true" />{t.teacher}: {teacherName}</span>
+          {assignment.createdAt && <span><Clock3 size={15} aria-hidden="true" />{t.assignedAt(formatDateTime(assignment.createdAt))}</span>}
+          <span><Clock3 size={15} aria-hidden="true" />{assignment.dueDate ? commonText().due(formatDateTime(assignment.dueDate)) : commonText().noDueDate}</span>
+        </div>}
         <p className="eyebrow">
           {lesson.subject?.name} · {t.grade(lesson.grade ?? lesson.subject?.grade)}
         </p>

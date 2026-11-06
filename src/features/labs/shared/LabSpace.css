@@ -279,6 +279,7 @@
 .lab-space .lab-workspace > .error { position: absolute; left: 18px; bottom: 100px; z-index: 12; max-width: min(400px, calc(100% - 36px)); background: var(--surface); }
 .lab-space .preview-strip { pointer-events: none; }
 .lab-space-body { z-index: 1; pointer-events: none; overflow: hidden; }
+.lab-space:has(.class-lab-additional-response) .lab-space-body { overflow-y: auto; overflow-x: hidden; }
 .lab-space-body > *, .lab-space .lab-workspace > *, .lab-space .bulb-content, .lab-space .lab-aside { pointer-events: auto; }
 .lab-space .lab-layout, .lab-space .lab-workspace, .lab-space .bulb-activity, .lab-space .circuit-editor { pointer-events: none; }
 .lab-space-scene { position: fixed; inset: 0; z-index: 0; }
@@ -300,3 +301,90 @@
 }
 
 .lab-space-header-actions:empty { display: none; }
+
+/* Teacher authoring has its own scroll pane beside the pinned simulation. */
+.lab-space:has(.teacher-lab-authoring) .lab-space-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  padding: 92px 16px 16px;
+}
+.teacher-lab-authoring {
+  display: grid;
+  grid-template-columns: minmax(300px, 370px) minmax(300px, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-height: calc(100dvh - 108px);
+  pointer-events: none;
+}
+.lab-space .teacher-lab-authoring > .panel {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  pointer-events: auto;
+}
+.lab-space .teacher-lab-authoring > [aria-label="Tùy biến thông số Lab"] {
+  box-sizing: border-box;
+  min-height: 0;
+  max-height: calc(100dvh - 108px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.lab-space .teacher-lab-authoring .teacher-lab-preview {
+  box-sizing: border-box;
+  min-height: 0;
+  max-height: calc(100dvh - 108px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+/* The 2D simulation is an absolute overlay; contain it inside the preview panel while authoring. */
+.lab-space .teacher-lab-authoring .teacher-lab-preview:has(.fluid-kit-shell) {
+  position: relative;
+  min-height: min(72dvh, 680px);
+  overflow: hidden;
+}
+.lab-space:has(.teacher-lab-authoring) .teacher-lab-preview > .fluid-kit-shell {
+  inset: 52px 0 0;
+  width: auto;
+  height: auto;
+}
+@media (max-width: 980px) {
+  .teacher-lab-authoring {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .lab-space .teacher-lab-authoring .teacher-lab-preview:has(.fluid-kit-shell) {
+    min-height: 76dvh;
+  }
+  .lab-space:has(.teacher-lab-authoring) .lab-space-body {
+    overflow-y: auto;
+    padding: 76px 10px 12px;
+  }
+  .teacher-lab-authoring {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    min-height: 0;
+    padding-bottom: 16px;
+  }
+  .lab-space .teacher-lab-authoring > [aria-label="Tùy biến thông số Lab"],
+  .lab-space .teacher-lab-authoring .teacher-lab-preview {
+    max-height: none;
+    overflow: visible;
+  }
+  .lab-space .teacher-lab-authoring .teacher-lab-preview:has(.fluid-kit-shell) {
+    overflow: hidden;
+  }
+  .lab-space:has(.teacher-lab-authoring) .teacher-lab-preview .buoyancy-table {
+    inset: 8px 8px 43dvh;
+    padding: 8px;
+  }
+  .lab-space:has(.teacher-lab-authoring) .teacher-lab-preview .k3-hud {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    width: calc(100% - 16px);
+    max-height: 42dvh;
+  }
+}

@@ -1,9 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Search, CheckCircle2, AlertCircle, Filter, FileSpreadsheet } from "lucide-react";
+import {
+  Download, Search, CheckCircle2, AlertCircle, Filter, FileSpreadsheet,
+  Plus, X, Sparkles, FlaskConical, FileText, ExternalLink, Layers, HelpCircle, FileCheck, UploadCloud
+} from "lucide-react";
 import { api, idempotencyKey, mutate } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field } from "../../components/ui";
+import { useActionToast } from "../../components/ActionToasts";
 import { defineText } from "../../i18n";
+import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
 
 const text = defineText({
   vi: {
@@ -15,6 +21,9 @@ const text = defineText({
     chooseCsv: "Chọn tệp CSV trước.",
     onlyThisClass: "CHỈ DÀNH CHO LỚP NÀY",
     resources: "Tài nguyên lớp",
+    createResource: "Tạo tài nguyên",
+    cancel: "Hủy",
+    closeCreate: "Thu gọn",
     createDirect: "Tạo nội dung trực tiếp",
     contentType: "Loại nội dung",
     purpose: "Mục đích sử dụng",
@@ -81,6 +90,9 @@ const text = defineText({
     chooseCsv: "Choose a CSV file first.",
     onlyThisClass: "FOR THIS CLASS ONLY",
     resources: "Class resources",
+    createResource: "Create resource",
+    cancel: "Cancel",
+    closeCreate: "Collapse",
     createDirect: "Create content directly",
     contentType: "Content type",
     purpose: "Purpose",
@@ -141,7 +153,7 @@ const text = defineText({
 });
 const t = text();
 import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
-import { richNames, richSamples, ResourcePreview, type ResourceKind } from "./RichResourceEditor";
+import { richNames, richSamples, ResourcePreview, cleanFileName, type ResourceKind } from "./RichResourceEditor";
 
 type Kind = ResourceKind;
 type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; attachment?: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
@@ -182,12 +194,14 @@ function downloadSampleCsv(kind: Kind) {
 }
 
 export function TeacherClassResources({ classId, disabled, labOnly = false }: { classId: string; disabled: boolean; labOnly?: boolean }) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useQuery<Resource[]>({ queryKey: ["class-resources", classId], queryFn: () => api(`/classes/${classId}/resources`) });
   const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classId], queryFn: () => api(`/classes/${classId}/assignable-content`) });
   
   // Creation Mode
   const [creationMode, setCreationMode] = useState<"direct" | "import">("direct");
+  const [isFormOpen, setIsFormOpen] = useState(true);
   
   // Direct creation state
   const [kind, setKind] = useState<Kind>(labOnly ? "LAB" : "DECK");
@@ -203,6 +217,8 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
   const [importPreview, setImportPreview] = useState<any>(null);
   const [importError, setImportError] = useState<unknown>(null);
+  const [isCsvDragging, setIsCsvDragging] = useState(false);
+  const toast = useActionToast();
 
   // List Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -221,28 +237,64 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
     try {
       const body = resourceBody();
       await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() });
+      toast({
+        title: "Đã tạo bản nháp",
+        description: `Tài nguyên "${title.trim()}" đã được lưu thành công.`,
+        tone: "success",
+      });
       setTitle("");
       setSource(sample[kind]);
-    } catch (e) {
+    } catch (e: any) {
       setError(e);
+      toast({
+        title: "Lưu bản nháp thất bại",
+        description: e?.message ?? "Có lỗi xảy ra khi tạo tài nguyên.",
+        tone: "error",
+      });
     }
   };
 
   const previewImport = async () => {
     setImportError(null);
     setImportPreview(null);
-    if (!importFile) return setImportError(new Error(t.selectFileFirst));
+    if (!importFile) {
+      const err = new Error(t.selectFileFirst);
+      setImportError(err);
+      toast({ title: t.selectFileFirst, tone: "error" });
+      return;
+    }
     try {
-      setImportPreview(await api(`/classes/${classId}/resources/import/preview`, "POST", { kind: importKind, filename: importFile.name, csv: importFile.csv }));
-    } catch (e) {
+      const preview = await api(`/classes/${classId}/resources/import/preview`, "POST", { kind: importKind, filename: importFile.name, csv: importFile.csv });
+      setImportPreview(preview);
+      if (preview.valid) {
+        toast({
+          title: "Tệp CSV hợp lệ",
+          description: `Tìm thấy ${preview.items?.length ?? 0} mục sẵn sàng nhập.`,
+          tone: "success",
+        });
+      } else {
+        toast({
+          title: "Tệp CSV có lỗi",
+          description: "Vui lòng xem chi tiết lỗi bên dưới.",
+          tone: "error",
+        });
+      }
+    } catch (e: any) {
       setImportError(e);
+      toast({
+        title: "Kiểm tra tệp thất bại",
+        description: e?.message ?? "Không thể phân tích cú pháp tệp CSV.",
+        tone: "error",
+      });
     }
   };
 
   const submitImport = async () => {
     if (!importFile) return;
     if (!importTitle.trim() || !importLessonId) {
-      setImportError(new Error(t.missingLessonOrTitle));
+      const err = new Error(t.missingLessonOrTitle);
+      setImportError(err);
+      toast({ title: t.missingLessonOrTitle, tone: "error" });
       return;
     }
     setImportError(null);
@@ -252,12 +304,22 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
         body: { kind: importKind, title: importTitle.trim(), lessonId: importLessonId, filename: importFile.name, csv: importFile.csv },
         key: idempotencyKey(),
       });
+      toast({
+        title: "Nhập tài nguyên thành công",
+        description: `Đã tạo bản nháp "${importTitle.trim()}".`,
+        tone: "success",
+      });
       setImportFile(null);
       setImportPreview(null);
       setImportTitle("");
       setImportLessonId("");
-    } catch (e) {
+    } catch (e: any) {
       setImportError(e);
+      toast({
+        title: "Nhập tài nguyên thất bại",
+        description: e?.message ?? "Không thể lưu bản nháp từ CSV.",
+        tone: "error",
+      });
     }
   };
 
@@ -276,18 +338,61 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   });
 
   return (
-    <section className="panel" aria-labelledby={`resources-${classId}`}>
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">{t.onlyThisClass}</p>
-          <h2 id={`resources-${classId}`}>{t.resources}</h2>
+    <section className="panel class-resources-panel" aria-labelledby={`resources-${classId}`}>
+      <div className="class-resource-top-bar">
+        <div className="resource-list-toolbar">
+          <div className="resource-search-input">
+            <Search size={15} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder={t.searchResourcePlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Tìm kiếm tài nguyên"
+            />
+          </div>
+          <div className="resource-filters">
+            <label className="filter-select-wrap">
+              <Filter size={13} aria-hidden="true" />
+              <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="Lọc theo loại">
+                <option value="ALL">{t.allKinds}</option>
+                {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="DECK">{t.deck}</option>
+                <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+                <option value="TEST">{t.testUnassigned}</option>
+              </select>
+            </label>
+            <label className="filter-select-wrap">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Lọc theo trạng thái">
+                <option value="ALL">{t.allStatuses}</option>
+                <option value="PUBLISHED">{t.shared}</option>
+                <option value="DRAFT">{t.draft}</option>
+                <option value="ARCHIVED">{t.archived}</option>
+              </select>
+            </label>
+          </div>
         </div>
+
+      {!disabled && !labOnly && (
+          <button
+            type="button"
+            className={isFormOpen ? "secondary button-compact" : "primary button-compact"}
+            onClick={() => setIsFormOpen((prev) => !prev)}
+            aria-expanded={isFormOpen}
+          >
+            {isFormOpen ? <X size={15} aria-hidden="true" /> : <Plus size={15} aria-hidden="true" />}
+            <span>{isFormOpen ? t.closeCreate : t.createResource}</span>
+          </button>
+        )}
       </div>
 
-      {!disabled && (
+      {!disabled && isFormOpen && (
         <div className="class-resource-create class-resource-create-card">
           <div className="resource-create-header">
-            <h4 className="resource-create-title">{creationMode === "direct" ? t.createDirect : t.importCsv}</h4>
+            <h4 className="resource-create-title">
+              <Sparkles size={16} aria-hidden="true" />
+              <span>{creationMode === "direct" ? t.createDirect : t.importCsv}</span>
+            </h4>
             {!labOnly && <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
               <button
                 type="button"
@@ -314,31 +419,46 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
           {creationMode === "direct" ? (
             <form onSubmit={create}>
               <fieldset className="form-lock" disabled={action.isPending}>
-                <label className="field">
-                  <span>{t.purpose}</span>
-                  <select disabled={labOnly} value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
-                    <option value="DECK">{t.deck}</option>
-                    <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
-                    <option value="TEST">{t.testUnassigned}</option>
-                    {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                </label>
+                <div className="form-grid-2col">
+                  <label className="field">
+                    <span>{t.purpose}</span>
+                    <select disabled={labOnly} value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
+                      <option value="DECK">{t.deck}</option>
+                      <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+                      <option value="TEST">{t.testUnassigned}</option>
+                      {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{t.linkedLesson}</span>
+                    <select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+                      <option value="">{t.chooseLesson}</option>
+                      {lessons.data?.lessons.map((lesson) => (
+                        <option key={lesson.id} value={lesson.id}>
+                          {t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
-                <label className="field">
-                  <span>{t.linkedLesson}</span>
-                  <select required value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
-                    <option value="">{t.chooseLesson}</option>
-                    {lessons.data?.lessons.map((lesson) => (
-                      <option key={lesson.id} value={lesson.id}>
-                        {t.grade(lesson.grade)} · {lesson.subject.name} · {lesson.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <ResourceEditor kind={kind} value={source} onChange={setSource} classId={classId} />
+                {kind === "LAB" && source.source?.labId && source.source?.challengeId && (
+                  <button type="button" className="secondary button-compact" onClick={() => navigate(`/labs/${encodeURIComponent(source.source!.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind, title, lessonId, content: resourceInput(kind, source) } } })}>
+                    <FlaskConical size={14} aria-hidden="true" />
+                    <span>Mở phòng thí nghiệm để tùy biến thông số</span>
+                  </button>
+                )}
                 <p className="tiny muted">{t.draftHint}</p>
                 <ErrorBox error={error} />
-                <button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
+                <div className="button-row resource-create-actions">
+                  <button type="button" className="secondary button-compact" onClick={() => setIsFormOpen(false)}>
+                    {t.cancel}
+                  </button>
+                  <button className="primary button-compact" disabled={action.isPending}>
+                    {action.isPending ? t.saving : t.saveDraft}
+                  </button>
+                </div>
               </fieldset>
             </form>
           ) : (
@@ -411,25 +531,62 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                 </small>
               </div>
 
-              <div className="import-file-row">
-                <label className="field file-field">
+              <div
+                className={`file-dropzone csv-dropzone${isCsvDragging ? " is-dragging" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsCsvDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsCsvDragging(false);
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  setIsCsvDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && !action.isPending) {
+                    setImportFile({ name: file.name, csv: await file.text() });
+                    setImportPreview(null);
+                    if (!importTitle) {
+                      setImportTitle(file.name.replace(/\.csv$/i, ""));
+                    }
+                  }
+                }}
+              >
+                <label className="field file-field dropzone-label">
                   <span>{t.csvFile}</span>
-                  <input
-                    type="file"
-                    accept=".csv,text/csv"
-                    onChange={async (e) => {
-                      const next = e.target.files?.[0];
-                      setImportFile(next ? { name: next.name, csv: await next.text() } : null);
-                      setImportPreview(null);
-                      if (next && !importTitle) {
-                        setImportTitle(next.name.replace(/\.csv$/i, ""));
-                      }
-                    }}
-                  />
+                  <div className="dropzone-box">
+                    <UploadCloud size={24} className="dropzone-icon" aria-hidden="true" />
+                    <div className="dropzone-text">
+                      <span className="dropzone-title">
+                        {importFile ? importFile.name : "Kéo thả file CSV vào đây hoặc nhấn để duyệt file"}
+                      </span>
+                      <span className="dropzone-hint">
+                        {importFile ? "Đã sẵn sàng kiểm tra nội dung" : "Định dạng CSV UTF-8 (tối đa 1 MB)"}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      disabled={action.isPending}
+                      onChange={async (e) => {
+                        const next = e.target.files?.[0];
+                        setImportFile(next ? { name: next.name, csv: await next.text() } : null);
+                        setImportPreview(null);
+                        if (next && !importTitle) {
+                          setImportTitle(next.name.replace(/\.csv$/i, ""));
+                        }
+                      }}
+                    />
+                  </div>
                 </label>
+              </div>
+
+              <div className="import-action-row">
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary button-compact"
                   disabled={!importFile}
                   onClick={previewImport}
                 >
@@ -497,40 +654,6 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
           </div>
         </div>
 
-        {/* Resource list controls */}
-        <div className="resource-list-toolbar">
-        <div className="resource-search-input">
-          <Search size={16} aria-hidden="true" />
-          <input
-            type="search"
-            placeholder={t.searchResourcePlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Tìm kiếm tài nguyên"
-          />
-        </div>
-        <div className="resource-filters">
-          <label className="filter-select-wrap">
-            <Filter size={14} aria-hidden="true" />
-            <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="Lọc theo loại">
-              <option value="ALL">{t.allKinds}</option>
-              {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              <option value="DECK">{t.deck}</option>
-              <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
-              <option value="TEST">{t.testUnassigned}</option>
-            </select>
-          </label>
-          <label className="filter-select-wrap">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Lọc theo trạng thái">
-              <option value="ALL">{t.allStatuses}</option>
-              <option value="PUBLISHED">{t.shared}</option>
-              <option value="DRAFT">{t.draft}</option>
-              <option value="ARCHIVED">{t.archived}</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
       {list.isLoading && <p className="muted">{t.loading}</p>}
       {list.error && <ErrorBox error={list.error} />}
       {list.data?.length === 0 && <Empty>{t.none}</Empty>}
@@ -545,24 +668,115 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   );
 }
 
+function getResourceIcon(kind: Kind) {
+  switch (kind) {
+    case "LAB": return FlaskConical;
+    case "DOCUMENT": return FileText;
+    case "REPORT_TEMPLATE": return FileSpreadsheet;
+    case "LINK": return ExternalLink;
+    case "DECK": return Layers;
+    case "STUDY_QUIZ": return HelpCircle;
+    case "TEST": return FileCheck;
+    default: return FileText;
+  }
+}
+
 function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
-  const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: () => invalidateResourceChoices(qc, classId) });
+  const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: (created: any, path) => { void invalidateResourceChoices(qc, classId); if (path === "revise" && resource.kind === "LAB") navigate(`/labs/${encodeURIComponent(created.content.source.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: created.title, lessonId: created.lessonId, resourceId: created.id, content: resourceInput("LAB", created.content) } } }); } });
+  const removeDraft = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "DELETE"), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const [contentDraft, setContentDraft] = useState<ResourceContent>(resource.content);
   const [titleDraft, setTitleDraft] = useState(resource.title);
   const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
-  return <article className="class-resource-row"><div><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)}{count !== undefined ? ` · ${t.items(count)}` : ""}</small></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
-    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button></>}
-    {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>{t.newVersion}</button><button className="danger-text" disabled={action.isPending} onClick={() => action.mutate("archive")}>{t.archive}</button></>}
+  const Icon = getResourceIcon(resource.kind);
+  return <article className="class-resource-row apple-resource-row"><div className="resource-row-lead"><div className="resource-kind-icon" aria-hidden="true"><Icon size={18} /></div><div className="resource-row-title-wrap"><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)}{count !== undefined ? ` · ${t.items(count)}` : ""}</small></div></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
+    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details>{resource.kind === "LAB" && <button type="button" className="secondary" onClick={() => navigate(`/labs/${encodeURIComponent(contentDraft.source!.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: titleDraft, lessonId: resource.lessonId, resourceId: resource.id, content: resourceInput("LAB", contentDraft) } } })}>Mở Lab Space để sửa đề bài</button>}<button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button><button type="button" className="danger-text" disabled={removeDraft.isPending} onClick={() => { if (window.confirm("Xóa vĩnh viễn bản nháp này khỏi lớp?")) removeDraft.mutate(); }}>Xóa bản nháp</button><ErrorBox error={removeDraft.error} /></>}
+    {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>{resource.kind === "LAB" ? "Tạo bản sửa trong Lab Space" : t.newVersion}</button><button className="danger-text" disabled={action.isPending} onClick={() => { if (window.confirm("Ẩn đề bài này khỏi lớp? Bài đã giao vẫn giữ bản ghim.")) action.mutate("archive"); }}>{t.archive}</button></>}
     {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) && <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} />}
+    {!disabled && resource.kind === "LAB" && resource.status === "PUBLISHED" && <TeacherClassLabAdditionalResponses classId={classId} resourceId={resource.id} />}
     <ErrorBox error={action.error} />
   </article>;
 }
 
 export function StudentClassResources({ classId }: { classId: string }) {
   const list = useQuery<Resource[]>({ queryKey: ["class-resources", classId], queryFn: () => api(`/classes/${classId}/resources`) });
-  return <div className="class-resource-list"><h3>{t.classResources}</h3>{list.isLoading && <p className="muted">{t.loading}</p>}{list.error && <ErrorBox error={list.error} />}{list.data?.length === 0 && <p className="muted">{t.noneShared}</p>}{list.data?.map((r) => <StudentResource key={r.id} resource={r} classId={classId} />)}</div>;
+  const [category, setCategory] = useState<"ALL" | "DOCS" | "LABS" | "PRACTICE">("ALL");
+
+  const allItems = list.data ?? [];
+  const docs = allItems.filter((r) => ["DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(r.kind));
+  const labs = allItems.filter((r) => r.kind === "LAB");
+  const practice = allItems.filter((r) => ["DECK", "STUDY_QUIZ", "TEST"].includes(r.kind));
+
+  const displayItems = category === "DOCS" ? docs : category === "LABS" ? labs : category === "PRACTICE" ? practice : allItems;
+
+  return (
+    <div className="class-resource-list student-resource-section">
+      <div className="student-resource-toolbar">
+        <div className="student-resource-categories" role="tablist" aria-label="Phân loại tài nguyên">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={category === "ALL"}
+            className={category === "ALL" ? "active" : ""}
+            onClick={() => setCategory("ALL")}
+          >
+            <span>Tất cả</span>
+            <span className="cat-count">{allItems.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={category === "DOCS"}
+            className={category === "DOCS" ? "active" : ""}
+            onClick={() => setCategory("DOCS")}
+          >
+            <FileText size={14} aria-hidden="true" />
+            <span>Tài liệu & Báo cáo</span>
+            <span className="cat-count">{docs.length}</span>
+          </button>
+          {labs.length > 0 && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={category === "LABS"}
+              className={category === "LABS" ? "active" : ""}
+              onClick={() => setCategory("LABS")}
+            >
+              <FlaskConical size={14} aria-hidden="true" />
+              <span>Lab được chia sẻ</span>
+              <span className="cat-count">{labs.length}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={category === "PRACTICE"}
+            className={category === "PRACTICE" ? "active" : ""}
+            onClick={() => setCategory("PRACTICE")}
+          >
+            <Layers size={14} aria-hidden="true" />
+            <span>Thẻ học & Quiz</span>
+            <span className="cat-count">{practice.length}</span>
+          </button>
+        </div>
+      </div>
+
+      {list.isLoading && <p className="muted">{t.loading}</p>}
+      {list.error && <ErrorBox error={list.error} />}
+      {allItems.length === 0 && <Empty>{t.noneShared}</Empty>}
+      {allItems.length > 0 && displayItems.length === 0 && (
+        <Empty>Chưa có tài nguyên nào thuộc danh mục này.</Empty>
+      )}
+
+      <div className="student-resource-cards-list">
+        {displayItems.map((r) => (
+          <StudentResource key={r.id} resource={r} classId={classId} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function StudentResource({ resource, classId }: { resource: Resource; classId: string }) {
@@ -570,8 +784,51 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
   const [revealed, setRevealed] = useState<Record<string, boolean>>(resource.practice?.state?.revealed ?? {});
   const [answers, setAnswers] = useState<Record<string, number>>(resource.practice?.state?.answers ?? {});
   const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => invalidateResourceChoices(qc, classId) });
-  return <article className="class-resource-row student-resource"><div><b>{resource.title}</b><small>{names[resource.kind]}{resource.version > 1 ? ` · ${t.version(resource.version)}` : ""}</small></div>
-    {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) ? <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} student /> : resource.kind === "TEST" ? <p className="notice">{t.testNotAssigned}</p> : resource.kind === "DECK" ? <div className="resource-practice-items">{resource.content.cards?.map((card: any) => <div className="study-card" key={card.id}><b>{revealed[card.id] ? card.back : card.front}</b><button className="secondary" onClick={() => { const next = { ...revealed, [card.id]: !revealed[card.id] }; setRevealed(next); save.mutate({ revealed: next }); }}>{revealed[card.id] ? t.seeFront : t.flip}</button></div>)}</div> : <div className="resource-practice-items">{resource.content.questions?.map((q: any) => <fieldset key={q.id}><legend>{q.prompt}</legend>{q.options.map((option: any, index: number) => <label className="check" key={option.id}><input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />{option.text}</label>)}</fieldset>)}<p className="tiny muted">{t.ungraded}</p></div>}
-    {save.error && <ErrorBox error={save.error} />}{save.isSuccess && <small role="status">{t.practiceSaved}</small>}
-  </article>;
+  const Icon = getResourceIcon(resource.kind);
+  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
+
+  return (
+    <article className="class-resource-row student-resource apple-resource-card">
+      <div className="student-resource-header">
+        <div className="resource-kind-icon" aria-hidden="true">
+          <Icon size={18} />
+        </div>
+        <div className="student-resource-info">
+          <h4>{resource.title}</h4>
+          <small>{names[resource.kind]}{resource.version > 1 ? ` · ${t.version(resource.version)}` : ""}{count !== undefined ? ` · ${t.items(count)}` : ""}</small>
+        </div>
+      </div>
+      {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) ? (
+        <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} student />
+      ) : resource.kind === "TEST" ? (
+        <p className="notice">{t.testNotAssigned}</p>
+      ) : resource.kind === "DECK" ? (
+        <div className="resource-practice-items">
+          {resource.content.cards?.map((card: any) => (
+            <div className="study-card" key={card.id}>
+              <b>{revealed[card.id] ? card.back : card.front}</b>
+              <button className="secondary button-compact" onClick={() => { const next = { ...revealed, [card.id]: !revealed[card.id] }; setRevealed(next); save.mutate({ revealed: next }); }}>{revealed[card.id] ? t.seeFront : t.flip}</button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="resource-practice-items">
+          {resource.content.questions?.map((q: any) => (
+            <fieldset key={q.id}>
+              <legend>{q.prompt}</legend>
+              {q.options.map((option: any, index: number) => (
+                <label className="check" key={option.id}>
+                  <input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />
+                  {option.text}
+                </label>
+              ))}
+            </fieldset>
+          ))}
+          <p className="tiny muted">{t.ungraded}</p>
+        </div>
+      )}
+      {save.error && <ErrorBox error={save.error} />}
+      {save.isSuccess && <small role="status">{t.practiceSaved}</small>}
+    </article>
+  );
 }

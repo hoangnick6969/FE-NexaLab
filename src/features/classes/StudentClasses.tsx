@@ -26,7 +26,7 @@ import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { testStatusLabel, testStatusTone } from "../../lib/test-status";
-import { defineText } from "../../i18n";
+import { defineText, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
 
 const text = defineText({
@@ -328,6 +328,11 @@ export function StudentClasses() {
         : join.error
     : null;
   const selectedClass = classId ? list.data?.find((item) => item.id === classId) : undefined;
+  const classResources = useQuery<any[]>({
+    queryKey: ["class-resources", selectedClass?.id],
+    queryFn: () => api(`/classes/${selectedClass!.id}/resources`),
+    enabled: Boolean(selectedClass?.id),
+  });
   if (classId && list.isLoading) return <PageHeading eyebrow="CLASS SPACE" title={t.opening} description={t.loadingClass} />;
   if (classId && list.isError) return <><PageHeading eyebrow="CLASS SPACE" title={t.loadFailed} description={t.reloadList} /><LoadError query={list} what="Class Space" /><Link to="/classes">{t.backToList}</Link></>;
   if (classId && !selectedClass) return <><PageHeading eyebrow="CLASS SPACE" title={t.notFound} description={t.notMember} /><Link className="student-lesson-open" to="/classes">{t.backToSpace}</Link></>;
@@ -345,7 +350,6 @@ export function StudentClasses() {
       : classItems.filter((item) => item.contentType === "lab");
     const classTests = (classWork.data?.tests ?? []).filter((item: any) => item.classroom?.id === selectedClass.id);
     const reviewLessons = classItems.filter((item) => item.contentType === "lesson");
-
     return (
       <div className="class-space-detail-container">
         <nav className="class-detail-nav" aria-label="Điều hướng lớp học">
@@ -397,7 +401,7 @@ export function StudentClasses() {
                     ["lessons", t.tabLessons, classLessons.length, BookOpen],
                     ["labs", t.tabLabs, classLabs.length, FlaskConical],
                     ["tests", t.tabTests, classTests.length, ClipboardCheck],
-                    ["resources", t.tabResources, null, Layers],
+                    ["resources", t.tabResources, classResources.data?.length ?? 0, Layers],
                   ] as const
                 ).map(([tab, label, count, Icon]) => (
                   <button
@@ -512,7 +516,11 @@ export function StudentClasses() {
                             <h3 className="class-lab-card-title">{lab.title}</h3>
                           </div>
                           <div className="class-lab-card-footer">
-                            <small className="muted">{dueLabel(lab.dueDate)}</small>
+                            <span className="class-lab-card-meta">
+                              <small className="muted">{teacherName}</small>
+                              {lab.createdAt && <small className="muted">Giao lúc {formatDateTime(lab.createdAt)}</small>}
+                              <small className="muted">{dueLabel(lab.dueDate)}</small>
+                            </span>
                             <span className="class-lab-cta">
                               <span>{t.enterLab}</span>
                               <ArrowRight size={14} aria-hidden="true" />

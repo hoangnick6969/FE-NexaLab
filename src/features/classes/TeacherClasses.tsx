@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Users, BookOpen, Layers, BarChart2 } from "lucide-react";
+import { Users, BookOpen, Layers, BarChart2, ArrowLeft } from "lucide-react";
 import { api, idempotencyKey, useAuth } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -41,6 +41,9 @@ const text = defineText({
     assignmentsShortcut: "Bài giao",
     resourcesShortcut: "Tài nguyên",
     progressShortcut: "Theo dõi",
+    allClasses: "Tất cả lớp học",
+    backToClasses: "Quay lại danh sách",
+    classNotFound: "Không tìm thấy lớp trong danh sách này. Hãy chọn trạng thái lớp phù hợp hoặc quay lại danh sách.",
   },
   en: {
     title: "My classes",
@@ -71,6 +74,9 @@ const text = defineText({
     assignmentsShortcut: "Assignments",
     resourcesShortcut: "Resources",
     progressShortcut: "Progress",
+    allClasses: "All classes",
+    backToClasses: "Back to class list",
+    classNotFound: "Class not found in this list. Check the class status or return to the class list.",
   },
 });
 const t = text();
@@ -99,6 +105,7 @@ export function TeacherClasses() {
     queryKey: ["classes", status],
     queryFn: () => api("/classes?status=" + status),
   });
+  const selectedClass = list.data?.find((c) => c.id === selected);
   const create = useMutate<{ class: ClassSummary; joinCode: string | null }>();
   const teacher = user.role === "TEACHER";
   const focusedClass = useRef<string | null>(null);
@@ -116,145 +123,177 @@ export function TeacherClasses() {
   }, [selected, list.data]);
   return (
     <div className="teacher-workspace teacher-class-listing">
-      <PageHeading
-        title={t.title}
-        description={t.description}
-        action={
-          teacher ? (
+      {selected ? (
+        <div className="teacher-class-selected-layout">
+          <nav className="class-detail-breadcrumb" aria-label="Breadcrumb">
             <button
-              className="primary"
-              onClick={() => {
-                createKey.current = idempotencyKey();
-                create.reset();
-                setIssuedCode(null);
-                setCreating(true);
-              }}
-            >
-              + {t.createClass}
-            </button>
-          ) : null
-        }
-      />
-      <div className="teacher-workspace-toolbar">
-        <div className="teacher-workspace-tabs" role="tablist" aria-label={t.classStatus}>
-          {(["ACTIVE", "ARCHIVED"] as const).map((value) => (
-            <button
-              key={value}
               type="button"
-              role="tab"
-              aria-selected={status === value}
-              onClick={() => navigate(value === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes")}
+              className="breadcrumb-back-btn"
+              onClick={() => navigate(status === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes")}
             >
-              {value === "ACTIVE" ? t.active : t.archived}
+              <ArrowLeft size={15} aria-hidden="true" />
+              <span>{t.allClasses}</span>
             </button>
-          ))}
-        </div>
-      </div>
-      <LoadError query={list} what={t.classList} />
-      <div className={`teacher-class-content${selected && list.data?.some((classroom) => classroom.id === selected) ? " has-selection" : ""}`}>
-        <div className="class-grid">
-          {list.isLoading && <CardSkeleton count={3} />}
-          {list.data?.map((c) => (
-            <article
-              key={c.id}
-              className={"panel class-card " + (selected === c.id ? "selected" : "")}
-            >
-              <div
-                role="button"
-                tabIndex={0}
-                className="class-card-main"
-                aria-pressed={selected === c.id}
-                onClick={() => setSelected(c.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelected(c.id);
-                  }
-                }}
+            <span className="breadcrumb-separator" aria-hidden="true">/</span>
+            <span className="breadcrumb-current">{selectedClass ? selectedClass.name : selected}</span>
+          </nav>
+          <LoadError query={list} what={t.classList} />
+          {list.isLoading && <CardSkeleton count={2} />}
+          {selectedClass && teacher && (
+            <div className="teacher-class-detail-full">
+              <ClassDetail key={selected} classroom={selectedClass} />
+            </div>
+          )}
+          {!list.isLoading && !selectedClass && (
+            <Empty>
+              <p>{t.classNotFound}</p>
+              <button
+                type="button"
+                className="secondary"
+                style={{ marginTop: 12 }}
+                onClick={() => navigate(status === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes")}
               >
-                <div className="class-card-head">
-                  <Users size={20} aria-hidden="true" />
-                  <h3>{c.name}</h3>
-                </div>
-                <p>
-                  {t.grade(c.grade)} · {t.members(c.members.approved)}
-                  {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
-                </p>
-                <p>{t.activeWork(c.assignments.active)}</p>
-                <div className="badge-row">
-                  {c.status === "ARCHIVED" ? (
-                    <Badge tone="outline">{t.archivedBadge}</Badge>
-                  ) : (
-                    <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
-                  )}
-                  {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
-                </div>
-              </div>
-              <div className="class-card-shortcuts" aria-label={`Lối tắt quản lý ${c.name}`}>
+                {t.backToClasses}
+              </button>
+            </Empty>
+          )}
+        </div>
+      ) : (
+        <>
+          <PageHeading
+            title={t.title}
+            description={t.description}
+            action={
+              teacher ? (
                 <button
-                  type="button"
-                  className={`class-shortcut-btn${selected === c.id && currentTab === "students" ? " active" : ""}`}
-                  title={t.studentsShortcut}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelected(c.id, "students");
+                  className="primary"
+                  onClick={() => {
+                    createKey.current = idempotencyKey();
+                    create.reset();
+                    setIssuedCode(null);
+                    setCreating(true);
                   }}
                 >
-                  <Users size={13} aria-hidden="true" />
-                  <span>{t.studentsShortcut}</span>
-                  {c.members.pending > 0 && <span className="shortcut-counter-badge">{c.members.pending}</span>}
+                  + {t.createClass}
                 </button>
+              ) : null
+            }
+          />
+          <div className="teacher-workspace-toolbar">
+            <div className="teacher-workspace-tabs" role="tablist" aria-label={t.classStatus}>
+              {(["ACTIVE", "ARCHIVED"] as const).map((value) => (
                 <button
+                  key={value}
                   type="button"
-                  className={`class-shortcut-btn${selected === c.id && currentTab === "work" ? " active" : ""}`}
-                  title={t.assignmentsShortcut}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelected(c.id, "work");
-                  }}
+                  role="tab"
+                  aria-selected={status === value}
+                  onClick={() => navigate(value === "ARCHIVED" ? "/classes?status=ARCHIVED" : "/classes")}
                 >
-                  <BookOpen size={13} aria-hidden="true" />
-                  <span>{t.assignmentsShortcut}</span>
+                  {value === "ACTIVE" ? t.active : t.archived}
                 </button>
-                <button
-                  type="button"
-                  className={`class-shortcut-btn${selected === c.id && currentTab === "resources" ? " active" : ""}`}
-                  title={t.resourcesShortcut}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelected(c.id, "resources");
-                  }}
+              ))}
+            </div>
+          </div>
+          <LoadError query={list} what={t.classList} />
+          <div className="teacher-class-content">
+            <div className="class-grid">
+              {list.isLoading && <CardSkeleton count={3} />}
+              {list.data?.map((c) => (
+                <article
+                  key={c.id}
+                  className="panel class-card"
                 >
-                  <Layers size={13} aria-hidden="true" />
-                  <span>{t.resourcesShortcut}</span>
-                </button>
-                {c.status !== "ARCHIVED" && (
-                  <button
-                    type="button"
-                    className={`class-shortcut-btn${selected === c.id && currentTab === "progress" ? " active" : ""}`}
-                    title={t.progressShortcut}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelected(c.id, "progress");
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="class-card-main"
+                    onClick={() => setSelected(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(c.id);
+                      }
                     }}
                   >
-                    <BarChart2 size={13} aria-hidden="true" />
-                    <span>{t.progressShortcut}</span>
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-        {selected && teacher && list.data?.some((c) => c.id === selected) && (
-          <div className="teacher-class-detail">
-            <ClassDetail key={selected} classroom={list.data.find((c) => c.id === selected)!} />
+                    <div className="class-card-head">
+                      <Users size={20} aria-hidden="true" />
+                      <h3>{c.name}</h3>
+                    </div>
+                    <p>
+                      {t.grade(c.grade)} · {t.members(c.members.approved)}
+                      {c.members.pending > 0 && ` · ${t.pending(c.members.pending)}`}
+                    </p>
+                    <p>{t.activeWork(c.assignments.active)}</p>
+                    <div className="badge-row">
+                      {c.status === "ARCHIVED" ? (
+                        <Badge tone="outline">{t.archivedBadge}</Badge>
+                      ) : (
+                        <Badge>{!c.joinCode.issued ? t.noCode : c.joinCode.enabled ? t.codeOn : t.codeOff}</Badge>
+                      )}
+                      {c.requiresApproval && <Badge tone="outline">{t.needsApproval}</Badge>}
+                    </div>
+                  </div>
+                  <div className="class-card-shortcuts" aria-label={`Lối tắt quản lý ${c.name}`}>
+                    <button
+                      type="button"
+                      className="class-shortcut-btn"
+                      title={t.studentsShortcut}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(c.id, "students");
+                      }}
+                    >
+                      <Users size={13} aria-hidden="true" />
+                      <span>{t.studentsShortcut}</span>
+                      {c.members.pending > 0 && <span className="shortcut-counter-badge">{c.members.pending}</span>}
+                    </button>
+                    <button
+                      type="button"
+                      className="class-shortcut-btn"
+                      title={t.assignmentsShortcut}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(c.id, "work");
+                      }}
+                    >
+                      <BookOpen size={13} aria-hidden="true" />
+                      <span>{t.assignmentsShortcut}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="class-shortcut-btn"
+                      title={t.resourcesShortcut}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(c.id, "resources");
+                      }}
+                    >
+                      <Layers size={13} aria-hidden="true" />
+                      <span>{t.resourcesShortcut}</span>
+                    </button>
+                    {c.status !== "ARCHIVED" && (
+                      <button
+                        type="button"
+                        className="class-shortcut-btn"
+                        title={t.progressShortcut}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(c.id, "progress");
+                        }}
+                      >
+                        <BarChart2 size={13} aria-hidden="true" />
+                        <span>{t.progressShortcut}</span>
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
-        )}
-        {selected && list.data && !list.data.some((c) => c.id === selected) && <Empty>Không tìm thấy lớp trong danh sách này. Hãy chọn trạng thái lớp phù hợp hoặc quay lại danh sách.</Empty>}
-      </div>
-      {list.data && list.data.length === 0 && (
-        <Empty>{status === "ACTIVE" ? t.noClasses : t.noArchived}</Empty>
+          {list.data && list.data.length === 0 && (
+            <Empty>{status === "ACTIVE" ? t.noClasses : t.noArchived}</Empty>
+          )}
+        </>
       )}
       {creating && (
         <Modal title={t.newClass} onClose={() => setCreating(false)}>
