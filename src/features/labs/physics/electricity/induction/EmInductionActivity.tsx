@@ -11,6 +11,7 @@ import {
   type EmCheckpointId, type EmEvidence, type EmObservation, type EmPrediction, type EmState,
 } from "./em-evidence";
 import "./EmInductionActivity.css";
+import { LabWhatIf } from "../../../runtime/LabWhatIf";
 
 // The 3D scene loads only when it is shown.
 const EmInduction3DStage = lazy(() => import("./EmInduction3DStage"));
@@ -439,6 +440,7 @@ export function EmInductionActivity({ state, onChange }: { state: unknown; onCha
             <p>{exploreText()}</p>
             {!running && observation && exploreShown?.circuit === "CLOSED" && <Waveform observation={observation} />}
           </div>
+          <LabWhatIf kind="em-induction" />
         </div>}
       </div>}
       {showField && <p className="em-note">{t.fieldNote}</p>}

@@ -8,6 +8,7 @@ import { Badge, Empty, ErrorBox, Field, useAction, verdictLabel, InlineLoader } 
 import { StudentProgress } from "./StudentProgress";
 import { dateTime } from "../../lib/test-status";
 import { defineText, formatDateTime } from "../../i18n";
+import { HelpSeekingPanel } from "./HelpSeekingPanel";
 
 const text = defineText({
   vi: {
@@ -33,7 +34,7 @@ const text = defineText({
     unlink: "Hủy liên kết",
     code: "Mã liên kết do giáo viên cấp",
     link: "Liên kết",
-    linkScope: "Liên kết chỉ hiển thị tiến độ tổng hợp và hoạt động an toàn của con; không hiển thị đáp án, gợi ý hoặc trạng thái lab thô.",
+    linkScope: "Liên kết chỉ hiển thị tiến độ tổng hợp và hoạt động an toàn của con; không hiển thị đáp án, nội dung gợi ý hoặc trạng thái lab thô (chỉ số lần con xin gợi ý).",
     openClasses: "Mở lớp học để xem phân tích từng học sinh",
     openAdmin: "Mở quản trị để xem người dùng",
     overdueNotices: "Thông báo bài quá hạn",
@@ -84,7 +85,7 @@ const text = defineText({
     unlink: "Unlink",
     code: "Link code from the teacher",
     link: "Link",
-    linkScope: "A link shows only summary progress and safe activity; never answers, hints or raw lab state.",
+    linkScope: "A link shows only summary progress and safe activity; never answers, hint text or raw lab state (only how often hints were asked).",
     openClasses: "Open a class to see each student's analysis",
     openAdmin: "Open administration to see users",
     overdueNotices: "Overdue work notices",
@@ -300,6 +301,7 @@ export function ProgressPage() {
               <p className="tiny muted">{t.parentNote}</p>
             </section>
           )}
+          {user.role === "PARENT" && student && <HelpSeekingPanel key={student} studentId={student} />}
           {q.data ? (
             <>
               <div className="progress-cards">

@@ -12,6 +12,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { useLabRunHost } from "./runtime/lab-run-host";
+import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
+import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
+import { RunHintPanel } from "./runtime/RunHintPanel";
+import { StepPickerHint } from "./runtime/StepPickerHint";
+import { LabWhatIf } from "./runtime/LabWhatIf";
+import { WHAT_IF_BY_RENDERER } from "./runtime/what-if-labs";
+import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
@@ -154,6 +161,8 @@ const text = defineText({
   },
 });
 const t = text();
+/** Station Labs with after-submit hints (SAI-01A step 2); checkpoint Labs are covered by their envelope. */
+const STATION_HINT_RENDERERS = new Set(["density-bench", "gene-expression", "eye-anatomy-optics", "buoyancy-bench"]);
 
 export default function Lab() {
   const { id = "circuit" } = useParams();
@@ -260,23 +269,29 @@ export default function Lab() {
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
   if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
+  // SAI-01A step 3 + B2: event-scored Labs render their own result, so the explanation and hint float beside it.
+  const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
+    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"}
+        whatIf={id === "lever-equilibrium" ? "lever" : id === "thermal-energy" ? "thermal" : undefined} />
+    // While working (no attempt yet): moment-A hints on a step the learner picks.
+    : user.role === "STUDENT" && labRun.launch && !labRun.attempt ? <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} placement="floating" /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu hoạt động bảo toàn khối lượng. Số cân chỉ mở sau khi em ghi dự đoán.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
+      : <><MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
           onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()}
-          attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+          attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
   if (id === "lever-equilibrium") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-06 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành đòn bẩy. Dự đoán được ghi trước khi mở kết quả.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />);
+      : <><LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
   if (id === "thermal-energy") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-07 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành năng lượng nhiệt.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />);
+      : <><ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />{eventHint}</>);
   return space(
     <>
       <ErrorBox error={assignmentId ? assignment.error : labs.error} />
@@ -332,6 +347,17 @@ export default function Lab() {
           {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} runtimeConfig={labRun.launch?.runtimeConfig} />}
           {runtimeReady && !(guided && user.role === "TEACHER") && <div className="lab-actions">
             <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer?.envelope === "checkpoints" && (() => {
+              const view = checkpointViewForRenderer(renderer.key);
+              if (!view) return null;
+              const step = view.hintStep(state);
+              return <RunHintPanel key={`${step.ask?.criterion ?? ""}|${step.reflect?.criterion ?? ""}`} runId={labRun.launch.runId} step={step}
+                labelOf={(criterion) => view.stepLabel(criterion.replace(/^prediction:/, ""))} />;
+            })()}
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer && STATION_HINT_RENDERERS.has(renderer.key) && (
+              <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} />
+            )}
+
             <button
               className="primary"
               data-testid="lab-run-submit"
@@ -453,6 +479,14 @@ export default function Lab() {
               </p>
             )}
           </section>
+          {user.role === "STUDENT" && guided && renderer && (renderer.envelope === "checkpoints" || STATION_HINT_RENDERERS.has(renderer.key)) && attempt?.id && result && (
+            <>
+              <VerdictExplanationPanel key={"why-" + attempt.id} attemptId={attempt.id} passed={attempt.verdict === "passed"} />
+              {attempt.verdict !== "passed" && <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />}
+              {/* B3: station Labs offer what-ifs only after a pass, so no answer can help a retry. */}
+              {attempt.verdict === "passed" && WHAT_IF_BY_RENDERER[renderer.key] && <section className="panel"><LabWhatIf kind={WHAT_IF_BY_RENDERER[renderer.key]} /></section>}
+            </>
+          )}
           {user.role === "STUDENT" && runtimeReady && !guided && (
             <section className="panel tutor-panel">
               <h3>

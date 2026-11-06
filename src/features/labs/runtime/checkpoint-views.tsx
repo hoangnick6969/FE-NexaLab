@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
 import { defineText } from "../../../i18n";
-import { bulbEvidenceReady, defaultBulbEvidence } from "../physics/electricity/circuit-bulb-evidence";
+import { bulbEvidenceReady, bulbHintStep, defaultBulbEvidence } from "../physics/electricity/circuit-bulb-evidence";
 import { loadLabActivity } from "./lazy-lab-activity";
-import { defaultEmEvidence, emEvidenceReady } from "../physics/electricity/induction/em-evidence";
-import { defaultEcoEvidence, ecoEvidenceReady } from "../biology/ecology/tolerance/eco-evidence";
-import { defaultFwEvidence, fwEvidenceReady } from "../biology/ecology/food-web/fw-evidence";
+import { defaultEmEvidence, emEvidenceFrom, emEvidenceReady, emPhaseOf } from "../physics/electricity/induction/em-evidence";
+import { defaultEcoEvidence, ecoEvidenceFrom, ecoEvidenceReady, ecoPhaseOf, OBSERVE_FIRST } from "../biology/ecology/tolerance/eco-evidence";
+import { defaultFwEvidence, fwEvidenceFrom, fwEvidenceReady, fwPhaseOf } from "../biology/ecology/food-web/fw-evidence";
 
 const CircuitBulbActivity = loadLabActivity(() => import("../physics/electricity/CircuitBulbActivity").then((module) => ({ default: module.CircuitBulbActivity })));
 const EmInductionActivity = loadLabActivity(() => import("../physics/electricity/induction/EmInductionActivity").then((module) => ({ default: module.EmInductionActivity })));
@@ -60,7 +60,26 @@ export type CheckpointView = {
   defaultEvidence: () => unknown;
   ready: (value: unknown) => boolean;
   describeResult: (item: any) => string;
+  /** Student-facing name of one checkpoint, for the hint button. */
+  stepLabel: (checkpointId: string) => string;
+  /** SAI-01A in-run hint targets derived from the draft evidence alone. */
+  hintStep: (value: unknown) => HintStep;
 };
+
+/** `ask`: the step waiting for a prediction (moment A). `reflect`: the last observed step (moment B). */
+export type HintStep = {
+  ask: { criterion: string } | null;
+  reflect: { criterion: string; state: unknown; prediction: unknown } | null;
+};
+
+type PhasedEvidence = { checkpoints: Array<{ id: string; state: unknown; prediction: unknown }>; observed: Record<string, boolean> };
+function phasedHintStep(evidence: PhasedEvidence, phase: { kind: string; id?: string }, observeFirst: ReadonlySet<string> = new Set()): HintStep {
+  const ask = phase.kind === "predict" ? { criterion: "prediction:" + phase.id } : phase.kind === "explain" ? { criterion: "explanation" } : null;
+  // An observe-first step (FL-20 LIMITS) is answered after seeing the data, so it has no reflection.
+  const last = [...evidence.checkpoints].reverse()
+    .find((checkpoint) => evidence.observed[checkpoint.id] && checkpoint.prediction !== null && !observeFirst.has(checkpoint.id));
+  return { ask, reflect: last ? { criterion: "prediction:" + last.id, state: last.state, prediction: last.prediction } : null };
+}
 
 const verdict = (item: any) => item.predictionCorrect ? text().correct : text().incorrect;
 
@@ -70,6 +89,8 @@ const views: Record<string, CheckpointView> = {
     Activity: CircuitBulbActivity,
     defaultEvidence: defaultBulbEvidence,
     ready: bulbEvidenceReady,
+    hintStep: bulbHintStep,
+    stepLabel: (id) => id === "CLOSED" ? text().closed : text().open,
     describeResult: (item) => {
       const t = text();
       return `${item.id === "CLOSED" ? t.closed : t.open}: ${item.scientificObservation?.bulbState === "ON" ? t.on : t.off}, ${verdict(item)}`;
@@ -80,6 +101,8 @@ const views: Record<string, CheckpointView> = {
     Activity: EmInductionActivity,
     defaultEvidence: defaultEmEvidence,
     ready: emEvidenceReady,
+    stepLabel: (id) => ({ STILL: text().still, PUSH: text().push, PULL: text().pull, ROTATE: text().rotate } as Record<string, string>)[id] ?? id,
+    hintStep: (value) => { const evidence = emEvidenceFrom(value); return phasedHintStep(evidence as PhasedEvidence, emPhaseOf(evidence)); },
     describeResult: (item) => {
       const t = text();
       const observation = item.scientificObservation ?? {};
@@ -95,6 +118,8 @@ const views: Record<string, CheckpointView> = {
     Activity: EcologyToleranceActivity,
     defaultEvidence: defaultEcoEvidence,
     ready: ecoEvidenceReady,
+    stepLabel: (id) => text().eco[id] ?? id,
+    hintStep: (value) => { const evidence = ecoEvidenceFrom(value); return phasedHintStep(evidence as PhasedEvidence, ecoPhaseOf(evidence), OBSERVE_FIRST); },
     describeResult: (item) => {
       const e = text().eco;
       const observation = item.scientificObservation ?? {};
@@ -112,6 +137,8 @@ const views: Record<string, CheckpointView> = {
     Activity: FoodWebActivity,
     defaultEvidence: defaultFwEvidence,
     ready: fwEvidenceReady,
+    stepLabel: (id) => text().fw[id] ?? id,
+    hintStep: (value) => { const evidence = fwEvidenceFrom(value); return phasedHintStep(evidence as PhasedEvidence, fwPhaseOf(evidence)); },
     describeResult: (item) => {
       const f = text().fw;
       const observation = item.scientificObservation ?? {};

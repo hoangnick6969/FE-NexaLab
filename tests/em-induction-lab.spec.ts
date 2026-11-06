@@ -14,6 +14,8 @@ async function mockShell(page: Page) {
   } }));
   await page.route("**/api/me/notifications/unread-count", (route) => route.fulfill({ json: { count: 0 } }));
   await page.route("**/api/tutor/status", (route) => route.fulfill({ json: { provider: "rules" } }));
+  // SAI-01A: the in-run hint toggle asks whether the last observed step was mispredicted.
+  await page.route("**/api/lab-runs/*/hints/check", (route) => route.fulfill({ status: 201, json: { mismatch: false } }));
   await page.route("**/api/labs", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/assignments/assignment-em", (route) => route.fulfill({ json: {
     id: "assignment-em", title: "Cảm ứng điện từ", contentType: "lab", dueDate: null, overdue: false,
@@ -269,6 +271,12 @@ test("FL-25 free explore unlocks after the checkpoints, follows the model and st
   await expect(explored).toContainText("đổi chiều hai lần", { timeout: 8000 });
   // The checkpoint result is unchanged by exploring.
   await expect(observation).toContainText("đổi chiều hai lần");
+  // B3: what-if questions answered from the model.
+  const whatIf = page.getByTestId("what-if");
+  await whatIf.getByRole("button", { name: "Nếu nam châm nằm yên bên trong cuộn dây?" }).click();
+  await expect(page.getByTestId("what-if-answer")).toContainText("Từ trường qua cuộn dây không thay đổi nên không có dòng điện cảm ứng");
+  await whatIf.getByRole("button", { name: "Nếu đưa cực S lại gần cuộn dây thì sao?" }).click();
+  await expect(page.getByTestId("what-if-answer")).toContainText("đổi cực thì đổi chiều");
 
   await page.getByRole("button", { name: "Đóng khám phá" }).click();
   await expect(page.getByTestId("em-2d-open-switch")).toHaveCount(0);

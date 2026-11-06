@@ -1,0 +1,10 @@
+/* SAI-05: one card per Lab; levels wrap so a phone never scrolls sideways. */
+.help-seeking-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 12px; }
+.help-seeking-lab { border: 1px solid var(--line, rgba(18, 38, 30, 0.12)); border-radius: 12px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.help-seeking-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; }
+.help-seeking-head b { overflow-wrap: anywhere; }
+.help-seeking-total { font-weight: 600; white-space: nowrap; }
+.help-seeking-levels { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
+.help-seeking-levels > div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--surface-muted, rgba(18, 38, 30, 0.04)); }
+.help-seeking-levels dt { font-size: 0.85em; color: var(--muted); }
+.help-seeking-levels dd { margin: 0; font-weight: 600; }
