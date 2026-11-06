@@ -21,6 +21,7 @@ import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../compon
 import { PageHeading } from "../../components/PageHeading";
 import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
+import { labInfo } from "../labs/lab-info";
 import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
@@ -99,8 +100,8 @@ const text = defineText({
     enterLab: "Vào phòng thí nghiệm",
     testsTitle: "Bài kiểm tra & Quiz đánh giá",
     testsDesc: "Các bài kiểm tra tính điểm và đánh giá năng lực do giáo viên giao cho lớp.",
-    resourcesTitle: "Tài nguyên & Bộ thẻ ôn luyện",
-    resourcesDesc: "Tài liệu học tập, bộ thẻ ghi nhớ flashcards và quiz luyện tập thầy cô chia sẻ.",
+    resourcesTitle: "Tài nguyên của lớp",
+    resourcesDesc: "Tài liệu, mẫu báo cáo, Lab riêng và học liệu thầy cô chia sẻ.",
     lessonReviewTitle: "Bộ thẻ ôn tập kiến thức theo bài học",
     lessonReviewDesc: "Bộ thẻ ghi nhớ tóm tắt các khái niệm, công thức và trọng tâm kiến thức của bài học.",
     openReviewDeck: "Mở bộ thẻ ôn tập",
@@ -186,8 +187,8 @@ const text = defineText({
     enterLab: "Launch Lab Simulation",
     testsTitle: "Assigned Tests & Quizzes",
     testsDesc: "Graded assessments and progress tests assigned to this class.",
-    resourcesTitle: "Resources & Study Flashcards",
-    resourcesDesc: "Learning materials, flashcard decks, and practice quizzes shared by your teacher.",
+    resourcesTitle: "Class resources",
+    resourcesDesc: "Documents, report templates, custom labs and learning materials shared by your teacher.",
     lessonReviewTitle: "Lesson Review Flashcards",
     lessonReviewDesc: "Flashcard decks summarizing key concepts and core topics for each lesson.",
     openReviewDeck: "Open flashcard deck",
@@ -396,7 +397,7 @@ export function StudentClasses() {
                     ["lessons", t.tabLessons, classLessons.length, BookOpen],
                     ["labs", t.tabLabs, classLabs.length, FlaskConical],
                     ["tests", t.tabTests, classTests.length, ClipboardCheck],
-                    ["resources", t.tabResources, reviewLessons.length, Layers],
+                    ["resources", t.tabResources, null, Layers],
                   ] as const
                 ).map(([tab, label, count, Icon]) => (
                   <button
@@ -409,7 +410,7 @@ export function StudentClasses() {
                   >
                     <Icon size={15} aria-hidden="true" className="tab-btn-icon" />
                     <span>{label}</span>
-                    <span className="tab-btn-count">{count}</span>
+                    {count !== null && <span className="tab-btn-count">{count}</span>}
                   </button>
                 ))}
               </div>
@@ -503,6 +504,7 @@ export function StudentClasses() {
                               <Badge tone="passed">{t.typeLab}</Badge>
                             )}
                           </div>
+                          {labInfo.find((entry) => entry.id === lab.contentId)?.thumbnail && <img className="class-lab-source-thumbnail" src={labInfo.find((entry) => entry.id === lab.contentId)!.thumbnail} alt="" loading="lazy" />}
                           <div className="class-lab-card-main">
                             <div className="class-lab-icon-box">
                               <FlaskConical size={22} aria-hidden="true" />

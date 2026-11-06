@@ -8,11 +8,13 @@ import { defineText } from "../../i18n";
 import { dueLabel, LoadError } from "./class-ui";
 import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import "./teacher-operations.css";
+import { TeacherClassResources } from "./ClassSpaceResources";
+import { labInfo } from "../labs/lab-info";
 
 const text = defineText({
   vi: {
     title: "Class Lab",
-    description: "Giao lab nền tảng đã phát hành cho từng lớp và mở lại bài lab đã lưu trữ.",
+    description: "Tạo hoạt động riêng từ Lab đã duyệt, chia sẻ để luyện tập và giao bài cho từng lớp.",
     manageClasses: "Quản lý lớp",
     active: "Đang giao",
     archived: "Đã lưu trữ",
@@ -20,6 +22,7 @@ const text = defineText({
     grade: (grade: number) => `Khối ${grade}`,
     students: (count: number) => `${count} học sinh đã duyệt`,
     assign: "Giao lab",
+    privateActivities: "Hoạt động Lab riêng của lớp: tạo, xem trước và sửa phiên bản",
     none: "Chưa có bài lab nào được giao.",
     noneHelp: "Chọn lab nền tảng trong mục giao bài của lớp. Bài được giao chỉ mở cho học sinh thuộc danh sách nhận bài.",
     noClasses: "Chưa có lớp phù hợp.",
@@ -38,7 +41,7 @@ const text = defineText({
   },
   en: {
     title: "Class Lab",
-    description: "Assign released foundational labs to a class and revisit archived lab work.",
+    description: "Customize approved labs for a class, share unscored practice and assign class work.",
     manageClasses: "Manage classes",
     active: "Assigned",
     archived: "Archived",
@@ -46,6 +49,7 @@ const text = defineText({
     grade: (grade: number) => `Grade ${grade}`,
     students: (count: number) => `${count} approved ${count === 1 ? "student" : "students"}`,
     assign: "Assign a lab",
+    privateActivities: "Private class labs: create, preview and revise",
     none: "No labs have been assigned yet.",
     noneHelp: "Choose a released foundational lab from a class's assignment area. Assigned work is limited to its recipient list.",
     noClasses: "No matching classes.",
@@ -160,6 +164,7 @@ export function ClassLabs() {
                 </Link>
               )}
             </header>
+            {view === "active" && <details><summary>{t.privateActivities}</summary><TeacherClassResources classId={classroom.id} disabled={classroom.status !== "ACTIVE"} labOnly /></details>}
 
             {assignmentsQuery?.isLoading && <div className="teacher-class-labs-loading"><CardSkeleton count={1} /></div>}
             {assignmentsQuery?.isError && <LoadError query={assignmentsQuery} what={t.loadAssignments} />}
@@ -173,7 +178,7 @@ export function ClassLabs() {
               <div className="teacher-class-labs-list">
                 {labs.map((assignment) => (
                   <article className="teacher-class-lab-row" key={assignment.id}>
-                    <div className="teacher-class-lab-icon" aria-hidden="true"><FlaskConical size={18} /></div>
+                    <div className="teacher-class-lab-icon" aria-hidden="true">{labInfo.find((lab) => lab.id === assignment.contentId)?.thumbnail ? <img src={labInfo.find((lab) => lab.id === assignment.contentId)!.thumbnail} alt="" /> : <FlaskConical size={18} />}</div>
                     <div className="teacher-class-lab-main">
                       <h3>{assignment.title}</h3>
                       <p>{t.recipients(assignment.recipientCount)} · {assignment.audience === "CLASS" ? t.wholeClass : t.subset}</p>

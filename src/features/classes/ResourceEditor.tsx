@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Field } from "../../components/ui";
 import { defineText } from "../../i18n";
+import { RichResourceEditor, type ResourceKind } from "./RichResourceEditor";
 
 const text = defineText({
   vi: {
@@ -37,17 +38,21 @@ const text = defineText({
   },
 });
 
-export type ResourceContent = { cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
+export type ResourceContent = { source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
 
-export function resourceInput(kind: "DECK" | "STUDY_QUIZ" | "TEST", value: ResourceContent) {
+export function resourceInput(kind: ResourceKind, value: ResourceContent) {
+  if (kind === "LAB") return { source: value.source, learningObjective: value.learningObjective, instructions: value.instructions, reportPrompts: value.reportPrompts?.filter((prompt) => prompt.trim()) ?? [] };
+  if (kind === "DOCUMENT" || kind === "REPORT_TEMPLATE") return { description: value.description ?? "", source: value.source };
+  if (kind === "LINK") return { url: value.url, description: value.description ?? "" };
   return kind === "DECK" ? { cards: value.cards?.map(({ front, back }) => ({ front, back })) } : {
     questions: value.questions?.map((question) => ({ prompt: question.prompt, options: question.options.map((option) => typeof option === "string" ? option : option.text),
       ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 } : {}) })),
   };
 }
 
-export function ResourceEditor({ kind, value, onChange }: { kind: "DECK" | "STUDY_QUIZ" | "TEST"; value: ResourceContent; onChange: (value: ResourceContent) => void }) {
+export function ResourceEditor({ kind, value, onChange, classId }: { kind: ResourceKind; value: ResourceContent; onChange: (value: ResourceContent) => void; classId?: string }) {
   const t = text();
+  if (["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(kind)) return <RichResourceEditor kind={kind} value={value} onChange={onChange} classId={classId} />;
   if (kind === "DECK") {
     const cards = value.cards ?? [];
     return (

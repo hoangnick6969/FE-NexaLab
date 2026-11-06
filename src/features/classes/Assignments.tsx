@@ -48,6 +48,8 @@ const text = defineText({
     noTests: "Chưa có bài kiểm tra đã xuất bản trong Class Space. Hãy xuất bản bài kiểm tra trước khi giao.",
     noContent: "Chưa có nội dung đã xuất bản. Hãy xuất bản nội dung trước khi giao.",
     shareNote: "Chia sẻ bài kiểm tra trong Class Space không tạo bài giao. Chỉ học sinh được giao mới làm và nộp bài.",
+    privateLabOption: (title: string, version: number) => `${title} · Lab riêng của lớp · bản ${version}`,
+    privateLabNote: (version: number) => `Ghim nội dung giáo viên và cấu hình khoa học của bản ${version}. Thay đổi tài nguyên sau này không sửa bài đã giao.`,
     taskNameOptional: "Tên nhiệm vụ (để trống sẽ dùng tên nội dung)",
     dueRequired: "Hạn nộp (bắt buộc)",
     dueNotRequired: "Hạn nộp (không bắt buộc)",
@@ -97,6 +99,8 @@ const text = defineText({
     noTests: "No published tests in Class Space. Publish a test before assigning it.",
     noContent: "No published content. Publish content before assigning it.",
     shareNote: "Sharing a test in Class Space does not assign it. Only assigned students take and submit it.",
+    privateLabOption: (title: string, version: number) => `${title} · Private class lab · version ${version}`,
+    privateLabNote: (version: number) => `Pins teacher content and the scientific configuration of version ${version}. Later resource changes do not change issued assignments.`,
     taskNameOptional: "Task name (blank uses the content name)",
     dueRequired: "Due date (required)",
     dueNotRequired: "Due date (optional)",
@@ -261,7 +265,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
   const [labChallengeId, setLabChallengeId] = useState("");
   const [validation, setValidation] = useState("");
   const key = useRef(idempotencyKey());
-  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[] }>({
+  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[]; classLabs?: any[] }>({
     queryKey: ["assignable", classroom.id],
     queryFn: () => api(`/classes/${classroom.id}/assignable-content`),
   });
@@ -273,6 +277,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
   const act = useMutate<{ recipientCount: number; message: string }>();
   const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : content.data?.tests ?? [];
   const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
+  const selectedPrivateLab = contentType === "lab" ? content.data?.classLabs?.find((item) => `resource:${item.id}` === contentId) : undefined;
   const isTest = contentType === "test";
   return (
     <Modal title={t.assign} onClose={onClose}>
@@ -293,8 +298,8 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
               key: key.current,
               body: {
                 contentType,
-                contentId,
-                ...(contentType === "lab" && selectedLab ? { labReleaseId: selectedLab.release.id, labChallengeId } : {}),
+                contentId: selectedPrivateLab?.content.source.labId ?? contentId,
+                ...(selectedPrivateLab ? { classLabResourceId: selectedPrivateLab.id } : contentType === "lab" && selectedLab ? { labReleaseId: selectedLab.release.id, labChallengeId } : {}),
                 audience: scope,
                 ...(title ? { title } : {}),
                 dueDate: due ? new Date(due).toISOString() : null,
@@ -329,6 +334,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
             setLabChallengeId(nextLab?.challenges?.[0]?.id ?? "");
           }}>
             <option value="">{t.chooseContent}</option>
+            {contentType === "lab" && content.data?.classLabs?.map((item) => <option key={item.id} value={`resource:${item.id}`}>{t.privateLabOption(item.title, item.version)}</option>)}
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
                 {isTest ? t.testOption(item.title, item.version, item.questionCount) : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
@@ -338,6 +344,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
             ))}
           </select>
         </label>
+        {selectedPrivateLab && <p className="notice">{t.privateLabNote(selectedPrivateLab.version)}</p>}
         {contentType === "lab" && selectedLab && <>
           <label className="field">
             <span>{t.chooseLabChallenge}</span>
@@ -380,7 +387,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType }: { c
         <ErrorBox error={validation} />
         <p className="tiny muted">{t.recipientsFixed}</p>
         <ErrorBox error={act.error} />
-        <button className="primary wide" disabled={act.isPending || !contentId || !options.length || (contentType === "lab" && !labChallengeId) || (scope === "SUBSET" && studentIds.length === 0)}>
+        <button className="primary wide" disabled={act.isPending || !contentId || (!options.length && !selectedPrivateLab) || (contentType === "lab" && !selectedPrivateLab && !labChallengeId) || (scope === "SUBSET" && studentIds.length === 0)}>
           {act.isPending ? t.assigning : t.assign}
         </button>
       </form>

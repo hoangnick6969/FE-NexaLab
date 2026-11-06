@@ -17,6 +17,7 @@ const text = defineText({
     resources: "Tài nguyên lớp",
     createDirect: "Tạo nội dung trực tiếp",
     contentType: "Loại nội dung",
+    purpose: "Mục đích sử dụng",
     deck: "Thẻ học",
     practiceQuiz: "Quiz luyện tập không điểm",
     testUnassigned: "Bài kiểm tra (chưa được giao)",
@@ -82,6 +83,7 @@ const text = defineText({
     resources: "Class resources",
     createDirect: "Create content directly",
     contentType: "Content type",
+    purpose: "Purpose",
     deck: "Study cards",
     practiceQuiz: "Ungraded practice quiz",
     testUnassigned: "Test (not assigned yet)",
@@ -139,15 +141,21 @@ const text = defineText({
 });
 const t = text();
 import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
+import { richNames, richSamples, ResourcePreview, type ResourceKind } from "./RichResourceEditor";
 
-type Kind = "DECK" | "STUDY_QUIZ" | "TEST";
-type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
-const names: Record<Kind, string> = t.names;
+type Kind = ResourceKind;
+type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; attachment?: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
+const names: Record<Kind, string> = { ...t.names, ...richNames };
 const sample: Record<Kind, object> = {
   DECK: { cards: [{ front: "", back: "" }] },
   STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""] }] },
   TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
+  ...richSamples,
 };
+
+function invalidateResourceChoices(qc: ReturnType<typeof useQueryClient>, classId: string) {
+  return Promise.all(["class-resources", "assignable", "class-resource-lessons"].map((key) => qc.invalidateQueries({ queryKey: [key, classId] })));
+}
 
 function downloadSampleCsv(kind: Kind) {
   let content = "";
@@ -173,7 +181,7 @@ function downloadSampleCsv(kind: Kind) {
   URL.revokeObjectURL(url);
 }
 
-export function TeacherClassResources({ classId, disabled }: { classId: string; disabled: boolean }) {
+export function TeacherClassResources({ classId, disabled, labOnly = false }: { classId: string; disabled: boolean; labOnly?: boolean }) {
   const qc = useQueryClient();
   const list = useQuery<Resource[]>({ queryKey: ["class-resources", classId], queryFn: () => api(`/classes/${classId}/resources`) });
   const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classId], queryFn: () => api(`/classes/${classId}/assignable-content`) });
@@ -182,10 +190,10 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
   const [creationMode, setCreationMode] = useState<"direct" | "import">("direct");
   
   // Direct creation state
-  const [kind, setKind] = useState<Kind>("DECK");
+  const [kind, setKind] = useState<Kind>(labOnly ? "LAB" : "DECK");
   const [title, setTitle] = useState("");
   const [lessonId, setLessonId] = useState("");
-  const [source, setSource] = useState<ResourceContent>(sample.DECK);
+  const [source, setSource] = useState<ResourceContent>(sample[labOnly ? "LAB" : "DECK"]);
   const [error, setError] = useState<unknown>(null);
 
   // Dedicated Import state
@@ -203,7 +211,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
 
   const action = useMutation({
     mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }),
+    onSuccess: () => invalidateResourceChoices(qc, classId),
   });
 
   const resourceBody = () => ({ kind, title: title.trim(), lessonId, content: resourceInput(kind, source) });
@@ -254,6 +262,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
   };
 
   const filteredResources = (list.data ?? []).filter((r) => {
+    if (labOnly && r.kind !== "LAB") return false;
     if (searchQuery.trim() && !r.title.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
       return false;
     }
@@ -279,7 +288,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
         <div className="class-resource-create class-resource-create-card">
           <div className="resource-create-header">
             <h4 className="resource-create-title">{creationMode === "direct" ? t.createDirect : t.importCsv}</h4>
-            <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
+            {!labOnly && <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
               <button
                 type="button"
                 role="tab"
@@ -299,18 +308,19 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
                 <FileSpreadsheet size={15} aria-hidden="true" />
                 {t.modeImport}
               </button>
-            </div>
+            </div>}
           </div>
 
           {creationMode === "direct" ? (
             <form onSubmit={create}>
               <fieldset className="form-lock" disabled={action.isPending}>
                 <label className="field">
-                  <span>{t.contentType}</span>
-                  <select value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
+                  <span>{t.purpose}</span>
+                  <select disabled={labOnly} value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
                     <option value="DECK">{t.deck}</option>
                     <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
                     <option value="TEST">{t.testUnassigned}</option>
+                    {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
                 <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
@@ -325,7 +335,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
                     ))}
                   </select>
                 </label>
-                <ResourceEditor kind={kind} value={source} onChange={setSource} />
+                <ResourceEditor kind={kind} value={source} onChange={setSource} classId={classId} />
                 <p className="tiny muted">{t.draftHint}</p>
                 <ErrorBox error={error} />
                 <button className="primary" disabled={action.isPending}>{action.isPending ? t.saving : t.saveDraft}</button>
@@ -504,6 +514,7 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
             <Filter size={14} aria-hidden="true" />
             <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="Lọc theo loại">
               <option value="ALL">{t.allKinds}</option>
+              {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               <option value="DECK">{t.deck}</option>
               <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
               <option value="TEST">{t.testUnassigned}</option>
@@ -536,14 +547,15 @@ export function TeacherClassResources({ classId, disabled }: { classId: string; 
 
 function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {
   const qc = useQueryClient();
-  const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+  const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const [contentDraft, setContentDraft] = useState<ResourceContent>(resource.content);
   const [titleDraft, setTitleDraft] = useState(resource.title);
-  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+  const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
-  return <article className="class-resource-row"><div><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)} · {t.items(count ?? 0)}</small></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
-    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button></>}
+  return <article className="class-resource-row"><div><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)}{count !== undefined ? ` · ${t.items(count)}` : ""}</small></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
+    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button></>}
     {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>{t.newVersion}</button><button className="danger-text" disabled={action.isPending} onClick={() => action.mutate("archive")}>{t.archive}</button></>}
+    {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) && <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} />}
     <ErrorBox error={action.error} />
   </article>;
 }
@@ -557,9 +569,9 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
   const qc = useQueryClient();
   const [revealed, setRevealed] = useState<Record<string, boolean>>(resource.practice?.state?.revealed ?? {});
   const [answers, setAnswers] = useState<Record<string, number>>(resource.practice?.state?.answers ?? {});
-  const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => qc.invalidateQueries({ queryKey: ["class-resources", classId] }) });
+  const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => invalidateResourceChoices(qc, classId) });
   return <article className="class-resource-row student-resource"><div><b>{resource.title}</b><small>{names[resource.kind]}{resource.version > 1 ? ` · ${t.version(resource.version)}` : ""}</small></div>
-    {resource.kind === "TEST" ? <p className="notice">{t.testNotAssigned}</p> : resource.kind === "DECK" ? <div className="resource-practice-items">{resource.content.cards?.map((card: any) => <div className="study-card" key={card.id}><b>{revealed[card.id] ? card.back : card.front}</b><button className="secondary" onClick={() => { const next = { ...revealed, [card.id]: !revealed[card.id] }; setRevealed(next); save.mutate({ revealed: next }); }}>{revealed[card.id] ? t.seeFront : t.flip}</button></div>)}</div> : <div className="resource-practice-items">{resource.content.questions?.map((q: any) => <fieldset key={q.id}><legend>{q.prompt}</legend>{q.options.map((option: any, index: number) => <label className="check" key={option.id}><input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />{option.text}</label>)}</fieldset>)}<p className="tiny muted">{t.ungraded}</p></div>}
+    {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) ? <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} student /> : resource.kind === "TEST" ? <p className="notice">{t.testNotAssigned}</p> : resource.kind === "DECK" ? <div className="resource-practice-items">{resource.content.cards?.map((card: any) => <div className="study-card" key={card.id}><b>{revealed[card.id] ? card.back : card.front}</b><button className="secondary" onClick={() => { const next = { ...revealed, [card.id]: !revealed[card.id] }; setRevealed(next); save.mutate({ revealed: next }); }}>{revealed[card.id] ? t.seeFront : t.flip}</button></div>)}</div> : <div className="resource-practice-items">{resource.content.questions?.map((q: any) => <fieldset key={q.id}><legend>{q.prompt}</legend>{q.options.map((option: any, index: number) => <label className="check" key={option.id}><input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />{option.text}</label>)}</fieldset>)}<p className="tiny muted">{t.ungraded}</p></div>}
     {save.error && <ErrorBox error={save.error} />}{save.isSuccess && <small role="status">{t.practiceSaved}</small>}
   </article>;
 }

@@ -1,0 +1,15 @@
+/* Hallmark · scope: app · genre: modern-minimal · theme: existing NexaLab */
+/* critique: keep resource previews readable across teacher and student routes */
+.rich-resource-editor, .resource-preview { display: grid; gap: 12px; min-width: 0; }
+.resource-preview { width: 100%; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.resource-preview p, .resource-preview li { overflow-wrap: anywhere; }
+.resource-lab-thumbnail { width: min(100%, 320px); aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.class-lab-source-thumbnail { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.resource-plain-text { white-space: pre-wrap; }
+.class-lab-instructions { max-width: 100%; margin: 16px; }
+.rich-resource-editor textarea { min-height: 100px; resize: vertical; width: 100%; }
+.rich-resource-editor :is(button, input, select, textarea, a):focus-visible,
+.resource-preview :is(button, a):focus-visible { outline: 2px solid var(--line-focus); outline-offset: 2px; }
+.rich-resource-editor button:active, .resource-preview :is(button, a):active { opacity: 0.85; }
+.rich-resource-editor :is(button, input, select, textarea):disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 640px) { .resource-preview { padding: 12px; } .class-lab-instructions { margin: 8px; } }

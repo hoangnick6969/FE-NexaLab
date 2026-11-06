@@ -22,6 +22,7 @@ export type TeacherAssignment = {
   title: string;
   contentId: string;
   contentType: AssignableType;
+  classLabSnapshot?: { resourceId: string; version: number; title: string; learningObjective: string; instructions: string; reportPrompts: string[]; contentDigest: string } | null;
   dueDate: string | null;
   overdue: boolean;
   audience: "CLASS" | "SUBSET";

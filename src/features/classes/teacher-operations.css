@@ -1374,3 +1374,5 @@ body {
     animation-iteration-count: 1;
   }
 }
+/* Class resource previews preserve plain text and fit the existing resource cards. */
+.teacher-class-lab-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }

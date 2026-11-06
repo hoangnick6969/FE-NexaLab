@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import "../classes/class-resource-preview.css";
 import { simulate } from "@nexalab/sim";
 import { Link, useParams, useLocation, useSearchParams } from "react-router-dom";
 import {
@@ -38,6 +39,13 @@ const text = defineText({
     grades: "LỚP 8–9",
     discoveryRoom: "Phòng khám phá",
     teacherPreview: "Giáo viên · Xem trước",
+    teacherInstructions: "Hướng dẫn của giáo viên",
+    customSupplement: "Hướng dẫn này bổ sung cho hoạt động và checkpoints đã duyệt.",
+    unscoredClassPractice: "Luyện tập chung không chấm điểm.",
+    pinnedSourcePreview: "Xem trước hoạt động nguồn đã ghim",
+    advisoryPreview: "Mô phỏng xem trước chỉ mang tính tham khảo; không tạo phiên chạy, bài nộp hoặc điểm học sinh.",
+    loadingActivity: "Đang tải hoạt động…",
+    previewUnavailable: "Chưa có giao diện tương thích với mô hình nguồn đã ghim.",
     freePractice: "Thực hành tự do",
     assignedPractice: "Bài thực hành được giao",
     startSession: "Bắt đầu phiên thực hành",
@@ -102,6 +110,13 @@ const text = defineText({
     grades: "GRADES 8–9",
     discoveryRoom: "Discovery room",
     teacherPreview: "Teacher · Preview",
+    teacherInstructions: "Teacher instructions",
+    customSupplement: "These instructions supplement the approved activity and checkpoints.",
+    unscoredClassPractice: "Shared practice is unscored.",
+    pinnedSourcePreview: "Pinned source activity preview",
+    advisoryPreview: "Preview simulation is advisory; it creates no student run, submission or grade.",
+    loadingActivity: "Loading activity…",
+    previewUnavailable: "No compatible renderer is installed for the pinned source model.",
     freePractice: "Free practice",
     assignedPractice: "Assigned practice",
     startSession: "Start practice session",
@@ -160,6 +175,8 @@ export default function Lab() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const assignmentId = searchParams.get("assignmentId") || undefined;
+  const resourceId = searchParams.get("resourceId") || undefined;
+  const classId = searchParams.get("classId") || undefined;
   const user = useAuth((s) => s.user)!;
   const qc = useQueryClient();
   const [state, setState] = useState<any>({});
@@ -181,10 +198,11 @@ export default function Lab() {
     enabled: user.role === "STUDENT" && Boolean(assignmentId),
   });
   const publicLab = labs.data?.find((item: any) => item.id === id);
+  const classResource = useQuery<any>({ queryKey: ["class-resource", classId, resourceId], queryFn: () => api(`/classes/${encodeURIComponent(classId!)}/resources/${encodeURIComponent(resourceId!)}`), enabled: Boolean(resourceId && classId) });
   const assignedLab = assignment.data?.contentType === "lab" && assignment.data.content?.id === id
     ? assignment.data.content
     : null;
-  const lab = assignedLab ?? publicLab;
+  const lab = assignedLab ?? (classResource.data?.kind === "LAB" && classResource.data.content.source.labId === id ? { ...publicLab, id, title: classResource.data.title } : publicLab);
   const relatedLessons: RelatedLesson[] = publicLab?.lessonLinks ?? [];
   const originLessonId = searchParams.get("lessonId");
   const originLesson = originLessonId ? relatedLessons.find((lesson) => lesson.lessonId === originLessonId) : relatedLessons[0];
@@ -193,9 +211,9 @@ export default function Lab() {
   const returnSection = originLessonId === originLesson?.lessonId && requestedSection === mappedSection ? mappedSection : undefined;
   const returnAssignment = originLessonId === originLesson?.lessonId ? searchParams.get("lessonAssignmentId") || undefined : undefined;
   const returnToLesson = originLesson ? relatedLessonHref(originLesson.lessonId, returnSection ? "reading" : "labs", returnAssignment, returnSection) : undefined;
-  const challengeId = assignedLab?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
+  const challengeId = assignedLab?.challengeId ?? classResource.data?.content?.source?.challengeId ?? publicLab?.challenges?.[0]?.id ?? null;
   // Before a run resolves its renderer, students see the Lab's legacy view; teachers preview the configured model.
-  const startRenderer = user.role === "TEACHER" ? previewLabRenderer(id, lab?.simulationModelRef) : labRenderer(id);
+  const startRenderer = user.role === "TEACHER" ? previewLabRenderer(id, classResource.data?.content?.execution?.modelRef ?? lab?.simulationModelRef) : labRenderer(id);
   const fallbackState = useMemo(
     () => location.state?.labState ?? startRenderer?.defaultState() ?? {},
     [id, location.key, location.state?.labState, startRenderer],
@@ -206,6 +224,7 @@ export default function Lab() {
     labId: id,
     challengeId,
     assignmentId,
+    resourceId,
     releaseId: searchParams.get("releaseId") || undefined,
     state,
     initialState: fallbackState,
@@ -252,13 +271,19 @@ export default function Lab() {
     setHint(null);
     setSaved(false);
   };
-  const exitTo = returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
-  const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{content}</LabSpace>;
+  const exitTo = resourceId && classId ? `/classes/${encodeURIComponent(classId)}?tab=resources` : returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
+  const pedagogy = labRun.launch?.classLabSnapshot ?? assignment.data?.classLabSnapshot ?? (classResource.data?.kind === "LAB" ? classResource.data.content : null);
+  const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{pedagogy && <section className="panel class-lab-instructions"><h2>{t.teacherInstructions}</h2><b>{pedagogy.learningObjective}</b><p className="resource-plain-text">{pedagogy.instructions}</p>{pedagogy.reportPrompts?.length > 0 && <ol>{pedagogy.reportPrompts.map((prompt: string, index: number) => <li key={index}>{prompt}</li>)}</ol>}<p className="tiny muted">{t.customSupplement}{resourceId ? ` ${t.unscoredClassPractice}` : ""}</p></section>}<ErrorBox error={classResource.error} />{content}</LabSpace>;
+  if (user.role === "TEACHER" && resourceId) {
+    const pinned = classResource.data?.content?.execution;
+    const compatible = pinned && renderer?.modelRefs.includes(pinned.modelRef);
+    return space(<section className="panel"><h2>{t.pinnedSourcePreview}</h2><p>{t.advisoryPreview}</p>{classResource.isLoading ? <p role="status">{t.loadingActivity}</p> : compatible && renderer ? <><p>{pinned.modelRef} / {classResource.data.content.source.challengeId}</p><renderer.Activity state={state} onChange={change} resetKey={resetKey} runtimeParams={pinned.effectiveParams?.[challengeId ?? ""] ?? null} runtimeConfig={pinned.template?.buoyancy} /></> : <p>{t.previewUnavailable}</p>}</section>);
+  }
   if (!hasLabRenderer(id))
     return space(<p>{t.notFound}</p>);
   if (user.role === "STUDENT" && assignmentId && assignment.isSuccess && !assignedLab)
     return space(<section className="panel"><h1>{t.notFound}</h1><Link className="primary" to="/assignments">{t.backToList}</Link></section>);
-  if (user.role === "STUDENT" && !assignmentId && labs.isSuccess && !publicLab)
+  if (user.role === "STUDENT" && !assignmentId && !resourceId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
