@@ -132,6 +132,10 @@ test("submit stays disabled until every station is complete, then sends the evid
 
   await submit.click();
   await expect(page.getByTestId("density-result")).toContainText("6 / 6");
+  // B3 after a pass: what-if answered from the density model.
+  await page.getByTestId("what-if").getByRole("button", { name: "Nếu dùng khối sắt to gấp đôi?" }).click();
+  await expect(page.getByTestId("what-if-answer")).toContainText("Khối sắt gấp đôi: 156 g, 20 cm³ → 7,8 g/cm³.");
+  await expect(page.getByTestId("what-if-answer")).toContainText("khối lượng riêng không đổi");
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toMatchObject({ contract: "lab-contract/1", runId: "density-run", stateSchemaVersion: 1, evidenceSchemaVersion: 1 });
   expect(submissions[0].evidence).toEqual({

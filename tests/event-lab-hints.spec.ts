@@ -89,6 +89,8 @@ test("FL-06 not passed: the after-submit hint panel asks for a hint and stays on
   await page.getByRole("button", { name: "Nộp bài" }).click();
   const panel = page.locator(".event-lab-hint");
   await expect(panel).toContainText("Gợi ý từng bước");
+  // Not passed: no what-if, so nothing can help the retry.
+  await expect(panel.getByTestId("what-if")).toHaveCount(0);
   // B2: the explanation is fetched only when asked; an unmet step shows its name, never its answer.
   expect(explained).toEqual([]);
   await panel.getByRole("button", { name: "Vì sao em chưa đạt?" }).click();

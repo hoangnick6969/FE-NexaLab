@@ -16,6 +16,8 @@ import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/Checkpoin
 import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
 import { StepPickerHint } from "./runtime/StepPickerHint";
+import { LabWhatIf } from "./runtime/LabWhatIf";
+import { WHAT_IF_BY_RENDERER } from "./runtime/what-if-labs";
 import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
@@ -269,7 +271,8 @@ export default function Lab() {
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
   // SAI-01A step 3 + B2: event-scored Labs render their own result, so the explanation and hint float beside it.
   const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
-    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"} />
+    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"}
+        whatIf={id === "lever-equilibrium" ? "lever" : id === "thermal-energy" ? "thermal" : undefined} />
     // While working (no attempt yet): moment-A hints on a step the learner picks.
     : user.role === "STUDENT" && labRun.launch && !labRun.attempt ? <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} placement="floating" /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
@@ -480,6 +483,8 @@ export default function Lab() {
             <>
               <VerdictExplanationPanel key={"why-" + attempt.id} attemptId={attempt.id} passed={attempt.verdict === "passed"} />
               {attempt.verdict !== "passed" && <CheckpointHintPanel key={attempt.id} attemptId={attempt.id} />}
+              {/* B3: station Labs offer what-ifs only after a pass, so no answer can help a retry. */}
+              {attempt.verdict === "passed" && WHAT_IF_BY_RENDERER[renderer.key] && <section className="panel"><LabWhatIf kind={WHAT_IF_BY_RENDERER[renderer.key]} /></section>}
             </>
           )}
           {user.role === "STUDENT" && runtimeReady && !guided && (

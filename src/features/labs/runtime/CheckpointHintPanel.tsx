@@ -4,6 +4,8 @@ import { api } from "../../../lib/api";
 import { Badge, ErrorBox, useAction } from "../../../components/ui";
 import { defineText } from "../../../i18n";
 import { VerdictExplanationPanel } from "./VerdictExplanationPanel";
+import { LabWhatIf } from "./LabWhatIf";
+import type { LabWhatIfKind } from "./what-if-labs";
 import "./CheckpointHintPanel.css";
 
 /** SAI-01A rules-only hint for a not-passed checkpoint Lab attempt (BE spec-student-ai-checkpoint-hints). */
@@ -80,7 +82,7 @@ export function CheckpointHintPanel({ attemptId }: { attemptId: string }) {
  * Event-scored Labs draw their own full-screen layout: the B2 explanation (any verdict) and, when not passed,
  * the hint float beside it and can be collapsed to a pill.
  */
-export function FloatingCheckpointHint({ attemptId, passed = false }: { attemptId: string; passed?: boolean }) {
+export function FloatingCheckpointHint({ attemptId, passed = false, whatIf }: { attemptId: string; passed?: boolean; whatIf?: LabWhatIfKind }) {
   const t = text();
   const [open, setOpen] = useState(true);
   return (
@@ -90,6 +92,8 @@ export function FloatingCheckpointHint({ attemptId, passed = false }: { attemptI
         <button type="button" className="event-lab-hint-close" aria-label={t.collapse} onClick={() => setOpen(false)}><X size={16} aria-hidden /></button>
         <VerdictExplanationPanel attemptId={attemptId} passed={passed} />
         {!passed && <CheckpointHintPanel attemptId={attemptId} />}
+        {/* B3: only after a pass, so no what-if answer can help a retry. */}
+        {passed && whatIf && <section className="panel"><LabWhatIf kind={whatIf} /></section>}
       </div>
       {!open && <button type="button" className="secondary event-lab-hint-pill" onClick={() => setOpen(true)}><Lightbulb size={15} aria-hidden /> {passed ? t.expandPassed : t.expand}</button>}
     </div>

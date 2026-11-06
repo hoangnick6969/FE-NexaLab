@@ -271,6 +271,12 @@ test("FL-25 free explore unlocks after the checkpoints, follows the model and st
   await expect(explored).toContainText("đổi chiều hai lần", { timeout: 8000 });
   // The checkpoint result is unchanged by exploring.
   await expect(observation).toContainText("đổi chiều hai lần");
+  // B3: what-if questions answered from the model.
+  const whatIf = page.getByTestId("what-if");
+  await whatIf.getByRole("button", { name: "Nếu nam châm nằm yên bên trong cuộn dây?" }).click();
+  await expect(page.getByTestId("what-if-answer")).toContainText("Từ trường qua cuộn dây không thay đổi nên không có dòng điện cảm ứng");
+  await whatIf.getByRole("button", { name: "Nếu đưa cực S lại gần cuộn dây thì sao?" }).click();
+  await expect(page.getByTestId("what-if-answer")).toContainText("đổi cực thì đổi chiều");
 
   await page.getByRole("button", { name: "Đóng khám phá" }).click();
   await expect(page.getByTestId("em-2d-open-switch")).toHaveCount(0);
