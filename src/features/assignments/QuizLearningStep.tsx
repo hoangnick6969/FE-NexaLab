@@ -4,6 +4,7 @@ import { api, useAuth, type QuizAttemptHistoryResponse, type QuizAttemptRequest,
 import { ErrorBox, InlineLoader } from "../../components/ui";
 import { withAssignmentContext } from "../lessons/lesson-catalog";
 import { defineText } from "../../i18n";
+import { QuizQuestionHint } from "./QuizQuestionHint";
 
 const text = defineText({
   vi: {
@@ -219,6 +220,7 @@ export function QuizLearningStep({
               </label>
             ))}
           </fieldset>
+          <QuizQuestionHint key={question.id} lessonId={lessonId} assignmentId={assignmentId} questionId={question.id} />
           <div className="quiz-actions">
             <button type="button" className="secondary" disabled={index === 0} onClick={() => setIndex((value) => value - 1)}>{t.previous}</button>
             {index < questions.length - 1 ? (

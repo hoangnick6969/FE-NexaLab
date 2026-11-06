@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, CircleHelp, Compass, Info, Play, RotateCcw, Undo2, X } from "lucide-react";
 import { FOOD_WEB_CAUSES, foodWebChains } from "@nexalab/sim";
-import { defineText } from "../../../../../i18n";
+import { WhatIfPanel } from "../WhatIfPanel";
+import { foodWebAnswer, foodWebWhatIfs } from "../what-if";
+import { defineText, getLocale } from "../../../../../i18n";
 import { EnergyPyramid, FoodWebScene } from "./FoodWebScene";
 import { FoodWebView3D } from "./FoodWebView3D";
 import { webglAvailable } from "../kit";
@@ -419,6 +421,8 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
           <p className="fw-note">{t.explore.intro}</p>
           {exploreRemoved && removal && <p className="fw-note" role="status">{t.names[exploreRemoved]} {t.removed}. {Object.entries(removal.effects).filter(([, v]: any) => v.effect !== "NO_DIRECT_EFFECT").map(([id, v]: any) => `${t.names[id as SpeciesId]}: ${t.effects[v.effect as Effect].toLowerCase()}`).join("; ")}.</p>}
           <button type="button" className="fw-tool" disabled={!exploreRemoved} onClick={() => setExploreRemoved(null)}><RotateCcw size={16} aria-hidden="true" /><span>{t.explore.reset}</span></button>
+          <WhatIfPanel items={foodWebWhatIfs(t.names, getLocale())} selectedId={exploreRemoved ? `remove:${exploreRemoved}` : null}
+            answer={exploreRemoved ? foodWebAnswer(exploreRemoved, t.names, getLocale()) : null} onSelect={(item) => setExploreRemoved(item.action.removed)} />
           <p className="fw-note">{t.explore.links}</p>
           <ul className="fw-links">
             {(Object.keys(t.names) as SpeciesId[]).filter((id) => id !== "nam-vi-khuan").map((id) => <li key={id}>{t.names[id]}: {t.explore.chains(chainCount(id))}</li>)}

@@ -48,6 +48,20 @@ export function phaseOf(evidence: BulbEvidence): Phase {
   return "ready";
 }
 
+/** SAI-01A in-run hint targets: the step waiting for a prediction, and the last observed one. */
+export function bulbHintStep(value: unknown) {
+  const evidence = evidenceFrom(value);
+  const phase = phaseOf(evidence);
+  const [closed, open] = evidence.checkpoints;
+  const ask = phase === "predict-closed" ? "prediction:CLOSED" : phase === "predict-open" ? "prediction:OPEN" : phase === "explain" ? "explanation" : null;
+  const observed = open.prediction !== null && !switchClosed(open) ? open
+    : closed.prediction !== null && switchClosed(closed) ? closed : null;
+  return {
+    ask: ask ? { criterion: ask } : null,
+    reflect: observed ? { criterion: "prediction:" + observed.id, state: observed.state, prediction: observed.prediction } : null,
+  };
+}
+
 export function bulbEvidenceReady(value: unknown): boolean {
   const evidence = evidenceFrom(value);
   return switchClosed(evidence.checkpoints[0]) && evidence.checkpoints[0].prediction !== null &&

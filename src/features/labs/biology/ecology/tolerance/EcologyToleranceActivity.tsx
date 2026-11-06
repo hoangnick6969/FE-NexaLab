@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, CircleHelp, Compass, Info, Play, X } from "lucide-react";
 import { ECOLOGY_POPULATIONS } from "@nexalab/sim";
-import { defineText } from "../../../../../i18n";
+import { defineText, getLocale } from "../../../../../i18n";
+import { WhatIfPanel } from "../WhatIfPanel";
+import { ecologyAnswer, ecologyWhatIfs, type EcologyAction } from "../what-if";
 import { useReducedMotion } from "../../../physics/electricity/induction/apparatus/anim";
 import { PondScene, type FishState } from "./PondScene";
 import { PondView3D, vigorAt } from "./PondView3D";
@@ -240,6 +242,13 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
   const [explore, setExplore] = useState<ExploreScene | null>(null);
   const [exploreValue, setExploreValue] = useState(250);
   const [exploreSample, setExploreSample] = useState<"P1" | "P2" | "P3">("P1");
+  // B3: the selected what-if; moving the slider or the sample by hand clears it so the answer never disagrees with the scene.
+  const [whatIf, setWhatIf] = useState<{ id: string; action: EcologyAction } | null>(null);
+  const askWhatIf = (item: { id: string; action: EcologyAction }) => {
+    setWhatIf(item);
+    if (item.action.scene === "pond") { setExplore("pond"); setExploreValue(item.action.valueDeciC); }
+    if (item.action.scene === "pyramid") { setExplore("pyramid"); setExploreSample(item.action.sampleId); }
+  };
   const [factorAnswers, setFactorAnswers] = useState<Record<string, boolean | undefined>>({});
   const [factorChecked, setFactorChecked] = useState(false);
   const frame = useRef<number | null>(null);
@@ -413,7 +422,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
       {showSlider && <label className="eco-slider">
         <span>{t.temperature}: <b data-testid="eco-temperature">{formatDeciC(pondValue)} °C</b></span>
         <input type="range" min={0} max={500} step={1} value={pondValue} disabled={sweeping} aria-valuetext={`${formatDeciC(pondValue)} °C`}
-          data-testid="eco-slider" onChange={(event) => exploring ? setExploreValue(Number(event.target.value)) : visit(Number(event.target.value))} />
+          data-testid="eco-slider" onChange={(event) => { if (exploring) { setExploreValue(Number(event.target.value)); setWhatIf(null); } else visit(Number(event.target.value)); }} />
       </label>}
       {sliderLocked && scene === "pond" && <p className="eco-dock-note">{t.fishLocked} {formatDeciC(pondValue)} °C</p>}
       <button type="button" className="eco-act" data-testid="eco-act" disabled={phase.kind !== "act" || sweeping || review !== null} onClick={act}>
@@ -499,7 +508,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
       {phase.kind === "ready" && !review && <p className="eco-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
 
       {done && !review && <div className="eco-explore" data-testid="eco-explore">
-        <button type="button" className="eco-tool" aria-expanded={exploring} aria-controls="eco-explore-controls" onClick={() => setExplore((value) => value ? null : "pond")}>
+        <button type="button" className="eco-tool" aria-expanded={exploring} aria-controls="eco-explore-controls" onClick={() => { setExplore((value) => value ? null : "pond"); setWhatIf(null); }}>
           <Compass size={16} aria-hidden="true" /><span>{exploring ? t.explore.hide : t.explore.show}</span>
         </button>
         {exploring && <div id="eco-explore-controls" className="eco-explore-controls">
@@ -508,7 +517,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           <fieldset className="eco-segment">
             <legend>{t.explore.scene}</legend>
             {(["pond", "population", "pyramid", "factors"] as const).map((option) => <label key={option} className="eco-segment-option">
-              <input type="radio" name="eco-explore-scene" checked={explore === option} onChange={() => setExplore(option)} />
+              <input type="radio" name="eco-explore-scene" checked={explore === option} onChange={() => { setExplore(option); setWhatIf(null); }} />
               <span>{t.explore[option]}</span>
             </label>)}
           </fieldset>
@@ -523,7 +532,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
             <fieldset className="eco-segment">
               <legend>{t.explore.sample}</legend>
               {(["P1", "P2", "P3"] as const).map((sample) => <label key={sample} className="eco-segment-option">
-                <input type="radio" name="eco-explore-sample" checked={exploreSample === sample} onChange={() => setExploreSample(sample)} />
+                <input type="radio" name="eco-explore-sample" checked={exploreSample === sample} onChange={() => { setExploreSample(sample); setWhatIf(null); }} />
                 <span>{sample}</span>
               </label>)}
             </fieldset>
@@ -541,6 +550,8 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
             <button type="button" className="eco-tool" onClick={() => setFactorChecked(true)}>{t.explore.check}</button>
             {factorChecked && <p className="eco-note" role="status">{t.explore.factorResult(factorScore, FACTORS.length)}</p>}
           </div>}
+          <WhatIfPanel items={ecologyWhatIfs(getLocale())} selectedId={whatIf?.id ?? null}
+            answer={whatIf ? ecologyAnswer(whatIf.action, getLocale()) : null} onSelect={askWhatIf} />
         </div>}
       </div>}
       <p className="eco-note">{t.modelLimit}</p>

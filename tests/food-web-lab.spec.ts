@@ -14,6 +14,8 @@ async function mockShell(page: Page) {
   } }));
   await page.route("**/api/me/notifications/unread-count", (route) => route.fulfill({ json: { count: 0 } }));
   await page.route("**/api/tutor/status", (route) => route.fulfill({ json: { provider: "rules" } }));
+  // SAI-01A: the in-run hint toggle asks whether the last observed step was mispredicted.
+  await page.route("**/api/lab-runs/*/hints/check", (route) => route.fulfill({ status: 201, json: { mismatch: false } }));
   await page.route("**/api/labs", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/assignments/assignment-fw", (route) => route.fulfill({ json: {
     id: "assignment-fw", title: "Lưới thức ăn", contentType: "lab", dueDate: null, overdue: false,
@@ -126,6 +128,22 @@ test("FL-21 food web: answers before checks, a broken chain is shown, F5 restore
   await expect(page.getByTestId("fw-causes")).toContainText("Giúp bảo vệ, duy trì cân bằng tự nhiên");
 
   await page.getByRole("radio", { name: /mất rắn thì con mồi/ }).click();
+  // B3: "Nếu… thì sao?" in free explore (every checkpoint done), answered from the model; not part of the payload.
+  await page.getByTestId("fw-explore").getByRole("button", { name: "Khám phá thêm" }).click();
+  const whatIf = page.getByTestId("what-if");
+  const whatIfAnswer = page.getByTestId("what-if-answer");
+  await whatIf.getByRole("button", { name: "Nếu mất ếch thì sao?" }).click();
+  await expect(whatIfAnswer).toContainText("Ếch ăn châu chấu và sâu ăn lá, nên châu chấu và sâu ăn lá có thể tăng lên vì bớt bị ăn.");
+  await expect(whatIfAnswer).toContainText("Rắn cũng ăn ếch");
+  await expect(whatIfAnswer).toContainText("2 chuỗi thức ăn đi qua ếch bị đứt.");
+  await expect(node("chau-chau")).toHaveAttribute("data-effect", "INCREASE");
+  // Picking a species on the board asks the same question.
+  await node("dai-bang").click();
+  await expect(whatIf.getByRole("button", { name: "Nếu mất đại bàng thì sao?" })).toHaveAttribute("aria-pressed", "true");
+  await expect(whatIfAnswer).toContainText("Không loài nào trong lưới ăn đại bàng.");
+  await whatIf.screenshot({ path: "test-results/fw-what-if.png" });
+  await expect(whatIf.getByRole("button", { name: /nấm, vi khuẩn/ })).toHaveCount(0);
+  await page.getByTestId("fw-explore").getByRole("button", { name: "Đóng khám phá" }).click();
   await page.getByTestId("lab-run-submit").click();
   const line = page.getByText("Mất rắn, ếch: tăng lên, trả lời đúng");
   await expect(line).toBeVisible();

@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { Empty, verdictLabel } from "../../components/ui";
 import { type TeacherAssignment } from "./class-types";
 import { LoadError } from "./class-ui";
+import { ClassHintInsight } from "./ClassHintInsight";
 import { defineText, formatDateTime } from "../../i18n";
 
 const text = defineText({
@@ -77,6 +78,7 @@ export function PracticeAnalytics({ classId }: { classId: string }) {
     queryFn: () => api(`/classes/${classId}/students/${openStudent}/evidence?assignmentId=${encodeURIComponent(selectedId)}`),
     enabled: Boolean(selectedId && openStudent),
   });
+  const selected = assignments.data?.find((item) => item.id === selectedId);
   const flags = new Map((support.data ?? []).map((row: any) => [row.student.id, row.flags]));
   return (
     <section className="panel teacher-analytics-panel">
@@ -103,6 +105,7 @@ export function PracticeAnalytics({ classId }: { classId: string }) {
 
       <LoadError query={assignments} what={t.assignedList} />
       <LoadError query={board} what={t.board} />
+      {selected?.contentType === "lab" && <ClassHintInsight key={selectedId} classId={classId} assignmentId={selectedId} />}
       {selectedId && board.data?.length === 0 && <Empty>{t.noStudents}</Empty>}
 
       <div className="analytics-student-list">

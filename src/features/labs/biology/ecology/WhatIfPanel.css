@@ -1,0 +1,11 @@
+/* B3: what-if questions inside a Lab's free-explore panel. */
+.what-if { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line, rgba(18, 38, 30, 0.12)); min-width: 0; }
+.what-if h5 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.95rem; }
+.what-if-intro { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.what-if-questions { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.what-if-question { min-height: 36px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line, rgba(18, 38, 30, 0.18)); background: var(--surface, #fff); color: inherit; font: inherit; font-size: 0.85rem; text-align: left; cursor: pointer; }
+.what-if-question[aria-pressed="true"] { border-color: var(--accent, #2d7a5f); background: var(--accent-soft, rgba(45, 122, 95, 0.1)); font-weight: 600; }
+.what-if-answer:empty { display: none; }
+.what-if-answer { padding: 10px 12px; border-radius: 10px; background: var(--surface-muted, rgba(18, 38, 30, 0.05)); }
+.what-if-answer p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.what-if-answer small { color: var(--muted); }
