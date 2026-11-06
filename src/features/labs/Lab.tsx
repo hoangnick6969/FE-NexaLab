@@ -15,6 +15,7 @@ import { useLabRunHost } from "./runtime/lab-run-host";
 import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
 import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
+import { StepPickerHint } from "./runtime/StepPickerHint";
 import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
@@ -268,7 +269,9 @@ export default function Lab() {
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
   // SAI-01A step 3 + B2: event-scored Labs render their own result, so the explanation and hint float beside it.
   const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
-    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"} /> : null;
+    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"} />
+    // While working (no attempt yet): moment-A hints on a step the learner picks.
+    : user.role === "STUDENT" && labRun.launch && !labRun.attempt ? <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} placement="floating" /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
     : !labRun.launch || !labRun.rendererKey
@@ -348,6 +351,9 @@ export default function Lab() {
               return <RunHintPanel key={`${step.ask?.criterion ?? ""}|${step.reflect?.criterion ?? ""}`} runId={labRun.launch.runId} step={step}
                 labelOf={(criterion) => view.stepLabel(criterion.replace(/^prediction:/, ""))} />;
             })()}
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer && STATION_HINT_RENDERERS.has(renderer.key) && (
+              <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} />
+            )}
 
             <button
               className="primary"

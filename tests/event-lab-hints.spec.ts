@@ -30,6 +30,23 @@ test("FL-06 not passed: the after-submit hint panel asks for a hint and stays on
   await page.goto("/labs/lever-equilibrium?assignmentId=assignment-fl06");
   await page.getByRole("button", { name: "Bắt đầu thí nghiệm" }).click();
   await expect(page.locator(".physics-stage canvas")).toBeVisible();
+  // SAI-01A while working: the floating step picker gives levels 1–2; nothing about the learner's state is sent.
+  const stepAsks: any[] = [];
+  await page.route("**/api/lab-runs/run-fl06/hints/steps", route => route.fulfill({ json: { reflections: false, maxLevel: 2, steps: [
+    { criterion: "rotation", label: "Dự đoán chiều quay" }, { criterion: "moment", label: "Đo moment lực" },
+  ] } }));
+  await page.route("**/api/lab-runs/run-fl06/hints", route => { stepAsks.push(route.request().postDataJSON());
+    route.fulfill({ status: 201, json: { id: "r1", level: 1, content: "Đòn bẩy quay về phía nào khi hai bên chưa cân?", label: "Dự đoán chiều quay", repeatReason: null } }); });
+  await page.getByTestId("step-hint-toggle").click();
+  const stepPanel = page.getByTestId("step-hint-panel");
+  await stepPanel.getByRole("button", { name: "Gợi ý cho bước này" }).click();
+  await expect(stepPanel).toContainText("Đòn bẩy quay về phía nào khi hai bên chưa cân?");
+  expect(stepAsks).toEqual([{ criterion: "rotation", moment: "BEFORE_PREDICTION" }]);
+  await page.screenshot({ path: "test-results/event-step-hint.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/event-step-hint-phone.png" });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await stepPanel.getByRole("button", { name: "Đóng gợi ý" }).click();
   await expect(page.locator(".k5-3d-mark")).toHaveCount(11);
   await expect(page.locator(".k5-3d-mark-origin")).toHaveText("O · 0");
   await expect(page.getByText("Cánh tay đòn d là khoảng cách từ O đến lỗ móc", { exact: false })).toBeVisible();

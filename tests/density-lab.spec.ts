@@ -355,3 +355,36 @@ test("both 3D pebbles stay within the bore throughout the drop and rest on the i
     await expect(page.getByTestId("density-drop")).toHaveText("Thả sỏi vào ống đong");
   }
 });
+
+test("SAI-01A: while working, the learner picks a step and gets levels 1–2 without sending any state", async ({ page }) => {
+  await open(page);
+  const asked: any[] = [];
+  await page.route("**/api/lab-runs/density-run/hints/steps", (route) => route.fulfill({ json: { reflections: false, maxLevel: 2, steps: [
+    { criterion: "mass", label: "Đo khối lượng" }, { criterion: "volume", label: "Đo thể tích" },
+  ] } }));
+  await page.route("**/api/lab-runs/density-run/hints", (route) => {
+    const body = route.request().postDataJSON();
+    asked.push(body);
+    const level = Math.min(2, asked.filter((item) => item.criterion === body.criterion).length);
+    return route.fulfill({ status: 201, json: { id: `h${asked.length}`, level, content: `Gợi ý ${body.criterion} mức ${level}`,
+      label: body.criterion === "mass" ? "Đo khối lượng" : "Đo thể tích", repeatReason: asked.length > 2 && level === 2 ? "TOP_LEVEL" : null } });
+  });
+  await page.getByTestId("step-hint-toggle").click();
+  const panel = page.getByTestId("step-hint-panel");
+  await panel.getByLabel("Em đang vướng ở bước nào?").selectOption({ label: "Đo thể tích" });
+  await panel.getByRole("button", { name: "Gợi ý cho bước này" }).click();
+  await expect(panel).toContainText("Mức 1/2 · Câu hỏi gợi mở");
+  await expect(panel).toContainText("Về bước: Đo thể tích");
+  await panel.getByRole("button", { name: "Gợi ý thêm" }).click();
+  await expect(panel).toContainText("Mức 2/2 · Gợi ý khái niệm");
+  await panel.getByRole("button", { name: "Gợi ý thêm" }).click();
+  await expect(panel).toContainText("Trong lúc làm, gợi ý dừng ở mức này");
+  // Another step starts fresh in the panel.
+  await panel.getByLabel("Em đang vướng ở bước nào?").selectOption({ label: "Đo khối lượng" });
+  await expect(panel.getByRole("button", { name: "Gợi ý cho bước này" })).toBeVisible();
+  expect(asked).toEqual([
+    { criterion: "volume", moment: "BEFORE_PREDICTION" }, { criterion: "volume", moment: "BEFORE_PREDICTION" }, { criterion: "volume", moment: "BEFORE_PREDICTION" },
+  ]);
+  await page.setViewportSize({ width: 360, height: 760 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});

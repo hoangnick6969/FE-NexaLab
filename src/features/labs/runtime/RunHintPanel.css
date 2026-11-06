@@ -20,3 +20,8 @@
 /* While the popover is open its dock sits above the activity's guide card (a bottom sheet on phones). */
 .lab-space .lab-workspace > .lab-actions:has(.run-hint-popover),
 .lab-space-body > .lab-actions:has(.run-hint-popover) { z-index: 40; }
+/* Station and event Labs: the step-picker hint. Event Labs draw their own layout, so it floats under the header. */
+.run-hint-popover .field { display: grid; gap: 4px; }
+.run-hint-popover .field select { width: 100%; }
+.event-lab-run-hint { position: fixed; z-index: 30; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); }
+.event-lab-run-hint .run-hint-toggle { box-shadow: 0 8px 24px rgba(18, 38, 30, 0.14); }
