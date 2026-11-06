@@ -136,6 +136,22 @@ test("FL-20 ecology activity: predictions before observations, F5 restore, keybo
   await next.click();
 
   await page.getByRole("radio", { name: /nằm ngoài giới hạn sinh thái/ }).click();
+  // B3: "Nếu… thì sao?" in free explore, answered from the model; the scene follows the question.
+  await page.getByTestId("eco-explore").getByRole("button", { name: "Khám phá thêm" }).click();
+  const whatIf = page.getByTestId("what-if");
+  const whatIfAnswer = page.getByTestId("what-if-answer");
+  await whatIf.getByRole("button", { name: "Nếu nước ao ở 43 °C thì cá rô phi sao?" }).click();
+  await expect(whatIfAnswer).toContainText("43 °C cao hơn giới hạn trên 42 °C nên cá rô phi không tồn tại được.");
+  await expect(page.getByTestId("eco-temperature")).toHaveText("43,0 °C");
+  await whatIf.getByRole("button", { name: "Nếu thả cá C vào nơi nước 8 °C–36 °C?" }).click();
+  await expect(whatIfAnswer).toContainText("Cá C không nuôi được quanh năm vì lúc nóng nhất 36 °C cao hơn giới hạn trên 30 °C.");
+  await whatIf.getByRole("button", { name: "Nếu quần thể có tháp tuổi như mẫu P1?" }).click();
+  await expect(whatIfAnswer).toContainText("tháp phát triển");
+  await expect(page.getByRole("radio", { name: "P1", exact: true })).toBeChecked();
+  // Changing the scene by hand clears the answer, so it never disagrees with what is shown.
+  await page.getByRole("radio", { name: "Ao cá", exact: true }).check();
+  await expect(whatIfAnswer).toBeEmpty();
+  await page.getByTestId("eco-explore").getByRole("button", { name: "Đóng khám phá" }).click();
   await expect(page.getByTestId("lab-run-submit")).toBeEnabled();
   await page.getByTestId("lab-run-submit").click();
   await expect(page.getByText("Nước 44,0 °C: cá rô phi không tồn tại được, trả lời đúng")).toBeVisible();
