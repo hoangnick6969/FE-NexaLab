@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, ChevronRight, School, GraduationCap, FlaskConical, Zap, Leaf } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { defineText } from "../i18n";
 import { commonText } from "../i18n/common";
@@ -23,6 +23,8 @@ const text = defineText({
     nextChapter: "Chương sau",
     expandChapter: "Xem danh sách bài",
     collapseChapter: "Thu gọn",
+    classLabel: "Lớp",
+    teacherLabel: "GV",
   },
   en: {
     lessons: "lessons",
@@ -41,6 +43,8 @@ const text = defineText({
     nextChapter: "Next chapter",
     expandChapter: "View lessons",
     collapseChapter: "Collapse",
+    classLabel: "Class",
+    teacherLabel: "Teacher",
   },
 });
 
@@ -54,6 +58,10 @@ export type HierarchyItem = {
   chapterOrder?: number | null;
   itemOrder?: number | null;
   coverAssetVersionId?: string | null;
+  classroom?: { id: string; name: string; teacher?: { fullName?: string | null; username?: string | null } | null };
+  contentType?: string;
+  contentId?: string;
+  thumbnail?: string | null;
 };
 
 type SubjectGradeChapterBrowserProps<T extends HierarchyItem> = {
@@ -70,9 +78,54 @@ const compareOrder = (left?: number | null, right?: number | null) =>
   (left ?? Number.MAX_SAFE_INTEGER) - (right ?? Number.MAX_SAFE_INTEGER);
 const chapterPath = (chapter: string) => encodeURIComponent(chapter);
 
-export function SubjectCover({ subjectId, subjectName, versionId }: { subjectId: string; subjectName: string; versionId?: string | null }) {
-  const [src, setSrc] = useState<string | null>(null);
+function SubjectIconComponent({ subjectId, size = 26 }: { subjectId: string; size?: number }) {
+  const normalized = (subjectId || "").toLowerCase();
+  if (normalized.includes("physic") || normalized.includes("vat-ly") || normalized.includes("vatly")) {
+    return <Zap size={size} aria-hidden="true" />;
+  }
+  if (normalized.includes("chem") || normalized.includes("hoa-hoc") || normalized.includes("hoahoc")) {
+    return <FlaskConical size={size} aria-hidden="true" />;
+  }
+  if (normalized.includes("bio") || normalized.includes("sinh-hoc") || normalized.includes("sinhhoc")) {
+    return <Leaf size={size} aria-hidden="true" />;
+  }
+  if (normalized.includes("khtn") || normalized.includes("natural") || normalized.includes("khoa-hoc")) {
+    return <FlaskConical size={size} aria-hidden="true" />;
+  }
+  return <BookOpen size={size} aria-hidden="true" />;
+}
+
+function getSubjectAbbr(subjectId: string, subjectName: string): string {
+  const name = (subjectName || "").toUpperCase();
+  if (name.includes("TỰ NHIÊN")) return "KHTN";
+  if (name.includes("VẬT LÝ") || name.includes("VẬT LÍ")) return "VẬT LÝ";
+  if (name.includes("HÓA HỌC")) return "HÓA HỌC";
+  if (name.includes("SINH HỌC")) return "SINH HỌC";
+  if (name.includes("TOÁN")) return "TOÁN";
+  return name.slice(0, 8);
+}
+
+export function SubjectCover({
+  subjectId,
+  subjectName,
+  versionId,
+  thumbnail,
+  grade,
+  className,
+}: {
+  subjectId: string;
+  subjectName: string;
+  versionId?: string | null;
+  thumbnail?: string | null;
+  grade?: number | null;
+  className?: string | null;
+}) {
+  const [src, setSrc] = useState<string | null>(thumbnail ?? null);
   useEffect(() => {
+    if (thumbnail) {
+      setSrc(thumbnail);
+      return;
+    }
     let active = true;
     let revoke: () => void = () => undefined;
     setSrc(null);
@@ -81,11 +134,42 @@ export function SubjectCover({ subjectId, subjectName, versionId }: { subjectId:
       else image.revoke();
     }).catch(() => undefined);
     return () => { active = false; revoke(); };
-  }, [versionId]);
-  return <span className={`subject-icon ${subjectId}`} aria-hidden="true">
-    {src ? <img src={src} alt="" width="400" height="600" loading="lazy" decoding="async" onError={() => setSrc(null)} /> : <BookOpen />}
-    <span className="sr-only">{subjectName}</span>
-  </span>;
+  }, [versionId, thumbnail]);
+
+  return (
+    <span className={`subject-icon ${subjectId}`} aria-hidden="true">
+      {src ? (
+        <img src={src} alt="" width="400" height="600" loading="lazy" decoding="async" onError={() => setSrc(null)} />
+      ) : (
+        <div className={`subject-mockup-cover is-${subjectId}`}>
+          <div className="subject-mockup-decor" aria-hidden="true">
+            <div className="decor-circle circle-1" />
+            <div className="decor-circle circle-2" />
+          </div>
+          <div className="subject-mockup-top">
+            <span className="mockup-class-badge">
+              <GraduationCap size={12} aria-hidden="true" />
+              <span>LỚP HỌC</span>
+            </span>
+            {grade && <span className="mockup-grade-pill">K{grade}</span>}
+          </div>
+          <div className="subject-mockup-center">
+            <div className="mockup-icon-box">
+              <SubjectIconComponent subjectId={subjectId} size={28} />
+            </div>
+            <span className="mockup-subject-abbr">{getSubjectAbbr(subjectId, subjectName)}</span>
+          </div>
+          {className && (
+            <div className="subject-mockup-footer">
+              <School size={11} aria-hidden="true" />
+              <span className="mockup-class-name" title={className}>{className}</span>
+            </div>
+          )}
+        </div>
+      )}
+      <span className="sr-only">{subjectName}</span>
+    </span>
+  );
 }
 
 /** URL-backed hierarchy shared by student catalogs; every level is a real screen/deep link. */
@@ -105,12 +189,42 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
 
   const subjectGrades = useMemo(() => {
-    const groups = new Map<string, { subjectId: string; subjectName: string; grade: number; count: number; coverAssetVersionId?: string | null }>();
+    const groups = new Map<string, {
+      subjectId: string;
+      subjectName: string;
+      grade: number;
+      count: number;
+      coverAssetVersionId?: string | null;
+      thumbnail?: string | null;
+      classNames: string[];
+      teacherNames: string[];
+    }>();
     for (const item of items) {
       const key = `${item.grade}:${item.subjectId}`;
-      const group = groups.get(key) ?? { subjectId: item.subjectId, subjectName: item.subjectName, grade: item.grade, count: 0, coverAssetVersionId: item.coverAssetVersionId };
+      const group = groups.get(key) ?? {
+        subjectId: item.subjectId,
+        subjectName: item.subjectName,
+        grade: item.grade,
+        count: 0,
+        coverAssetVersionId: item.coverAssetVersionId,
+        thumbnail: item.thumbnail,
+        classNames: [],
+        teacherNames: [],
+      };
       group.count += 1;
-      if (!group.coverAssetVersionId) group.coverAssetVersionId = item.coverAssetVersionId;
+      if (!group.coverAssetVersionId && item.coverAssetVersionId) {
+        group.coverAssetVersionId = item.coverAssetVersionId;
+      }
+      if (!group.thumbnail && item.thumbnail) {
+        group.thumbnail = item.thumbnail;
+      }
+      if (item.classroom?.name && !group.classNames.includes(item.classroom.name)) {
+        group.classNames.push(item.classroom.name);
+      }
+      const teacherName = item.classroom?.teacher?.fullName || item.classroom?.teacher?.username;
+      if (teacherName && !group.teacherNames.includes(teacherName)) {
+        group.teacherNames.push(teacherName);
+      }
       groups.set(key, group);
     }
     return [...groups.values()].sort((a, b) => a.grade - b.grade || a.subjectName.localeCompare(b.subjectName, "vi"));
@@ -183,10 +297,42 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
       )}
     </nav>
     {!selected ? <div className="hierarchy-subject-grid">
-      {subjectGrades.map((group) => <Link className="hierarchy-choice" key={`${group.grade}:${group.subjectId}`} to={`${basePath}/grades/${group.grade}/subjects/${encodeURIComponent(group.subjectId)}`}>
-        <SubjectCover subjectId={group.subjectId} subjectName={group.subjectName} versionId={group.coverAssetVersionId} />
-        <span className="hierarchy-choice-copy"><span className="hierarchy-choice-grade">{t.grade(group.grade)}</span><b>{group.subjectName}</b><small>{t.items(group.count)}</small></span><ArrowRight size={18} aria-hidden="true" />
-      </Link>)}
+      {subjectGrades.map((group) => (
+        <Link
+          className="hierarchy-choice"
+          key={`${group.grade}:${group.subjectId}`}
+          to={`${basePath}/grades/${group.grade}/subjects/${encodeURIComponent(group.subjectId)}`}
+        >
+          <SubjectCover
+            subjectId={group.subjectId}
+            subjectName={group.subjectName}
+            versionId={group.coverAssetVersionId}
+            thumbnail={group.thumbnail}
+            grade={group.grade}
+            className={group.classNames[0]}
+          />
+          <span className="hierarchy-choice-copy">
+            <span className="hierarchy-choice-grade-row">
+              <span className="hierarchy-choice-grade">{t.grade(group.grade)}</span>
+              <span className="hierarchy-choice-count-pill">{t.items(group.count)}</span>
+            </span>
+            <b className="hierarchy-choice-title">{group.subjectName}</b>
+            {group.classNames.length > 0 && (
+              <span className="hierarchy-choice-meta-line class-meta" title={group.classNames.join(", ")}>
+                <School size={13} aria-hidden="true" />
+                <span>{group.classNames.join(", ")}</span>
+              </span>
+            )}
+            {group.teacherNames.length > 0 && (
+              <span className="hierarchy-choice-meta-line teacher-meta" title={group.teacherNames.join(", ")}>
+                <GraduationCap size={13} aria-hidden="true" />
+                <span>{t.teacherLabel}: {group.teacherNames.join(", ")}</span>
+              </span>
+            )}
+          </span>
+          <ArrowRight size={18} aria-hidden="true" className="hierarchy-choice-arrow" />
+        </Link>
+      ))}
     </div> : !selectedChapter ? <>
       <header className="hierarchy-screen-heading"><span className="eyebrow">{t.grade(selected.grade).toLocaleUpperCase()}</span><h2>{selected.subjectName}</h2><p>{t.chapterIndex} · {scopedItems.length} {itemLabel}</p></header>
       {chapters.length ? <ol className="hierarchy-chapter-list" aria-label={t.chapterIndexLabel}>

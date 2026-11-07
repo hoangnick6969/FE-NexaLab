@@ -18,7 +18,8 @@ export type LabLaunch = {
   initialState: unknown;
   rendererKey: string | null;
   expiresAt: string | null;
-  context: "ASSIGNMENT" | "FOUNDATIONAL";
+  context: "ASSIGNMENT" | "FOUNDATIONAL" | "CLASS_PRACTICE";
+  classLabSnapshot?: { title: string; learningObjective: string; instructions: string; reportPrompts: string[] } | null;
   assignmentId: string | null;
   versionBinding: "ASSIGNMENT_PINNED" | "LEGACY_UNPINNED_LAUNCH" | "FOUNDATIONAL_LAUNCH";
   /** Server-chosen run parameters, e.g. FL-03 specimen pins. Absent for runs that have none. */
@@ -116,6 +117,7 @@ type HostInput = {
   challengeId: string | null;
   assignmentId?: string;
   releaseId?: string;
+  resourceId?: string;
   state: unknown;
   initialState: unknown;
   onStateChange: (state: any) => void;
@@ -131,8 +133,8 @@ export function useLabRunHost(input: HostInput) {
   const startedAt = useRef(Date.now());
   const idempotencyKey = useRef(crypto.randomUUID());
   const contextKey = useMemo(
-    () => `${input.userId}:${input.assignmentId ? `assignment:${input.assignmentId}` : "foundational"}:lab:${input.labId}:challenge:${input.challengeId ?? "missing"}`,
-    [input.assignmentId, input.challengeId, input.labId, input.userId],
+    () => `${input.userId}:${input.resourceId ? `resource:${input.resourceId}` : input.assignmentId ? `assignment:${input.assignmentId}` : "foundational"}:lab:${input.labId}:challenge:${input.challengeId ?? "missing"}`,
+    [input.resourceId, input.assignmentId, input.challengeId, input.labId, input.userId],
   );
   const draftKey = launch
     ? `${contextKey}:run:${launch.runId}:schema:${launch.stateSchemaVersion}`
@@ -202,6 +204,7 @@ export function useLabRunHost(input: HostInput) {
       const next = await api<LabLaunch>(`/labs/${encodeURIComponent(input.labId)}/runs`, "POST", {
         challengeId: input.challengeId,
         ...(input.releaseId ? { releaseId: input.releaseId } : {}),
+        ...(input.resourceId ? { resourceId: input.resourceId } : {}),
         ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
       });
       if (next.contract !== "lab-contract/1") throw new Error("Phiên thực hành dùng hợp đồng không được hỗ trợ.");

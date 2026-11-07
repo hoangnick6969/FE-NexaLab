@@ -24,7 +24,7 @@ const GeneProteinActivity = loadLabActivity(() => import("../biology/molecular/g
 /** Where the pinned server rubric expects learner data in a `lab-contract/1` submission. */
 export type SubmissionEnvelope = "labState" | "checkpoints" | "evidence";
 
-export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null; runtimeConfig?: unknown };
+export type LabActivityProps = { state: any; onChange: (next: any) => void; result?: any; resetKey: number; runtimeParams?: Record<string, string | number> | null; runtimeConfig?: unknown; displayQuestions?: string[]; authoring?: boolean; onDisplayQuestionChange?: (index: number, value: string) => void };
 
 export type GuidedActivity = {
   /** Submission is enabled only when the activity evidence is complete. */

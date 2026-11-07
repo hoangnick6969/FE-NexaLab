@@ -1,5 +1,6 @@
 import { K3Hud } from "../kit";
 import { EXPLORATION_SPECIMENS, useBuoyancyStore, type BuoyancyStep } from "./useBuoyancyStore";
+import { useState } from "react";
 
 const steps: Array<{ id: BuoyancyStep; label: string; instruction: string }> = [
   { id: "air", label: "1 · Đo P₀", instruction: "Đo trọng lượng mẫu vật ngoài không khí bằng lực kế." },
@@ -8,14 +9,26 @@ const steps: Array<{ id: BuoyancyStep; label: string; instruction: string }> = [
   { id: "verify", label: "4 · Kiểm chứng", instruction: "Đo nước tràn và so sánh F_A = P₀ − F_lực kế = ρgV." },
 ];
 
-export function BuoyancyHud() {
+export function BuoyancyHud({ displayQuestions, authoring = false, onDisplayQuestionChange }: { displayQuestions?: string[]; authoring?: boolean; onDisplayQuestionChange?: (index: number, value: string) => void }) {
+  const [editingQuestion, setEditingQuestion] = useState(false);
   const state = useBuoyancyStore();
   const samples = [...state.config.specimens, ...EXPLORATION_SPECIMENS];
   const specimen = samples.find((item) => item.id === state.specimenId)!;
   const weightN = specimen.massG / 1000 * state.config.gravity;
   const buoyantN = state.config.fluidDensityKgM3 * state.config.gravity * state.submergedVolumeMl / 1e6;
   const index = steps.findIndex((item) => item.id === state.step);
+  const question = displayQuestions?.[index] ?? "";
   return <K3Hud title="FL-05 · Lực đẩy Ác-si-mét" stations={steps} current={state.step} onSelect={(id) => state.setStep(id as BuoyancyStep)} step={{ index, total: steps.length }} instruction={steps[index].instruction}
+    question={authoring && onDisplayQuestionChange ? <div className="k3-question-editor">
+      <b>Câu hỏi học sinh</b>
+      {editingQuestion ? <>
+        <textarea aria-label={`Sửa câu hỏi bước ${index + 1}`} maxLength={1000} value={question} onChange={(event) => onDisplayQuestionChange(index, event.target.value)} />
+        <button type="button" className="secondary" onClick={() => setEditingQuestion(false)}>Xong</button>
+      </> : <>
+        <p>{question || "Chưa có câu hỏi cho bước này."}</p>
+        <button type="button" className="secondary" onClick={() => setEditingQuestion(true)}>Sửa câu hỏi này</button>
+      </>}
+    </div> : question ? <p className="k3-student-question"><b>Câu hỏi:</b> {question}</p> : undefined}
     readout={`Lực kế: ${state.springForceN.toFixed(3)} N · Nước tràn: ${state.overflowMl.toFixed(1)} mL`}
     telemetry={<><span>P₀: {weightN.toFixed(3)} N</span><span>F_A: {buoyantN.toFixed(3)} N</span><span>V chìm: {state.submergedVolumeMl.toFixed(1)} mL</span></>}
     formulaLatex={String.raw`F_A=P_0-F_{spring}=\rho gV_{submerged}`}
@@ -29,7 +42,7 @@ export function BuoyancyHud() {
       <button type="button" className="secondary" onClick={() => state.setStep("air")}>Đo P₀ ngoài không khí</button>
       <button type="button" className="secondary" onClick={() => state.setStep("partial")}>Nhúng vào bình tràn</button>
       <button type="button" className="secondary" onClick={() => state.setStep("full")}>Nhúng chìm hoàn toàn</button>
-      <button type="button" className="secondary buoyancy-record" onClick={state.recordReading}>Ghi số liệu vào bảng ({state.records.length})</button>
+      {!authoring && <button type="button" className="secondary buoyancy-record" onClick={state.recordReading}>Ghi số liệu vào bảng ({state.records.length})</button>}
       {!state.config.specimens.some(item => item.id === state.specimenId) && <p className="buoyancy-drag-hint">Mẫu khám phá · dùng Sắt hoặc Sỏi để nộp bài. Với gỗ, dây chùng khi lực đẩy lớn hơn trọng lượng.</p>}
     </>}
   />;

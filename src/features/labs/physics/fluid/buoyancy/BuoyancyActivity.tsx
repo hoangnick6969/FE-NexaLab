@@ -10,15 +10,15 @@ import { BuoyancyStoreProvider, EXPLORATION_SPECIMENS, useBuoyancyStore } from "
 import { buoyancyPresentationSchema, type BuoyancyEvidence } from "./BuoyancyEvidence";
 import "./buoyancy.css";
 
-export function BuoyancyActivity({ state: evidence, onChange, resetKey = 0, runtimeConfig }: { state: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void; resetKey?: number; runtimeConfig?: unknown }) {
+export function BuoyancyActivity({ state: evidence, onChange, resetKey = 0, runtimeConfig, displayQuestions, authoring = false, onDisplayQuestionChange }: { state: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void; resetKey?: number; runtimeConfig?: unknown; displayQuestions?: string[]; authoring?: boolean; onDisplayQuestionChange?: (index: number, value: string) => void }) {
   const config = useMemo(() => buoyancyPresentationSchema.safeParse(runtimeConfig), [runtimeConfig]);
   if (!config.success) return <div role="alert">Cấu hình FL-05 đã ghim không hợp lệ hoặc bị thiếu.</div>;
   return <BuoyancyStoreProvider key={resetKey} config={config.data} evidence={evidence}>
-    <BuoyancyScene evidence={evidence} onChange={onChange} />
+    <BuoyancyScene evidence={evidence} onChange={onChange} displayQuestions={displayQuestions} authoring={authoring} onDisplayQuestionChange={onDisplayQuestionChange} />
   </BuoyancyStoreProvider>;
 }
 
-function BuoyancyScene({ evidence, onChange }: { evidence: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void }) {
+function BuoyancyScene({ evidence, onChange, displayQuestions, authoring, onDisplayQuestionChange }: { evidence: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void; displayQuestions?: string[]; authoring: boolean; onDisplayQuestionChange?: (index: number, value: string) => void }) {
   const state = useBuoyancyStore();
   const headerActions = useContext(LabHeaderActionsContext);
   const specimen = [...state.config.specimens, ...EXPLORATION_SPECIMENS].find((item) => item.id === state.specimenId)!;
@@ -36,9 +36,9 @@ function BuoyancyScene({ evidence, onChange }: { evidence: BuoyancyEvidence; onC
     <div className={`buoyancy-table${state.mode === "2d" ? " is-active" : ""}`} aria-hidden={state.mode !== "2d"}>
       <Buoyancy2DStage />
       <h2>Bảng số liệu FL-05</h2><table><thead><tr><th>Mẫu</th><th>P₀ (N)</th><th>F_lực kế (N)</th><th>F_A (N)</th><th>V tràn (mL)</th></tr></thead><tbody><tr><td>{specimen.label}</td><td>{weightN.toFixed(3)}</td><td>{state.springForceN.toFixed(3)}</td><td>{(state.config.fluidDensityKgM3 * state.config.gravity * state.submergedVolumeMl / 1e6).toFixed(3)}</td><td>{state.overflowMl.toFixed(1)}</td></tr>{state.records.map((row, i) => <tr key={i}><td>{row.specimenId} · lần {i + 1}</td><td>{row.weightN.toFixed(3)}</td><td>{row.springN.toFixed(3)}</td><td>{row.buoyantN.toFixed(3)}</td><td>{row.volumeMl.toFixed(1)}</td></tr>)}</tbody></table>
-      <label>Thể tích nước tràn đo được (mL)<input disabled={!graded} data-testid="buoyancy-overflow-input" type="number" min="0" max="500" step="0.1" value={evidence.overflowMl ?? ""} onChange={(event) => onChange({ ...evidence, overflowMl: event.target.value === "" ? null : Number(event.target.value) })} /></label>
-      <label>Lực đẩy tính từ số chỉ lực kế (N)<input disabled={!graded} data-testid="buoyancy-force-input" type="number" min="0" max="50" step="0.001" value={evidence.measuredBuoyantForceN ?? ""} onChange={(event) => onChange({ ...evidence, measuredBuoyantForceN: event.target.value === "" ? null : Number(event.target.value) })} /></label>
+      {!authoring && <><label>Thể tích nước tràn đo được (mL)<input disabled={!graded} data-testid="buoyancy-overflow-input" type="number" min="0" max="500" step="0.1" value={evidence.overflowMl ?? ""} onChange={(event) => onChange({ ...evidence, overflowMl: event.target.value === "" ? null : Number(event.target.value) })} /></label>
+      <label>Lực đẩy tính từ số chỉ lực kế (N)<input disabled={!graded} data-testid="buoyancy-force-input" type="number" min="0" max="50" step="0.001" value={evidence.measuredBuoyantForceN ?? ""} onChange={(event) => onChange({ ...evidence, measuredBuoyantForceN: event.target.value === "" ? null : Number(event.target.value) })} /></label></>}
     </div>
-    <BuoyancyHud />
+    <BuoyancyHud displayQuestions={displayQuestions} authoring={authoring} onDisplayQuestionChange={onDisplayQuestionChange} />
   </FluidKitLayoutShell>;
 }
