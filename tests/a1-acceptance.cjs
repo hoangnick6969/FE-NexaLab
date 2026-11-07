@@ -21,12 +21,13 @@ const assert = require('node:assert/strict');
   try {
     const page=await browser.newPage(); const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
-    await page.goto(process.env.TEST_WEB ?? 'http://127.0.0.1:5173');
+    await page.goto((process.env.TEST_WEB ?? 'http://127.0.0.1:5173') + '/login');
     await page.getByLabel('Tên đăng nhập học sinh').fill(username);
     await page.getByLabel('Mật khẩu',{exact:true}).fill(student.data.credentials.temporaryPassword);
     await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
     await page.getByLabel('Mật khẩu tạm').fill(student.data.credentials.temporaryPassword);
     await page.getByLabel('Mật khẩu mới (ít nhất 12 ký tự)').fill('A1Browser-Private2026!');
+    await page.getByLabel('Nhập lại mật khẩu mới').fill('A1Browser-Private2026!');
     await page.getByRole('button',{name:'Lưu và bắt đầu học'}).click();
     await page.getByRole('link',{name:/A1 Published Lesson/}).waitFor();
     await page.reload();

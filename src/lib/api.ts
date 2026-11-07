@@ -116,13 +116,14 @@ export const idempotencyKey = (): string => crypto.randomUUID();
 async function readError(r: Response): Promise<ApiError> {
   let data: Partial<ApiErrorEnvelope> = {};
   try {
-    data = await r.json();
+    const body: unknown = await r.json();
+    if (body && typeof body === "object") data = body as Partial<ApiErrorEnvelope>;
   } catch {
     // Non-JSON gateway errors still produce a typed error.
   }
-  const status = data.statusCode ?? r.status;
+  const status = r.status;
   const code = typeof data.code === "string" ? data.code : "HTTP_" + r.status;
-  return new ApiError(status, code, apiErrorMessage(status, code, data.message), data.details);
+  return new ApiError(status, code, apiErrorMessage(status, code, typeof data.message === "string" ? data.message : undefined, data.details), data.details);
 }
 export type QuizAttemptResponse = {
   attempt: QuizAttemptSummary;
@@ -274,6 +275,7 @@ let refreshPromise: Promise<boolean> | null = null;
 export async function restore() {
   if (!refreshPromise)
     refreshPromise = (async () => {
+      const startingToken = useAuth.getState().token;
       try {
         const r = await fetch(base + "/auth/refresh", {
           method: "POST",
@@ -281,6 +283,7 @@ export async function restore() {
         });
         if (!r.ok) return false;
         const data = await r.json();
+        if (useAuth.getState().token !== startingToken) return false;
         useAuth.getState().set(data.user, data.accessToken);
         return true;
       } catch {
@@ -299,6 +302,7 @@ export async function api<T = any>(
   headers: Record<string, string> = {},
 ): Promise<T> {
   const token = useAuth.getState().token;
+  const userId = useAuth.getState().user?.id;
   const safeRead = method === "GET";
   let r: Response;
   try {
@@ -312,23 +316,42 @@ export async function api<T = any>(
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-  } catch (error) {
+  } catch {
     if (safeRead && retry) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       return api(path, method, body, false, headers);
     }
-    throw error;
+    throw new ApiError(0, "NETWORK_ERROR", apiErrorMessage(0, "NETWORK_ERROR", undefined));
   }
-  if (r.status === 401 && retry && !path.startsWith("/auth/")) {
-    if (await restore()) return api(path, method, body, false, headers);
-    useAuth.getState().set(null, null);
+  const authenticatedAuthEndpoint = Boolean(token) && ["/auth/password", "/auth/me"].includes(path);
+  if (r.status === 401 && retry && useAuth.getState().token === token && (!path.startsWith("/auth/") || authenticatedAuthEndpoint)) {
+    const restored = await restore();
+    if (restored && (!userId || useAuth.getState().user?.id === userId)) return api(path, method, body, false, headers);
+    if (!restored && useAuth.getState().token === token) useAuth.getState().set(null, null);
   }
   if (safeRead && retry && [502, 503, 504].includes(r.status)) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     return api(path, method, body, false, headers);
   }
-  if (!r.ok) throw await readError(r);
-  return r.json();
+  if (!r.ok) {
+    const error = await readError(r);
+    if (error.code === "PASSWORD_CHANGE_REQUIRED" && useAuth.getState().token === token) {
+      const current = useAuth.getState();
+      if (current.user) current.set({ ...current.user, mustChangePassword: true }, current.token);
+      if (path !== "/auth/me" && current.token) {
+        try {
+          const user = await api<User>("/auth/me");
+          if (useAuth.getState().token === current.token) current.set(user, current.token);
+        } catch { /* Keep the gate active until authoritative reconciliation succeeds. */ }
+      }
+    }
+    throw error;
+  }
+  try {
+    return await r.json();
+  } catch {
+    throw new ApiError(502, "INVALID_RESPONSE", apiErrorMessage(502, "INVALID_RESPONSE", undefined));
+  }
 }
 /** Retryable mutation: the same key is reused when the network call is retried. */
 export function mutate<T = any>(path: string, method: string, body: unknown, key = idempotencyKey()) {
