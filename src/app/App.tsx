@@ -58,6 +58,8 @@ const Classes = lazy(() =>
   import("../features/classes/Classes").then((m) => ({ default: m.Classes }))
 );
 
+const FlashcardStudy = lazy(() => import("../features/classes/FlashcardStudy"));
+
 const ClassLabs = lazy(() =>
   import("../features/classes/ClassLabs").then((m) => ({ default: m.ClassLabs }))
 );
@@ -402,6 +404,7 @@ export default function App() {
               <Route path="/assignments/catalog/*" element={user.role === "STUDENT" ? <StudentAssignments /> : <Navigate to="/classes" />} />
               <Route path="/assignments/:id" element={user.role === "STUDENT" ? <AssignedLearning /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />
               <Route path="/classes" element={["STUDENT", "TEACHER"].includes(user.role) ? <Classes /> : <Navigate to="/" replace />} />
+              <Route path="/classes/:classId/resources/:resourceId/study" element={user.role === "STUDENT" ? <FlashcardStudy /> : <Navigate to="/classes" replace />} />
               <Route path="/classes/:classId" element={["STUDENT", "TEACHER"].includes(user.role) ? <Classes /> : <Navigate to="/" replace />} />
               <Route path="/classes/:classId/catalog/*" element={user.role === "STUDENT" ? <Classes /> : <Navigate to="/classes" />} />
               <Route path="/progress" element={["STUDENT", "PARENT"].includes(user.role) ? <ProgressPage /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />

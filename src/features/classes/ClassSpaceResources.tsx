@@ -1,14 +1,17 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download, Search, CheckCircle2, AlertCircle, Filter, FileSpreadsheet,
-  Plus, X, Sparkles, FlaskConical, FileText, ExternalLink, Layers, HelpCircle, FileCheck, UploadCloud
+  Plus, X, Sparkles, FlaskConical, FileText, ExternalLink, Layers, HelpCircle, FileCheck, UploadCloud,
+  Star, ArrowRight
 } from "lucide-react";
-import { api, idempotencyKey, mutate } from "../../lib/api";
+import { api, idempotencyKey, mutate, streamMaterial } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field } from "../../components/ui";
 import { useActionToast } from "../../components/ActionToasts";
 import { defineText } from "../../i18n";
+import { labInfo } from "../labs/lab-info";
+import "./flashcard-study.css";
 import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
 
 const text = defineText({
@@ -156,7 +159,7 @@ import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceE
 import { richNames, richSamples, ResourcePreview, cleanFileName, type ResourceKind } from "./RichResourceEditor";
 
 type Kind = ResourceKind;
-type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; attachment?: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
+export type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; attachment?: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
 const names: Record<Kind, string> = { ...t.names, ...richNames };
 const sample: Record<Kind, object> = {
   DECK: { cards: [{ front: "", back: "" }] },
@@ -691,13 +694,52 @@ function TeacherResourceRow({ resource, classId, disabled }: { resource: Resourc
   const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
   const Icon = getResourceIcon(resource.kind);
-  return <article className="class-resource-row apple-resource-row"><div className="resource-row-lead"><div className="resource-kind-icon" aria-hidden="true"><Icon size={18} /></div><div className="resource-row-title-wrap"><b>{resource.title}</b><small>{names[resource.kind]} · {t.version(resource.version)}{count !== undefined ? ` · ${t.items(count)}` : ""}</small></div></div><Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
-    {!disabled && resource.status === "DRAFT" && <><details className="class-resource-edit"><summary>{t.editDraft}</summary><form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}><label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label><ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} /><ErrorBox error={update.error} /><button className="secondary" disabled={update.isPending}>{t.saveDraft}</button></form></details>{resource.kind === "LAB" && <button type="button" className="secondary" onClick={() => navigate(`/labs/${encodeURIComponent(contentDraft.source!.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: titleDraft, lessonId: resource.lessonId, resourceId: resource.id, content: resourceInput("LAB", contentDraft) } } })}>Mở Lab Space để sửa đề bài</button>}<button className="secondary" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button><button type="button" className="danger-text" disabled={removeDraft.isPending} onClick={() => { if (window.confirm("Xóa vĩnh viễn bản nháp này khỏi lớp?")) removeDraft.mutate(); }}>Xóa bản nháp</button><ErrorBox error={removeDraft.error} /></>}
-    {!disabled && resource.status === "PUBLISHED" && <><button className="secondary" disabled={action.isPending} onClick={() => action.mutate("revise")}>{resource.kind === "LAB" ? "Tạo bản sửa trong Lab Space" : t.newVersion}</button><button className="danger-text" disabled={action.isPending} onClick={() => { if (window.confirm("Ẩn đề bài này khỏi lớp? Bài đã giao vẫn giữ bản ghim.")) action.mutate("archive"); }}>{t.archive}</button></>}
-    {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) && <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} />}
-    {!disabled && resource.kind === "LAB" && resource.status === "PUBLISHED" && <TeacherClassLabAdditionalResponses classId={classId} resourceId={resource.id} />}
-    <ErrorBox error={action.error} />
-  </article>;
+  return (
+    <article className="class-resource-row apple-resource-row">
+      <div className="resource-row-header">
+        <div className="resource-row-lead">
+          <div className="resource-kind-icon" aria-hidden="true"><Icon size={18} /></div>
+          <div className="resource-row-title-wrap">
+            <b>{resource.title}</b>
+            <small>{names[resource.kind]} · {t.version(resource.version)}{count !== undefined ? ` · ${t.items(count)}` : ""}</small>
+          </div>
+        </div>
+        <div className="resource-row-controls">
+          <Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
+          {!disabled && resource.status === "DRAFT" && (
+            <>
+              <details className="class-resource-edit">
+                <summary>{t.editDraft}</summary>
+                <form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}>
+                  <label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label>
+                  <ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} />
+                  <ErrorBox error={update.error} />
+                  <button className="secondary" disabled={update.isPending}>{t.saveDraft}</button>
+                </form>
+              </details>
+              {resource.kind === "LAB" && (
+                <button type="button" className="secondary button-compact" onClick={() => navigate(`/labs/${encodeURIComponent(contentDraft.source!.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: titleDraft, lessonId: resource.lessonId, resourceId: resource.id, content: resourceInput("LAB", contentDraft) } } })}>
+                  Mở Lab Space để sửa đề bài
+                </button>
+              )}
+              <button className="secondary button-compact" disabled={action.isPending} onClick={() => action.mutate("publish")}>{t.publish}</button>
+              <button type="button" className="danger-text button-compact" disabled={removeDraft.isPending} onClick={() => { if (window.confirm("Xóa vĩnh viễn bản nháp này khỏi lớp?")) removeDraft.mutate(); }}>Xóa bản nháp</button>
+              <ErrorBox error={removeDraft.error} />
+            </>
+          )}
+          {!disabled && resource.status === "PUBLISHED" && (
+            <>
+              <button className="secondary button-compact" disabled={action.isPending} onClick={() => action.mutate("revise")}>{resource.kind === "LAB" ? "Tạo bản sửa trong Lab Space" : t.newVersion}</button>
+              <button className="danger-text button-compact" disabled={action.isPending} onClick={() => { if (window.confirm("Ẩn đề bài này khỏi lớp? Bài đã giao vẫn giữ bản ghim.")) action.mutate("archive"); }}>{t.archive}</button>
+            </>
+          )}
+        </div>
+      </div>
+      {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) && <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} />}
+      {!disabled && resource.kind === "LAB" && resource.status === "PUBLISHED" && <TeacherClassLabAdditionalResponses classId={classId} resourceId={resource.id} />}
+      <ErrorBox error={action.error} />
+    </article>
+  );
 }
 
 export function StudentClassResources({ classId }: { classId: string }) {
@@ -780,55 +822,207 @@ export function StudentClassResources({ classId }: { classId: string }) {
 }
 
 function StudentResource({ resource, classId }: { resource: Resource; classId: string }) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
-  const [revealed, setRevealed] = useState<Record<string, boolean>>(resource.practice?.state?.revealed ?? {});
   const [answers, setAnswers] = useState<Record<string, number>>(resource.practice?.state?.answers ?? {});
   const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => invalidateResourceChoices(qc, classId) });
-  const Icon = getResourceIcon(resource.kind);
   const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
 
+  const isDeck = resource.kind === "DECK";
+  const isLab = resource.kind === "LAB";
+  const isDoc = ["DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind);
+  const isQuiz = resource.kind === "STUDY_QUIZ";
+  const isTest = resource.kind === "TEST";
+
+  const studyUrl = `/classes/${encodeURIComponent(classId)}/resources/${encodeURIComponent(resource.id)}/study`;
+  const labEntry = isLab ? labInfo.find((entry) => entry.id === resource.content.source?.labId) : null;
+  const labQuery = isLab ? new URLSearchParams({ resourceId: resource.id, classId, challengeId: resource.content.source?.challengeId ?? "" }).toString() : "";
+  const labUrl = isLab ? `/labs/${encodeURIComponent(resource.content.source?.labId || "")}?${labQuery}` : "";
+
+  const storageKey = `nexa_fc_state_${resource.id}`;
+  const legacyStorageKey = `nexa_fc_starred_${resource.id}`;
+  const localSaved = useMemo(() => {
+    if (!isDeck) return null;
+    try {
+      const stateRaw = localStorage.getItem(storageKey);
+      if (stateRaw) return JSON.parse(stateRaw);
+      const legacyRaw = localStorage.getItem(legacyStorageKey);
+      if (legacyRaw) return { starredCards: JSON.parse(legacyRaw) };
+      return null;
+    } catch {
+      return null;
+    }
+  }, [isDeck, storageKey, legacyStorageKey]);
+
+  const apiStarred = resource.practice?.state?.starredCards;
+  const starredList: string[] = useMemo(() => {
+    if (Array.isArray(apiStarred) && apiStarred.length > 0) return apiStarred;
+    if (Array.isArray(localSaved?.starredCards) && localSaved.starredCards.length > 0) return localSaved.starredCards;
+    return Array.isArray(apiStarred) ? apiStarred : [];
+  }, [apiStarred, localSaved?.starredCards]);
+
+  const starredCount = starredList.length;
+
+  const revealedCount = useMemo(() => {
+    const apiRev = resource.practice?.state?.revealed;
+    if (apiRev && typeof apiRev === "object" && Object.keys(apiRev).length > 0) return Object.keys(apiRev).length;
+    if (localSaved?.revealed && typeof localSaved.revealed === "object") return Object.keys(localSaved.revealed).length;
+    return 0;
+  }, [resource.practice?.state?.revealed, localSaved?.revealed]);
+
+  const hasStudied = isDeck && (starredCount > 0 || revealedCount > 0 || (typeof localSaved?.lastIndex === "number" && localSaved.lastIndex > 0));
+
+  const promptCount = isLab ? (resource.content.reportPrompts?.length || 0) : 0;
+  const attachment = resource.attachment;
+  const friendlySize = attachment?.bytes
+    ? attachment.bytes >= 1024 * 1024
+      ? `${(attachment.bytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(attachment.bytes / 1024)} KB`
+    : "";
+
+  const handleCardClick = () => {
+    if (isDeck) {
+      navigate(studyUrl);
+    } else if (isLab && labUrl) {
+      navigate(labUrl);
+    } else if (isDoc) {
+      if (resource.kind === "LINK") {
+        let url = resource.content.url || resource.content.source?.url;
+        if (url && /^https:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
+      } else if (resource.content.source?.assetVersionId) {
+        void streamMaterial(`assetv:${resource.content.source.assetVersionId}`).then((access) => {
+          window.open(access.src, "_blank", "noopener,noreferrer");
+        });
+      }
+    }
+  };
+
+  const isInteractive = isDeck || isLab || isDoc;
+
   return (
-    <article className="class-resource-row student-resource apple-resource-card">
-      <div className="student-resource-header">
-        <div className="resource-kind-icon" aria-hidden="true">
-          <Icon size={18} />
-        </div>
-        <div className="student-resource-info">
-          <h4>{resource.title}</h4>
-          <small>{names[resource.kind]}{resource.version > 1 ? ` · ${t.version(resource.version)}` : ""}{count !== undefined ? ` · ${t.items(count)}` : ""}</small>
-        </div>
-      </div>
-      {["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind) ? (
-        <ResourcePreview kind={resource.kind} content={resource.content} attachment={resource.attachment} resourceId={resource.id} classId={classId} student />
-      ) : resource.kind === "TEST" ? (
-        <p className="notice">{t.testNotAssigned}</p>
-      ) : resource.kind === "DECK" ? (
-        <div className="resource-practice-items">
-          {resource.content.cards?.map((card: any) => (
-            <div className="study-card" key={card.id}>
-              <b>{revealed[card.id] ? card.back : card.front}</b>
-              <button className="secondary button-compact" onClick={() => { const next = { ...revealed, [card.id]: !revealed[card.id] }; setRevealed(next); save.mutate({ revealed: next }); }}>{revealed[card.id] ? t.seeFront : t.flip}</button>
+    <article
+      className={`student-resource-item${isInteractive ? " is-interactive" : ""}`}
+      onClick={isInteractive ? handleCardClick : undefined}
+      onKeyDown={isInteractive ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      } : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      role={isInteractive ? "link" : undefined}
+      aria-label={isDeck ? `${hasStudied ? "Tiếp tục học" : "Học thẻ"}: ${resource.title}` : isLab ? `Mở Lab: ${resource.title}` : resource.title}
+    >
+      <div className="resource-lead-visual" aria-hidden="true">
+        {isDeck ? (
+          <div className="resource-visual-emblem emblem-deck">
+            <Layers size={20} />
+            <span className="emblem-sub-badge">{count ?? 0} thẻ</span>
+          </div>
+        ) : isLab ? (
+          labEntry?.thumbnail ? (
+            <img className="resource-visual-thumb" src={labEntry.thumbnail} alt="" />
+          ) : (
+            <div className="resource-visual-emblem emblem-lab">
+              <FlaskConical size={20} />
             </div>
-          ))}
+          )
+        ) : isDoc ? (
+          <div className="resource-visual-emblem emblem-doc">
+            <FileText size={20} />
+            <span className="emblem-sub-badge">
+              {attachment?.mime?.includes("pdf") ? "PDF" : resource.kind === "LINK" ? "LINK" : "TỆP"}
+            </span>
+          </div>
+        ) : (
+          <div className="resource-visual-emblem emblem-quiz">
+            <HelpCircle size={20} />
+          </div>
+        )}
+      </div>
+
+      <div className="resource-body-content">
+        <div className="resource-headline-row">
+          <h4 className="resource-item-title">{resource.title}</h4>
+          <span className="resource-kind-pill">
+            {isDeck ? "Thẻ học" : isLab ? "Lab mô phỏng" : isDoc ? (resource.kind === "LINK" ? "Liên kết" : "Tài liệu") : isTest ? "Bài kiểm tra" : "Luyện tập"}
+          </span>
         </div>
-      ) : (
-        <div className="resource-practice-items">
-          {resource.content.questions?.map((q: any) => (
-            <fieldset key={q.id}>
-              <legend>{q.prompt}</legend>
-              {q.options.map((option: any, index: number) => (
-                <label className="check" key={option.id}>
-                  <input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />
-                  {option.text}
-                </label>
-              ))}
-            </fieldset>
-          ))}
-          <p className="tiny muted">{t.ungraded}</p>
+
+        <div className="resource-meta-line">
+          {isDeck ? (
+            <>
+              <span>{count ?? 0} thẻ hai mặt</span>
+              {starredCount > 0 && (
+                <span
+                  className="meta-starred-tag"
+                  title="Nhấn để ôn lại thẻ đã lưu"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`${studyUrl}?mode=starred`);
+                  }}
+                >
+                  <Star size={11} className="fill-current" />
+                  <span>{starredCount} đã lưu</span>
+                </span>
+              )}
+              {revealedCount > 0 && <span>· Đã ôn {revealedCount}/{count}</span>}
+            </>
+          ) : isLab ? (
+            <>
+              <span>{labEntry?.title ?? resource.content.source?.labId ?? "Phòng thí nghiệm"}</span>
+              {promptCount > 0 && <span>· {promptCount} câu hỏi báo cáo</span>}
+            </>
+          ) : isDoc ? (
+            <>
+              <span>{cleanFileName(attachment?.fileName) || (resource.kind === "LINK" ? "Liên kết ngoài" : "Tệp học liệu")}</span>
+              {friendlySize && <span>· {friendlySize}</span>}
+            </>
+          ) : (
+            <span>{count !== undefined ? `${count} câu hỏi` : names[resource.kind]}</span>
+          )}
         </div>
-      )}
-      {save.error && <ErrorBox error={save.error} />}
-      {save.isSuccess && <small role="status">{t.practiceSaved}</small>}
+
+        <p className="resource-description-line">
+          {isDeck
+            ? (resource.content.cards?.[0]?.front
+                ? `Khái niệm mở đầu: “${resource.content.cards[0].front}”`
+                : "Ôn tập từng khái niệm với phương pháp thẻ lật hai mặt ghi nhớ chủ động.")
+            : isLab
+            ? (resource.content.learningObjective || resource.content.instructions || "Thực hành tương tác trực quan với phòng thí nghiệm ảo.")
+            : isDoc
+            ? (resource.content.description || "Tài liệu đính kèm phục vụ học tập và làm bài báo cáo.")
+            : isTest
+            ? t.testNotAssigned
+            : "Luyện tập trả lời câu hỏi để củng cố kiến thức."}
+        </p>
+
+        {isQuiz && (
+          <div className="resource-practice-inline" onClick={(e) => e.stopPropagation()}>
+            {resource.content.questions?.map((q: any) => (
+              <fieldset key={q.id}>
+                <legend>{q.prompt}</legend>
+                {q.options.map((option: any, index: number) => (
+                  <label className="check" key={option.id}>
+                    <input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />
+                    {option.text}
+                  </label>
+                ))}
+              </fieldset>
+            ))}
+            {save.isSuccess && <small className="text-success" role="status">Đã lưu bài làm</small>}
+          </div>
+        )}
+      </div>
+
+      <div className="resource-action-area">
+        {isInteractive && (
+          <span className="resource-action-link">
+            <span>{isDeck ? (hasStudied ? "Tiếp tục học" : "Bắt đầu học") : isLab ? "Mở Lab" : "Mở tài liệu"}</span>
+            <ArrowRight size={14} className="resource-action-arrow" aria-hidden="true" />
+          </span>
+        )}
+      </div>
     </article>
   );
 }

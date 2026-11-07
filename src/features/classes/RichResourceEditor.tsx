@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { UploadCloud, Loader2, CheckCircle2, Eye, Download, FileText, ExternalLink } from "lucide-react";
+import { UploadCloud, Loader2, CheckCircle2, Eye, Download, FileText, ExternalLink, FlaskConical, ArrowRight, ClipboardList, ChevronDown } from "lucide-react";
 import { api, streamMaterial, uploadFile } from "../../lib/api";
 import { useActionToast } from "../../components/ActionToasts";
 import { ErrorBox, Field } from "../../components/ui";
@@ -175,10 +175,88 @@ export function RichResourceEditor({ kind, value, onChange, classId }: { kind: R
 export function ResourcePreview({ kind, content, resourceId, classId, student = false, attachment }: { kind: ResourceKind; content: any; resourceId?: string; classId?: string; student?: boolean; attachment?: { fileName: string; mime: string; bytes: number | null; status: string } | null }) {
   const t = richResourceText();
   const [error, setError] = useState<unknown>(null);
+  const [expanded, setExpanded] = useState(false);
   if (kind === "LAB") {
     const lab = labInfo.find((entry) => entry.id === content.source?.labId);
     const query = new URLSearchParams({ ...(resourceId && classId ? { resourceId, classId } : {}), challengeId: content.source?.challengeId ?? "" });
-    return <section className="resource-preview"><h4>{student ? t.classActivity : t.previewActivity}</h4>{lab?.thumbnail && <img className="resource-lab-thumbnail" src={lab.thumbnail} alt={lab.title} />}<p className="tiny muted">{t.source}: {lab?.title ?? content.source?.labId} · {content.source?.challengeId}</p><b>{t.teacherObjective}</b><p>{content.learningObjective}</p><b>{t.teacherInstructions}</b><p className="resource-plain-text">{content.instructions}</p>{content.reportPrompts?.length > 0 && <ol>{content.reportPrompts.map((prompt: string, i: number) => <li key={i}>{prompt}</li>)}</ol>}<p className="tiny muted">{t.practiceHelp}</p>{resourceId && classId && <Link className="secondary" to={`/labs/${encodeURIComponent(content.source.labId)}?${query}`}>{student ? t.openPractice : t.previewSource}</Link>}</section>;
+    const promptCount = content.reportPrompts?.length || 0;
+    const desc = content.learningObjective || content.instructions;
+    const hasExtraDetails = Boolean(promptCount > 0 || (content.learningObjective && content.instructions));
+    return (
+      <section className="resource-preview compact-resource-preview compact-lab-resource-preview">
+        <div className="compact-lab-main">
+          {lab?.thumbnail ? (
+            <img className="compact-lab-thumb" src={lab.thumbnail} alt={lab.title} />
+          ) : (
+            <div className="compact-lab-thumb compact-lab-thumb-fallback">
+              <FlaskConical size={20} aria-hidden="true" />
+            </div>
+          )}
+          <div className="compact-lab-body">
+            <div className="compact-lab-source-row">
+              <span className="compact-lab-source-name">
+                {lab?.title ?? content.source?.labId}
+                {content.source?.challengeId ? ` · ${content.source.challengeId}` : ""}
+              </span>
+              {promptCount > 0 && (
+                <span className="compact-lab-prompt-pill">
+                  <ClipboardList size={11} aria-hidden="true" />
+                  <span>{promptCount} câu hỏi</span>
+                </span>
+              )}
+            </div>
+            {desc && <p className="compact-lab-summary">{desc}</p>}
+            <div className="compact-lab-actions">
+              {resourceId && classId && (
+                <Link className="secondary button-compact compact-lab-open-btn" to={`/labs/${encodeURIComponent(content.source?.labId || "")}?${query}`}>
+                  <FlaskConical size={14} aria-hidden="true" />
+                  <span>{student ? t.openPractice : t.previewSource}</span>
+                  <ArrowRight size={13} aria-hidden="true" />
+                </Link>
+              )}
+              {hasExtraDetails && (
+                <button
+                  type="button"
+                  className="compact-lab-details-toggle"
+                  onClick={() => setExpanded(!expanded)}
+                  aria-expanded={expanded}
+                >
+                  <span>{expanded ? "Thu gọn" : "Xem chi tiết"}</span>
+                  <ChevronDown size={13} className={expanded ? "rotate-180" : ""} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        {expanded && (
+          <div className="compact-lab-expanded-details">
+            {content.learningObjective && (
+              <div className="compact-lab-detail-block">
+                <b>{t.teacherObjective}</b>
+                <p>{content.learningObjective}</p>
+              </div>
+            )}
+            {content.instructions && (
+              <div className="compact-lab-detail-block">
+                <b>{t.teacherInstructions}</b>
+                <p className="resource-plain-text">{content.instructions}</p>
+              </div>
+            )}
+            {content.reportPrompts?.length > 0 && (
+              <div className="compact-lab-detail-block">
+                <b>Câu hỏi báo cáo</b>
+                <ol>
+                  {content.reportPrompts.map((prompt: string, i: number) => (
+                    <li key={i}>{prompt}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            <p className="tiny muted">{t.practiceHelp}</p>
+          </div>
+        )}
+      </section>
+    );
   }
   let url = kind === "LINK" ? content.url : content.source?.url;
   try { const parsed = new URL(url); if (parsed.protocol !== "https:" || parsed.username || parsed.password) url = undefined; } catch { url = undefined; }
@@ -191,7 +269,7 @@ export function ResourcePreview({ kind, content, resourceId, classId, student = 
 
   return (
     <section className="resource-preview compact-resource-preview">
-      {!student && <h4>{t.sourcePreview}</h4>}
+      {!student && !resourceId && <h4>{t.sourcePreview}</h4>}
       {attachment && (
         <div className="compact-attachment-card">
           <div className="compact-attachment-badge">
