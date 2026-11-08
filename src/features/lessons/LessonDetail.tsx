@@ -19,6 +19,7 @@ import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
 import { ExerciseQuestionHint } from "../assignments/QuizQuestionHint";
+import { TutorChat } from "../student-ai/TutorChat";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
 import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
@@ -369,6 +370,7 @@ export function LessonDetail() {
 
     <ErrorBox error={foundationalLabs.error} />
     <ErrorBox error={linkedPublicLesson.error} />
+    {user.role === "STUDENT" && <TutorChat contextKind="LESSON" contextId={id} />}
 
     <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
       {tabs.map((tab, index) => {

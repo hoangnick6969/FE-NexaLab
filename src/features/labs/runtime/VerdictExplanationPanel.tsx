@@ -1,3 +1,4 @@
+import { AiChip } from "../../student-ai/AiChip";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, CircleDashed, HelpCircle } from "lucide-react";
@@ -56,6 +57,7 @@ export function VerdictExplanationPanel({ attemptId, passed }: { attemptId: stri
           <ErrorBox error={q.error} />
           {q.data && (
             <>
+              <AiChip provider={(q.data as any).provider} />
               <p>{q.data.summary}</p>
               <ol className="verdict-explanation-steps">
                 {q.data.items.map((item) => (

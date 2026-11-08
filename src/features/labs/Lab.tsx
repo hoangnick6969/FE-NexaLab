@@ -15,6 +15,7 @@ import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/Checkpoin
 import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
 import { LegacyHintPanel } from "./runtime/LegacyHintPanel";
+import { TutorChat } from "../student-ai/TutorChat";
 import { StepPickerHint } from "./runtime/StepPickerHint";
 import { LabWhatIf } from "./runtime/LabWhatIf";
 import { WHAT_IF_BY_RENDERER } from "./runtime/what-if-labs";
@@ -470,6 +471,7 @@ export default function Lab() {
             <LegacyHintPanel key={attempt?.id ?? "none"} attempt={attempt ?? null} llmEnabled={Boolean(tutorStatus.data?.llmEnabled)}
               previousLevel={lastHintLevel} onHint={(next) => setLastHintLevel(next.level)} />
           )}
+          {user.role === "STUDENT" && runtimeReady && <TutorChat contextKind="LAB" contextId={id} />}
         </details></aside>}
       </div>
       {!guided && <p className="tiny muted">{t.disclaimer}</p>}

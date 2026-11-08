@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { api, ApiError } from "../../../lib/api";
 import { Badge, ErrorBox, useAction } from "../../../components/ui";
 import { defineText } from "../../../i18n";
+import { AiChip, isAiProvider } from "../../student-ai/AiChip";
 
 /**
  * SAI-01 hint for legacy Labs (circuit, chemistry, eye): tutor-rules@1, 4 levels that rise only after a changed
@@ -18,7 +19,6 @@ export type LegacyHint = {
   provider: "rules" | "rules-fallback" | "anthropic" | "fake" | "cache";
   createdAt: string;
 };
-const AI_PROVIDERS = new Set(["anthropic", "fake", "cache"]);
 
 const text = defineText({
   vi: {
@@ -94,7 +94,7 @@ export function LegacyHintPanel({ attempt, llmEnabled, previousLevel, onHint }: 
       {hint ? (
         <div className="hint">
           <Badge>{t.level(hint.level)}</Badge>
-          {AI_PROVIDERS.has(hint.provider) && <> <Badge tone="info">{t.ai}</Badge><p className="tiny muted">{t.aiNote}</p></>}
+          {isAiProvider(hint.provider) && <> <AiChip provider={hint.provider} /><p className="tiny muted">{t.aiNote}</p></>}
           <p style={{ whiteSpace: "pre-line" }}>{hint.content}</p>
           {stayed && <p className="tiny muted" data-testid="hint-same-level">{t.sameLevel}</p>}
         </div>

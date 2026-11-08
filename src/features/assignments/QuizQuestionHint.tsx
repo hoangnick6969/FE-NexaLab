@@ -1,3 +1,4 @@
+import { AiChip } from "../student-ai/AiChip";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Lightbulb } from "lucide-react";
@@ -53,6 +54,7 @@ function QuestionHintButton({ path, questionId }: { path: string; questionId: st
       {hint && (
         <div className="quiz-question-hint-body">
           <small className="muted">{t.level(hint.level)}</small>
+          <AiChip provider={(hint as any).provider} />
           <p>{hint.content}</p>
           {hint.repeatReason === "NEEDS_ATTEMPT" && <small className="muted">{t.needsAttempt}</small>}
           {hint.repeatReason === "TOP_LEVEL" && <small className="muted">{t.topLevel}</small>}

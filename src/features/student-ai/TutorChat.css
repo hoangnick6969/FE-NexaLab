@@ -1,0 +1,17 @@
+.tutor-chat { margin-top: 12px; }
+.tutor-chat-toggle { width: 100%; justify-content: center; }
+.tutor-chat-panel { display: grid; gap: 8px; }
+.tutor-chat-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tutor-chat-panel h3 { display: flex; align-items: center; gap: 6px; margin: 0; }
+.tutor-chat-messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
+.tutor-chat-messages li { padding: 8px 10px; border-radius: 10px; background: var(--surface-2, rgba(127, 127, 127, .08)); overflow-wrap: anywhere; }
+.tutor-chat-messages li[data-role="STUDENT"] { margin-left: 24px; background: var(--accent-soft, rgba(46, 125, 107, .12)); }
+.tutor-chat-messages li p { margin: 4px 0 0; white-space: pre-line; }
+.tutor-chat-panel textarea { width: 100%; resize: vertical; min-height: 56px; box-sizing: border-box; }
+.tutor-chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.ai-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; }
+
+/* AA contrast: the global .muted token is below 4.5:1 on these surfaces, so the chat and AI chip use --text-muted. */
+.tutor-chat-panel .muted { color: var(--text-muted, #506070); }
+.ai-chip { color: var(--text, #14202b); background: var(--surface, #ffffff); border: 1px solid currentColor; }
+.tutor-chat-messages li p { color: var(--text, #14202b); }

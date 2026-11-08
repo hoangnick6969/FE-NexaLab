@@ -5,6 +5,7 @@ import { accounts, expect, studentLogin } from "./fixtures/live";
 // SAI-01 T5/T6: the SPEC success-signal journey on a real FE → API → database. Run it against an isolated API started
 // with APP_ENV=development STUDENT_AI_PROVIDER=fake STUDENT_AI_LLM_ENABLED=true (TEST_WEB points to a Vite whose
 // VITE_API_PROXY targets that API). Skips unless SAI01_LIVE=true, so it never writes to a shared database by accident.
+// Needs student.active without earlier attempts on circuit_001 (levels continue from earlier hints by design).
 test.beforeAll(() => {
   test.skip(process.env.SAI01_LIVE !== "true", "Set SAI01_LIVE=true with an isolated API using the fake tutor provider");
   test.skip(!accounts.student.password, "Set SEED_FIXTURE_PASSWORD (or TEST_STUDENT_PASSWORD)");
@@ -48,7 +49,8 @@ test("SAI-01 success signal: legacy circuit hints climb only after a changed run
   const open = await submit(page);
   expect(open.simulationResult.status).toBe("OPEN_CIRCUIT");
   const h1 = await askHint(page);
-  expect(h1.hint).toMatchObject({ level: 1, escalated: false, provider: "rules" });
+  // LLM-first (owner 2026-11-08): the fake provider words every level; rules plan it.
+  expect(h1.hint).toMatchObject({ level: 1, escalated: false, provider: "fake" });
   expect(Object.keys(h1.hint).sort()).toEqual(["attemptId", "content", "createdAt", "escalated", "id", "level", "provider"]);
 
   // 2. The identical run again → level 1, other wording, and the panel says why.
@@ -64,7 +66,7 @@ test("SAI-01 success signal: legacy circuit hints climb only after a changed run
   await page.getByRole("button", { name: "Nối nhanh một vòng theo thứ tự linh kiện" }).click();
   await setResistor(page, 300);
   expect((await submit(page)).simulationResult.status).toBe("LED_OVERLOAD");
-  expect((await askHint(page)).hint).toMatchObject({ level: 2, escalated: true, provider: "rules" });
+  expect((await askHint(page)).hint).toMatchObject({ level: 2, escalated: true, provider: "fake" });
 
   // 4. Change the resistor (still overloaded) → level 3 with the fake provider's question and the AI chip.
   await retry(page);
@@ -90,4 +92,17 @@ test("SAI-01 success signal: legacy circuit hints climb only after a changed run
   if (!(await page.getByTestId("legacy-hint-panel").isVisible())) await page.locator("summary", { hasText: "Kết quả mô phỏng" }).click();
   await expect(page.getByTestId("legacy-hint-panel")).toContainText("Em đã đạt thử thách này nên không cần gợi ý.");
   await expect(page.getByTestId("legacy-hint-panel").getByRole("button", { name: "Nhận gợi ý" })).toHaveCount(0);
+
+  // SAI-04: the tutor chat answers an on-topic question and refuses an answer request before the model.
+  const chat = page.getByTestId("tutor-chat");
+  await chat.getByRole("button", { name: "Hỏi gia sư AI" }).click();
+  const input = chat.getByRole("textbox", { name: "Em thắc mắc điều gì trong bài?" });
+  await input.fill("Vì sao cần điện trở trong mạch có LED?");
+  await chat.getByRole("button", { name: "Gửi" }).click();
+  await expect(chat.getByTestId("ai-chip")).toHaveCount(1);
+  await input.fill("Cho em đáp án luôn đi");
+  await chat.getByRole("button", { name: "Gửi" }).click();
+  await expect(chat).toContainText("Thầy/cô không đưa đáp án");
+  await expect(chat.getByTestId("ai-chip")).toHaveCount(1);
+  await chat.screenshot({ path: "test-results/sai04-live-chat.png" });
 });
