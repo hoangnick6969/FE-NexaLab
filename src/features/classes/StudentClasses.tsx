@@ -22,12 +22,14 @@ import { PageHeading } from "../../components/PageHeading";
 import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
 import { labInfo } from "../labs/lab-info";
+import { labCurriculumLabel, labCurriculumMetadata } from "../labs/lab-curriculum-label";
 import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { testStatusLabel, testStatusTone } from "../../lib/test-status";
 import { defineText, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
+import "./class-resource-preview.css";
 
 const text = defineText({
   vi: {
@@ -229,22 +231,23 @@ type ClassWork = HierarchyItem & {
   overdue: boolean;
 };
 
-async function readStudentClassWork() {
-  const assignments = await api<any[]>("/assignments");
+async function readStudentClassWork(classId: string) {
+  const assignments = await api<any[]>(`/assignments?classId=${encodeURIComponent(classId)}`);
   const eligible = assignments.filter((assignment) => assignment.canOpen !== false);
   return {
     items: eligible.flatMap((assignment) => {
+      const curriculum = assignment.contentType === "lab" ? labCurriculumMetadata(assignment) : null;
       const subject = assignment.subject;
-      if (assignment.contentType === "test" || !subject || !assignment.grade) return [];
+      if (assignment.contentType === "test" || !(curriculum?.subjectId ?? subject?.id) || !(curriculum?.grade ?? assignment.grade)) return [];
       return [{
         id: assignment.id,
         title: assignment.title,
         classId: assignment.classroom.id,
         contentType: assignment.contentType,
         classroom: assignment.classroom,
-        subjectId: subject.id,
-        subjectName: subject.name,
-        grade: Number(assignment.grade),
+        subjectId: curriculum?.subjectId ?? subject.id,
+        subjectName: curriculum?.subjectName ?? subject.name,
+        grade: Number(curriculum?.grade ?? assignment.grade),
         chapter: assignment.chapter || commonText().noChapter,
         chapterOrder: assignment.chapterOrder,
         itemOrder: assignment.curriculumOrder ?? assignment.topicOrder,
@@ -278,7 +281,7 @@ export function StudentClasses() {
   const [result, setResult] = useState<{ message: string; pending: boolean } | null>(null);
   const key = useRef(idempotencyKey());
   const list = useQuery<StudentClass[]>({ queryKey: ["classes"], queryFn: () => api("/classes") });
-  const classWork = useQuery({ queryKey: ["student-class-space-content"], queryFn: readStudentClassWork, enabled: Boolean(classId) });
+  const classWork = useQuery({ queryKey: ["student-class-space-content", classId], queryFn: () => readStudentClassWork(classId!), enabled: Boolean(classId) });
   const join = useMutate<{ enrollmentStatus: string; message: string; class: { name: string } }>();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "approved" | "pending" | "ARCHIVED">("ALL");
@@ -500,15 +503,18 @@ export function StudentClasses() {
                           to={`/assignments/${encodeURIComponent(lab.id)}`}
                         >
                           <div className="class-lab-card-top">
-                            <span className="student-class-pill grade">{t.gradeLabel(lab.grade || selectedClass.grade)}</span>
-                            {lab.subject?.name && <span className="student-class-pill subject">{lab.subject.name}</span>}
+                            <span className="student-class-pill grade">{labCurriculumLabel(lab, lab.subject?.name ?? "KHTN", t.gradeLabel(lab.grade || selectedClass.grade)).grade}</span>
+                            <span className="student-class-pill subject">{labCurriculumLabel(lab, lab.subject?.name ?? "KHTN", t.gradeLabel(lab.grade || selectedClass.grade)).subject}</span>
                             {lab.overdue ? (
                               <span className="student-class-overdue-tag">{t.overdue}</span>
                             ) : (
                               <Badge tone="passed">{t.typeLab}</Badge>
                             )}
                           </div>
-                          {labInfo.find((entry) => entry.id === lab.contentId)?.thumbnail && <img className="class-lab-source-thumbnail" src={labInfo.find((entry) => entry.id === lab.contentId)!.thumbnail} alt="" loading="lazy" />}
+                          {(lab.thumbnailUrl || labInfo.find((entry) => entry.id === lab.contentId)?.thumbnail)
+                            ? <img className="class-lab-source-thumbnail" src={lab.thumbnailUrl || labInfo.find((entry) => entry.id === lab.contentId)!.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} />
+                            : null}
+                          <span className="class-assignment-thumbnail-fallback" hidden={Boolean(lab.thumbnailUrl || labInfo.find((entry) => entry.id === lab.contentId)?.thumbnail)} aria-hidden="true"><FlaskConical size={34} /></span>
                           <div className="class-lab-card-main">
                             <div className="class-lab-icon-box">
                               <FlaskConical size={22} aria-hidden="true" />
@@ -552,11 +558,14 @@ export function StudentClasses() {
                       <span className="student-assignment-icon-wrap">
                         <ClipboardCheck size={17} aria-hidden="true" />
                       </span>
+                      {item.thumbnailUrl && <img className="class-test-thumbnail-img" src={item.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} />}
+                      <span className="class-test-thumbnail" hidden={Boolean(item.thumbnailUrl)} aria-hidden="true"><ClipboardCheck size={30} /></span>
                       <span className="student-assignment-copy">
                         <span className="student-assignment-title-line">
                           <b>{item.title}</b>
                         </span>
                         <div className="student-assignment-meta-row">
+                          {item.grade && item.subject?.name && <span className="student-assignment-meta-text">{item.subject.name} · {t.gradeLabel(item.grade)}</span>}
                           <span className="student-assignment-meta-text">{dueLabel(item.dueDate)}</span>
                           {item.testStatus && (
                             <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>

@@ -5,6 +5,11 @@
 .resource-preview p, .resource-preview li { overflow-wrap: anywhere; }
 .resource-lab-thumbnail { width: min(100%, 320px); aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
 .class-lab-source-thumbnail { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.class-assignment-thumbnail-fallback, .class-test-thumbnail { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 8px; color: #1f6f78; background: linear-gradient(135deg, #e2f3f1, #d8e9f5); }
+.class-assignment-thumbnail-fallback[hidden] { display: none; }
+.class-test-thumbnail { width: 84px; min-width: 84px; }
+.class-test-thumbnail[hidden], .class-test-thumbnail-img[hidden], .class-lab-source-thumbnail[hidden], .student-assignment-thumbnail[hidden] { display: none; }
+.class-test-thumbnail-img { width: 84px; min-width: 84px; aspect-ratio: 16 / 9; border-radius: 8px; object-fit: cover; }
 .resource-plain-text { white-space: pre-wrap; }
 .class-lab-instructions { max-width: 100%; margin: 16px; }
 .rich-resource-editor textarea { min-height: 100px; resize: vertical; width: 100%; }

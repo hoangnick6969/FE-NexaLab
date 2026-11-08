@@ -15,3 +15,12 @@ export function labCurriculumLabel(lab: any, fallbackSubject: string, fallbackGr
     grade: Number.isInteger(grade) && grade > 0 ? t.grade(grade) : fallbackGrade,
   };
 }
+
+export function labCurriculumMetadata(lab: any) {
+  const match = typeof lab?.topicCode === "string" ? /^KHTN(\d+)-/.exec(lab.topicCode) : null;
+  return {
+    subjectId: match ? "khtn" : lab?.subject?.id,
+    subjectName: match ? text().science : lab?.subject?.name,
+    grade: match ? Number(match[1]) : lab?.grade,
+  };
+}

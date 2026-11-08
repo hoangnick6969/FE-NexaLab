@@ -351,7 +351,8 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   });
   const approved = roster.data?.filter((e) => e.status === "approved") ?? [];
   const act = useMutate<{ recipientCount: number; message: string }>();
-  const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : contentType === "written" ? content.data?.writtenTasks ?? [] : content.data?.tests ?? [];
+  const options = (contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : contentType === "written" ? content.data?.writtenTasks ?? [] : content.data?.tests ?? [])
+    .filter((item: any) => contentType === "lesson" || item.grade == null || item.grade === classroom.grade);
   const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
   useEffect(() => { if (initialLabId && selectedLab && !labChallengeId) setLabChallengeId(selectedLab.challenges[0]?.id ?? ""); }, [initialLabId, selectedLab, labChallengeId]);
   const selectedPrivateLab = contentType === "lab" ? content.data?.classLabs?.find((item) => `resource:${item.id}` === contentId) : undefined;
