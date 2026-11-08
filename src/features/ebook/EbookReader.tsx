@@ -2,13 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import type { RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, ExternalLink, Highlighter, LoaderCircle, Maximize2, Minimize2, Minus, Plus, StickyNote, Underline } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, ExternalLink, Highlighter, LoaderCircle, Maximize2, Minimize2, Minus, Plus, Sparkles, StickyNote, Underline } from "lucide-react";
 import { api, useAuth } from "../../lib/api";
 import { ErrorBox, PageLoader } from "../../components/ui";
 import { httpsUrl } from "../../lib/urls";
 import { t } from "./ebookText";
 import { rangeForOffsets, type Annotation, type FallbackMark } from "./annotations";
 import { EbookAnnotationPanel } from "./EbookAnnotationPanel";
+import { TextbookAsk } from "../student-ai/TextbookAsk";
+import { useStudentAiStatus } from "../student-ai/useStudentAi";
+import { getLocale } from "../../i18n";
+
+const askLabel = () => (getLocale() === "en" ? "Ask AI" : "Hỏi AI");
 import { usePdfDocument } from "./usePdfDocument";
 import "./ebook.css";
 
@@ -27,7 +32,10 @@ export function EbookReader() {
   const [renderError, setRenderError] = useState("");
   const [renderRetry, setRenderRetry] = useState(0);
   const [renderedPage, setRenderedPage] = useState(0);
-  const [mode, setMode] = useState<"read" | "highlight" | "underline" | "note">("read");
+  const [mode, setMode] = useState<"read" | "highlight" | "underline" | "note" | "ask">("read");
+  // B5: "Hỏi AI" mode, students only, when the tutor chat is on (dev/test while SG-2 / SG-4 are open).
+  const studentAi = useStudentAiStatus();
+  const canAsk = user.role === "STUDENT" && studentAi.chatEnabled;
   const [selection, setSelection] = useState<{ text: string; start: number; end: number; prefix: string; suffix: string } | null>(null);
   const [noteText, setNoteText] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -216,7 +224,7 @@ export function EbookReader() {
   if (!subject || !url) return <section className="panel lesson-detail-empty"><BookOpen /><h1>{t.noEbook}</h1><p>{t.unsafeLink}</p><Link className="primary" to="/lessons">{t.backToLesson}</Link></section>;
   const annotations = annotationsQuery.data?.pages.flat() ?? [];
 
-  return <div className={`ebook-reader-page${selection && mode !== "read" ? " has-ebook-selection" : ""}`} ref={readerRef}>
+  return <div className={`ebook-reader-page${selection && mode !== "read" && mode !== "ask" ? " has-ebook-selection" : ""}`} ref={readerRef}>
     {!fingerprint && document && <p className="notice">{t.noFingerprint}</p>}
     <div className="ebook-reader-layout">
       <section className="ebook-reader-main">
@@ -246,6 +254,7 @@ export function EbookReader() {
             <button type="button" className={mode === "highlight" ? "active" : ""} onClick={() => setMode("highlight")}><Highlighter size={16} /> {t.highlight}</button>
             <button type="button" className={mode === "underline" ? "active" : ""} onClick={() => setMode("underline")}><Underline size={16} /> {t.underline}</button>
             <button type="button" className={mode === "note" ? "active" : ""} onClick={() => setMode("note")}><StickyNote size={16} /> {t.note}</button>
+            {canAsk && <button type="button" className={mode === "ask" ? "active" : ""} onClick={() => { setSelection(null); setMode("ask"); }}><Sparkles size={16} /> {askLabel()}</button>}
           </div>
         </div>
         {fullscreenError && <p className="notice" role="status">{fullscreenError}</p>}
@@ -272,8 +281,8 @@ export function EbookReader() {
         onClose={() => setNotesOpen(false)}
         annotationsQuery={annotationsQuery}
         annotations={annotations}
-        selection={selection}
-        mode={mode}
+        selection={mode === "ask" ? null : selection}
+        mode={mode === "ask" ? "read" : mode}
         noteText={noteText}
         setNoteText={setNoteText}
         onSave={saveSelected}
@@ -282,6 +291,7 @@ export function EbookReader() {
         onChanged={refreshAnnotations}
         goToPage={goToPage}
       />
+      {mode === "ask" && canAsk && <TextbookAsk subjectId={subjectId} pageNumber={pageNumber} selection={selection} maxMessage={studentAi.maxMessage} onClose={() => { setSelection(null); setMode("read"); }} />}
     </div>
   </div>;
 }

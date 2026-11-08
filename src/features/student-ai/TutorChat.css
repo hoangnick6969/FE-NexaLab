@@ -15,3 +15,5 @@
 .tutor-chat-panel .muted { color: var(--text-muted, #506070); }
 .ai-chip { color: var(--text, #14202b); background: var(--surface, #ffffff); border: 1px solid currentColor; }
 .tutor-chat-messages li p { color: var(--text, #14202b); }
+.textbook-ask { position: fixed; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow-y: auto; z-index: 40; box-sizing: border-box; }
+.textbook-ask-quote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--brand, #1f6f78); max-height: 120px; overflow-y: auto; color: var(--text, #14202b); overflow-wrap: anywhere; }
