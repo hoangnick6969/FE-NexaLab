@@ -18,6 +18,7 @@ import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
+import { ExerciseQuestionHint } from "../assignments/QuizQuestionHint";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
 import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
@@ -617,6 +618,7 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
     {exercise.questions.map((question: any, index: number) => <fieldset className="exercise-question" key={question.id}>
       <legend>{index + 1}. {question.prompt}</legend>
       {question.options.map((option: any) => <label className="check" key={option.id}><input type="radio" name={question.id} value={option.id} checked={answers[question.id] === option.id} onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))} required />{option.text}</label>)}
+      {step.state !== "COMPLETED" && <ExerciseQuestionHint lessonId={lessonId} stepId={step.id} questionId={question.id} />}
     </fieldset>)}
     <ErrorBox error={attempt.error} />
     {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}%. {t.needs(step.exercise.passThreshold)}</p>}
