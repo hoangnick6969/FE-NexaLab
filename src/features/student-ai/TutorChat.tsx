@@ -80,7 +80,7 @@ export function TutorChat({ contextKind, contextId }: { contextKind: "LAB" | "LE
           <ol className="tutor-chat-messages" ref={list} aria-live="polite">
             {conversation.data?.messages.map((item) => (
               <li key={item.id} data-role={item.role}>
-                <span className="tiny muted">{item.role === "STUDENT" ? t.you : t.tutor} {item.ai && <AiChip provider="anthropic" />}</span>
+                <span className="tiny muted">{item.role === "STUDENT" ? t.you : t.tutor} {item.ai && <AiChip provider="ai" />}</span>
                 <p>{item.content}</p>
               </li>
             ))}

@@ -16,7 +16,7 @@ export type LegacyHint = {
   level: 1 | 2 | 3 | 4;
   content: string;
   escalated: boolean | null;
-  provider: "rules" | "rules-fallback" | "anthropic" | "fake" | "cache";
+  provider: "rules" | "rules-fallback" | "gemini" | "anthropic" | "fake" | "cache";
   createdAt: string;
 };
 

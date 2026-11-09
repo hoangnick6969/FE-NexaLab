@@ -65,7 +65,7 @@ export function TextbookAsk({ subjectId, pageNumber, selection, maxMessage, onCl
         {recent.map((item) => (
           <li key={item.id} data-role={item.role}>
             {item.passage && <small className="muted">{t.page(item.pageNumber ?? pageNumber)} · “{item.passage.length > 80 ? item.passage.slice(0, 80) + "…" : item.passage}”</small>}
-            {item.ai && <AiChip provider="anthropic" />}
+            {item.ai && <AiChip provider="ai" />}
             <p>{item.content}</p>
           </li>
         ))}
