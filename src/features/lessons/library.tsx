@@ -28,6 +28,7 @@ const text = defineText({
     sampleBadge: "Mẫu",
     addChallenge: "Thêm thử thách tùy chỉnh sau phần thực hành",
     rangePending: "Khoảng tham số đang chờ duyệt khoa học (Q-C2-04): dùng được cho bài riêng tự kiểm duyệt, chưa dùng được cho thư viện chung.",
+    rangeTeamDefault: "Khoảng tham số là mặc định tạm thời do nhóm kỹ thuật đặt (2026-11-09), đang chờ chủ sản phẩm và người duyệt xác nhận: dùng được cho bài riêng và cho gợi ý AI, chưa dùng được cho thư viện chung.",
     attribution: "Nguồn và giấy phép",
     source: "Nguồn:",
     licence: "Giấy phép:",
@@ -69,6 +70,7 @@ const text = defineText({
     sampleBadge: "Sample",
     addChallenge: "Add a custom challenge after the practice",
     rangePending: "Parameter ranges await scientific review (Q-C2-04): usable in self-reviewed private lessons, not yet in the shared library.",
+    rangeTeamDefault: "The parameter ranges are temporary defaults set by the engineering team (2026-11-09), awaiting product owner and reviewer confirmation: usable in private lessons and for AI suggestions, not yet in the shared library.",
     attribution: "Sources and licence",
     source: "Source:",
     licence: "Licence:",
@@ -106,7 +108,7 @@ type NumberParam = { kind: "number"; label: string; unit: string; min: number; m
 type ChoiceParam = { kind: "choice"; label: string; options: Array<{ value: string; label: string }>; default: string };
 export type Taxonomy = {
   domains: Array<{ id: string; label: string }>;
-  challengeParameters: Record<string, { modelRef: string; rangeReview: string; params: Record<string, NumberParam | ChoiceParam> }>;
+  challengeParameters: Record<string, { modelRef: string; rangeReview: string; boundsRef?: string; params: Record<string, NumberParam | ChoiceParam> }>;
 };
 export type Attribution = { sources: string | null; license: string | null; licenseLabel: string | null; synthetic: boolean; note: string | null };
 
@@ -332,7 +334,7 @@ export function TaxonomyFields({
           )}
           {params && spec.rangeReview !== "approved" && (
             <p className="tiny muted">
-              {t.rangePending}
+              {spec.rangeReview === "team-lead-default" ? t.rangeTeamDefault : t.rangePending}
             </p>
           )}
         </>

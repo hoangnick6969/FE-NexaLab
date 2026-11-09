@@ -5,6 +5,7 @@ import { ErrorBox, Field, Modal, useAction } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, ReasonDialog, SCOPE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
 import { defineText } from "../../i18n";
 import { Avatar } from "../../components/Avatar";
+import { AdminCreditsPanel } from "./AdminCreditsPanel";
 
 const text = defineText({
   vi: {
@@ -310,6 +311,7 @@ function UserDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <p className="tiny">
               {t.owned(q.data.ownership.classes.length, q.data.ownership.lessons.length, q.data.ownership.assets.length)}
             </p>
+            {user.role === "TEACHER" && <AdminCreditsPanel teacherId={user.id} />}
             <h3>{t.deleteRules}</h3>
             {q.data.deletion.eligible ? (
               <p className="tiny">{t.canDelete}</p>

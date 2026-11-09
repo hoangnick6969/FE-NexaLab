@@ -1,12 +1,12 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download, Search, CheckCircle2, AlertCircle, Filter, FileSpreadsheet,
   Plus, X, Sparkles, FlaskConical, FileText, ExternalLink, Layers, HelpCircle, FileCheck, UploadCloud,
   Star, ArrowRight
 } from "lucide-react";
-import { api, idempotencyKey, mutate, streamMaterial } from "../../lib/api";
+import { api, idempotencyKey, isApiError, mutate, streamMaterial } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field } from "../../components/ui";
 import { useActionToast } from "../../components/ActionToasts";
 import { defineText } from "../../i18n";
@@ -16,7 +16,13 @@ import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponse
 
 const text = defineText({
   vi: {
-    names: { DECK: "Thẻ học", STUDY_QUIZ: "Quiz luyện tập không điểm", TEST: "Bài kiểm tra chờ giao" },
+    names: { DECK: "Thẻ học", STUDY_QUIZ: "Quiz luyện tập không điểm", TEST: "Bài kiểm tra chờ giao", WRITTEN_TASK: "Bài tự luận" },
+    writtenTask: "Bài tự luận (chấm theo biểu điểm)",
+    writtenStudentNote: "Bài tự luận do giáo viên chấm. Thầy cô sẽ mở phần nộp bài khi giao bài.",
+    writtenMax: (n: number) => `tối đa ${n} ký tự`,
+    writtenCriteria: "Tiêu chí chấm",
+    points: (n: number) => `${n} điểm`,
+    rubricErrors: "Biểu điểm chưa hợp lệ:",
     sampleFront: "Khái niệm",
     sampleBack: "Giải thích",
     sampleQuestion: "Câu hỏi",
@@ -69,6 +75,7 @@ const text = defineText({
     practiceSaved: "Đã lưu lượt luyện tập",
     modeDirect: "Tạo nội dung trực tiếp",
     modeImport: "Nhập từ file CSV",
+    modeAi: "Soạn nháp bằng AI",
     downloadTemplate: "Tải file mẫu CSV",
     csvTemplateTip: (kind: string) => `Tải file mẫu định dạng CSV chuẩn UTF-8 cho ${kind}`,
     requiredColumns: "Các cột bắt buộc trong CSV:",
@@ -83,9 +90,21 @@ const text = defineText({
     allStatuses: "Tất cả trạng thái",
     showingResources: (n: number, total: number) => `Đang hiển thị ${n} / ${total} tài nguyên`,
     noMatchingResources: "Không có tài nguyên nào phù hợp với bộ lọc.",
+    similarTitle: "Câu tương tự đã có",
+    similarHint: "Chỉ là cảnh báo; tài nguyên vẫn được lưu. Thầy cô tự quyết định giữ hay sửa.",
+    similarItem: (n: number) => `Mục ${n}`,
+    similarMatch: (title: string, exact: boolean) => `${exact ? "Trùng" : "Gần giống"} “${title}”`,
+    similarClass: (name: string) => ` · lớp ${name}`,
+    similarLibrary: " · thư viện bài học",
   },
   en: {
-    names: { DECK: "Study cards", STUDY_QUIZ: "Ungraded practice quiz", TEST: "Test waiting to be assigned" },
+    names: { DECK: "Study cards", STUDY_QUIZ: "Ungraded practice quiz", TEST: "Test waiting to be assigned", WRITTEN_TASK: "Written task" },
+    writtenTask: "Written task (rubric graded)",
+    writtenStudentNote: "Written tasks are graded by your teacher. Submission opens when the task is assigned.",
+    writtenMax: (n: number) => `up to ${n} characters`,
+    writtenCriteria: "Grading criteria",
+    points: (n: number) => `${n} pts`,
+    rubricErrors: "The rubric is not valid:",
     sampleFront: "Concept",
     sampleBack: "Explanation",
     sampleQuestion: "Question",
@@ -138,6 +157,7 @@ const text = defineText({
     practiceSaved: "Practice saved",
     modeDirect: "Create directly",
     modeImport: "Import from CSV",
+    modeAi: "Draft with AI",
     downloadTemplate: "Download CSV template",
     csvTemplateTip: (kind: string) => `Download standard UTF-8 CSV template for ${kind}`,
     requiredColumns: "Required columns in CSV:",
@@ -152,19 +172,29 @@ const text = defineText({
     allStatuses: "All statuses",
     showingResources: (n: number, total: number) => `Showing ${n} / ${total} resources`,
     noMatchingResources: "No resources match the selected filters.",
+    similarTitle: "Similar questions already exist",
+    similarHint: "This is only a warning; the resource is saved. You decide whether to keep or edit it.",
+    similarItem: (n: number) => `Item ${n}`,
+    similarMatch: (title: string, exact: boolean) => `${exact ? "Same as" : "Close to"} “${title}”`,
+    similarClass: (name: string) => ` · class ${name}`,
+    similarLibrary: " · lesson library",
   },
 });
 const t = text();
-import { ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
+import { emptyWrittenPrompt, ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
+import { TeacherAiPanel } from "./TeacherAiPanel";
+import type { QuestionDuplicateWarning } from "./teacher-ai-api";
 import { richNames, richSamples, ResourcePreview, cleanFileName, type ResourceKind } from "./RichResourceEditor";
 
 type Kind = ResourceKind;
+type CsvKind = "DECK" | "STUDY_QUIZ" | "TEST";
 export type Resource = { id: string; classId: string; kind: Kind; title: string; lessonId: string | null; version: number; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; content: any; attachment?: any; practice?: { state: Record<string, any>; updatedAt: string; scored: false } | null };
 const names: Record<Kind, string> = { ...t.names, ...richNames };
 const sample: Record<Kind, object> = {
   DECK: { cards: [{ front: "", back: "" }] },
   STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""] }] },
   TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
+  WRITTEN_TASK: { prompts: [emptyWrittenPrompt()] },
   ...richSamples,
 };
 
@@ -172,7 +202,18 @@ function invalidateResourceChoices(qc: ReturnType<typeof useQueryClient>, classI
   return Promise.all(["class-resources", "assignable", "class-resource-lessons"].map((key) => qc.invalidateQueries({ queryKey: [key, classId] })));
 }
 
-function downloadSampleCsv(kind: Kind) {
+/** RUBRIC_INVALID details from the server, listed by field path (TAI2-T1). */
+function RubricErrors({ error }: { error: unknown }) {
+  if (!isApiError(error, "RUBRIC_INVALID") || !Array.isArray(error.details)) return null;
+  return (
+    <div className="error" role="alert">
+      <b>{t.rubricErrors}</b>
+      <ul>{(error.details as Array<{ path: string; message: string }>).map((d, i) => <li key={i}><code>{d.path || "-"}</code>: {d.message}</li>)}</ul>
+    </div>
+  );
+}
+
+function downloadSampleCsv(kind: CsvKind) {
   let content = "";
   let filename = "";
   if (kind === "DECK") {
@@ -196,15 +237,38 @@ function downloadSampleCsv(kind: Kind) {
   URL.revokeObjectURL(url);
 }
 
+/** "Câu tương tự đã có" (TAI3-T2): qdup@1 warnings with the source title and class; never blocks saving. */
+function DuplicateWarnings({ warnings }: { warnings?: QuestionDuplicateWarning[] }) {
+  if (!warnings?.length) return null;
+  return (
+    <div className="notice warning-text duplicate-warnings" role="status">
+      <b><AlertCircle size={14} aria-hidden="true" /> {t.similarTitle}</b>
+      <ul>
+        {warnings.map((warning) => (
+          <li key={warning.index}>
+            {t.similarItem(warning.index + 1)}:{" "}
+            {warning.matches
+              .map((m) => t.similarMatch(m.source.title, m.level === "EXACT") + (m.source.kind === "LIBRARY_LESSON" ? t.similarLibrary : m.source.className ? t.similarClass(m.source.className) : ""))
+              .join("; ")}
+          </li>
+        ))}
+      </ul>
+      <p className="tiny muted">{t.similarHint}</p>
+    </div>
+  );
+}
+
 export function TeacherClassResources({ classId, disabled, labOnly = false }: { classId: string; disabled: boolean; labOnly?: boolean }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useQuery<Resource[]>({ queryKey: ["class-resources", classId], queryFn: () => api(`/classes/${classId}/resources`) });
   const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classId], queryFn: () => api(`/classes/${classId}/assignable-content`) });
   
-  // Creation Mode
-  const [creationMode, setCreationMode] = useState<"direct" | "import">("direct");
+  // Creation Mode (the Teacher AI tab reopens when the URL names an AI job, so a reload keeps the review in view)
+  const [searchParams] = useSearchParams();
+  const [creationMode, setCreationMode] = useState<"direct" | "import" | "ai">(searchParams.has("aiJob") ? "ai" : "direct");
   const [isFormOpen, setIsFormOpen] = useState(true);
+  const [focusedResourceId, setFocusedResourceId] = useState<string | null>(null);
   
   // Direct creation state
   const [kind, setKind] = useState<Kind>(labOnly ? "LAB" : "DECK");
@@ -212,9 +276,10 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   const [lessonId, setLessonId] = useState("");
   const [source, setSource] = useState<ResourceContent>(sample[labOnly ? "LAB" : "DECK"]);
   const [error, setError] = useState<unknown>(null);
+  const [createdWarnings, setCreatedWarnings] = useState<QuestionDuplicateWarning[]>([]);
 
   // Dedicated Import state
-  const [importKind, setImportKind] = useState<Kind>("DECK");
+  const [importKind, setImportKind] = useState<CsvKind>("DECK");
   const [importTitle, setImportTitle] = useState("");
   const [importLessonId, setImportLessonId] = useState("");
   const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
@@ -239,7 +304,9 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
     event.preventDefault(); setError(null);
     try {
       const body = resourceBody();
-      await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() });
+      setCreatedWarnings([]);
+      const created = await action.mutateAsync({ path: `/classes/${classId}/resources`, body, key: idempotencyKey() });
+      setCreatedWarnings(created?.duplicateWarnings ?? []);
       toast({
         title: "Đã tạo bản nháp",
         description: `Tài nguyên "${title.trim()}" đã được lưu thành công.`,
@@ -394,7 +461,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
           <div className="resource-create-header">
             <h4 className="resource-create-title">
               <Sparkles size={16} aria-hidden="true" />
-              <span>{creationMode === "direct" ? t.createDirect : t.importCsv}</span>
+              <span>{creationMode === "direct" ? t.createDirect : creationMode === "import" ? t.importCsv : t.modeAi}</span>
             </h4>
             {!labOnly && <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
               <button
@@ -416,10 +483,31 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                 <FileSpreadsheet size={15} aria-hidden="true" />
                 {t.modeImport}
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={creationMode === "ai"}
+                className={creationMode === "ai" ? "active" : ""}
+                onClick={() => setCreationMode("ai")}
+              >
+                <Sparkles size={15} aria-hidden="true" />
+                {t.modeAi}
+              </button>
             </div>}
           </div>
 
-          {creationMode === "direct" ? (
+          {creationMode === "ai" ? (
+            <TeacherAiPanel
+              classId={classId}
+              lessons={lessons.data?.lessons ?? []}
+              onMaterialized={(resourceId) => {
+                setSearchQuery("");
+                setKindFilter("ALL");
+                setStatusFilter("ALL");
+                setFocusedResourceId(resourceId);
+              }}
+            />
+          ) : creationMode === "direct" ? (
             <form onSubmit={create}>
               <fieldset className="form-lock" disabled={action.isPending}>
                 <div className="form-grid-2col">
@@ -429,6 +517,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                       <option value="DECK">{t.deck}</option>
                       <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
                       <option value="TEST">{t.testUnassigned}</option>
+                      <option value="WRITTEN_TASK">{t.writtenTask}</option>
                       {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
@@ -453,7 +542,8 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                   </button>
                 )}
                 <p className="tiny muted">{t.draftHint}</p>
-                <ErrorBox error={error} />
+                {isApiError(error, "RUBRIC_INVALID") ? <RubricErrors error={error} /> : <ErrorBox error={error} />}
+                <DuplicateWarnings warnings={createdWarnings} />
                 <div className="button-row resource-create-actions">
                   <button type="button" className="secondary button-compact" onClick={() => setIsFormOpen(false)}>
                     {t.cancel}
@@ -488,7 +578,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                   <select
                     value={importKind}
                     onChange={(e) => {
-                      const next = e.target.value as Kind;
+                      const next = e.target.value as CsvKind;
                       setImportKind(next);
                       setImportPreview(null);
                     }}
@@ -623,6 +713,8 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                 </div>
               )}
 
+              {importPreview && <DuplicateWarnings warnings={importPreview.duplicateWarnings} />}
+
               {importFile && importPreview?.valid && (!importTitle.trim() || !importLessonId) && (
                 <p className="tiny muted warning-text">{t.missingLessonOrTitle}</p>
               )}
@@ -664,7 +756,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
         <Empty>{t.noMatchingResources}</Empty>
       )}
       {filteredResources.map((r) => (
-        <TeacherResourceRow key={r.id} resource={r} classId={classId} disabled={disabled} />
+        <TeacherResourceRow key={r.id} resource={r} classId={classId} disabled={disabled} focused={r.id === focusedResourceId} />
       ))}
       </div>
     </section>
@@ -684,18 +776,24 @@ function getResourceIcon(kind: Kind) {
   }
 }
 
-function TeacherResourceRow({ resource, classId, disabled }: { resource: Resource; classId: string; disabled: boolean }) {
+function TeacherResourceRow({ resource, classId, disabled, focused = false }: { resource: Resource; classId: string; disabled: boolean; focused?: boolean }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // A draft just created from Teacher AI opens in the existing draft editor and scrolls into view.
+  const rowRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (focused) rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focused]);
   const action = useMutation({ mutationFn: (path: string) => api(`/classes/${classId}/resources/${resource.id}/${path}`, "POST", {}), onSuccess: (created: any, path) => { void invalidateResourceChoices(qc, classId); if (path === "revise" && resource.kind === "LAB") navigate(`/labs/${encodeURIComponent(created.content.source.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind: "LAB", title: created.title, lessonId: created.lessonId, resourceId: created.id, content: resourceInput("LAB", created.content) } } }); } });
   const removeDraft = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "DELETE"), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const [contentDraft, setContentDraft] = useState<ResourceContent>(resource.content);
   const [titleDraft, setTitleDraft] = useState(resource.title);
   const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => invalidateResourceChoices(qc, classId) });
-  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
+  const updateWarnings: QuestionDuplicateWarning[] = update.data?.duplicateWarnings ?? [];
+  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content.prompts?.length : resource.content.questions?.length;
   const Icon = getResourceIcon(resource.kind);
   return (
-    <article className="class-resource-row apple-resource-row">
+    <article ref={rowRef} id={`resource-${resource.id}`} className={`class-resource-row apple-resource-row${focused ? " focused" : ""}`}>
       <div className="resource-row-header">
         <div className="resource-row-lead">
           <div className="resource-kind-icon" aria-hidden="true"><Icon size={18} /></div>
@@ -708,12 +806,13 @@ function TeacherResourceRow({ resource, classId, disabled }: { resource: Resourc
           <Badge tone={resource.status === "PUBLISHED" ? "" : "outline"}>{resource.status === "PUBLISHED" ? t.shared : resource.status === "DRAFT" ? t.draft : t.archived}</Badge>
           {!disabled && resource.status === "DRAFT" && (
             <>
-              <details className="class-resource-edit">
+              <details className="class-resource-edit" open={focused || undefined}>
                 <summary>{t.editDraft}</summary>
                 <form onSubmit={(event) => { event.preventDefault(); update.mutate(); }}>
                   <label className="field"><span>{t.resourceName}</span><input required value={titleDraft} maxLength={160} onChange={(event) => setTitleDraft(event.target.value)} /></label>
                   <ResourceEditor kind={resource.kind} value={contentDraft} onChange={setContentDraft} classId={classId} />
-                  <ErrorBox error={update.error} />
+                  {isApiError(update.error, "RUBRIC_INVALID") ? <RubricErrors error={update.error} /> : <ErrorBox error={update.error} />}
+                  <DuplicateWarnings warnings={updateWarnings} />
                   <button className="secondary" disabled={update.isPending}>{t.saveDraft}</button>
                 </form>
               </details>
@@ -749,7 +848,7 @@ export function StudentClassResources({ classId }: { classId: string }) {
   const allItems = list.data ?? [];
   const docs = allItems.filter((r) => ["DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(r.kind));
   const labs = allItems.filter((r) => r.kind === "LAB");
-  const practice = allItems.filter((r) => ["DECK", "STUDY_QUIZ", "TEST"].includes(r.kind));
+  const practice = allItems.filter((r) => ["DECK", "STUDY_QUIZ", "TEST", "WRITTEN_TASK"].includes(r.kind));
 
   const displayItems = category === "DOCS" ? docs : category === "LABS" ? labs : category === "PRACTICE" ? practice : allItems;
 
@@ -826,7 +925,8 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
   const qc = useQueryClient();
   const [answers, setAnswers] = useState<Record<string, number>>(resource.practice?.state?.answers ?? {});
   const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => invalidateResourceChoices(qc, classId) });
-  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.content.questions?.length;
+  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content.prompts?.length : resource.content.questions?.length;
+  const isWritten = resource.kind === "WRITTEN_TASK";
 
   const isDeck = resource.kind === "DECK";
   const isLab = resource.kind === "LAB";
@@ -945,7 +1045,7 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
         <div className="resource-headline-row">
           <h4 className="resource-item-title">{resource.title}</h4>
           <span className="resource-kind-pill">
-            {isDeck ? "Thẻ học" : isLab ? "Lab mô phỏng" : isDoc ? (resource.kind === "LINK" ? "Liên kết" : "Tài liệu") : isTest ? "Bài kiểm tra" : "Luyện tập"}
+            {isDeck ? "Thẻ học" : isLab ? "Lab mô phỏng" : isDoc ? (resource.kind === "LINK" ? "Liên kết" : "Tài liệu") : isTest ? "Bài kiểm tra" : isWritten ? t.names.WRITTEN_TASK : "Luyện tập"}
           </span>
         </div>
 
@@ -1023,6 +1123,25 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
           </span>
         )}
       </div>
+      {isWritten && <WrittenTaskView content={resource.content} />}
     </article>
+  );
+}
+
+/** Student view of a WRITTEN_TASK: only what studentWrittenTaskContent returns (prompt, length limit, criteria). */
+function WrittenTaskView({ content }: { content: any }) {
+  return (
+    <div className="resource-practice-items written-task-view">
+      {(content?.prompts ?? []).map((p: any, i: number) => (
+        <fieldset key={p.id ?? i}>
+          <legend>{t.names.WRITTEN_TASK} · {i + 1}</legend>
+          <p>{p.prompt}</p>
+          <p className="tiny muted">{t.writtenMax(p.maxChars)}</p>
+          <p className="tiny"><b>{t.writtenCriteria}</b></p>
+          <ul className="tiny">{(p.criteria ?? []).map((c: any) => <li key={c.code}>{c.description} · {t.points(c.maxPoints)}</li>)}</ul>
+        </fieldset>
+      ))}
+      <p className="notice tiny">{t.writtenStudentNote}</p>
+    </div>
   );
 }

@@ -2368,3 +2368,85 @@ body {
 }
 /* Class resource previews preserve plain text and fit the existing resource cards. */
 .teacher-class-lab-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+/* Teacher AI workspace (TAI-T5). Uses the shared tokens so light and dark themes both work. */
+.teacher-ai-panel { display: grid; gap: 16px; }
+.teacher-ai-head { display: flex; gap: 10px; align-items: flex-start; color: var(--brand-ink); }
+.teacher-ai-head h3 { margin: 2px 0 4px; color: var(--text); }
+.teacher-ai-form textarea,
+.teacher-ai-editor textarea { width: 100%; resize: vertical; font: inherit; }
+.teacher-ai-job { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; background: var(--surface); }
+.teacher-ai-job-head { display: flex; align-items: center; gap: 10px; }
+.teacher-ai-job-head > div { flex: 1 1 auto; min-width: 0; }
+.teacher-ai-job-head small { display: block; margin-top: 2px; }
+.teacher-ai-review { display: grid; gap: 10px; }
+.teacher-ai-item { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px; }
+.teacher-ai-item header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.teacher-ai-item.decided.rejected .teacher-ai-question,
+.teacher-ai-item.decided.rejected .teacher-ai-card { opacity: 0.55; }
+.teacher-ai-question p { margin: 0 0 6px; }
+.teacher-ai-question ol { margin: 0 0 6px; padding-left: 22px; }
+.teacher-ai-question li.correct { font-weight: 600; color: var(--brand-ink); }
+.teacher-ai-card { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.teacher-ai-card dt { color: var(--muted); }
+.teacher-ai-card dd { margin: 0; }
+.teacher-ai-card dd.tiny { grid-column: 1 / -1; }
+.teacher-ai-duplicates p { margin: 0; display: flex; gap: 6px; align-items: center; }
+.teacher-ai-editor { display: grid; gap: 8px; }
+.teacher-ai-option { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: end; }
+.teacher-ai-reject { display: grid; gap: 8px; max-width: 360px; }
+.teacher-ai-jobs h4 { margin: 0 0 6px; }
+.teacher-ai-jobs ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.teacher-ai-jobs li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.teacher-ai-jobs li > span { flex: 1 1 220px; min-width: 0; }
+.teacher-ai-jobs li.active { border-color: var(--brand); }
+.class-resource-row.focused { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 8px; }
+@media (max-width: 640px) {
+  .teacher-ai-option { grid-template-columns: auto 1fr; }
+  .teacher-ai-option .icon-button { grid-column: 2; justify-self: end; }
+}
+
+/* TAI3-T2 duplicate warnings on class resource authoring and import preview. */
+.duplicate-warnings b { display: flex; align-items: center; gap: 6px; }
+.duplicate-warnings ul { margin: 6px 0 4px; padding-left: 20px; }
+
+/* TAI2-T1 written task rubric editor and student view. */
+.written-task-editor textarea { width: 100%; resize: vertical; font: inherit; }
+.written-criterion { margin-top: 10px; }
+.written-anchor { display: grid; grid-template-columns: minmax(80px, 120px) 1fr; gap: 8px; align-items: end; }
+.written-task-view ul { margin: 4px 0 0; padding-left: 20px; }
+@media (max-width: 640px) { .written-anchor { grid-template-columns: 1fr; } }
+
+/* TAI3-T5: similar-content check (evidence for the teacher; shared parts highlighted, never rendered as HTML). */
+.similarity-card { border: 1px solid var(--line, rgba(0, 0, 0, 0.14)); border-radius: 10px; padding: 12px; margin-top: 12px; }
+.similarity-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.similarity-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0 0; padding: 8px; border: 1px solid var(--line, rgba(0, 0, 0, 0.14)); border-radius: 8px; }
+.similarity-mark { background: rgba(255, 190, 0, 0.35); color: inherit; border-radius: 3px; padding: 0 1px; }
+.similarity-review { margin-top: 12px; }
+@media (max-width: 720px) { .similarity-columns { grid-template-columns: 1fr; } }
+
+/* TAI4-T4: teacher insights. Neutral tones only: no red or green judgment colors. */
+.insights-panel .insights-filter, .insight-student-section .insights-filter { margin: 8px 0; }
+.insight-student { margin-top: 16px; }
+.insight-student h3 { margin: 0 0 4px; }
+.insight-card { border: 1px solid var(--line, rgba(0, 0, 0, 0.14)); border-radius: 10px; padding: 12px; margin-top: 10px; }
+.insight-card h4 { margin: 0; }
+.insight-evidence ul { margin: 4px 0 0; padding-left: 20px; }
+.insight-evidence-detail, .insight-replay { margin-top: 6px; padding: 8px; border-left: 3px solid var(--line, rgba(0, 0, 0, 0.14)); }
+.insight-handled { margin-top: 8px; }
+.insight-note { margin-top: 10px; }
+.insight-note textarea { width: 100%; resize: vertical; font: inherit; }
+.insight-insufficient { margin-top: 16px; }
+.insight-insufficient summary { cursor: pointer; }
+.insight-student-section { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line, rgba(0, 0, 0, 0.14)); }
+.insight-evidence li { margin: 2px 0; }
+.insight-evidence .text-button { margin-left: 8px; }
+
+/* TAI2-T6: AI rubric suggestions (teacher only). Neutral tones; evidence marks are text nodes, never HTML. */
+.ai-suggestion-request { margin: 8px 0; }
+.ai-suggestion-request ul { margin: 4px 0 0; padding-left: 20px; }
+.ai-suggestion { border: 1px dashed var(--line, rgba(0, 0, 0, 0.2)); border-radius: 10px; padding: 10px 12px; margin: 8px 0 12px; }
+.ai-suggestion h3 { margin: 0 0 4px; font-size: 1rem; }
+.ai-criterion { margin: 4px 0 6px; padding-left: 8px; border-left: 3px solid var(--line, rgba(0, 0, 0, 0.14)); }
+.evidence-mark { background: rgba(80, 140, 255, 0.25); color: inherit; border-radius: 3px; padding: 0 1px; }
+.written-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
