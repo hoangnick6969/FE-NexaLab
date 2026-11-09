@@ -35,6 +35,46 @@ const launch = (runId: string, modelRef = "circuit@1.0.0") => ({
   assignmentId: "assignment-lab", versionBinding: "ASSIGNMENT_PINNED",
 });
 
+test("private class practice launches the exact resource challenge and displays teacher instructions", async ({ page }) => {
+  await mockShell(page);
+  const instructions = "Predict before opening the switch; explain your evidence.";
+  await page.route("**/api/classes/class-private/resources/resource-v2", (route) => route.fulfill({ json: {
+    id: "resource-v2", kind: "LAB", title: "Private teacher activity", content: {
+      source: { labId: "circuit", releaseId: "source-release", challengeId: "private-challenge" }, learningObjective: "Trace the current path", instructions, reportPrompts: ["Why does the bulb go out?"],
+    },
+  } }));
+  const bodies: any[] = [];
+  await page.route("**/api/labs/circuit/runs", (route) => {
+    bodies.push(route.request().postDataJSON());
+    return route.fulfill({ json: { ...launch("private-run"), challengeId: "private-challenge", context: "CLASS_PRACTICE", assignmentId: null, classLabSnapshot: { title: "Private teacher activity", learningObjective: "Trace the current path", instructions, reportPrompts: ["Why does the bulb go out?"] } } });
+  });
+  await page.goto("/labs/circuit?classId=class-private&resourceId=resource-v2");
+  await expect(page.getByText(instructions, { exact: true })).toBeVisible();
+  await page.getByTestId("lab-session-start").click();
+  await expect(page.getByTestId("lab-run-submit")).toBeVisible();
+  expect(bodies).toEqual([{ challengeId: "private-challenge", resourceId: "resource-v2" }]);
+  expect(bodies[0]).not.toHaveProperty("assignmentId");
+  expect(bodies[0]).not.toHaveProperty("releaseId");
+});
+
+test("teacher previews the pinned bulb activity and custom instructions without a student run or simulation request", async ({ page }) => {
+  await mockShell(page);
+  const teacher = { ...student, id: "teacher", role: "TEACHER" };
+  await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: { user: teacher, accessToken: "teacher-token" } }));
+  await page.route("**/api/me/profile", (route) => route.fulfill({ json: { ...teacher, preferences: { locale: "vi", theme: "system" } } }));
+  await page.route("**/api/classes/class-private/resources/resource-v2", (route) => route.fulfill({ json: {
+    kind: "LAB", title: "Private bulb activity", content: { source: { labId: "circuit", releaseId: "old-release", challengeId: "old-challenge" }, learningObjective: "Teacher goal", instructions: "Teacher pinned instructions", reportPrompts: [], execution: { modelRef: "circuit-bulb@1.0.0", effectiveParams: { "old-challenge": null }, template: {} } },
+  } }));
+  let writes = 0;
+  await page.route(/\/api\/(labs\/circuit\/runs|attempts|simulate\/circuit)$/, (route) => { writes++; return route.fulfill({ status: 500, json: {} }); });
+  await page.goto("/labs/circuit?classId=class-private&resourceId=resource-v2");
+  await expect(page.getByText("Teacher pinned instructions", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("bulb-prediction-closed")).toBeVisible();
+  await expect(page.getByTestId("lab-session-start")).toHaveCount(0);
+  await expect(page.getByTestId("lab-run-submit")).toHaveCount(0);
+  expect(writes).toBe(0);
+});
+
 test("P3.2b assigned LabRun restores a compatible F5 draft and retries with the same key", async ({ page }) => {
   await mockShell(page);
   let launches = 0;

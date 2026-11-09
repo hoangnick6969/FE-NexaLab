@@ -69,6 +69,11 @@
 .fluid-kit-shell .k3-station[aria-selected="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
 .fluid-kit-shell .k3-step { margin: 0; color: var(--muted); font-size: 0.875rem; }
 .fluid-kit-shell .k3-instruction { margin: 0; font-size: 1rem; line-height: 1.5; }
+.fluid-kit-shell .k3-student-question { margin: 0; padding: 10px 12px; border-left: 3px solid var(--k3-selected); border-radius: 8px; background: color-mix(in srgb, var(--k3-selected) 8%, var(--surface)); line-height: 1.45; }
+.fluid-kit-shell .k3-question-editor { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--k3-selected) 6%, var(--surface)); }
+.fluid-kit-shell .k3-question-editor p { margin: 0; line-height: 1.45; }
+.fluid-kit-shell .k3-question-editor textarea { width: 100%; min-height: 72px; resize: vertical; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-base); font: inherit; }
+.fluid-kit-shell .k3-question-editor button { justify-self: start; }
 .fluid-kit-shell .k3-readout { padding: 10px 12px; border-radius: 10px; background: var(--k3-body); font-variant-numeric: tabular-nums; }
 .fluid-kit-shell .k3-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .fluid-kit-shell .k3-actions button.secondary, .fluid-kit-shell .k3-actions select { box-sizing: border-box; min-height: 42px; max-width: 100%; padding: 9px 13px; border: 1px solid color-mix(in srgb, var(--line) 82%, white); border-radius: 11px; background: color-mix(in srgb, var(--surface) 86%, transparent); color: inherit; box-shadow: 0 2px 8px rgb(20 40 32 / 0.05); font: inherit; font-size: 0.875rem; }

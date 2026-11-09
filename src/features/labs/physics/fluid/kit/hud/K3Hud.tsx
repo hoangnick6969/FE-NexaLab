@@ -19,13 +19,14 @@ export type K3CameraPreset = "overview" | "meniscus" | "dynamometer";
  * a live instrument readout and the station's actions. It holds no science;
  * the Lab passes copy, readings and buttons that map to semantic events.
  */
-export function K3Hud({ title, stations, current, onSelect, step, instruction, readout, actions, notice, children, cameraPreset, onCameraPresetChange, telemetry, formula, formulaLatex }: {
+export function K3Hud({ title, stations, current, onSelect, step, instruction, question, readout, actions, notice, children, cameraPreset, onCameraPresetChange, telemetry, formula, formulaLatex }: {
   title: string;
   stations: readonly K3Station[];
   current: string;
   onSelect?: (stationId: string) => void;
   step: { index: number; total: number };
   instruction: string;
+  question?: ReactNode;
   readout?: ReactNode;
   actions?: ReactNode;
   notice?: string;
@@ -68,6 +69,7 @@ export function K3Hud({ title, stations, current, onSelect, step, instruction, r
       </div>
       <p className="k3-step">{t.step(step.index + 1, step.total)}</p>
       <p className="k3-instruction" aria-live="polite">{instruction}</p>
+      {question}
       {readout && <div className="k3-readout" role="status" aria-label={t.readout}>{readout}</div>}
       {telemetry && <div className="k3-telemetry" aria-live="polite">{telemetry}</div>}
       {(formula || formulaLatex) && <div className="k3-formula" aria-label="Formula preview">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { KeyRound, Archive } from "lucide-react";
+import { KeyRound, Archive, Edit3, Power, Users, ClipboardList, Layers, BarChart2 } from "lucide-react";
 import { ErrorBox, Field, Modal } from "../../components/ui";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { type ClassSummary } from "./class-types";
@@ -71,10 +71,10 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
   const tabs = [
-    { id: "students", label: t.studentsTab },
-    { id: "work", label: t.workTab },
-    { id: "resources", label: t.resourcesTab },
-    ...(!archived ? [{ id: "progress", label: t.progressTab }] : []),
+    { id: "students", label: t.studentsTab, icon: Users },
+    { id: "work", label: t.workTab, icon: ClipboardList },
+    { id: "resources", label: t.resourcesTab, icon: Layers },
+    ...(!archived ? [{ id: "progress", label: t.progressTab, icon: BarChart2 }] : []),
   ];
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : "students";
   const [modal, setModal] = useState<"" | "edit" | "rotate" | "archive" | "code">("");
@@ -91,35 +91,49 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   };
   return (
     <>
-      <section className="panel teacher-class-detail-header" aria-labelledby="class-detail-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
-            <p className="tiny muted">
-              {t.grade(classroom.grade)} · {classroom.requiresApproval ? t.codeNeedsApproval : t.codeApprovesAtOnce}
+      <section className="panel teacher-class-detail-header unified-class-header" aria-labelledby="class-detail-title">
+        <div className="unified-header-top">
+          <div className="unified-header-main">
+            <div className="unified-title-row">
+              <h2 id="class-detail-title" tabIndex={-1}>{classroom.name}</h2>
+              <span className="unified-grade-pill">{t.grade(classroom.grade)}</span>
+              {classroom.joinCode.issued && (
+                <span className={`unified-code-status ${classroom.joinCode.enabled ? "is-active" : "is-inactive"}`}>
+                  <KeyRound size={12} aria-hidden="true" />
+                  <span>{classroom.joinCode.enabled ? t.codeOn : t.codeOff}</span>
+                </span>
+              )}
+            </div>
+            <p className="tiny muted unified-subtext">
+              {classroom.requiresApproval ? t.codeNeedsApproval : t.codeApprovesAtOnce}
             </p>
           </div>
           {!archived && (
-            <div className="button-row">
-              <button className="secondary" onClick={() => setModal("edit")}>
-                {t.editClass}
+            <div className="button-row unified-action-row">
+              <button type="button" className="secondary button-compact" onClick={() => setModal("edit")}>
+                <Edit3 size={14} aria-hidden="true" />
+                <span>{t.editClass}</span>
               </button>
-              <button className="secondary" onClick={() => setModal("rotate")}>
-                <KeyRound size={16} /> {classroom.joinCode.issued ? t.newCode : t.createCode}
+              <button type="button" className="secondary button-compact" onClick={() => setModal("rotate")}>
+                <KeyRound size={14} aria-hidden="true" />
+                <span>{classroom.joinCode.issued ? t.newCode : t.createCode}</span>
               </button>
               {classroom.joinCode.issued && (
                 <button
-                  className="secondary"
+                  type="button"
+                  className="secondary button-compact"
                   disabled={act.isPending}
                   onClick={() =>
                     act.mutate({ path: `/classes/${classroom.id}`, method: "PUT", body: { joinCodeEnabled: !classroom.joinCode.enabled } })
                   }
                 >
-                  {classroom.joinCode.enabled ? t.codeOff : t.codeOn}
+                  <Power size={13} aria-hidden="true" />
+                  <span>{classroom.joinCode.enabled ? t.codeOff : t.codeOn}</span>
                 </button>
               )}
-              <button className="danger-text" onClick={() => setModal("archive")}>
-                <Archive size={16} /> {t.archiveClass}
+              <button type="button" className="danger-text button-compact" onClick={() => setModal("archive")}>
+                <Archive size={14} aria-hidden="true" />
+                <span>{t.archiveClass}</span>
               </button>
             </div>
           )}
@@ -131,22 +145,27 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
         )}
         {code && <ShownOnce code={code} onDone={() => setCode(null)} />}
         <ErrorBox error={!modal ? act.error : null} />
+
+        <div className="teacher-class-tabs unified-class-tabs" role="tablist" aria-label={t.tabsLabel}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                id={`class-tab-${tab.id}`}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`class-panel-${tab.id}`}
+                onClick={() => selectTab(tab.id)}
+              >
+                <Icon size={15} aria-hidden="true" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
-      <div className="teacher-class-tabs" role="tablist" aria-label={t.tabsLabel}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            id={`class-tab-${tab.id}`}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={`class-panel-${tab.id}`}
-            onClick={() => selectTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
       <section className="teacher-class-tabpanel" id={`class-panel-${activeTab}`} role="tabpanel" aria-labelledby={`class-tab-${activeTab}`}>
         {activeTab === "students" && <Roster classroom={classroom} />}
         {activeTab === "work" && <>

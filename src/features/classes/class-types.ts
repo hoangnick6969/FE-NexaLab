@@ -22,11 +22,13 @@ export type TeacherAssignment = {
   title: string;
   contentId: string;
   contentType: AssignableType;
+  classLabSnapshot?: { resourceId: string; version: number; title: string; learningObjective: string; instructions: string; reportPrompts: string[]; contentDigest: string } | null;
   dueDate: string | null;
   overdue: boolean;
   audience: "CLASS" | "SUBSET";
   status: "ACTIVE" | "ARCHIVED";
   recipientCount: number;
+  targetStudentIds?: string[];
   testSummary?: { revision: number; extended: boolean; counts: Record<"SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED" | "OVERDUE_UNSUBMITTED" | "NOT_SUBMITTED", number> };
 };
 

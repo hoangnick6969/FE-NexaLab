@@ -21,11 +21,12 @@ import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../compon
 import { PageHeading } from "../../components/PageHeading";
 import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
+import { labInfo } from "../labs/lab-info";
 import { type StudentClass } from "./class-types";
 import { LoadError, dueLabel, useMutate } from "./class-ui";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { testStatusLabel, testStatusTone } from "../../lib/test-status";
-import { defineText } from "../../i18n";
+import { defineText, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
 
 const text = defineText({
@@ -99,8 +100,8 @@ const text = defineText({
     enterLab: "Vào phòng thí nghiệm",
     testsTitle: "Bài kiểm tra & Quiz đánh giá",
     testsDesc: "Các bài kiểm tra tính điểm và đánh giá năng lực do giáo viên giao cho lớp.",
-    resourcesTitle: "Tài nguyên & Bộ thẻ ôn luyện",
-    resourcesDesc: "Tài liệu học tập, bộ thẻ ghi nhớ flashcards và quiz luyện tập thầy cô chia sẻ.",
+    resourcesTitle: "Tài nguyên của lớp",
+    resourcesDesc: "Tài liệu, mẫu báo cáo, Lab riêng và học liệu thầy cô chia sẻ.",
     lessonReviewTitle: "Bộ thẻ ôn tập kiến thức theo bài học",
     lessonReviewDesc: "Bộ thẻ ghi nhớ tóm tắt các khái niệm, công thức và trọng tâm kiến thức của bài học.",
     openReviewDeck: "Mở bộ thẻ ôn tập",
@@ -186,8 +187,8 @@ const text = defineText({
     enterLab: "Launch Lab Simulation",
     testsTitle: "Assigned Tests & Quizzes",
     testsDesc: "Graded assessments and progress tests assigned to this class.",
-    resourcesTitle: "Resources & Study Flashcards",
-    resourcesDesc: "Learning materials, flashcard decks, and practice quizzes shared by your teacher.",
+    resourcesTitle: "Class resources",
+    resourcesDesc: "Documents, report templates, custom labs and learning materials shared by your teacher.",
     lessonReviewTitle: "Lesson Review Flashcards",
     lessonReviewDesc: "Flashcard decks summarizing key concepts and core topics for each lesson.",
     openReviewDeck: "Open flashcard deck",
@@ -327,6 +328,11 @@ export function StudentClasses() {
         : join.error
     : null;
   const selectedClass = classId ? list.data?.find((item) => item.id === classId) : undefined;
+  const classResources = useQuery<any[]>({
+    queryKey: ["class-resources", selectedClass?.id],
+    queryFn: () => api(`/classes/${selectedClass!.id}/resources`),
+    enabled: Boolean(selectedClass?.id),
+  });
   if (classId && list.isLoading) return <PageHeading eyebrow="CLASS SPACE" title={t.opening} description={t.loadingClass} />;
   if (classId && list.isError) return <><PageHeading eyebrow="CLASS SPACE" title={t.loadFailed} description={t.reloadList} /><LoadError query={list} what="Class Space" /><Link to="/classes">{t.backToList}</Link></>;
   if (classId && !selectedClass) return <><PageHeading eyebrow="CLASS SPACE" title={t.notFound} description={t.notMember} /><Link className="student-lesson-open" to="/classes">{t.backToSpace}</Link></>;
@@ -344,7 +350,6 @@ export function StudentClasses() {
       : classItems.filter((item) => item.contentType === "lab");
     const classTests = (classWork.data?.tests ?? []).filter((item: any) => item.classroom?.id === selectedClass.id);
     const reviewLessons = classItems.filter((item) => item.contentType === "lesson");
-
     return (
       <div className="class-space-detail-container">
         <nav className="class-detail-nav" aria-label="Điều hướng lớp học">
@@ -396,7 +401,7 @@ export function StudentClasses() {
                     ["lessons", t.tabLessons, classLessons.length, BookOpen],
                     ["labs", t.tabLabs, classLabs.length, FlaskConical],
                     ["tests", t.tabTests, classTests.length, ClipboardCheck],
-                    ["resources", t.tabResources, reviewLessons.length, Layers],
+                    ["resources", t.tabResources, classResources.data?.length ?? 0, Layers],
                   ] as const
                 ).map(([tab, label, count, Icon]) => (
                   <button
@@ -409,7 +414,7 @@ export function StudentClasses() {
                   >
                     <Icon size={15} aria-hidden="true" className="tab-btn-icon" />
                     <span>{label}</span>
-                    <span className="tab-btn-count">{count}</span>
+                    {count !== null && <span className="tab-btn-count">{count}</span>}
                   </button>
                 ))}
               </div>
@@ -503,6 +508,7 @@ export function StudentClasses() {
                               <Badge tone="passed">{t.typeLab}</Badge>
                             )}
                           </div>
+                          {labInfo.find((entry) => entry.id === lab.contentId)?.thumbnail && <img className="class-lab-source-thumbnail" src={labInfo.find((entry) => entry.id === lab.contentId)!.thumbnail} alt="" loading="lazy" />}
                           <div className="class-lab-card-main">
                             <div className="class-lab-icon-box">
                               <FlaskConical size={22} aria-hidden="true" />
@@ -510,7 +516,11 @@ export function StudentClasses() {
                             <h3 className="class-lab-card-title">{lab.title}</h3>
                           </div>
                           <div className="class-lab-card-footer">
-                            <small className="muted">{dueLabel(lab.dueDate)}</small>
+                            <span className="class-lab-card-meta">
+                              <small className="muted">{teacherName}</small>
+                              {lab.createdAt && <small className="muted">Giao lúc {formatDateTime(lab.createdAt)}</small>}
+                              <small className="muted">{dueLabel(lab.dueDate)}</small>
+                            </span>
                             <span className="class-lab-cta">
                               <span>{t.enterLab}</span>
                               <ArrowRight size={14} aria-hidden="true" />

@@ -7288,6 +7288,15 @@ td small {
   color: var(--brand-ink);
 }
 
+.student-assignment-thumbnail {
+  width: 76px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--fill-neutral-95);
+}
+
 .student-list-icon {
   width: 34px;
   height: 34px;
@@ -9062,6 +9071,41 @@ td small {
   border-radius: 20px;
 }
 
+.app-shell-student .assigned-lab-thumbnail {
+  display: block;
+  width: 100%;
+  max-height: min(38vw, 320px);
+  aspect-ratio: 16 / 6;
+  margin: 0 0 18px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--fill-neutral-95);
+}
+
+.app-shell-student .assigned-lab-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-neutral-93-2);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-shell-student .assigned-lab-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-shell-student .assigned-lab-meta svg {
+  flex: 0 0 auto;
+  color: var(--brand);
+}
+
 .app-shell-student .student-assigned-learning .lesson-content>.eyebrow {
   color: var(--brand-ink);
   font-size: 11px;
@@ -10472,6 +10516,217 @@ td small {
   font-size: 12px;
 }
 
+/* Subject Mockup Cover & Class Meta Details */
+.subject-mockup-cover {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 10px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  text-decoration: none;
+  user-select: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #ffffff;
+}
+
+.subject-mockup-cover[class*="physics"],
+.subject-mockup-cover[class*="vat-ly"],
+.subject-mockup-cover.is-physics {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+}
+
+.subject-mockup-cover[class*="chemistry"],
+.subject-mockup-cover[class*="hoa-hoc"],
+.subject-mockup-cover.is-chemistry {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.subject-mockup-cover[class*="biology"],
+.subject-mockup-cover[class*="sinh-hoc"],
+.subject-mockup-cover.is-biology {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.subject-mockup-cover[class*="khtn"],
+.subject-mockup-cover[class*="natural"],
+.subject-mockup-cover.is-natural-science {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.subject-mockup-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.15;
+}
+
+.subject-mockup-decor .decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+}
+
+.subject-mockup-decor .circle-1 {
+  width: 140px;
+  height: 140px;
+  right: -30px;
+  top: -30px;
+}
+
+.subject-mockup-decor .circle-2 {
+  width: 90px;
+  height: 90px;
+  left: -20px;
+  bottom: 10px;
+}
+
+.subject-mockup-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  z-index: 1;
+}
+
+.mockup-class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.mockup-grade-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subject-mockup-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 1;
+  flex: 1;
+  padding: 10px 0;
+}
+
+.mockup-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.mockup-subject-abbr {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.subject-mockup-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(4px);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  z-index: 1;
+  max-width: 100%;
+}
+
+.mockup-class-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Enhanced hierarchy card copy */
+.hierarchy-choice-grade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.hierarchy-choice-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.hierarchy-choice-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hierarchy-choice-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+
+.hierarchy-choice-meta-line.class-meta {
+  color: #0d9488;
+  font-weight: 600;
+}
+
+.hierarchy-choice-meta-line.teacher-meta {
+  color: #475569;
+  font-weight: 500;
+}
+
+.hierarchy-choice:hover .hierarchy-choice-meta-line.class-meta {
+  color: #0f766e;
+}
+
 /* Book-like chapter TOC list */
 .hierarchy-chapter-list {
   display: grid;
@@ -11078,6 +11333,17 @@ td small {
   justify-content: space-between;
   gap: 10px;
   font-size: 12px;
+}
+
+.class-lab-card-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.class-lab-card-meta small {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .class-lab-cta {
