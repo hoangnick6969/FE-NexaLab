@@ -17,3 +17,15 @@
 .tutor-chat-messages li p { color: var(--text, #14202b); }
 .textbook-ask { position: fixed; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow-y: auto; z-index: 40; box-sizing: border-box; }
 .textbook-ask-quote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--brand, #1f6f78); max-height: 120px; overflow-y: auto; color: var(--text, #14202b); overflow-wrap: anywhere; }
+
+/* Lesson passage Q&A (tutor-chat-rules@5): the "ask about this" button next to a highlight, the quoted passage and a
+   docked panel so the student keeps their reading position. */
+.passage-ask-button { position: fixed; z-index: 45; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); white-space: nowrap; }
+.tutor-chat-quote { display: flex; align-items: flex-start; gap: 6px; }
+.tutor-chat-quote > div { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.tutor-chat-quote blockquote { white-space: pre-line; }
+.tutor-chat-quote-ref { display: block; margin-top: 2px; font-style: italic; overflow-wrap: anywhere; }
+.tutor-chat[data-docked="true"] .tutor-chat-panel { position: fixed; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow-y: auto; z-index: 40; box-sizing: border-box; box-shadow: 0 8px 28px rgba(0, 0, 0, .18); }
+@media (max-width: 600px) {
+  .tutor-chat[data-docked="true"] .tutor-chat-panel { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 70vh; }
+}
