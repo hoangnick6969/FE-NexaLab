@@ -30,6 +30,7 @@ const text = defineText({
     savedLabs: "Thí nghiệm đã lưu",
     settings: "Cài đặt tài khoản",
     notifications: "Thông báo",
+    credits: "Tín dụng AI",
     admin: "Quản trị hệ thống",
     explore: "Khám phá",
     pagePath: "Đường dẫn trang",
@@ -61,6 +62,7 @@ const text = defineText({
     savedLabs: "Saved experiments",
     settings: "Account settings",
     notifications: "Notifications",
+    credits: "AI credits",
     admin: "System administration",
     explore: "Explore",
     pagePath: "Page path",
@@ -203,6 +205,12 @@ export function TopbarBreadcrumb({
       return [
         { label: homeLabel, to: "/" },
         { label: t.notifications, isCurrent: true },
+      ];
+    }
+    if (pathname === "/credits") {
+      return [
+        { label: homeLabel, to: "/" },
+        { label: t.credits, isCurrent: true },
       ];
     }
     if (pathname === "/admin") {

@@ -8,6 +8,7 @@ import { Badge, Empty, ErrorBox, PageLoader } from "../../components/ui";
 import { PracticalPathwayStep } from "../labs/pathways/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
 import { AssignedTest } from "./AssignedTest";
+import { AssignedWritten } from "./AssignedWritten";
 import { QuizLearningStep } from "./QuizLearningStep";
 import { defineText, formatDate, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
@@ -108,6 +109,7 @@ export function AssignedLearning() {
   const teacherName = assignment.classroom.teacher?.fullName || (assignment.classroom.teacher?.username ? `@${assignment.classroom.teacher.username}` : t.teacher);
   const sourceLab = assignment.contentType === "lab" ? labInfo.find((lab) => lab.id === content.id) : undefined;
   if (assignment.contentType === "test") return <AssignedTest assignment={assignment} />;
+  if (assignment.contentType === "written") return <AssignedWritten assignment={assignment} />;
   if (assignment.contentType === "lesson" && pathwayQuery.isLoading)
     return <PageLoader message={t.loadingPathway} caption={t.pathwayCaption} />;
   if (assignment.contentType === "lesson" && pathwayQuery.error)

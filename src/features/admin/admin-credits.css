@@ -1,0 +1,5 @@
+/* TAI-05 admin credits panel (admin chunk only). */
+.admin-credits { display: grid; gap: 10px; }
+.admin-credits-forms { display: flex; flex-wrap: wrap; gap: 12px; }
+.admin-credits-forms form { display: grid; gap: 8px; flex: 1 1 260px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.admin-credits-forms textarea { width: 100%; resize: vertical; font: inherit; }

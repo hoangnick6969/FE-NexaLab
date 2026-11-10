@@ -7,11 +7,12 @@ import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
 import { Confirm, LoadError, dueLabel, toLocalInput, useMutate } from "./class-ui";
 import { TestTracking } from "./TestAssignments";
+import { WrittenTracking } from "./WrittenGrading";
 import { defineText } from "../../i18n";
 
 const text = defineText({
   vi: {
-    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra" },
+    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận" },
     students: (n: number) => `${n} học sinh`,
     group: " (nhóm)",
     wholeClass: " (cả lớp)",
@@ -19,6 +20,7 @@ const text = defineText({
     extendedTimes: (n: number) => `Đã dời hạn (lần ${n})`,
     overdue: "Quá hạn",
     trackSubmissions: "Theo dõi bài nộp",
+    trackWritten: "Theo dõi và chấm bài",
     edit: "Sửa",
     archive: "Lưu trữ",
     assigned: "Bài đã giao",
@@ -62,7 +64,7 @@ const text = defineText({
     selectedCount: (n: number) => `Đã chọn ${n} học sinh${n === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}`,
   },
   en: {
-    types: { lesson: "Lesson", lab: "Lab", test: "Test" },
+    types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task" },
     students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
     group: " (group)",
     wholeClass: " (whole class)",
@@ -70,6 +72,7 @@ const text = defineText({
     extendedTimes: (n: number) => `Extended (${n}×)`,
     overdue: "Overdue",
     trackSubmissions: "Track submissions",
+    trackWritten: "Track and grade",
     edit: "Edit",
     archive: "Archive",
     assigned: "Assigned work",
@@ -125,6 +128,9 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const [editing, setEditing] = useState<TeacherAssignment | null>(null);
   const [archiving, setArchiving] = useState<TeacherAssignment | null>(null);
   const [tracking, setTracking] = useState<TeacherAssignment | null>(null);
+  const [writtenTracking, setWrittenTracking] = useState<TeacherAssignment | null>(null);
+  const [writtenView, setWrittenView] = useState<"similarity" | undefined>(undefined);
+  const requestedSimilarity = searchParams.get("similarity");
   const [notice, setNotice] = useState<string | null>(null);
   const list = useQuery<TeacherAssignment[]>({
     queryKey: ["class-assignments", classroom.id],
@@ -134,6 +140,18 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   useEffect(() => {
     if (requestedLabAssignment) setAssigning(true);
   }, [requestedLabAssignment]);
+  // Deep link from a similarity insight: open the written tracking modal of that assignment in its similarity view.
+  useEffect(() => {
+    if (!requestedSimilarity || !list.data) return;
+    const target = list.data.find((item) => item.id === requestedSimilarity && item.contentType === "written");
+    if (target) {
+      setWrittenView("similarity");
+      setWrittenTracking(target);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("similarity");
+    setSearchParams(next, { replace: true });
+  }, [requestedSimilarity, list.data]);
   const closeAssignModal = () => {
     setAssigning(false);
     if (searchParams.has("assign")) {
@@ -150,6 +168,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       case "lab":
         return FlaskConical;
       case "test":
+      case "written":
         return ClipboardCheck;
       case "lesson":
       default:
@@ -195,6 +214,12 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
             <button type="button" className="secondary button-compact" onClick={() => setTracking(a)}>
               <BarChart2 size={14} aria-hidden="true" />
               <span>{t.trackSubmissions}</span>
+            </button>
+          )}
+          {a.contentType === "written" && (
+            <button type="button" className="secondary button-compact" onClick={() => setWrittenTracking(a)}>
+              <BarChart2 size={14} aria-hidden="true" />
+              <span>{t.trackWritten}</span>
             </button>
           )}
           {a.status === "ACTIVE" && !archived && (
@@ -289,6 +314,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
         </Modal>
       )}
       {tracking && <TestTracking classroom={classroom} assignment={tracking} onClose={() => setTracking(null)} />}
+      {writtenTracking && <WrittenTracking classroom={classroom} assignment={writtenTracking} initialView={writtenView} onClose={() => { setWrittenTracking(null); setWrittenView(undefined); }} />}
       {archiving && (
         <Confirm
           action={t.archiveAction}
@@ -315,7 +341,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   const [labChallengeId, setLabChallengeId] = useState("");
   const [validation, setValidation] = useState("");
   const key = useRef(idempotencyKey());
-  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[]; classLabs?: any[] }>({
+  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[]; classLabs?: any[]; writtenTasks?: any[] }>({
     queryKey: ["assignable", classroom.id],
     queryFn: () => api(`/classes/${classroom.id}/assignable-content`),
   });
@@ -325,11 +351,12 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   });
   const approved = roster.data?.filter((e) => e.status === "approved") ?? [];
   const act = useMutate<{ recipientCount: number; message: string }>();
-  const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : content.data?.tests ?? [];
+  const options = contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : contentType === "written" ? content.data?.writtenTasks ?? [] : content.data?.tests ?? [];
   const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
   useEffect(() => { if (initialLabId && selectedLab && !labChallengeId) setLabChallengeId(selectedLab.challenges[0]?.id ?? ""); }, [initialLabId, selectedLab, labChallengeId]);
   const selectedPrivateLab = contentType === "lab" ? content.data?.classLabs?.find((item) => `resource:${item.id}` === contentId) : undefined;
   const isTest = contentType === "test";
+  const isWritten = contentType === "written";
   return (
     <Modal title={t.assign} onClose={onClose}>
       <form
@@ -379,6 +406,10 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
             <input type="radio" name="contentType" checked={isTest} onChange={() => setContentType("test")} />
             {t.test}
           </label>
+          <label className="check">
+            <input type="radio" name="contentType" checked={isWritten} onChange={() => setContentType("written")} />
+            {t.types.written}
+          </label>
         </fieldset>
         <label className="field">
           <span>{t.published}</span>
@@ -392,7 +423,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
             {contentType === "lab" && content.data?.classLabs?.map((item) => <option key={item.id} value={`resource:${item.id}`}>{t.privateLabOption(item.title, item.version)}</option>)}
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
-                {isTest ? t.testOption(item.title, item.version, item.questionCount) : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
+                {isTest ? t.testOption(item.title, item.version, item.questionCount) : isWritten ? `${item.title} · v${item.version} · ${item.promptCount}` : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
                 {item.synthetic ? t.sampleSuffix : ""}
                 {item.scope === "TEACHER_PRIVATE" ? t.privateSuffix : ""}
               </option>
@@ -419,7 +450,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
         )}
         {isTest && <p className="tiny muted">{t.shareNote}</p>}
         <Field label={t.taskNameOptional} name="title" maxLength={200} />
-        <Field label={isTest ? t.dueRequired : t.dueNotRequired} name="dueDate" type="datetime-local" required={isTest} />
+        <Field label={isTest || isWritten ? t.dueRequired : t.dueNotRequired} name="dueDate" type="datetime-local" required={isTest || isWritten} />
         <fieldset className="segmented">
           <legend>Giao cho</legend>
           <label className="check">

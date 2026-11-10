@@ -81,6 +81,10 @@ const SettingsPage = lazy(() =>
 
 const AdminPage = lazy(() => import("../features/admin/Admin"));
 
+// TAI-05 teacher AI credits: loaded on demand for teachers only, so the entry, student and parent bundles never carry it.
+const TeacherCredits = lazy(() => import("../features/credits/TeacherCredits"));
+const TeacherCreditsNav = lazy(() => import("../features/credits/TeacherCreditsNav"));
+
 export const Lab = lazy(() => import("../features/labs/Lab"));
 
 const text = defineText({
@@ -315,6 +319,7 @@ export default function App() {
               <NavLink end to="/" title={t.overview}><LayoutDashboard /><span className="nav-text">{t.overview}</span></NavLink>
               {user.role === "TEACHER" && <NavLink to="/class-labs" title={t.classLab}><FlaskConical /><span className="nav-text">{t.classLab}</span></NavLink>}
               {user.role === "TEACHER" && <NavLink to="/classes" title={t.myClasses}><Users /><span className="nav-text">{t.myClasses}</span></NavLink>}
+              {user.role === "TEACHER" && <Suspense fallback={null}><TeacherCreditsNav /></Suspense>}
               {user.role !== "PARENT" && <NavLink to="/lessons" title={t.lessonLibrary}><BookOpen /><span className="nav-text">{t.lessonLibrary}</span></NavLink>}
               {user.role === "PARENT" && <NavLink to="/progress" title={t.childProgress}><ChartNoAxesCombined /><span className="nav-text">{t.childProgress}</span></NavLink>}
               {user.role === "ADMIN" && <NavLink to="/admin" title={t.admin}><Settings /><span className="nav-text">{t.admin}</span></NavLink>}
@@ -409,6 +414,7 @@ export default function App() {
               <Route path="/classes/:classId/catalog/*" element={user.role === "STUDENT" ? <Classes /> : <Navigate to="/classes" />} />
               <Route path="/progress" element={["STUDENT", "PARENT"].includes(user.role) ? <ProgressPage /> : <Navigate to={user.role === "TEACHER" ? "/classes" : "/"} replace />} />
               <Route path="/saved" element={user.role === "STUDENT" ? <Saved /> : <Navigate to="/" replace />} />
+              <Route path="/credits" element={user.role === "TEACHER" ? <TeacherCredits /> : <Navigate to="/" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route

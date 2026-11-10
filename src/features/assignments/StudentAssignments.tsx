@@ -36,6 +36,7 @@ const text = defineText({
     badgeTest: "Bài kiểm tra",
     teacher: "GV",
     assignedAt: (date: string) => `Giao lúc ${date}`,
+    badgeWritten: "Bài tự luận",
   },
   en: {
     loading: "Loading assignments…",
@@ -62,6 +63,7 @@ const text = defineText({
     badgeTest: "Assessment",
     teacher: "Teacher",
     assignedAt: (date: string) => `Assigned ${date}`,
+    badgeWritten: "Written task",
   },
 });
 
@@ -75,6 +77,7 @@ type AssignmentItem = HierarchyItem & {
   classroom: { id: string; name: string; teacher?: { fullName?: string | null; username?: string | null } | null };
   notice?: string | null;
   testStatus?: { status: string; dueSoon?: boolean; extended?: boolean } | null;
+  writtenStatus?: { status: string; dueSoon?: boolean; extended?: boolean } | null;
 };
 
 export function StudentAssignments() {
@@ -83,7 +86,7 @@ export function StudentAssignments() {
   if (query.isLoading) return <PageLoader message={t.loading} />;
   if (query.error) return <div><ErrorBox error={query.error} /><button onClick={() => query.refetch()}>{t.retry}</button></div>;
   const assignments = (query.data ?? []) as any[];
-  const dueSoon = assignments.filter((item) => item.testStatus?.dueSoon);
+  const dueSoon = assignments.filter((item) => (item.testStatus ?? item.writtenStatus)?.dueSoon);
   const overdueItems = assignments.filter((item) => item.overdue);
   const hierarchical = assignments.filter((item) => item.canOpen && item.subject && item.grade).map((item) => ({
     ...item,
@@ -94,7 +97,7 @@ export function StudentAssignments() {
     itemOrder: item.curriculumOrder ?? item.topicOrder,
     thumbnail: item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined,
   })) as AssignmentItem[];
-  const tests = assignments.filter((item) => item.contentType === "test");
+  const tests = assignments.filter((item) => item.contentType === "test" || item.contentType === "written");
   const ungroupedTests = tests.filter((item) => item.canOpen !== false && (!item.subject || !item.grade));
   const closed = assignments.filter((item) => item.canOpen === false);
   return (
@@ -138,7 +141,7 @@ export function StudentAssignments() {
             <span className="student-assignment-icon-wrap" aria-hidden="true">
               {item.contentType === "lab" ? (
                 <FlaskConical size={18} />
-              ) : item.contentType === "test" ? (
+              ) : item.contentType === "test" || item.contentType === "written" ? (
                 <ClipboardCheck size={18} />
               ) : (
                 <BookOpen size={18} />
@@ -152,14 +155,20 @@ export function StudentAssignments() {
                     ? t.badgeLab
                     : item.contentType === "test"
                       ? t.badgeTest
-                      : t.badgeLesson}
+                      : item.contentType === "written"
+                        ? t.badgeWritten
+                        : t.badgeLesson}
                 </span>
-                {item.testStatus && (
-                  <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>
-                    {testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}
-                    {item.testStatus.extended ? t.extended : ""}
-                  </Badge>
-                )}
+                {(() => {
+                  const status = item.testStatus ?? item.writtenStatus;
+                  if (!status) return null;
+                  return (
+                    <Badge tone={testStatusTone[status.status as keyof typeof testStatusTone]}>
+                      {testStatusLabel[status.status as keyof typeof testStatusLabel]}
+                      {status.extended ? t.extended : ""}
+                    </Badge>
+                  );
+                })()}
               </span>
               <div className="student-assignment-meta-row">
                 <span className="student-assignment-meta-text">

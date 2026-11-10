@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus, ArrowUpRight, BookOpen, Save } from "lucide-react";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, idempotencyKey, isApiError, mutate, useAuth, uploadFile } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton } from "../../components/ui";
 import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard } from "./lesson-catalog";
+// TAI-06: the AI lab-challenge panel is teacher-only code, loaded on demand so the student lesson hub never carries it.
+const LabChallengeEntry = lazy(() => import("../lab-challenge/LabChallengePanel"));
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
 import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
 import { StudentLessonsHub } from "./StudentLessonsHub";
@@ -462,7 +464,6 @@ function LessonsLibrary({ user }: { user: any }) {
       {filtersActive && library.data && library.data.items.length === 0 && (
         <Empty>{t.noFilterMatch}</Empty>
       )}
-      {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
       {edit && (
         <Modal
           title={edit.id ? t.editLesson : t.createLesson}
@@ -766,6 +767,17 @@ function LessonsLibrary({ user }: { user: any }) {
               + {t.addQuestion}
             </button>
             <TaxonomyFields edit={edit} setEdit={setEdit} taxonomy={library.data?.taxonomy} outcomes={library.data?.outcomes ?? []} />
+            {user.role === "TEACHER" && (
+              <Suspense fallback={null}>
+                <LabChallengeEntry
+                  lesson={edit}
+                  meta={meta.get(edit.id)}
+                  parameters={library.data?.taxonomy?.challengeParameters}
+                  onApplied={(applied) => setEdit((s: any) => ({ ...s, labId: applied.labId, challengeParams: applied.challengeParams }))}
+                  onPreview={(id) => setPreviewId(id)}
+                />
+              </Suspense>
+            )}
             <ReviewChecklist value={edit.review} onChange={(review) => setEdit((s: any) => ({ ...s, review }))} />
             {user.role === "ADMIN" && edit.id && edit.scope === "SHARED_LIBRARY" && meta.get(edit.id)?.releaseReview && (
               <ReleaseReviews lessonId={edit.id} reviews={meta.get(edit.id).releaseReview} />
@@ -793,6 +805,7 @@ function LessonsLibrary({ user }: { user: any }) {
           </form>
         </Modal>
       )}
+      {previewId && <PreviewModal id={previewId} onClose={() => setPreviewId(null)} />}
     </div>
   );
 }
