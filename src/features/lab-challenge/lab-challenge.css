@@ -1,0 +1,36 @@
+/* TAI6-T4 lab-challenge panel (teacher lesson editor only; loaded with the lazy panel chunk). */
+.lab-challenge { margin: 12px 0; }
+.lab-challenge-disabled { margin: 12px 0; }
+.lab-challenge-panel { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface); }
+.lab-challenge-head { display: flex; gap: 10px; align-items: flex-start; color: var(--brand-ink); }
+.lab-challenge-head > div { flex: 1 1 auto; min-width: 0; }
+.lab-challenge-head h3 { margin: 2px 0 4px; color: var(--text); }
+.lab-challenge-form { display: grid; gap: 10px; border: 0; padding: 0; margin: 0; }
+.lab-challenge-form textarea { width: 100%; resize: vertical; font: inherit; }
+.lab-challenge-panel .warning-text { color: var(--warning, #8a5a00); }
+.lab-challenge-panel .button-compact { padding: 4px 10px; font-size: 0.85rem; }
+.lab-challenge-recent ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.lab-challenge-recent li { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.lab-challenge-job { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.lab-challenge-job-head { display: flex; align-items: center; gap: 10px; }
+.lab-challenge-job-head > div { flex: 1 1 auto; min-width: 0; }
+.lab-challenge-reasons { margin: 4px 0 0; padding-left: 18px; }
+.lab-challenge-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lab-challenge-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); }
+.lab-challenge-card.is-rejected { opacity: 0.6; }
+.lab-challenge-card.is-applied { border-color: var(--brand, #1f6f5c); }
+.lab-challenge-card h4 { margin: 8px 0 0; font-weight: 600; }
+.lab-challenge-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lab-challenge-params { margin: 0; display: grid; gap: 4px; }
+.lab-challenge-params > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.lab-challenge-params dt { font-weight: 600; }
+.lab-challenge-params dd { margin: 0; }
+.lab-challenge-objective, .lab-challenge-rationale { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--surface-muted, rgba(0, 0, 0, 0.04)); }
+.lab-challenge-rationale { font-style: italic; }
+.lab-challenge-engine { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lab-challenge-engine li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: space-between; }
+.lab-challenge-applied { display: grid; gap: 6px; }
+@media (max-width: 640px) {
+  .lab-challenge-panel { padding: 12px; }
+  .lab-challenge-engine li { align-items: flex-start; }
+}

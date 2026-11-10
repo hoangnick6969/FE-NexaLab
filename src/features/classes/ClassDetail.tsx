@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { KeyRound, Archive, Edit3, Power, Users, ClipboardList, Layers, BarChart2 } from "lucide-react";
+import { KeyRound, Archive, Edit3, Power, Users, ClipboardList, Layers, BarChart2, Lightbulb } from "lucide-react";
 import { ErrorBox, Field, Modal } from "../../components/ui";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { type ClassSummary } from "./class-types";
@@ -9,6 +9,8 @@ import { Roster } from "./Roster";
 import { LateQueue } from "./TestAssignments";
 import { Assignments } from "./Assignments";
 import { PracticeAnalytics } from "./PracticeAnalytics";
+import { ClassInsights } from "./ClassInsights";
+import { insightText } from "./insights-copy";
 import { defineText } from "../../i18n";
 import "./teacher-operations.css";
 
@@ -74,7 +76,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
     { id: "students", label: t.studentsTab, icon: Users },
     { id: "work", label: t.workTab, icon: ClipboardList },
     { id: "resources", label: t.resourcesTab, icon: Layers },
-    ...(!archived ? [{ id: "progress", label: t.progressTab, icon: BarChart2 }] : []),
+    ...(!archived ? [{ id: "progress", label: t.progressTab, icon: BarChart2 }, { id: "insights", label: insightText().tab, icon: Lightbulb }] : []),
   ];
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : "students";
   const [modal, setModal] = useState<"" | "edit" | "rotate" | "archive" | "code">("");
@@ -174,6 +176,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
         </>}
         {activeTab === "resources" && <TeacherClassResources classId={classroom.id} disabled={archived} />}
         {activeTab === "progress" && !archived && <PracticeAnalytics classId={classroom.id} />}
+        {activeTab === "insights" && !archived && <ClassInsights classId={classroom.id} />}
       </section>
       {modal === "edit" && (
         <Modal title={t.editClass} onClose={close}>

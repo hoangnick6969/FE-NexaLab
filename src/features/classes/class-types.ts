@@ -32,7 +32,7 @@ export type TeacherAssignment = {
   testSummary?: { revision: number; extended: boolean; counts: Record<"SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED" | "OVERDUE_UNSUBMITTED" | "NOT_SUBMITTED", number> };
 };
 
-export type AssignableType = "lesson" | "lab" | "test";
+export type AssignableType = "lesson" | "lab" | "test" | "written";
 
 // ---------------- Student ----------------
 

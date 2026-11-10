@@ -1,0 +1,15 @@
+/* TAI-05 teacher credits. Loaded with the credit components only (teacher chunk). */
+.credit-estimate { display: grid; gap: 4px; }
+.credit-estimate-line { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--brand-ink); }
+.credit-estimate-line.is-short { color: #ea580c; }
+.credit-job-line { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); }
+.credits-page { display: grid; gap: 16px; }
+.credits-balance { display: flex; flex-wrap: wrap; gap: 12px; }
+.credits-balance-card { display: flex; align-items: center; gap: 10px; min-width: 220px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--brand-ink); }
+.credits-balance-card small { display: block; color: var(--muted); }
+.credits-balance-card b { font-size: 1.4rem; color: var(--text); }
+.credits-balance-card b span { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+.credits-history-title { margin: 8px 0 0; font-size: 1.05rem; }
+.credit-history { width: 100%; border-collapse: collapse; }
+.credit-history th, .credit-history td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.credit-history .num { text-align: right; white-space: nowrap; }

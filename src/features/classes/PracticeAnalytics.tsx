@@ -6,6 +6,7 @@ import { Empty, verdictLabel } from "../../components/ui";
 import { type TeacherAssignment } from "./class-types";
 import { LoadError } from "./class-ui";
 import { ClassHintInsight } from "./ClassHintInsight";
+import { StudentInsightsSection } from "./ClassInsights";
 import { defineText, formatDateTime } from "../../i18n";
 
 const text = defineText({
@@ -170,6 +171,7 @@ export function PracticeAnalytics({ classId }: { classId: string }) {
                       </div>
                     </>
                   )}
+                  <StudentInsightsSection classId={classId} studentId={row.student.id} />
                 </div>
               )}
             </div>
