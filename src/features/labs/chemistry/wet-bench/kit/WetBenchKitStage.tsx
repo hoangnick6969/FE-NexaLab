@@ -84,10 +84,12 @@ function FollowGroup({ home, active, getTarget, children, scale = 1 }: { home: [
   return <group ref={ref} position={home} scale={scale}>{children}</group>;
 }
 
-export function WetBenchKitStage({ state, dispatch, hovered, onHover, viewResetSignal }: {
+export function WetBenchKitStage({ state, dispatch, hovered, onHover, viewResetSignal, view = VIEW }: {
   state: BenchUiState; dispatch: Dispatch<BenchAction>; hovered: string | null; onHover: (id: string | null) => void; viewResetSignal: number;
+  /** Camera override; only the lab-card thumbnail capture uses it. */
+  view?: BenchViewPreset;
 }) {
-  return <PhysicsStage view={VIEW} viewResetSignal={viewResetSignal}>
+  return <PhysicsStage view={view} viewResetSignal={viewResetSignal}>
     <BenchScene state={state} dispatch={dispatch} hovered={hovered} onHover={onHover} />
   </PhysicsStage>;
 }

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CircuitBulb3DStage } from "../physics/electricity/CircuitBulb3DStage";
 import { EmInduction3DStage } from "../physics/electricity/induction/EmInduction3DStage";
 import { Density3DStage } from "../physics/fluid/density/Density3DStage";
-import type { StageView } from "../physics/shared/PhysicsStage";
+import type { BenchViewPreset, StageView } from "../physics/shared/PhysicsStage";
 import { defaultDensityEvidence } from "../physics/fluid/density/density-evidence";
 import { WetBenchStage } from "../chemistry/wet-bench/WetBenchStage";
 import { GeneProtein3DStage } from "../biology/molecular/gene-protein/GeneProtein3DStage";
@@ -25,6 +25,51 @@ import { ENERGY_CHAIN, type SpeciesId } from "../biology/ecology/food-web/fw-evi
 import { FOOD_WEB_SPECIES } from "@nexalab/sim";
 import "../biology/ecology/food-web/FoodWebActivity.css";
 import "../shared/LabSpace.css";
+import { WetBenchKitStage } from "../chemistry/wet-bench/kit/WetBenchKitStage";
+import { benchReducer, initialBenchState, type BenchAction, type BenchUiState } from "../chemistry/wet-bench/kit/bench-reducer";
+import { fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
+import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+
+/** K2 explore benches: a mid-session state built from the same reducer actions a student would perform. */
+function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unknown>>) {
+  const played = steps.reduce<BenchUiState>((current, step) => benchReducer(current, { now: 0, ...step } as BenchAction), initialBenchState(config));
+  const state: BenchUiState = { ...played, focusVesselId: null, notice: null, banner: null };
+  return <div className="k2-thumbnail">
+    <WetBenchKitStage state={state} dispatch={() => undefined} hovered={null} onHover={() => undefined} viewResetSignal={0} view={k2ThumbnailView} />
+    {/* Text tags are hidden so the card reads in any language (and kit.css is not loaded here). */}
+    <style>{`.k2-vessel-tag, .k2-bottle-tag, .k2-strip-chip, .k2-drag-tag, .k2-lcd { display: none !important; }`}</style>
+  </div>;
+}
+/** Capture-only framing: the tube rack and the reagent shelf fill the card, no HUD insets. */
+const k2ThumbnailView: BenchViewPreset = {
+  wide: { position: [-0.45, 1.35, 1.75], target: [-0.45, 0.25, -0.3] },
+  narrow: { position: [-0.45, 1.35, 1.75], target: [-0.45, 0.25, -0.3] },
+  minDistance: 0.8, maxDistance: 6,
+};
+const dropper = { type: "hold", held: { kind: "tool", tool: "dropper", apparatusId: "dropper" } };
+const fill = (reagentId: string, vesselId: string) => [{ type: "click_bottle", reagentId }, { type: "click_vessel", vesselId }];
+
+/** FL-13: acids, water and bases side by side; phenolphthalein pink in both bases, litmus strips dipped in acid, water and vinegar. */
+const acidBaseThumbnail = () => k2Thumbnail(fl13Config, [
+  dropper, { type: "preset", microliters: 1000 },
+  ...fill("HCl_0_1M", "T1"), ...fill("NaOH_0_1M", "T2"), ...fill("H2O_distilled", "T3"),
+  ...fill("CH3COOH_0_1M", "T4"), ...fill("CaOH2_0_01M", "T5"),
+  { type: "click_bottle", reagentId: "phenolphthalein_indicator" }, { type: "click_vessel", vesselId: "T2" }, { type: "click_vessel", vesselId: "T5" },
+  { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "litmus_paper", apparatusId: "litmus" } },
+  { type: "click_vessel", vesselId: "T1" }, { type: "click_vessel", vesselId: "T3" }, { type: "click_vessel", vesselId: "T4" },
+  { type: "release" },
+]);
+
+/** FL-14a: Zn, Fe and Cu each in dilute HCl, and an iron nail in CuSO4. */
+const metalReactivityThumbnail = () => k2Thumbnail(fl14aConfig, [
+  dropper, { type: "preset", microliters: 1000 },
+  ...fill("HCl_0_1M", "T1"), ...fill("HCl_0_1M", "T2"), ...fill("HCl_0_1M", "T3"), ...fill("CuSO4_0_1M", "T4"),
+  { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "tongs", apparatusId: "tongs" } },
+  ...fill("Zn_granule", "T1"), ...fill("Fe_nail", "T2"), ...fill("Cu_foil", "T3"), ...fill("Fe_nail", "T4"),
+  { type: "release" },
+]);
 
 const densityThumbnailView: StageView = {
   position: [-0.25, 1.28, 1.95], target: [-0.4, 0.3, 0.08],
@@ -58,6 +103,8 @@ const foodWebThumbnail = () => <div className="fw-thumbnail">
 </div>;
 
 const scenes: Record<string, () => ReactNode> = {
+  "acid-base-indicators": acidBaseThumbnail,
+  "metal-reactivity": metalReactivityThumbnail,
   "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,
