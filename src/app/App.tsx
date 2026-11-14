@@ -250,6 +250,7 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><EyeOpticsPreview /></Suspense>;
   if (K2KitPreview && location.pathname === "/dev/lab-kits/k2")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K2KitPreview /></Suspense>;
+  if (user?.mustChangePassword) return <PasswordGate />;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {
@@ -270,7 +271,6 @@ export default function App() {
       </Suspense>
     );
   }
-  if (user.mustChangePassword) return <PasswordGate />;
   if (/^\/labs\/[^/]+\/?$/.test(location.pathname)) return <Suspense fallback={<div className="lab-space"><Link className="secondary" to={user.role === "TEACHER" ? "/class-labs" : "/labs"}>{user.role === "TEACHER" ? t.classLab : t.labsLabel}</Link><PageLoader fullScreen message={t.starting} /></div>}>
     <Routes><Route path="/labs/:id" element={["STUDENT", "TEACHER"].includes(user.role) ? <Lab /> : <Navigate to="/" />} /></Routes>
   </Suspense>;

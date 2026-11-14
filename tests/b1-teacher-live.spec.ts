@@ -54,6 +54,7 @@ async function studentLogin(browser: Browser, username: string, password: string
   if (temporary) {
     await page.getByLabel("Mật khẩu tạm").fill(password);
     await page.getByLabel("Mật khẩu mới (ít nhất 12 ký tự)").fill(studentPassword);
+    await page.getByLabel("Nhập lại mật khẩu mới").fill(studentPassword);
     await page.getByRole("button", { name: /Lưu và bắt đầu học/ }).click();
     await expect(page.getByText("Đổi mật khẩu tạm")).toHaveCount(0);
   }

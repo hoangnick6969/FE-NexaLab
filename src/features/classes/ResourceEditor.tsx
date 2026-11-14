@@ -39,6 +39,7 @@ const text = defineText({
     addPrompt: "Thêm câu tự luận",
     removePrompt: (n: number) => `Xóa câu tự luận ${n}`,
     totalPoints: (n: number) => `Tổng điểm tối đa: ${n}`,
+    thumbnailUrl: "URL ảnh bìa bài kiểm tra (HTTPS, tùy chọn)",
   },
   en: {
     card: (n: number) => `Card ${n}`,
@@ -75,12 +76,13 @@ const text = defineText({
     addPrompt: "Add a written question",
     removePrompt: (n: number) => `Remove written question ${n}`,
     totalPoints: (n: number) => `Total maximum points: ${n}`,
+    thumbnailUrl: "Test cover image URL (HTTPS, optional)",
   },
 });
 
 export type WrittenCriterion = { code: string; description: string; maxPoints: number; anchors: Array<{ points: number; description: string }> };
 export type WrittenPrompt = { id?: string; prompt: string; maxChars: number; referenceAnswer?: string; commonPhrases?: string[]; criteria: WrittenCriterion[] };
-export type ResourceContent = { prompts?: WrittenPrompt[]; customParams?: Record<string, number>; source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
+export type ResourceContent = { prompts?: WrittenPrompt[]; customParams?: Record<string, number>; source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; thumbnailUrl?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
 
 export const emptyCriterion = (): WrittenCriterion => ({ code: "", description: "", maxPoints: 2, anchors: [{ points: 0, description: "" }, { points: 2, description: "" }] });
 export const emptyWrittenPrompt = (): WrittenPrompt => ({ prompt: "", maxChars: 1000, referenceAnswer: "", commonPhrases: [], criteria: [emptyCriterion()] });
@@ -97,10 +99,11 @@ export function resourceInput(kind: ResourceKind, value: ResourceContent) {
         criteria: p.criteria.map((c) => ({ code: c.code.trim().toUpperCase(), description: c.description, maxPoints: Number(c.maxPoints), anchors: c.anchors.map((a) => ({ points: Number(a.points), description: a.description })) })),
       })),
     };
-  if (kind === "LAB") return { source: value.source, learningObjective: value.learningObjective, instructions: value.instructions, reportPrompts: value.reportPrompts?.filter((prompt) => prompt.trim()) ?? [], ...(value.customParams ? { customParams: value.customParams } : {}) };
+  if (kind === "LAB") return { source: value.source, learningObjective: value.learningObjective, instructions: value.instructions, reportPrompts: value.reportPrompts?.filter((prompt) => prompt.trim()) ?? [], ...(value.thumbnailUrl?.trim() ? { thumbnailUrl: value.thumbnailUrl.trim() } : {}), ...(value.customParams ? { customParams: value.customParams } : {}) };
   if (kind === "DOCUMENT" || kind === "REPORT_TEMPLATE") return { description: value.description ?? "", source: value.source };
   if (kind === "LINK") return { url: value.url, description: value.description ?? "" };
   return kind === "DECK" ? { cards: value.cards?.map(({ front, back }) => ({ front, back })) } : {
+    ...(kind === "TEST" && value.thumbnailUrl?.trim() ? { thumbnailUrl: value.thumbnailUrl.trim() } : {}),
     questions: value.questions?.map((question) => ({ prompt: question.prompt, options: question.options.map((option) => typeof option === "string" ? option : option.text),
       ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 } : {}) })),
   };
@@ -148,9 +151,10 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
     );
   }
   const questions = value.questions ?? [];
-  const update = (index: number, change: Partial<NonNullable<ResourceContent["questions"]>[number]>) => onChange({ questions: questions.map((question, i) => i === index ? { ...question, ...change } : question) });
+  const update = (index: number, change: Partial<NonNullable<ResourceContent["questions"]>[number]>) => onChange({ ...value, questions: questions.map((question, i) => i === index ? { ...question, ...change } : question) });
   return (
     <div className="resource-practice-items">
+      {kind === "TEST" && <Field label={t.thumbnailUrl} type="url" maxLength={2048} value={value.thumbnailUrl ?? ""} onChange={(event) => onChange({ ...value, thumbnailUrl: event.target.value })} />}
       {questions.map((question, index) => (
         <fieldset key={index} className="resource-subcard">
           <div className="resource-subcard-header">
@@ -160,7 +164,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
               className="resource-delete-btn"
               disabled={questions.length <= 1}
               title={t.removeQuestion(index + 1)}
-              onClick={() => onChange({ questions: questions.filter((_, i) => i !== index) })}
+              onClick={() => onChange({ ...value, questions: questions.filter((_, i) => i !== index) })}
             >
               <Trash2 size={13} aria-hidden="true" />
               <span>{t.removeQuestion(index + 1)}</span>
@@ -190,7 +194,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
         type="button"
         className="resource-add-item-btn"
         disabled={questions.length >= 100}
-        onClick={() => onChange({ questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" ? { correctOption: 0 } : {}) }] })}
+        onClick={() => onChange({ ...value, questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" ? { correctOption: 0 } : {}) }] })}
       >
         <Plus size={15} aria-hidden="true" />
         <span>{t.addQuestion}</span>

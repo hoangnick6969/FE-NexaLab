@@ -2,6 +2,7 @@ import { Atom, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { api, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, Field, PasswordField, useAction } from "../../components/ui";
+import { usernameGuidance } from "../../i18n/errors";
 import { defineText } from "../../i18n";
 
 const text = defineText({
@@ -31,7 +32,7 @@ const text = defineText({
     studentUsername: "Tên đăng nhập học sinh",
     password: "Mật khẩu",
     remember: "Ghi nhớ đăng nhập trên thiết bị này",
-    rememberHint: "Chỉ bật trên máy riêng. Khi tắt, phiên kết thúc lúc đóng trình duyệt.",
+    rememberHint: "Chỉ bật trên máy riêng. Khi tắt, cookie chỉ dùng trong phiên trình duyệt (có thể được khôi phục cùng phiên).",
     consent: "Tôi là người lớn và đồng ý xử lý dữ liệu tài khoản để sử dụng nền tảng.",
     working: "Đang xử lý…",
     signIn: "Đăng nhập",
@@ -69,7 +70,7 @@ const text = defineText({
     studentUsername: "Student username",
     password: "Password",
     remember: "Keep me signed in on this device",
-    rememberHint: "Only on your own device. When off, the session ends when the browser closes.",
+    rememberHint: "Only on your own device. When off, the cookie lasts for the browser session (which browser session restore may recover).",
     consent: "I am an adult and agree to the processing of account data to use the platform.",
     working: "Working…",
     signIn: "Sign in",
@@ -90,6 +91,7 @@ export function Login() {
     const params = new URLSearchParams(location.search);
     return params.has("reset") ? "reset" : params.has("admin") ? "admin-login" : "student-login";
   });
+  const [usernameError, setUsernameError] = useState(false);
   const [message, setMessage] = useState("");
   const action = useAction(async (b: any) => {
     if (mode === "forgot") {
@@ -175,21 +177,38 @@ export function Login() {
                       : t.parentIntro}
           </p>
           <form
+            key={mode}
+            onChange={() => { if (action.isError) action.reset(); }}
             onSubmit={(e) => {
               e.preventDefault();
-              action.mutate(Object.fromEntries(new FormData(e.currentTarget)));
+              if (action.isPending) return;
+              const body = Object.fromEntries(new FormData(e.currentTarget));
+              const username = String(body.username ?? "").trim().toLowerCase();
+              if (mode === "student-login" && (username.length < 3 || username.length > 32 || !/^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/.test(username))) {
+                setUsernameError(true);
+                e.currentTarget.querySelector<HTMLInputElement>("[name=username]")?.focus();
+                return;
+              }
+              setUsernameError(false);
+              action.mutate(body);
             }}
           >
             {mode === "register" && (
               <Field label={t.fullName} name="fullName" required />
             )}
             {mode === "student-login" && (
+              <>
               <Field
                 label={t.studentUsername}
                 name="username"
                 required
                 autoComplete="username"
+                aria-describedby="username-guidance"
+                aria-invalid={usernameError || undefined}
+                onChange={() => { setUsernameError(false); if (action.isError) action.reset(); }}
               />
+              <p id="username-guidance" className={usernameError ? "error" : "tiny muted"} role={usernameError ? "alert" : undefined}>{usernameGuidance()}</p>
+              </>
             )}
             {mode !== "reset" && mode !== "student-login" && (
               <Field
@@ -239,9 +258,12 @@ export function Login() {
           </form>
           <div className="login-links">
             {(["login", "student-login"].includes(mode)) && <button
+              disabled={action.isPending}
               onClick={() => {
                 setMode(mode === "student-login" ? "login" : "student-login");
                 setMessage("");
+                setUsernameError(false);
+                action.reset();
               }}
             >
               {mode === "student-login"
@@ -249,17 +271,23 @@ export function Login() {
                 : t.studentByUsername}
             </button>}
             {(["login", "student-login", "admin-login"].includes(mode)) && <button
+              disabled={action.isPending}
               onClick={() => {
                 setMode(mode === "forgot" ? "login" : "forgot");
                 setMessage("");
+                setUsernameError(false);
+                action.reset();
               }}
             >
               {t.forgotLink}
             </button>}
             {(["forgot", "reset", "register"].includes(mode)) && <button
+              disabled={action.isPending}
               onClick={() => {
                 setMode("login");
                 setMessage("");
+                setUsernameError(false);
+                action.reset();
               }}
             >
               {t.backToLogin}

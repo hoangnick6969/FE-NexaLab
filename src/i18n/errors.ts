@@ -197,10 +197,28 @@ const en: Record<string, string | ((server: string) => string)> = {
 const byStatus: Record<number, string> = { 400: "VALIDATION_FAILED", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND", 409: "CONFLICT", 413: "PAYLOAD_TOO_LARGE", 429: "RATE_LIMITED", 503: "DEPENDENCY_FAILURE" };
 
 /** Message shown for an API error in the current language. */
-export function apiErrorMessage(status: number, code: string, serverMessage: string | undefined) {
+export function apiErrorMessage(status: number, code: string, serverMessage: string | undefined, details?: unknown) {
+  const vi = getLocale() === "vi";
+  if (code === "NETWORK_ERROR") return vi ? "Không thể kết nối. Kiểm tra mạng rồi thử lại." : "Cannot connect. Check your connection and try again.";
+  if (status >= 500) return vi ? "Máy chủ đang gặp sự cố. Vui lòng thử lại sau." : "The server is temporarily unavailable. Please try again shortly.";
+  if (status === 429) return vi ? "Bạn đã thử quá nhiều lần. Vui lòng chờ một lát rồi thử lại." : "Too many attempts. Please wait a moment and try again.";
+  if (code === "VALIDATION_FAILED") {
+    const fields = Array.isArray(details) ? details.map((item) => item?.path) : [];
+    if (fields.includes("username")) return usernameGuidance();
+    if (fields.includes("password")) return vi ? "Mật khẩu tối đa 128 ký tự; mật khẩu mới cần ít nhất 12 ký tự." : "Passwords can contain at most 128 characters; a new password needs at least 12.";
+    if (fields.includes("currentPassword")) return vi ? "Nhập mật khẩu hiện tại để tiếp tục." : "Enter your current password to continue.";
+    if (fields.includes("email")) return vi ? "Nhập địa chỉ email hợp lệ." : "Enter a valid email address.";
+    return vi ? "Kiểm tra lại thông tin đã nhập rồi thử lại." : "Check the information you entered and try again.";
+  }
   if (getLocale() === "vi") return serverMessage ?? "Không thể kết nối máy chủ";
   // Unknown codes fall back to their status class; a body-less gateway error means the server was not reached.
   if (!serverMessage && code.startsWith("HTTP_") && status >= 500) return "Cannot reach the server";
   const entry = en[code] ?? en[byStatus[status] ?? (status >= 500 ? "INTERNAL_ERROR" : "VALIDATION_FAILED")];
   return typeof entry === "function" ? entry(serverMessage ?? "") : entry;
+}
+
+export function usernameGuidance() {
+  return getLocale() === "vi"
+    ? "Tên đăng nhập gồm 3–32 ký tự: chữ cái, số, dấu chấm, gạch ngang hoặc gạch dưới; bắt đầu và kết thúc bằng chữ cái hoặc số, không có khoảng trắng bên trong."
+    : "Use 3–32 letters, numbers, dots, hyphens or underscores. Start and end with a letter or number, with no spaces inside.";
 }

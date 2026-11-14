@@ -9,6 +9,8 @@ import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components
 import { defineText, formatDate, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
 import { labInfo } from "../labs/lab-info";
+import { labCurriculumMetadata } from "../labs/lab-curriculum-label";
+import "../classes/class-resource-preview.css";
 
 const text = defineText({
   vi: {
@@ -71,6 +73,7 @@ type AssignmentItem = HierarchyItem & {
   contentId: string;
   createdAt: string;
   contentType: string;
+  thumbnailUrl?: string | null;
   dueDate: string | null;
   overdue: boolean;
   canOpen: boolean;
@@ -90,9 +93,9 @@ export function StudentAssignments() {
   const overdueItems = assignments.filter((item) => item.overdue);
   const hierarchical = assignments.filter((item) => item.canOpen && item.subject && item.grade).map((item) => ({
     ...item,
-    subjectId: item.subject.id,
-    subjectName: item.subject.name,
-    grade: Number(item.grade),
+    subjectId: item.contentType === "lab" ? labCurriculumMetadata(item).subjectId : item.subject.id,
+    subjectName: item.contentType === "lab" ? labCurriculumMetadata(item).subjectName : item.subject.name,
+    grade: Number(item.contentType === "lab" ? labCurriculumMetadata(item).grade : item.grade),
     chapter: item.chapter || commonText().noChapter,
     itemOrder: item.curriculumOrder ?? item.topicOrder,
     thumbnail: item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined,
@@ -135,9 +138,10 @@ export function StudentAssignments() {
         itemLabel={t.itemLabel}
         emptyCopy={ungroupedTests.length ? t.emptyUngrouped : t.emptyAll}
         renderItem={(item) => {
-          const thumbnail = item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined;
+          const thumbnail = item.thumbnailUrl || (item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined);
           return <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
-            {thumbnail && <img className="student-assignment-thumbnail" src={thumbnail} alt="" loading="lazy" />}
+            {thumbnail && <img className="student-assignment-thumbnail" src={thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} />}
+            <span className="class-test-thumbnail" hidden={item.contentType === "lesson" || Boolean(thumbnail)} aria-hidden="true">{item.contentType === "lab" ? <FlaskConical size={30} /> : <ClipboardCheck size={30} />}</span>
             <span className="student-assignment-icon-wrap" aria-hidden="true">
               {item.contentType === "lab" ? (
                 <FlaskConical size={18} />
@@ -194,6 +198,8 @@ export function StudentAssignments() {
           <div className="student-list student-assignment-list">
             {ungroupedTests.map((item) => (
               <Link key={item.id} className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
+                {item.thumbnailUrl && <img className="student-assignment-thumbnail" src={item.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} />}
+                <span className="class-test-thumbnail" hidden={Boolean(item.thumbnailUrl)} aria-hidden="true"><ClipboardCheck size={30} /></span>
                 <span className="student-assignment-icon-wrap" aria-hidden="true">
                   <ClipboardCheck size={18} />
                 </span>

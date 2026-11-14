@@ -101,6 +101,7 @@ export function RichResourceEditor({ kind, value, onChange, classId }: { kind: R
       {stale && <p className="notice">{t.stale}</p>}
       {stale && selected && <button type="button" className="secondary" onClick={() => onChange({ ...value, source: { labId: selected.id, releaseId: selected.release.id, challengeId: selected.challenges.some((item: any) => item.id === value.source.challengeId) ? value.source.challengeId : selected.challenges[0]?.id ?? "" } })}>{t.upgrade}</button>}
       <Field label={t.objective} required maxLength={1000} value={value.learningObjective ?? ""} onChange={(event) => onChange({ ...value, learningObjective: event.target.value })} />
+      <Field label={t.thumbnailUrl} type="url" maxLength={2048} value={value.thumbnailUrl ?? ""} onChange={(event) => onChange({ ...value, thumbnailUrl: event.target.value })} />
       <label className="field"><span>{t.instructions}</span><textarea required rows={3} maxLength={10000} value={value.instructions ?? ""} onChange={(event) => onChange({ ...value, instructions: event.target.value })} /></label>
       <label className="field"><span>{t.prompts}</span><textarea rows={2} value={(value.reportPrompts ?? []).join("\n")} onChange={(event) => onChange({ ...value, reportPrompts: event.target.value.split("\n") })} /></label>
       <ResourcePreview kind={kind} content={value} />
