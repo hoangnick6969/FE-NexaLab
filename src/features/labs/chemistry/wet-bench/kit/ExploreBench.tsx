@@ -57,11 +57,18 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { 
     if (introOpen) return;
     const key = (event: KeyboardEvent) => {
       const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
-      if (event.key === "Escape" && state.held && !typing) { event.preventDefault(); dispatch({ type: "hold", held: null }); }
+      if (event.key === "Escape" && state.held && !typing) { event.preventDefault(); dispatch({ type: "release" }); }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !typing) { event.preventDefault(); dispatch({ type: "undo", now: Date.now() }); }
     };
+    // Right-click puts whatever is in hand back where it was, instead of opening the browser menu.
+    const rightClick = (event: MouseEvent) => {
+      if (!state.held) return;
+      event.preventDefault();
+      dispatch({ type: "release" });
+    };
     window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
+    window.addEventListener("contextmenu", rightClick, true);
+    return () => { window.removeEventListener("keydown", key); window.removeEventListener("contextmenu", rightClick, true); };
   }, [introOpen, state.held]);
 
   const prompts = useMemo(() => (config.pedagogy.observationPrompts ?? []).map((prompt) => {

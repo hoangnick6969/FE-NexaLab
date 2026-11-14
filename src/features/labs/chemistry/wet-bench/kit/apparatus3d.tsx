@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { SPECIES, type VesselVisualState } from "@nexalab/sim/wet-bench";
 import { CATEGORY_COLOR, LITMUS_HEX, visualFill, type BottleCategory, type Look } from "./liquid-look";
 
+const LABEL_ARC = 1.9;
 const GLASS = { color: "#e0f2fe", transparent: true, opacity: 0.32, roughness: 0.15, metalness: 0.02, depthWrite: false, side: THREE.DoubleSide } as const;
 
 export const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -93,15 +94,6 @@ function Precipitate({ visual, radius, floorY }: { visual: VesselVisualState; ra
   return <mesh position={[0, floorY + h / 2, 0]}><cylinderGeometry args={[radius * 0.95, radius * 0.95, h, 24]} /><meshStandardMaterial color={visual.precipitate.color} roughness={1} /></mesh>;
 }
 
-/** A tried litmus strip left lying at the foot of its vessel, so results can be compared side by side. */
-function FootStrip({ colour, y, z }: { colour?: keyof typeof LITMUS_HEX; y: number; z: number }) {
-  if (!colour) return null;
-  return <group position={[0.03, y, z]} rotation={[-Math.PI / 2, 0, 0.35]}>
-    <mesh position={[0, 0.035, 0]}><boxGeometry args={[0.016, 0.07, 0.003]} /><meshStandardMaterial color={LITMUS_HEX.purple} roughness={0.8} /></mesh>
-    <mesh position={[0, -0.03, 0]}><boxGeometry args={[0.016, 0.06, 0.003]} /><meshStandardMaterial color={LITMUS_HEX[colour]} roughness={0.8} /></mesh>
-  </group>;
-}
-
 export type VesselProps = { visual: VesselVisualState; look: Look; flashAt: number | null; strip?: "red" | "purple" | "blue" };
 
 export function TestTube3D({ visual, look, flashAt, strip }: VesselProps) {
@@ -116,7 +108,6 @@ export function TestTube3D({ visual, look, flashAt, strip }: VesselProps) {
     <Precipitate visual={visual} radius={R * 0.8} floorY={0.015} />
     <Solids visual={visual} floorY={0.015} spread={0.012} />
     {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={R * 0.7} height={Math.max(fill * 0.43, 0.05)} bottom={0.02} />}
-    <FootStrip colour={strip} y={-0.045} z={0.11} />
     <Collider size={[0.12, 0.5, 0.12]} y={0.25} />
   </group>;
 }
@@ -133,7 +124,6 @@ export function Beaker3D({ visual, look, flashAt, strip, radius = 0.15, height =
     <Precipitate visual={visual} radius={radius * 0.85} floorY={0.02} />
     <Solids visual={visual} floorY={0.02} spread={0.05} />
     {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={radius * 0.6} height={Math.max(fill * inner, 0.05)} bottom={0.03} />}
-    <FootStrip colour={strip} y={0.004} z={radius + 0.06} />
     <Collider size={[radius * 2, height + 0.04, radius * 2]} y={height / 2} />
   </group>;
 }
@@ -153,7 +143,6 @@ export function Flask3D({ visual, look, flashAt, strip }: VesselProps) {
     <Solids visual={visual} floorY={0.016} spread={0.05} />
     {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={0.1} height={Math.max(level, 0.05)} bottom={0.02} />}
     {visual.stoppered && <mesh position={[0, body + 0.11, 0]}><cylinderGeometry args={[0.056, 0.042, 0.06, 20]} /><meshStandardMaterial color="#6b3d2a" roughness={0.8} /></mesh>}
-    <FootStrip colour={strip} y={0.004} z={0.23} />
     <Collider size={[0.34, 0.42, 0.34]} y={0.21} />
   </group>;
 }
@@ -168,10 +157,12 @@ export function ReagentBottle3D({ look, solid, category }: { look: Look; solid: 
       <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.076, 24]} /><meshBasicMaterial color={look.surface} transparent opacity={0.7} depthWrite={false} /></mesh>
     </>}
     {solid && <mesh position={[0, 0.06, 0]}><cylinderGeometry args={[0.076, 0.076, 0.09, 24]} /><meshStandardMaterial color="#d6d3d1" roughness={1} /></mesh>}
-    <mesh position={[0, 0.255, 0]}><cylinderGeometry args={[0.035, 0.06, 0.03, 20]} /><meshPhysicalMaterial {...GLASS} opacity={0.5} /></mesh>
-    <mesh position={[0, 0.295, 0]} castShadow><cylinderGeometry args={[0.04, 0.04, 0.05, 20]} /><meshStandardMaterial color="#334155" roughness={0.6} /></mesh>
-    <mesh position={[0, 0.12, 0.0865]}><planeGeometry args={[0.11, 0.1]} /><meshStandardMaterial color="#f8fafc" /></mesh>
-    <mesh position={[0, 0.17, 0.0872]}><planeGeometry args={[0.11, 0.028]} /><meshStandardMaterial color={band} /></mesh>
+    <mesh position={[0, 0.255, 0]}><cylinderGeometry args={[0.036, 0.062, 0.034, 24]} /><meshPhysicalMaterial {...GLASS} opacity={0.5} /></mesh>
+    <mesh position={[0, 0.282, 0]} castShadow><cylinderGeometry args={[0.043, 0.043, 0.022, 24]} /><meshStandardMaterial color="#334155" roughness={0.6} /></mesh>
+    <mesh position={[0, 0.301, 0]} castShadow><cylinderGeometry args={[0.04, 0.043, 0.016, 24]} /><meshStandardMaterial color="#1e293b" roughness={0.5} /></mesh>
+    {/* Label wraps the front of the body (curved, not a flat card); the category band sits inside it. */}
+    <mesh position={[0, 0.115, 0]}><cylinderGeometry args={[0.0865, 0.0865, 0.1, 28, 1, true, -LABEL_ARC / 2, LABEL_ARC]} /><meshStandardMaterial color="#f8fafc" roughness={0.9} side={THREE.DoubleSide} /></mesh>
+    <mesh position={[0, 0.148, 0]}><cylinderGeometry args={[0.0872, 0.0872, 0.03, 28, 1, true, -LABEL_ARC / 2 + 0.05, LABEL_ARC - 0.1]} /><meshStandardMaterial color={band} roughness={0.7} side={THREE.DoubleSide} /></mesh>
     <Collider size={[0.18, 0.34, 0.18]} y={0.17} />
   </group>;
 }
@@ -196,7 +187,7 @@ export function Dropper3D() {
 }
 
 /** Dropper held upright, tip at the origin. `liquid` fills the glass tube and shows what was drawn up. */
-export function DropperUpright({ liquid, squeezeAt }: { liquid: Look | null; squeezeAt: number | null }) {
+export function DropperUpright({ liquid, squeezeAt, fill = 1 }: { liquid: Look | null; squeezeAt: number | null; fill?: number }) {
   const bulb = useRef<Mesh>(null);
   useFrame(() => {
     if (!bulb.current) return;
@@ -206,7 +197,7 @@ export function DropperUpright({ liquid, squeezeAt }: { liquid: Look | null; squ
   });
   return <group>
     <mesh position={[0, 0.07, 0]}><cylinderGeometry args={[0.01, 0.0035, 0.14, 14]} /><meshPhysicalMaterial {...GLASS} opacity={0.5} /></mesh>
-    {liquid && <mesh position={[0, 0.045, 0]}><cylinderGeometry args={[0.0085, 0.003, 0.09, 12]} /><meshStandardMaterial color={liquid.color} transparent opacity={0.95} roughness={0.3} /></mesh>}
+    {liquid && fill > 0.01 && <mesh position={[0, 0.005 + 0.04 * fill, 0]} scale={[1, fill, 1]}><cylinderGeometry args={[0.0085, 0.003, 0.08, 12]} /><meshStandardMaterial color={liquid.color} transparent opacity={0.95} roughness={0.3} /></mesh>}
     <mesh position={[0, 0.145, 0]}><cylinderGeometry args={[0.013, 0.013, 0.014, 14]} /><meshStandardMaterial color="#1f2937" roughness={0.6} /></mesh>
     <mesh ref={bulb} position={[0, 0.19, 0]}><sphereGeometry args={[0.024, 18, 14]} /><meshStandardMaterial color="#dc2626" roughness={0.45} /></mesh>
   </group>;
@@ -250,8 +241,8 @@ export function LitmusStrip3D({ colour }: { colour: keyof typeof LITMUS_HEX | nu
     material.color.lerp(target, Math.min(1, delta * 6));
   });
   return <group>
-    <mesh position={[0, 0.095, 0]}><boxGeometry args={[0.018, 0.1, 0.003]} /><meshStandardMaterial color={LITMUS_HEX.purple} roughness={0.8} /></mesh>
-    <mesh ref={lower} position={[0, 0.025, 0]}><boxGeometry args={[0.018, 0.05, 0.003]} /><meshStandardMaterial color={LITMUS_HEX.purple} roughness={0.8} /></mesh>
+    <mesh position={[0, 0.085, 0]}><boxGeometry args={[0.016, 0.1, 0.003]} /><meshStandardMaterial color={LITMUS_HEX.purple} roughness={0.8} /></mesh>
+    <mesh ref={lower} position={[0, 0.02, 0]}><boxGeometry args={[0.016, 0.03, 0.003]} /><meshStandardMaterial color={LITMUS_HEX.purple} roughness={0.8} /></mesh>
   </group>;
 }
 

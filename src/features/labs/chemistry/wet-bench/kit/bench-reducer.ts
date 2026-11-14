@@ -10,6 +10,9 @@ import { K2_APPARATUS, isVesselKind, type HeldTool } from "./apparatus-manifest"
 import { isPlacementSlot, slotById } from "./bench-layout";
 import { describeVesselChange, equationsFor, formatGrams, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
 
+/** A dropper draws up to 1.0 mL (20 standard drops of 0.05 mL) per fill. */
+export const DROPPER_CAPACITY_MICROLITERS = 1000;
+
 export type Held =
   | { kind: "reagent"; reagentId: string }
   | { kind: "tool"; tool: HeldTool; apparatusId: string }
@@ -34,6 +37,8 @@ export type BenchUiState = {
   history: Array<{ snapshot: Snapshot; labelVi: string }>;
   held: Held | null;
   presetMicroliters: number;
+  /** Liquid left in the dropper while it holds a reagent (µL, 0 to DROPPER_CAPACITY_MICROLITERS). */
+  loadedMicroliters: number;
   focusVesselId: string | null;
   flashes: Record<string, { transition: Transition; at: number }>;
   banner: { vesselId: string; textVi: string; reasonVi?: string } | null;
@@ -57,6 +62,7 @@ export type BenchAction =
   | { type: "remove_probe"; now: number }
   | { type: "undo"; now: number }
   | { type: "reset"; now: number }
+  | { type: "release" }
   | { type: "dismiss_banner" }
   | { type: "load_log"; entries: ObservationLogEntry[] }
   | { type: "clear_log" };
@@ -78,7 +84,7 @@ export function initialBenchState(config: ChemistryLabConfig): BenchUiState {
     config,
     context: { allowedReactions: config.allowedReactions, availableReagents: config.availableReagents.map((item) => item.reagentId) },
     initial, current: initial, history: [], held: null,
-    presetMicroliters: config.dispensing.liquidPresetsMicroliters[0],
+    presetMicroliters: config.dispensing.liquidPresetsMicroliters[0], loadedMicroliters: 0,
     focusVesselId: null, flashes: {}, banner: null, notice: null, log: [], seen: { reactions: [], measurements: [] }, drip: null, stripColour: null,
   };
 }
@@ -95,6 +101,14 @@ function pushLog(state: BenchUiState, entry: Omit<ObservationLogEntry, "seq">): 
     reactions: [...new Set([...state.seen.reactions, ...entry.reactions])],
     measurements: entry.measurement ? [...new Set([...state.seen.measurements, entry.measurement])] : state.seen.measurements,
   };
+  const last = state.log.at(-1);
+  if (entry.merge && last?.merge && last.merge.key === entry.merge.key && !entry.outOfScope && !last.outOfScope
+      && entry.reactions.length === 0 && last.reactions.length === 0 && entry.equations.length === 0
+      && JSON.stringify(last.phenomenaVi) === JSON.stringify(entry.phenomenaVi)) {
+    const microliters = last.merge.microliters + entry.merge.microliters;
+    const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters)} ${last.merge.label}` };
+    return { ...state, log: [...state.log.slice(0, -1), merged], seen };
+  }
   return { ...state, log: [...state.log, { ...entry, seq }].slice(-500), seen };
 }
 
@@ -168,6 +182,7 @@ function runOperation(state: BenchUiState, op: Operation, now: number): BenchUiS
     at: now, vesselId: targetId, locationVi: apparatusLabel(state.config, targetId), actionVi: describeAction(state, op),
     phenomenaVi: phenomena, equations: equationsFor(transition, state.config), readings: liveReadings(state, current, targetId),
     reactions: transition?.fired.map((fired) => fired.reactionId) ?? [],
+    ...(op.type === "add_liquid" || op.type === "add_indicator" ? { merge: { key: `${targetId}|${op.reagentId}`, microliters: op.type === "add_liquid" ? op.microliters : op.drops * 50, label: reagentLabel(op.reagentId) } } : {}),
   });
 }
 
@@ -238,16 +253,50 @@ function applyHeld(state: BenchUiState, held: Held, target: Target, now: number)
   const reagent = reagentById(held.reagentId);
   if (!reagent) return state;
   const composition = reagent.composition;
-  const op: Operation = composition.kind === "solid"
-    ? { type: "add_solid", vesselId, reagentId: reagent.id, pieces: 1 }
-    : composition.kind === "indicator"
-      ? { type: "add_indicator", vesselId, reagentId: reagent.id, drops: Math.max(1, Math.round(Math.min(state.presetMicroliters, 250) / composition.microlitersPerDrop)) }
-      : { type: "add_liquid", vesselId, reagentId: reagent.id, microliters: state.presetMicroliters };
-  return runOperation(state, op, now);
+  if (composition.kind === "solid") return runOperation(state, { type: "add_solid", vesselId, reagentId: reagent.id, pieces: 1 }, now);
+  const loaded = state.loadedMicroliters;
+  if (loaded <= 0) return emptyDropper(state, now);
+  const dose = Math.min(loaded, composition.kind === "indicator" ? Math.min(state.presetMicroliters, 250) : state.presetMicroliters);
+  let op: Operation;
+  let used: number;
+  if (composition.kind === "indicator") {
+    const drops = Math.max(1, Math.floor(dose / composition.microlitersPerDrop));
+    op = { type: "add_indicator", vesselId, reagentId: reagent.id, drops };
+    used = drops * composition.microlitersPerDrop;
+  } else {
+    op = { type: "add_liquid", vesselId, reagentId: reagent.id, microliters: dose };
+    used = dose;
+  }
+  const after = runOperation(state, op, now);
+  if (after.drip === state.drip) return after; // rejected or out of scope: nothing left the dropper
+  const left = Math.max(0, loaded - used);
+  return left > 0 ? { ...after, loadedMicroliters: left } : emptyDropper(after, now);
 }
 
+const isDropperReagent = (reagentId: string) => reagentById(reagentId)?.dispenser === "dropper";
+
+/** The dropper ran dry: back to an empty dropper in hand, ready to draw from a bottle. */
+function emptyDropper(state: BenchUiState, now: number): BenchUiState {
+  const id = state.config.enabledApparatus.find((item) => item.kind === "dropper_pipette")?.id;
+  return {
+    ...state, loadedMicroliters: 0, held: id ? { kind: "tool", tool: "dropper", apparatusId: id } : null,
+    notice: { textVi: "Ống nhỏ giọt đã hết dung dịch — hãy đưa vào lọ hóa chất để hút thêm (tối đa 1,0 mL).", at: now },
+  };
+}
+
+/** Whenever a new dropper reagent is picked up, the dropper is filled to capacity. */
 export function benchReducer(state: BenchUiState, action: BenchAction): BenchUiState {
+  const next = reduce(state, action);
+  const held = next.held;
+  if (held?.kind !== "reagent") return next;
+  const previous = state.held;
+  if (previous?.kind === "reagent" && previous.reagentId === held.reagentId) return next;
+  return { ...next, loadedMicroliters: isDropperReagent(held.reagentId) ? DROPPER_CAPACITY_MICROLITERS : 0 };
+}
+
+function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
   switch (action.type) {
+    case "release": return { ...state, held: null, stripColour: null, notice: null };
     case "hold": {
       if (action.held?.kind === "vessel" && action.held.vesselId === wasteId(state.config)) return notice(state, "Cốc thải chỉ để đổ bỏ; hãy chọn vật chứa cần làm sạch.", Date.now());
       const takePen = action.held?.kind === "tool" && action.held.tool === "ph_meter" && state.current.probeIn;
@@ -267,7 +316,10 @@ export function benchReducer(state: BenchUiState, action: BenchAction): BenchUiS
     }
     case "click_bottle": {
       const held = state.held;
-      if (held?.kind === "reagent" && held.reagentId === action.reagentId) return { ...state, held: null };
+      if (held?.kind === "reagent" && held.reagentId === action.reagentId) {
+        const refill = isDropperReagent(held.reagentId) && state.loadedMicroliters < DROPPER_CAPACITY_MICROLITERS;
+        return refill ? { ...state, loadedMicroliters: DROPPER_CAPACITY_MICROLITERS, notice: null } : { ...state, held: null };
+      }
       if (held && ((held.kind === "tool" && (held.tool === "dropper" || held.tool === "tongs")) || held.kind === "reagent")) return benchReducer(state, { type: "apply", target: { kind: "bottle", reagentId: action.reagentId }, now: action.now });
       return { ...state, held: { kind: "reagent", reagentId: action.reagentId }, stripColour: null, notice: null };
     }

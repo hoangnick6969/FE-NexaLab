@@ -13,6 +13,8 @@ export type ObservationLogEntry = {
   reactions: string[];
   measurement?: "ph_meter" | "litmus_paper" | "scale";
   outOfScope?: boolean;
+  /** Set on "add" lines so repeated identical additions to one vessel collapse into one line. */
+  merge?: { key: string; microliters: number; label: string };
 };
 
 const comma = (value: string) => value.replace(".", ",");
@@ -20,8 +22,9 @@ export const formatPh = (tenths: number) => comma((tenths / 10).toFixed(1));
 export const formatGrams = (micrograms: number) => `${comma((micrograms / 1_000_000).toFixed(2))} g`;
 
 export function formatQuantity(microliters: number) {
-  if (microliters % 50 === 0 && microliters <= 250) return `${microliters / 50} giọt`;
-  return `${comma(String(microliters / 1000))} mL`;
+  const ml = comma(String(+(microliters / 1000).toFixed(3)));
+  if (microliters % 50 !== 0) return `${ml} mL`;
+  return microliters <= 250 ? `${microliters / 50} giọt` : `${ml} mL (${microliters / 50} giọt)`;
 }
 
 export const PIECE_NAME: Record<string, string> = { granule: "hạt", chips: "viên", nail: "chiếc đinh", foil: "lá" };

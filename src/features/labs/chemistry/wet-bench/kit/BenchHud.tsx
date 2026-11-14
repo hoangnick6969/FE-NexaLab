@@ -6,18 +6,20 @@ import type { Dispatch } from "react";
 import { measure, observeVessel, reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
 import { slotById } from "./bench-layout";
-import { apparatusLabel, validTargets, type BenchAction, type BenchUiState, type Held } from "./bench-reducer";
+import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, validTargets, type BenchAction, type BenchUiState, type Held } from "./bench-reducer";
 import { formatPh, formatQuantity, PIECE_NAME, reagentLabel } from "./observation-log";
 import { shortReagent } from "./WetBenchKitStage";
 
 const BAND = { colourless: "không màu", light_pink: "hồng nhạt", deep_pink: "hồng đậm", unknown: "chưa xác định" } as const;
 const same = (a: Held | null, b: Held) => !!a && JSON.stringify(a) === JSON.stringify(b);
 
-export function heldLabel(config: ChemistryLabConfig, held: Held) {
+const mlText = (microliters: number) => (microliters / 1000).toFixed(2).replace(".", ",");
+
+export function heldLabel(config: ChemistryLabConfig, held: Held, loadedMicroliters = 0) {
   if (held.kind === "reagent") {
     const reagent = reagentById(held.reagentId);
-    const tool = reagent?.dispenser === "tongs" ? "Kẹp gắp" : "Ống nhỏ giọt";
-    return `${tool} · ${reagentLabel(held.reagentId)}`;
+    if (reagent?.dispenser === "tongs") return `Kẹp gắp · ${reagentLabel(held.reagentId)}`;
+    return `Ống nhỏ giọt · ${reagentLabel(held.reagentId).replace(/^Dung dịch /, "")} · ${mlText(loadedMicroliters)} / ${mlText(DROPPER_CAPACITY_MICROLITERS)} mL`;
   }
   if (held.kind === "tool") return apparatusLabel(config, held.apparatusId);
   return apparatusLabel(config, held.vesselId);
@@ -49,13 +51,13 @@ export function BenchHud({ state, dispatch }: { state: BenchUiState; dispatch: D
     <div className="k2-hud-status">
       {held ? <div className="k2-held" role="status">
         <span className="k2-held-dot" aria-hidden="true" />
-        <span>Đang cầm: <b>{heldLabel(config, held)}</b></span>
+        <span>Đang cầm: <b>{heldLabel(config, held, state.loadedMicroliters)}</b></span>
         {showPresets && <div className="k2-presets" role="radiogroup" aria-label="Lượng mỗi lần nhỏ">
           {(presets.length ? presets : [config.dispensing.liquidPresetsMicroliters[0]]).map((value) => <button key={value} type="button" role="radio" aria-checked={state.presetMicroliters === value} className={state.presetMicroliters === value ? "is-on" : ""} onClick={() => dispatch({ type: "preset", microliters: value })}>{formatQuantity(value)}</button>)}
         </div>}
-        <button type="button" className="text-button" onClick={() => dispatch({ type: "hold", held: null })}>Bỏ (Esc)</button>
+        <button type="button" className="text-button" onClick={() => dispatch({ type: "release" })}>Đặt về chỗ cũ</button>
       </div> : <p className="k2-hint">{instruction(state)}</p>}
-      {held && <p className="k2-hint">{instruction(state)}</p>}
+      {held && <p className="k2-hint">{instruction(state)} <b>Nhấn chuột phải hoặc Esc để đặt về chỗ cũ.</b></p>}
       {state.notice && <p className="k2-notice" role="alert">{state.notice.textVi}</p>}
       {state.banner && <div className="k2-scope-banner" role="alert">
         <p><b>Ngoài phạm vi mô hình.</b> {state.banner.textVi}</p>

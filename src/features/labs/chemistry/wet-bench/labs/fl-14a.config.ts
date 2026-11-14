@@ -38,7 +38,7 @@ export const fl14aConfig: ChemistryLabConfig = {
   ],
   allowedReactions: ["metal-acid.zn-hcl", "metal-acid.fe-hcl", "displace.fe-cuso4", "displace.zn-cuso4"],
   measurements: [],
-  dispensing: { liquidPresetsMicroliters: [250, 1000, 2000] },
+  dispensing: { liquidPresetsMicroliters: [50, 250, 500] },
   pedagogy: {
     revealEquations: "after_observation",
     observationPrompts: [

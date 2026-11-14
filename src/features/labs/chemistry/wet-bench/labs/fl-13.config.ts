@@ -58,7 +58,7 @@ export const fl13Config: ChemistryLabConfig = {
   ],
   allowedReactions: ["acid-base.neutralization"],
   measurements: ["ph_meter", "litmus_paper"],
-  dispensing: { liquidPresetsMicroliters: [50, 250, 1000] },
+  dispensing: { liquidPresetsMicroliters: [50, 250, 500] },
   pedagogy: {
     revealEquations: "after_observation",
     observationPrompts: [

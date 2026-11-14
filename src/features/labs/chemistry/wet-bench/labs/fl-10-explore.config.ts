@@ -47,7 +47,7 @@ export const fl10ExploreConfig: ChemistryLabConfig = {
   ],
   allowedReactions: ["precip.bacl2-na2so4", "gas.caco3-hcl"],
   measurements: ["scale"],
-  dispensing: { liquidPresetsMicroliters: [1000, 10000] },
+  dispensing: { liquidPresetsMicroliters: [50, 250, 500] },
   pedagogy: {
     revealEquations: "never",
     observationPrompts: [
