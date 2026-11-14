@@ -1,0 +1,110 @@
+/* K2 wet-bench Explore kit. Overlays sit on top of the full-viewport 3D scene inside LabSpace. */
+.k2-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.k2-mode-badge { padding: 4px 10px; border-radius: 999px; background: rgba(31, 111, 120, 0.1); color: var(--brand-ink, var(--brand)); font-size: 12px; font-weight: 650; white-space: nowrap; }
+.k2-header-actions .secondary { min-height: 36px !important; padding: 6px 12px; font-size: 13px; border-radius: 10px; }
+
+/* Scoped to K2: in-scene labels near the edges must never scroll the shell sideways. */
+.lab-space:has(.k2-layout) { overflow: clip; }
+.lab-space:has(.k2-layout) .lab-space-header { flex-wrap: wrap; }
+.lab-space:has(.k2-layout) .lab-space-header-actions { min-width: 0; max-width: 100%; }
+.k2-layout { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.k2-layout > * { pointer-events: auto; }
+
+.k2-hud { position: absolute; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); width: min(760px, calc(100% - 440px)); max-height: 46dvh; overflow: hidden; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto minmax(0, 1fr); gap: 10px 14px; padding: 12px 14px; background: var(--surface-glass, rgba(255, 255, 255, 0.9)); color: var(--text-base); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 24px rgba(18, 38, 30, 0.12); backdrop-filter: blur(10px); }
+.k2-hud-status { grid-column: 1 / -1; display: grid; gap: 6px; }
+.k2-hud-groups { display: grid; align-content: start; gap: 8px; min-width: 0; min-height: 0; overflow: auto; padding-right: 4px; }
+.k2-group h3 { margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+.k2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.k2-lab .k2-chip, .k2-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px !important; padding: 4px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text-base); font: inherit; font-size: 14px; cursor: pointer; }
+.k2-chip i { width: 10px; height: 14px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.2); }
+.k2-chip em { font-style: normal; font-weight: 800; color: #b42318; }
+.k2-chip.is-held { border-color: #e0a030; background: #fff5e2; box-shadow: 0 0 0 2px rgba(224, 160, 48, 0.35); }
+.k2-chip.is-target { border-color: #2f8f8a; box-shadow: 0 0 0 2px rgba(47, 143, 138, 0.25); }
+.k2-chip.is-warning { border-color: #d64545; }
+.k2-vessel-chip { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.2; }
+.k2-vessel-chip small { color: var(--muted); font-size: 12px; }
+.k2-held { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 6px 10px; border-radius: 12px; background: #fff5e2; border: 1px solid #f0d29a; }
+.k2-held-dot { width: 10px; height: 10px; border-radius: 50%; background: #e0a030; }
+.k2-presets { display: inline-flex; gap: 4px; }
+.k2-presets button { min-height: 32px !important; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-base); font: inherit; font-size: 13px; cursor: pointer; }
+.k2-presets button.is-on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.k2-hint { margin: 0; font-size: 14px; color: var(--muted); }
+.k2-notice { margin: 0; padding: 6px 10px; border-radius: 10px; background: #fff4dc; color: #6b4a00; font-size: 14px; }
+.k2-scope-banner { padding: 10px 12px; border-radius: 12px; background: #fdecec; border: 1px solid #f1b5b5; color: #7a1c1c; }
+.k2-scope-banner p { margin: 0 0 6px; font-size: 14px; line-height: 1.45; }
+.k2-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.k2-row .secondary, .k2-inspector .secondary { min-height: 38px !important; padding: 4px 12px; font-size: 13px; }
+.k2-small { margin: 0; font-size: 13px; color: var(--muted); }
+.k2-mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+.k2-inspector { align-self: start; max-height: 100%; overflow: auto; width: 220px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; }
+.k2-inspector h3 { margin: 0 0 6px; font-size: 15px; }
+.k2-inspector ul { margin: 0 0 6px; padding-left: 18px; display: grid; gap: 2px; }
+.k2-inspector dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 8px; }
+.k2-inspector dt { color: var(--muted); }
+.k2-inspector dd { margin: 0; font-weight: 600; }
+
+.k2-log { position: absolute; top: 96px; right: max(16px, env(safe-area-inset-right)); bottom: 76px; width: min(360px, calc(100% - 32px)); display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--surface-glass, rgba(255, 255, 255, 0.92)); color: var(--text-base); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 24px rgba(18, 38, 30, 0.12); backdrop-filter: blur(10px); }
+.k2-log.is-collapsed { bottom: auto; }
+.k2-log header { display: flex; align-items: center; justify-content: space-between; }
+.k2-log h2 { margin: 0; font-size: 16px; }
+.k2-log h2 small { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--line); font-size: 12px; }
+.k2-log-empty { margin: 0; color: var(--muted); font-size: 14px; }
+.k2-log-list { flex: 1; overflow: auto; margin: 0; padding: 0; list-style: none; display: grid; align-content: start; gap: 8px; }
+.k2-log-list li { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.k2-log-list li.is-scope { border-color: #f1b5b5; background: #fff6f6; }
+.k2-log-meta { display: flex; gap: 8px; font-size: 12px; color: var(--muted); }
+.k2-log-meta b { color: var(--text-base); }
+.k2-log-action { margin: 2px 0; font-size: 14px; font-weight: 600; }
+.k2-log-phenomena { margin: 0; font-size: 14px; line-height: 1.45; }
+.k2-log-readings { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 0; font-size: 13px; color: var(--brand-ink, var(--brand)); }
+.k2-log-eq { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+
+/* In-scene labels (drei Html). */
+.k2-bottle-tag, .k2-vessel-tag, .k2-drag-tag, .k2-lcd { display: inline-block; white-space: nowrap; font-family: "Be Vietnam Pro", sans-serif; user-select: none; }
+.k2-bottle-tag { padding: 2px 8px; border-radius: 6px; font-size: 13px; font-weight: 750; letter-spacing: 0.2px; background: #fff; color: #0f172a; border: 2px solid #94a3b8; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.k2-bottle-tag.is-acid { border-color: #ef4444; }
+.k2-bottle-tag.is-base { border-color: #3b82f6; }
+.k2-bottle-tag.is-neutral { border-color: #22c55e; }
+.k2-bottle-tag.is-indicator { border-color: #d946ef; }
+.k2-bottle-tag.is-salt { border-color: #0ea5e9; }
+.k2-bottle-tag.is-metal, .k2-bottle-tag.is-mineral { border-color: #64748b; }
+.k2-vessel-tag { padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 700; background: rgba(35, 60, 52, 0.82); color: #fff; }
+.k2-vessel-tag.is-warning { background: #b42318; }
+.k2-drag-tag { padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #fff7e0; color: #5b3a05; border: 1px solid #e0a030; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.k2-lcd { padding: 2px 6px; border-radius: 4px; background: #0f2a1d; color: #b9f3a8; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+.k2-tooltip { display: grid; gap: 2px; width: max-content; max-width: 240px; padding: 6px 10px; border-radius: 10px; background: rgba(20, 32, 28, 0.92); color: #fff; font-family: "Be Vietnam Pro", sans-serif; font-size: 12px; line-height: 1.4; }
+.k2-tooltip b { font-size: 13px; }
+
+.k2-devbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.k2-devbar select { min-height: 36px !important; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); font: inherit; background: var(--surface); color: var(--text-base); }
+.k2-devbar .k2-dev-badge { padding: 2px 8px; border-radius: 999px; background: #fff1d6; color: #7a4d00; font-weight: 650; }
+.k2-devbar .k2-dev-badge.is-error { background: #fde3e3; color: #9b1c1c; }
+
+@media (max-width: 1024px) {
+  .k2-hud { width: calc(100% - 32px); max-height: 40dvh; grid-template-columns: 1fr auto; }
+  .k2-inspector { width: 200px; }
+  .k2-log, .k2-log.is-collapsed { top: auto; bottom: calc(40dvh + 28px); max-height: 26dvh; }
+}
+@media (max-width: 720px) {
+  .k2-header-actions .secondary { padding: 4px 8px; font-size: 12px; }
+  .lab-space:has(.k2-layout) .lab-space-header { gap: 8px; padding: 8px 10px; }
+  .lab-space:has(.k2-layout) .lab-space-header h1 { max-width: 100%; font-size: 14px; }
+  .k2-devbar select { max-width: 100%; }
+  .k2-devbar label { display: grid; min-width: 0; max-width: 100%; }
+  .k2-log, .k2-log.is-collapsed { top: auto; bottom: calc(40dvh + 84px); max-height: 22dvh; }
+  .k2-hud { bottom: 72px; max-height: 40dvh; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .k2-inspector { width: auto; max-height: 30dvh; }
+}
+
+/* Observation log: darker secondary text for legibility on the light panel. */
+.k2-log .k2-small, .k2-log > p { color: #475569; font-weight: 500; }
+.k2-log-meta { color: #475569; font-weight: 500; }
+.k2-log-meta b { color: #0f172a; font-weight: 700; }
+.k2-log-action { color: #0f172a; font-weight: 700; }
+.k2-log-phenomena { color: #334155; font-weight: 500; }
+.k2-log-eq { color: #475569; font-weight: 500; }
+.k2-log-empty { color: #475569; font-weight: 500; }
+.k2-log-readings { color: #0f766e; font-weight: 600; }
+.k2-strip-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: #fff; color: #0f172a; border: 1px solid #94a3b8; font-family: "Be Vietnam Pro", sans-serif; font-size: 12px; font-weight: 700; white-space: nowrap; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); user-select: none; }
+.k2-strip-chip i { width: 10px; height: 14px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.25); }

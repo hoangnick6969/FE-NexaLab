@@ -25,6 +25,7 @@ const K7KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/b
 const K8KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/ecology/kit/dev/K8KitPreview")) : null;
 const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/gene-protein/dev/GeneProteinPilotPreview")) : null;
 const EyeOpticsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/anatomy/eye-optics/dev/EyeOpticsPreview")) : null;
+const K2KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/chemistry/wet-bench/kit/dev/K2KitPreview")) : null;
 
 const PublicLanding = lazy(() =>
   import("../features/landing/PublicLanding").then((m) => ({ default: m.PublicLanding }))
@@ -247,6 +248,8 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><GeneProteinPilotPreview /></Suspense>;
   if (EyeOpticsPreview && location.pathname === "/dev/lab-kits/eye-optics")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><EyeOpticsPreview /></Suspense>;
+  if (K2KitPreview && location.pathname === "/dev/lab-kits/k2")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K2KitPreview /></Suspense>;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {
