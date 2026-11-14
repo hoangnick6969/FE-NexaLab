@@ -6,7 +6,6 @@ import {
   Play,
   RotateCcw,
   Bookmark,
-  Sparkles,
   CheckCircle2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +15,8 @@ import { useLabRunHost } from "./runtime/lab-run-host";
 import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
 import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
+import { LegacyHintPanel } from "./runtime/LegacyHintPanel";
+import { TutorChat } from "../student-ai/TutorChat";
 import { StepPickerHint } from "./runtime/StepPickerHint";
 import { LabWhatIf } from "./runtime/LabWhatIf";
 import { WHAT_IF_BY_RENDERER } from "./runtime/what-if-labs";
@@ -98,13 +99,6 @@ const text = defineText({
     savedToRecord: "Đã lưu vào hồ sơ",
     save: "Lưu thí nghiệm",
     resultAfterRun: "Kết quả xuất hiện sau khi em chạy thí nghiệm.",
-    guide: "Người bạn hướng dẫn",
-    aiGuide: "AI + hướng dẫn từ engine",
-    ruleGuide: "Gợi ý theo luật · chưa cấu hình AI",
-    level: (n: number) => `MỨC ${n} / 4`,
-    stuck: "Chưa tìm ra câu trả lời? Bắt đầu từ một câu hỏi nhỏ.",
-    getHint: "Nhận gợi ý",
-    hintRule: "Chỉ mở mức gợi ý tiếp theo sau khi em thực sự thử lại.",
     disclaimer: "Mô hình lý tưởng dùng cho học tập. Kết quả chính thức được tính trên máy chủ; không áp dụng để thiết kế mạch hoặc thao tác hóa chất thật.",
   },
   en: {
@@ -169,13 +163,6 @@ const text = defineText({
     savedToRecord: "Saved to your record",
     save: "Save experiment",
     resultAfterRun: "Results appear after you run the experiment.",
-    guide: "Your guide",
-    aiGuide: "AI + engine guidance",
-    ruleGuide: "Rule-based hints · AI not configured",
-    level: (n: number) => `LEVEL ${n} / 4`,
-    stuck: "Not there yet? Start with a small question.",
-    getHint: "Get a hint",
-    hintRule: "The next hint level opens only after you really try again.",
     disclaimer: "An idealised model for learning. Official results are computed on the server; do not use it to design real circuits or handle real chemicals.",
   },
 });
@@ -225,7 +212,8 @@ export default function Lab() {
     try { return simulate(id, state) as any; } catch { return null; }
   }, [id, state]);
   const [teacherAttempt, setTeacherAttempt] = useState<any>(null);
-  const [hint, setHint] = useState<any>(null);
+  // SAI-01: level of the last legacy hint in this session, so the panel can say why a level stayed.
+  const [lastHintLevel, setLastHintLevel] = useState<number | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [saved, setSaved] = useState(false);
   const tutorStatus = useQuery({
@@ -288,21 +276,14 @@ export default function Lab() {
   useEffect(() => {
     setState(fallbackState);
     setTeacherAttempt(null);
-    setHint(null);
     setSaved(false);
     setResetKey((k) => k + 1);
   }, [fallbackState]);
   const teacherRun = useAction(async () => {
     const r = await api("/simulate/" + id, "POST", state);
     setTeacherAttempt({ simulationResult: r, verdict: r.verdict });
-    setHint(null);
     setSaved(false);
     return r;
-  });
-  const hintAction = useAction(async () => {
-    const h = await api("/attempts/" + attempt.id + "/hint", "POST");
-    setHint(h);
-    return h;
   });
   const save = useAction(async () => {
     await api("/saved", "POST", {
@@ -343,7 +324,6 @@ export default function Lab() {
       setState(next);
       setTeacherAttempt(null);
     }
-    setHint(null);
     setSaved(false);
   };
   const pedagogy = labRun.launch?.classLabSnapshot ?? assignment.data?.classLabSnapshot ?? (classResource.data?.kind === "LAB" ? classResource.data.content : null);
@@ -614,37 +594,10 @@ export default function Lab() {
             </>
           )}
           {user.role === "STUDENT" && runtimeReady && !guided && (
-            <section className="panel tutor-panel">
-              <h3>
-                <Sparkles size={19} />
-                {t.guide}
-              </h3>
-              <span className="tiny muted">
-                {tutorStatus.data?.provider === "anthropic"
-                  ? t.aiGuide
-                  : t.ruleGuide}
-              </span>
-              {hint ? (
-                <div className="hint">
-                  <Badge>{t.level(hint.level)}</Badge>
-                  <p>{hint.content}</p>
-                </div>
-              ) : (
-                <p>{t.stuck}</p>
-              )}
-              <button
-                className="secondary wide"
-                disabled={!attempt || hintAction.isPending || !!hint}
-                onClick={() => hintAction.mutate(null)}
-              >
-                {t.getHint}
-              </button>
-              <ErrorBox error={hintAction.error} />
-              <small>
-                {t.hintRule}
-              </small>
-            </section>
+            <LegacyHintPanel key={attempt?.id ?? "none"} attempt={attempt ?? null} llmEnabled={Boolean(tutorStatus.data?.llmEnabled)}
+              previousLevel={lastHintLevel} onHint={(next) => setLastHintLevel(next.level)} />
           )}
+          {user.role === "STUDENT" && runtimeReady && <TutorChat contextKind="LAB" contextId={id} />}
         </details></aside>}
       </div>
       {!guided && <p className="tiny muted">{t.disclaimer}</p>}

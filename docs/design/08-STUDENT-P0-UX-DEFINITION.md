@@ -21,7 +21,7 @@
 The lesson library may show an optional subject-level external ebook/reference link configured by an admin. Label it as an external publisher/source link; opening it does not imply NexaLab hosts or has reproduction rights to the material.
 
 - No leaderboard, streak, badge economy, coins or gems in P0.
-- No Student AI Tutor/Hint in P0. It is P1 and must not appear in Student P0 navigation, CTA copy or dashboard cards.
+- Student hints (increment SAI, PO approval 2026-11-08, AD-18) appear only inside a Lab, lesson quiz or basic exercise, next to the work they help with: rules-only, never giving the answer, never changing a score. There is no Student AI entry in navigation, CTA copy or dashboard cards, and no free-text tutor chat.
 - No mascot implementation in P0. The referenced three-mascot idea remains an identity exploration, not a P0 requirement. Use a small line-art science illustration in the Continue card; it is decorative support, not a product character.
 - Every percentage, score or count links to its underlying lesson, quiz or practical attempts. A number without a drill-down is not shown as an achievement metric.
 - No real-world safety implication: simulations are educational models, not real experiments.
@@ -301,7 +301,7 @@ Use `transform` and `opacity` only for motion. Animate at most one or two meanin
 - [ ] All controls work with keyboard and touch; no critical action relies on hover or gesture.
 - [ ] Text and state colors meet WCAG AA and are not the sole state indicator.
 - [ ] Motion respects reduced-motion and does not cause layout shift.
-- [ ] AI Tutor/Hint is absent from P0 Student routes and screens.
+- [ ] No AI tutor route, nav entry, dashboard card or chat; hints appear only in-context (Lab, lesson quiz, basic exercise) per AD-18.
 
 ## 10. Review artifact
 

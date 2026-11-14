@@ -18,6 +18,11 @@ import { AttributionNote, libraryQuery } from "./library";
 import { VideoLearningStep } from "./VideoLearningStep";
 import { httpsUrl } from "../../lib/urls";
 import { withAssignmentContext } from "./lesson-catalog";
+import { ExerciseQuestionHint } from "../assignments/QuizQuestionHint";
+import { TutorChat } from "../student-ai/TutorChat";
+import { PassageAskButton } from "../student-ai/PassageAskButton";
+import { useStudentAiStatus } from "../student-ai/useStudentAi";
+import { useTextSelection, type HighlightedPassage } from "../student-ai/useTextSelection";
 import { defineText } from "../../i18n";
 import SourcePdfViewer from "../ebook/SourcePdfViewer";
 import { lessonLabHref, lessonLabSection, relatedLessonHref, type LessonLab } from "../labs/pathways/lesson-lab-navigation";
@@ -192,6 +197,11 @@ export function LessonDetail() {
   }, { replace: true });
   const [sourcePage, setSourcePage] = useState<number | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Lesson passage Q&A (tutor-chat-rules@5): highlight text in the reading tab, then ask the AI tutor about it.
+  const readingRef = useRef<HTMLDivElement>(null);
+  const studentAi = useStudentAiStatus();
+  const [askPassage, setAskPassage] = useState<HighlightedPassage | null>(null);
+  const highlighted = useTextSelection(readingRef, user.role === "STUDENT" && studentAi.chatEnabled);
   const queryClient = useQueryClient();
   const lessons = useQuery({
     queryKey: [user.role === "STUDENT" ? "open-curriculum-lesson" : "lessons", id],
@@ -368,6 +378,8 @@ export function LessonDetail() {
 
     <ErrorBox error={foundationalLabs.error} />
     <ErrorBox error={linkedPublicLesson.error} />
+    {user.role === "STUDENT" && <TutorChat contextKind="LESSON" contextId={id} passage={askPassage} onPassageChange={setAskPassage} />}
+    {user.role === "STUDENT" && highlighted && <PassageAskButton selection={highlighted} onAsk={setAskPassage} />}
 
     <div className="lesson-detail-tabs" role="tablist" aria-label={t.contentTabs}>
       {tabs.map((tab, index) => {
@@ -453,7 +465,7 @@ export function LessonDetail() {
         )}
 
         {activeTab === "reading" && <div className={`lesson-source-layout${sourcePage ? " is-open" : ""}`}><section id="lesson-panel-reading" role="tabpanel" aria-labelledby="lesson-tab-reading" className="panel lesson-detail-reading lesson-tab-panel">
-          <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0}>
+          <div className="lesson-reading-scroll" role="region" aria-label={t.readingRegion} tabIndex={0} ref={readingRef}>
             {user.role === "STUDENT" && !assignmentId && <div className="lesson-open-curriculum-note" role="note">
               <BookOpen size={20} aria-hidden="true" />
               <span><strong>{t.openNoticeTitle}</strong><span>{t.openNotice}</span></span>
@@ -617,6 +629,7 @@ function BasicExercise({ lessonId, step, onSubmitted }: { lessonId: string; step
     {exercise.questions.map((question: any, index: number) => <fieldset className="exercise-question" key={question.id}>
       <legend>{index + 1}. {question.prompt}</legend>
       {question.options.map((option: any) => <label className="check" key={option.id}><input type="radio" name={question.id} value={option.id} checked={answers[question.id] === option.id} onChange={() => setAnswers((current) => ({ ...current, [question.id]: option.id }))} required />{option.text}</label>)}
+      {step.state !== "COMPLETED" && <ExerciseQuestionHint lessonId={lessonId} stepId={step.id} questionId={question.id} />}
     </fieldset>)}
     <ErrorBox error={attempt.error} />
     {step.exercise && <p className={step.exercise.passed ? "notice" : "muted"} role="status">{step.exercise.passed ? t.passed : t.lastNotPassed}: {step.exercise.score}%. {t.needs(step.exercise.passThreshold)}</p>}

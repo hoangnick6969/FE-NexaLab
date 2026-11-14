@@ -1,3 +1,4 @@
+import { AiChip } from "../student-ai/AiChip";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Lightbulb } from "lucide-react";
@@ -7,7 +8,10 @@ import { withAssignmentContext } from "../lessons/lesson-catalog";
 import { defineText } from "../../i18n";
 import "./QuizQuestionHint.css";
 
-/** SAI-03A: rules-only hint on one quiz question (BE lesson-hints@1). Never the answer; the draft is never sent. */
+/**
+ * Rules-only hint on one question (BE lesson-hints@1): SAI-03A lesson quiz and SAI-03-T3 basic exercise.
+ * Never the answer; the draft is never sent.
+ */
 type QuestionHint = { id: string; level: 1 | 2 | 3; maxLevel: 2 | 3; content: string; escalated: boolean; repeatReason: "TOP_LEVEL" | "NEEDS_ATTEMPT" | null };
 
 const text = defineText({
@@ -30,10 +34,19 @@ const text = defineText({
 });
 
 export function QuizQuestionHint({ lessonId, assignmentId, questionId }: { lessonId: string; assignmentId: string; questionId: string }) {
+  return <QuestionHintButton path={withAssignmentContext(`/lessons/${encodeURIComponent(lessonId)}/quiz/hints`, assignmentId)} questionId={questionId} />;
+}
+
+/** SAI-03-T3: the same hint on an Open Curriculum basic exercise question. */
+export function ExerciseQuestionHint({ lessonId, stepId, questionId }: { lessonId: string; stepId: string; questionId: string }) {
+  return <QuestionHintButton path={`/open-curriculum/lessons/${encodeURIComponent(lessonId)}/exercises/${encodeURIComponent(stepId)}/hints`} questionId={questionId} />;
+}
+
+function QuestionHintButton({ path, questionId }: { path: string; questionId: string }) {
   const t = text();
   const [hint, setHint] = useState<QuestionHint | null>(null);
   const ask = useMutation({
-    mutationFn: () => api<QuestionHint>(withAssignmentContext(`/lessons/${encodeURIComponent(lessonId)}/quiz/hints`, assignmentId), "POST", { questionId }),
+    mutationFn: () => api<QuestionHint>(path, "POST", { questionId }),
     onSuccess: setHint,
   });
   return (
@@ -41,6 +54,7 @@ export function QuizQuestionHint({ lessonId, assignmentId, questionId }: { lesso
       {hint && (
         <div className="quiz-question-hint-body">
           <small className="muted">{t.level(hint.level)}</small>
+          <AiChip provider={(hint as any).provider} />
           <p>{hint.content}</p>
           {hint.repeatReason === "NEEDS_ATTEMPT" && <small className="muted">{t.needsAttempt}</small>}
           {hint.repeatReason === "TOP_LEVEL" && <small className="muted">{t.topLevel}</small>}

@@ -1,3 +1,4 @@
+import { AiChip } from "../../student-ai/AiChip";
 import { useState } from "react";
 import { Lightbulb, X } from "lucide-react";
 import { api } from "../../../lib/api";
@@ -62,6 +63,7 @@ export function CheckpointHintPanel({ attemptId }: { attemptId: string }) {
         <div className="hint">
           <Badge>{t.level(hint.level)}</Badge>
           <p className="tiny muted">{t.about(hint.label)}</p>
+          <AiChip provider={(hint as any).provider} />
           <p>{hint.content}</p>
           {hint.repeatReason === "SAME_ANSWER" && <p className="tiny muted">{t.sameAnswer}</p>}
           {hint.repeatReason === "TOP_LEVEL" && <p className="tiny muted">{t.topLevel}</p>}

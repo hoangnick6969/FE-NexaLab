@@ -1,0 +1,31 @@
+.tutor-chat { margin-top: 12px; }
+.tutor-chat-toggle { width: 100%; justify-content: center; }
+.tutor-chat-panel { display: grid; gap: 8px; }
+.tutor-chat-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tutor-chat-panel h3 { display: flex; align-items: center; gap: 6px; margin: 0; }
+.tutor-chat-messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
+.tutor-chat-messages li { padding: 8px 10px; border-radius: 10px; background: var(--surface-2, rgba(127, 127, 127, .08)); overflow-wrap: anywhere; }
+.tutor-chat-messages li[data-role="STUDENT"] { margin-left: 24px; background: var(--accent-soft, rgba(46, 125, 107, .12)); }
+.tutor-chat-messages li p { margin: 4px 0 0; white-space: pre-line; }
+.tutor-chat-panel textarea { width: 100%; resize: vertical; min-height: 56px; box-sizing: border-box; }
+.tutor-chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.ai-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; }
+
+/* AA contrast: the global .muted token is below 4.5:1 on these surfaces, so the chat and AI chip use --text-muted. */
+.tutor-chat-panel .muted { color: var(--text-muted, #506070); }
+.ai-chip { color: var(--text, #14202b); background: var(--surface, #ffffff); border: 1px solid currentColor; }
+.tutor-chat-messages li p { color: var(--text, #14202b); }
+.textbook-ask { position: fixed; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow-y: auto; z-index: 40; box-sizing: border-box; }
+.textbook-ask-quote { margin: 0; padding: 6px 10px; border-left: 3px solid var(--brand, #1f6f78); max-height: 120px; overflow-y: auto; color: var(--text, #14202b); overflow-wrap: anywhere; }
+
+/* Lesson passage Q&A (tutor-chat-rules@5): the "ask about this" button next to a highlight, the quoted passage and a
+   docked panel so the student keeps their reading position. */
+.passage-ask-button { position: fixed; z-index: 45; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); white-space: nowrap; }
+.tutor-chat-quote { display: flex; align-items: flex-start; gap: 6px; }
+.tutor-chat-quote > div { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.tutor-chat-quote blockquote { white-space: pre-line; }
+.tutor-chat-quote-ref { display: block; margin-top: 2px; font-style: italic; overflow-wrap: anywhere; }
+.tutor-chat[data-docked="true"] .tutor-chat-panel { position: fixed; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow-y: auto; z-index: 40; box-sizing: border-box; box-shadow: 0 8px 28px rgba(0, 0, 0, .18); }
+@media (max-width: 600px) {
+  .tutor-chat[data-docked="true"] .tutor-chat-panel { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 70vh; }
+}

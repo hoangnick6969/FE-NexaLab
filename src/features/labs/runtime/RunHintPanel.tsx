@@ -1,3 +1,4 @@
+import { AiChip } from "../../student-ai/AiChip";
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Lightbulb, MessageCircleQuestion, X } from "lucide-react";
@@ -93,6 +94,7 @@ export function RunHintPanel({ runId, step, labelOf }: { runId: string; step: Hi
           {hint ? (
             <div className="hint">
               <Badge>{t.level(hint.level)}</Badge>
+              <AiChip provider={(hint as any).provider} />
               <p>{hint.content}</p>
               {hint.repeatReason === "TOP_LEVEL" && <p className="tiny muted">{t.topLevel}</p>}
             </div>

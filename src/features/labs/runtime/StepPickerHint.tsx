@@ -1,3 +1,4 @@
+import { AiChip } from "../../student-ai/AiChip";
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Lightbulb, X } from "lucide-react";
@@ -87,6 +88,7 @@ export function StepPickerHint({ runId, placement = "dock" }: { runId: string; p
               <div className="hint">
                 <Badge>{t.level(shown.level)}</Badge>
                 <p className="tiny muted">{t.about(shown.label)}</p>
+                <AiChip provider={(shown as any).provider} />
                 <p>{shown.content}</p>
                 {shown.repeatReason === "TOP_LEVEL" && <p className="tiny muted">{t.topLevel}</p>}
               </div>
