@@ -25,6 +25,8 @@ const text = defineText({
     thermal: { subject: "VẬT LÝ", tag: "THÍ NGHIỆM", title: "Năng lượng nhiệt", description: "Đo điện năng cấp vào và độ tăng nhiệt độ của mẫu nước trong mô hình nhiệt lượng kế lý tưởng." },
     ecology: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Giới hạn sinh thái", description: "Đổi nhiệt độ nước ao để tìm giới hạn sinh thái của cá rô phi, rồi tính mật độ và đọc tháp tuổi." },
     foodWeb: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Lưới thức ăn", description: "Dựng chuỗi thức ăn, tính năng lượng qua các bậc và xem điều gì xảy ra khi một loài biến mất." },
+    acidBase: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Acid – base, chỉ thị và pH", description: "Tự pha dung dịch, nhúng quỳ tím, nhỏ phenolphthalein và đo pH; quan sát màu đổi khi trung hoà." },
+    metalReactivity: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Kim loại với acid và dung dịch muối", description: "Thả kẽm, sắt, đồng vào acid loãng và dung dịch CuSO₄ để so sánh mức độ hoạt động của kim loại." },
   },
   en: {
     buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
@@ -40,6 +42,8 @@ const text = defineText({
     thermal: { subject: "PHYSICS", tag: "EXPERIMENT", title: "Thermal energy", description: "Measure electrical input and water temperature rise in an ideal calorimeter model." },
     ecology: { subject: "BIOLOGY", tag: "SIMULATION", title: "Tolerance limits", description: "Change the pond temperature to find the tilapia's tolerance range, then work out density and read an age pyramid." },
     foodWeb: { subject: "BIOLOGY", tag: "SIMULATION", title: "Food webs", description: "Build a food chain, follow energy through the levels and see what happens when a species disappears." },
+    acidBase: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Acids, bases, indicators and pH", description: "Mix solutions, dip litmus paper, add phenolphthalein and measure pH; watch the colour change on neutralization." },
+    metalReactivity: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Metals with acid and salt solutions", description: "Drop zinc, iron and copper into dilute acid and CuSO₄ solution to compare how reactive the metals are." },
   },
 });
 const t = text();
@@ -96,6 +100,8 @@ const catalogEntries = [
   { id: "ecology-tolerance", ...t.ecology, className: "biology", number: "09", grade: 8 },
   { id: "eye-optics", ...t.eyeOptics, className: "biology", number: "10", grade: 8 },
   { id: "food-web", ...t.foodWeb, className: "biology", number: "11", grade: 8 },
+  { id: "acid-base-indicators", ...t.acidBase, className: "chemistry", number: "12", grade: 8 },
+  { id: "metal-reactivity", ...t.metalReactivity, className: "chemistry", number: "13", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({

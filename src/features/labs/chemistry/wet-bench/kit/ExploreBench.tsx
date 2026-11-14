@@ -1,0 +1,132 @@
+/**
+ * K2 Explore-first Lab: Stage 1 intro & safety → Stage 2 free workbench → Stage 3 optional prompts.
+ * Unscored and client-only: no LabRun, no attempt, no evidence.
+ */
+import { useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import { LabHeaderActionsContext, LabSpace } from "../../../shared/LabSpace";
+import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
+import { ObservationDrawer, usePromptAnswers } from "../../../shared/ObservationDrawer";
+import { K2_APPARATUS } from "./apparatus-manifest";
+import { apparatusLabel, benchReducer, initialBenchState } from "./bench-reducer";
+import { BenchHud } from "./BenchHud";
+import { loadObservationLog, saveObservationLog } from "./observation-log";
+import { ObservationLogPanel } from "./ObservationLogPanel";
+import { WetBenchKitStage } from "./WetBenchKitStage";
+import "./kit.css";
+
+const ackKey = (config: ChemistryLabConfig) => `nexalab:k2-safety-ack:${config.labId}@${config.configVersion}`;
+const readAck = (config: ChemistryLabConfig) => { try { return localStorage.getItem(ackKey(config)) === "1"; } catch { return false; } };
+
+export function ExploreBench({ config, onExit, exitTo, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; onExit: () => void; exitTo?: string; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
+  return <LabSpace title={config.title} onExit={onExit} exitTo={exitTo}>
+    <ExploreBenchBody config={config} headerExtra={headerExtra} draftNotice={draftNotice} configSource={configSource} />
+  </LabSpace>;
+}
+
+function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
+  const [state, dispatch] = useReducer(benchReducer, config, initialBenchState);
+  const [introOpen, setIntroOpen] = useState(true);
+  const [reopened, setReopened] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(() => readAck(config));
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [viewReset, setViewReset] = useState(0);
+  const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${config.labId}@${config.configVersion}`);
+  const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
+  const headerActions = useContext(LabHeaderActionsContext);
+  const logLoaded = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void loadObservationLog(config).then((entries) => {
+      if (!active) return;
+      if (entries.length) dispatch({ type: "load_log", entries });
+      logLoaded.current = true;
+    });
+    return () => { active = false; };
+  }, [config]);
+  useEffect(() => {
+    if (!logLoaded.current) return;
+    const timer = window.setTimeout(() => void saveObservationLog(config, state.log), 300);
+    return () => window.clearTimeout(timer);
+  }, [config, state.log]);
+
+  useEffect(() => {
+    if (introOpen) return;
+    const key = (event: KeyboardEvent) => {
+      const typing = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+      if (event.key === "Escape" && state.held && !typing) { event.preventDefault(); dispatch({ type: "hold", held: null }); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !typing) { event.preventDefault(); dispatch({ type: "undo", now: Date.now() }); }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [introOpen, state.held]);
+
+  const prompts = useMemo(() => (config.pedagogy.observationPrompts ?? []).map((prompt) => {
+    const when = prompt.highlightWhen;
+    const triggered = Boolean(when && ((when.reaction && state.seen.reactions.includes(when.reaction)) || (when.measurement && state.seen.measurements.includes(when.measurement))));
+    return { ...prompt, isNew: triggered && !seenPrompts.includes(prompt.id), canFocus: Boolean(prompt.focus?.apparatusId || prompt.focus?.reagentId) };
+  }), [config, state.seen, seenPrompts]);
+  const markSeen = useCallback(() => setSeenPrompts((current) => {
+    const fresh = prompts.filter((prompt) => prompt.isNew).map((prompt) => prompt.id);
+    return fresh.length ? [...current, ...fresh] : current;
+  }), [prompts]);
+  const focusPrompt = (promptId: string) => {
+    const focus = config.pedagogy.observationPrompts?.find((prompt) => prompt.id === promptId)?.focus;
+    const id = focus?.apparatusId ? `apparatus:${focus.apparatusId}` : focus?.reagentId ? `reagent:${focus.reagentId}` : null;
+    if (!id) return;
+    setHovered(id);
+    window.setTimeout(() => setHovered((current) => (current === id ? null : current)), 3500);
+  };
+
+  const enter = () => {
+    if (config.safetyBriefing.acknowledgeRequired) { try { localStorage.setItem(ackKey(config), "1"); } catch { /* per-session only */ } setAcknowledged(true); }
+    setIntroOpen(false);
+    setReopened(false);
+  };
+  const lastEntry = state.log.at(-1);
+  const announce = lastEntry ? `${lastEntry.locationVi}: ${lastEntry.actionVi}. ${lastEntry.phenomenaVi.join(". ")}${lastEntry.readings.ph ? `. pH ${lastEntry.readings.ph}` : ""}` : "";
+
+  const actions = <div className="k2-header-actions">
+    <span className="k2-mode-badge" title={configSource === "bundled" ? "Cấu hình lấy từ bộ Kit trong ứng dụng" : configSource === "database" ? "Cấu hình lấy từ cơ sở dữ liệu" : undefined}>Khám phá tự do · không chấm điểm</span>
+    <button type="button" className="secondary" onClick={() => { setReopened(true); setIntroOpen(true); }}>Giới thiệu & an toàn</button>
+    <button type="button" className="secondary" disabled={!state.history.length} onClick={() => dispatch({ type: "undo", now: Date.now() })}>↶ Hoàn tác</button>
+    <button type="button" className="secondary" onClick={() => { if (window.confirm("Làm mới bàn thí nghiệm? Các vật chứa trở về trạng thái ban đầu; nhật ký vẫn được giữ.")) { dispatch({ type: "reset", now: Date.now() }); setViewReset((value) => value + 1); } }}>Làm mới</button>
+    {headerExtra}
+  </div>;
+
+  return <>
+    {headerActions && createPortal(actions, headerActions)}
+    <WetBenchKitStage state={state} dispatch={dispatch} hovered={hovered} onHover={setHovered} viewResetSignal={viewReset} />
+    <div className="k2-layout" aria-hidden={introOpen}>
+      <BenchHud state={state} dispatch={dispatch} />
+      <ObservationLogPanel config={config} entries={state.log} dispatch={dispatch} />
+    </div>
+    {!introOpen && <ObservationDrawer open={drawerOpen} onOpenChange={setDrawerOpen} prompts={prompts} answers={answers} onAnswer={setAnswer} onFocus={focusPrompt} onSeen={markSeen}
+      afterChoiceVi="Hãy kiểm chứng trên bàn: nhỏ từng giọt, theo dõi màu dung dịch và số đo pH, rồi so với lựa chọn của em." />}
+    <p className="sr-only" aria-live="polite">{announce}</p>
+    {introOpen && <LabIntroOverlay
+      title={config.title}
+      contextLabel={config.contextLabel}
+      outcomes={config.outcomeSummary}
+      safety={config.safetyBriefing}
+      limitations={config.limitations}
+      acknowledgeRequired={config.safetyBriefing.acknowledgeRequired}
+      acknowledged={acknowledged}
+      draftNotice={draftNotice}
+      apparatus={config.enabledApparatus.filter((item, index, all) => item.kind !== "test_tube" || all.findIndex((other) => other.kind === "test_tube") === index).map((item) => ({
+        id: item.id,
+        label: item.kind === "test_tube" ? `${K2_APPARATUS.test_tube.labelVi} × ${config.enabledApparatus.filter((other) => other.kind === "test_tube").length}` : apparatusLabel(config, item.id),
+        purpose: K2_APPARATUS[item.kind].purposeVi,
+      }))}
+      materials={[...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).flatMap((bottle) => {
+        const reagent = reagentById(bottle.reagentId);
+        return reagent ? [{ id: reagent.id, label: reagent.labelVi, hazardLevel: reagent.hazard.level, hazardTags: reagent.hazard.tags, noteSim: reagent.safetyNoteSim, noteReal: reagent.safetyNoteRealLab }] : [];
+      })}
+      onEnter={enter}
+      onClose={reopened ? () => { setIntroOpen(false); setReopened(false); } : undefined}
+    />}
+  </>;
+}

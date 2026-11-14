@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useState, useMemo, useRef } from "react";
 import "../classes/class-resource-preview.css";
 import { simulate } from "@nexalab/sim";
 import { Link, useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -31,6 +31,9 @@ import { toLocalInput } from "../classes/class-ui";
 import { StudentClassLabAdditionalResponses } from "../classes/ClassLabAdditionalResponses";
 
 import { loadLabActivity } from "./runtime/lazy-lab-activity";
+import { isExploreLab } from "./runtime/explore-labs";
+
+const ExploreLabPage = lazy(() => import("./chemistry/wet-bench/kit/ExploreLabPage"));
 
 const MassConservationActivity = loadLabActivity(() => import("./chemistry/wet-bench/MassConservationActivity").then((module) => ({ default: module.MassConservationActivity })));
 const ThermalEnergyActivity = loadLabActivity(() => import("./physics/thermal/ThermalEnergyActivity").then((module) => ({ default: module.ThermalEnergyActivity })));
@@ -170,7 +173,14 @@ const t = text();
 /** Station Labs with after-submit hints (SAI-01A step 2); checkpoint Labs are covered by their envelope. */
 const STATION_HINT_RENDERERS = new Set(["density-bench", "gene-expression", "eye-anatomy-optics", "buoyancy-bench"]);
 
+/** Explore-first K2 Labs open the kit directly; every other Lab keeps the guided LabRun flow below. */
 export default function Lab() {
+  const { id } = useParams();
+  if (isExploreLab(id)) return <Suspense fallback={<p role="status" className="panel">Đang mở bàn thí nghiệm…</p>}><ExploreLabPage key={`explore:${id}`} labId={id!} /></Suspense>;
+  return <GuidedLab key="guided" />;
+}
+
+function GuidedLab() {
   const { id = "circuit" } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
