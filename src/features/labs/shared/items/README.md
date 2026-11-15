@@ -7,7 +7,7 @@
 | ID | Component | Bàn truyền vào | Điểm gắn |
 |---|---|---|---|
 | `beaker` | `Beaker3D` (`beaker.tsx`) | `radius`, `height`, `fill` (0–1), `liquid` (màu), `graduations`, `children` | `base`, `inside`, `mouth` qua `beakerAnchors(size)` |
-| `digital-scale` | `DigitalScale3D` (`digital-scale.tsx`) | `reading` (chuỗi đã định dạng, kèm đơn vị) | `base`, `pan`, `display` |
+| `digital-scale` | `DigitalScale3D` (`digital-scale.tsx`) | `reading` (chuỗi đã định dạng, kèm đơn vị); `children` là vật trên đĩa, vẽ tại `pan` với y = 0 là mặt đĩa; `onTare` (tùy chọn) hiện phím trừ bì | `base`, `pan`, `display` |
 
 `glass.tsx` chứa vật liệu thủy tinh và `LiquidColumn`, dùng cho item chung và cho đồ thủy tinh riêng của bàn (ống nghiệm, bình tam giác).
 
