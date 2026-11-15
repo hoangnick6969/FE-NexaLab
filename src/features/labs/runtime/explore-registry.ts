@@ -12,6 +12,7 @@ import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
 import { fixtureBench } from "./fixture-bench";
+import { mendelBench } from "../biology/genetics/mendel-bench";
 import type { ExploreRequirement } from "../class-explore/class-explore";
 
 /** One thing on a bench as students and teachers see it (C2.1 fields; `safety` only for materials). */
@@ -47,6 +48,7 @@ export type ExploreBenchEntry = {
 };
 
 const benches: ExploreBenchEntry[] = [
+  mendelBench,
   {
     kit: "k2-wet-bench@1",
     group: "chemistry",
