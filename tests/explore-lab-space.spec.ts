@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { fl13Config } from "../src/features/labs/chemistry/wet-bench/labs/fl-13.config";
 
 // SPEC-lab-space-shared-ui: FL-13 Explore keeps its flow (safety first, no attempt) and Esc acts by focus.
 const student = {
@@ -18,7 +19,8 @@ test("FL-13 Explore: keyboard safety gate, Esc collapses the hint drawer only fr
   } }));
   await page.route("**/api/me/notifications/unread-count", (route) => route.fulfill({ json: { count: 0 } }));
   await page.route("**/api/tutor/**", (route) => route.fulfill({ json: { provider: "rules", enabled: false } }));
-  await page.route("**/api/labs", (route) => route.fulfill({ json: [{ id: "acid-base-indicators", title: "Acid – base, chỉ thị và pH" }] }));
+  await page.route("**/api/labs", (route) => route.fulfill({ json: [{ id: "acid-base-indicators", title: "Acid – base, chỉ thị và pH", mode: "explore",
+    explore: { ok: true, kit: "k2-wet-bench@1", engine: "wet-bench@1.0.0", activity: { id: "pav-1", key: "acid-base-indicators-explore", version: 1, digest: "d" }, config: fl13Config } }] }));
 
   await page.goto("/labs/acid-base-indicators");
   const dialog = page.getByRole("dialog");

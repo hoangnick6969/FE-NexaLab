@@ -106,15 +106,13 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-const logKey = (config: ChemistryLabConfig) => `${config.labId}@${config.configVersion}`;
-
-/** Loads the saved notebook; storage failures (private mode, blocked) yield an empty one. */
-export async function loadObservationLog(config: ChemistryLabConfig): Promise<ObservationLogEntry[]> {
+/** Loads the notebook saved under `key` (`labId@activity.id` on /labs/:id); storage failures (private mode, blocked) yield an empty one. */
+export async function loadObservationLog(key: string): Promise<ObservationLogEntry[]> {
   try {
     const db = await openDb();
     try {
       const record = await new Promise<{ entries?: ObservationLogEntry[] } | undefined>((resolve, reject) => {
-        const request = db.transaction(STORE, "readonly").objectStore(STORE).get(logKey(config));
+        const request = db.transaction(STORE, "readonly").objectStore(STORE).get(key);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
@@ -123,11 +121,11 @@ export async function loadObservationLog(config: ChemistryLabConfig): Promise<Ob
   } catch { return []; }
 }
 
-export async function saveObservationLog(config: ChemistryLabConfig, entries: readonly ObservationLogEntry[]) {
+export async function saveObservationLog(config: ChemistryLabConfig, key: string, entries: readonly ObservationLogEntry[]) {
   try {
     const db = await openDb();
     try {
-      db.transaction(STORE, "readwrite").objectStore(STORE).put({ key: logKey(config), labId: config.labId, configVersion: config.configVersion, entries: entries.slice(-500), updatedAt: Date.now() });
+      db.transaction(STORE, "readwrite").objectStore(STORE).put({ key, labId: config.labId, configVersion: config.configVersion, entries: entries.slice(-500), updatedAt: Date.now() });
     } finally { db.close(); }
   } catch { /* Notebook still works for this session without storage. */ }
 }

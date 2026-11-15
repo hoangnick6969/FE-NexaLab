@@ -16,42 +16,48 @@ import { ObservationLogPanel } from "./ObservationLogPanel";
 import { WetBenchKitStage } from "./WetBenchKitStage";
 import "./kit.css";
 
-const ackKey = (config: ChemistryLabConfig) => `nexalab:k2-safety-ack:${config.labId}@${config.configVersion}`;
-const readAck = (config: ChemistryLabConfig) => { try { return localStorage.getItem(ackKey(config)) === "1"; } catch { return false; } };
+const ackKey = (storageKey: string) => `nexalab:k2-safety-ack:${storageKey}`;
+const readAck = (storageKey: string) => { try { return localStorage.getItem(ackKey(storageKey)) === "1"; } catch { return false; } };
 
-export function ExploreBench({ config, onExit, exitTo, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; onExit: () => void; exitTo?: string; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
-  return <LabSpace title={config.title} onExit={onExit} exitTo={exitTo}>
-    <ExploreBenchBody config={config} headerExtra={headerExtra} draftNotice={draftNotice} configSource={configSource} />
+type BenchProps = {
+  config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled";
+  /** Key for the local notebook, safety ack and answers: `/labs/:id` passes `labId@activity.id` (P0 C1.2); the dev route keeps `labId@configVersion`. */
+  storageKey?: string;
+};
+
+export function ExploreBench({ onExit, exitTo, ...props }: BenchProps & { onExit: () => void; exitTo?: string }) {
+  return <LabSpace title={props.config.title} onExit={onExit} exitTo={exitTo}>
+    <ExploreBenchBody {...props} />
   </LabSpace>;
 }
 
-function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
+function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, storageKey = `${config.labId}@${config.configVersion}` }: BenchProps) {
   const [state, dispatch] = useReducer(benchReducer, config, initialBenchState);
   const [introOpen, setIntroOpen] = useState(true);
   const [reopened, setReopened] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(() => readAck(config));
+  const [acknowledged, setAcknowledged] = useState(() => readAck(storageKey));
   const [hovered, setHovered] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewReset, setViewReset] = useState(0);
-  const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${config.labId}@${config.configVersion}`);
+  const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${storageKey}`);
   const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
   const headerActions = useContext(LabHeaderActionsContext);
   const logLoaded = useRef(false);
 
   useEffect(() => {
     let active = true;
-    void loadObservationLog(config).then((entries) => {
+    void loadObservationLog(storageKey).then((entries) => {
       if (!active) return;
       if (entries.length) dispatch({ type: "load_log", entries });
       logLoaded.current = true;
     });
     return () => { active = false; };
-  }, [config]);
+  }, [storageKey]);
   useEffect(() => {
     if (!logLoaded.current) return;
-    const timer = window.setTimeout(() => void saveObservationLog(config, state.log), 300);
+    const timer = window.setTimeout(() => void saveObservationLog(config, storageKey, state.log), 300);
     return () => window.clearTimeout(timer);
-  }, [config, state.log]);
+  }, [config, storageKey, state.log]);
 
   useEffect(() => {
     if (introOpen) return;
@@ -89,7 +95,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { 
   };
 
   const enter = () => {
-    if (config.safetyBriefing.acknowledgeRequired) { try { localStorage.setItem(ackKey(config), "1"); } catch { /* per-session only */ } setAcknowledged(true); }
+    if (config.safetyBriefing.acknowledgeRequired) { try { localStorage.setItem(ackKey(storageKey), "1"); } catch { /* per-session only */ } setAcknowledged(true); }
     setIntroOpen(false);
     setReopened(false);
   };
