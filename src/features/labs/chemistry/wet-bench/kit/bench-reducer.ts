@@ -3,12 +3,12 @@
  * goes through the same `hold` / `apply` actions, so all input methods behave identically.
  */
 import {
-  applyOperation, createBench, measure, reagentById, scaleReadingMicrograms,
-  type ApplyResult, type Bench, type ChemistryLabConfig, type EngineContext, type Operation, type Transition,
+  applyOperation, assessSolution, createBench, engineContextFor, measure, readVolume, reagentById, scaleReadingMicrograms,
+  type ApplyResult, type Bench, type ChemistryLabConfig, type EngineContext, type Operation, type SolutionAssessment, type Transition,
 } from "@nexalab/sim/wet-bench";
 import { K2_APPARATUS, isVesselKind, type HeldTool } from "./apparatus-manifest";
 import { isPlacementSlot, slotById } from "./bench-layout";
-import { describeVesselChange, equationsFor, formatGrams, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
+import { describeVesselChange, equationsFor, formatGrams, formatMilligrams, formatMolar, formatPercent, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
 import { OBSERVATION_LOG_LIMIT } from "../../../shared/explore/observation-log";
 
 /** A dropper draws up to 1.0 mL (20 standard drops of 0.05 mL) per fill. */
@@ -18,6 +18,27 @@ export type Held =
   | { kind: "reagent"; reagentId: string }
   | { kind: "tool"; tool: HeldTool; apparatusId: string }
   | { kind: "vessel"; vesselId: string };
+
+/** The learner's conclusion for one target: the real concentration, shown only after "Kết luận". */
+export type Conclusion = { targetId: string; vesselId: string; result: Extract<SolutionAssessment, { ok: true }> };
+
+/**
+ * Volume as the learner may know it. With a volume measurement in the Lab, only the graduated cylinder gives a number
+ * (to 1 mL); a flask shows whether it is at the mark and a beaker only a rough level, so the cylinder is the tool to use.
+ */
+export function volumeLabel(config: ChemistryLabConfig, vessel: Bench["vessels"][string]) {
+  if (!config.measurements.includes("volume")) return formatQuantity(vessel.solutionMicroliters);
+  if (vessel.kind === "graduated_cylinder_100ml") {
+    const reading = readVolume(vessel);
+    return reading.ok ? `${reading.milliliters} mL` : "";
+  }
+  if (vessel.kind === "volumetric_flask_100ml") return vessel.solutionMicroliters >= vessel.capacityMicroliters ? "đến vạch 100 mL" : "chưa đến vạch";
+  return `khoảng ${Math.round(vessel.solutionMicroliters / 10_000) * 10} mL`;
+}
+
+/** Largest and default spatula amount, in milligrams. */
+export const POWDER_MAX_MILLIGRAMS = 50_000;
+export const POWDER_DEFAULT_MILLIGRAMS = 500;
 
 export type Target = { kind: "vessel"; vesselId: string } | { kind: "slot"; slotId: string } | { kind: "bottle"; reagentId: string };
 
@@ -50,6 +71,11 @@ export type BenchUiState = {
   drip: { vesselId: string; reagentId: string; at: number } | null;
   /** Colour shown on the litmus strip in hand after a dip. */
   stripColour: "red" | "purple" | "blue" | null;
+  /** Scale zeroed (tared): the reading shown is the raw reading minus this, in µg. Presentation only. */
+  scaleZero: number;
+  /** Milligrams taken per spatula scoop (engine 1.1.0 powders). */
+  powderMilligrams: number;
+  conclusions: Record<string, Conclusion>;
 };
 
 export type BenchAction =
@@ -60,6 +86,10 @@ export type BenchAction =
   | { type: "click_bottle"; reagentId: string; now: number }
   | { type: "click_slot"; slotId: string; now: number }
   | { type: "empty"; vesselId: string; now: number }
+  | { type: "set_powder"; milligrams: number }
+  | { type: "tare"; now: number }
+  | { type: "fill_mark"; vesselId: string; now: number }
+  | { type: "conclude"; targetId: string; vesselId: string; now: number }
   | { type: "remove_probe"; now: number }
   | { type: "undo"; now: number }
   | { type: "reset"; now: number }
@@ -83,10 +113,11 @@ export function initialBenchState(config: ChemistryLabConfig): BenchUiState {
   };
   return {
     config,
-    context: { allowedReactions: config.allowedReactions, availableReagents: config.availableReagents.map((item) => item.reagentId) },
+    context: engineContextFor(config),
     initial, current: initial, history: [], held: null,
     presetMicroliters: config.dispensing.liquidPresetsMicroliters[0], loadedMicroliters: 0,
     focusVesselId: null, flashes: {}, banner: null, notice: null, log: [], seen: { reactions: [], measurements: [] }, drip: null, stripColour: null,
+    scaleZero: 0, powderMilligrams: POWDER_DEFAULT_MILLIGRAMS, conclusions: {},
   };
 }
 
@@ -94,6 +125,11 @@ const HISTORY_LIMIT = 50;
 const wasteId = (config: ChemistryLabConfig) => config.enabledApparatus.find((item) => item.kind === "waste_beaker")?.id ?? null;
 const scaleVessels = (state: BenchUiState, snapshot: Snapshot) =>
   Object.values(snapshot.bench.vessels).filter((vessel) => slotById(snapshot.positions[vessel.vesselId] ?? "")?.kind === "scale");
+/** What the scale shows for the vessels standing on it: the raw reading minus the zero set by the learner. */
+export const scaleDisplayMicrograms = (state: BenchUiState, snapshot: Snapshot = state.current) => {
+  const onScale = scaleVessels(state, snapshot);
+  return (onScale.length ? scaleReadingMicrograms(onScale) : 0) - state.scaleZero;
+};
 const hasScale = (state: BenchUiState) => state.config.enabledApparatus.some((item) => item.kind === "electronic_scale");
 
 function pushLog(state: BenchUiState, entry: Omit<ObservationLogEntry, "seq">): BenchUiState {
@@ -107,7 +143,7 @@ function pushLog(state: BenchUiState, entry: Omit<ObservationLogEntry, "seq">): 
       && entry.reactions.length === 0 && last.reactions.length === 0 && entry.equations.length === 0
       && JSON.stringify(last.phenomenaVi) === JSON.stringify(entry.phenomenaVi)) {
     const microliters = last.merge.microliters + entry.merge.microliters;
-    const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters)} ${last.merge.label}` };
+    const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters, Boolean(state.config.solutes?.length))} ${last.merge.label}` };
     return { ...state, log: [...state.log.slice(0, -1), merged], seen };
   }
   return { ...state, log: [...state.log, { ...entry, seq }].slice(-OBSERVATION_LOG_LIMIT), seen };
@@ -123,12 +159,15 @@ function rejectionText(state: BenchUiState, result: Extract<ApplyResult, { statu
     case "NOT_STOPPERABLE": return "Chỉ bình tam giác mới đậy được nút cao su.";
     case "EMPTY_SOURCE": return `${label} đang trống, không có gì để đổ.`;
     case "INVALID_OPERATION": return "Hãy mở nút bình trước khi rót.";
+    case "NOT_DISSOLVED": return "Chất rắn chưa tan hết, cần thêm nước và khuấy đều.";
+    case "NO_MARK": return "Chỉ bình định mức có vạch để thêm nước đến vạch.";
+    case "WRONG_REAGENT_FORM": return "Vật chứa hoặc dụng cụ này không dùng được với loại hoá chất đó.";
     default: return "Thao tác này không thực hiện được.";
   }
 }
 
 function describeAction(state: BenchUiState, op: Operation) {
-  if (op.type === "add_liquid") return `Thêm ${formatQuantity(op.microliters)} ${reagentLabel(op.reagentId)}`;
+  if (op.type === "add_liquid") return `Thêm ${formatQuantity(op.microliters, Boolean(state.config.solutes?.length))} ${reagentLabel(op.reagentId)}`;
   if (op.type === "add_indicator") return `Thêm ${op.drops} giọt ${reagentLabel(op.reagentId)}`;
   if (op.type === "add_solid") {
     const composition = reagentById(op.reagentId)?.composition;
@@ -136,6 +175,9 @@ function describeAction(state: BenchUiState, op: Operation) {
   }
   if (op.type === "pour_all") return `Đổ ${apparatusLabel(state.config, op.fromVesselId)} vào ${apparatusLabel(state.config, op.toVesselId)}`;
   if (op.type === "toggle_stopper") return state.current.bench.vessels[op.vesselId]?.stoppered ? "Mở nút cao su" : "Đậy nút cao su";
+  if (op.type === "add_solid_mass") return `Lấy ${formatMilligrams(op.milligrams)} ${reagentLabel(op.reagentId)} bằng thìa cho vào ${apparatusLabel(state.config, op.vesselId)}`;
+  if (op.type === "stir") return `Khuấy ${apparatusLabel(state.config, op.vesselId)} bằng đũa thuỷ tinh`;
+  if (op.type === "fill_to_mark") return `Thêm nước đến vạch của ${apparatusLabel(state.config, op.vesselId)}`;
   return `Đổ ${apparatusLabel(state.config, op.vesselId)} vào cốc thải`;
 }
 
@@ -145,7 +187,9 @@ function liveReadings(state: BenchUiState, snapshot: Snapshot, vesselId: string)
     const reading = measure(snapshot.bench.vessels[vesselId], "ph_meter");
     readings.ph = reading.ok && reading.kind === "ph_meter" ? formatPh(reading.tenthsPh) : "—";
   }
-  if (hasScale(state) && slotById(snapshot.positions[vesselId] ?? "")?.kind === "scale") readings.scale = formatGrams(scaleReadingMicrograms(scaleVessels(state, snapshot)));
+  if (hasScale(state) && slotById(snapshot.positions[vesselId] ?? "")?.kind === "scale") readings.scale = formatGrams(scaleDisplayMicrograms(state, snapshot));
+  const volume = state.config.measurements.includes("volume") && snapshot.bench.vessels[vesselId].kind === "graduated_cylinder_100ml" ? readVolume(snapshot.bench.vessels[vesselId]) : null;
+  if (volume?.ok) readings.volume = `${volume.milliliters} mL`;
   return readings;
 }
 
@@ -171,9 +215,9 @@ function runOperation(state: BenchUiState, op: Operation, now: number): BenchUiS
   const current: Snapshot = { ...before, bench: result.bench, strips, wasteMicroliters };
   const transition = result.transitions[0] ?? null;
   const flashes = transition && Object.keys(transition.gasProducedNanomoles).length ? { ...state.flashes, [targetId]: { transition, at: now } } : state.flashes;
-  const drip = op.type === "add_liquid" || op.type === "add_indicator" ? { vesselId: targetId, reagentId: op.reagentId, at: now } : state.drip;
+  const drip = op.type === "add_liquid" || op.type === "add_indicator" || op.type === "fill_to_mark" ? { vesselId: targetId, reagentId: op.reagentId, at: now } : state.drip;
   const next: BenchUiState = {
-    ...state, current, flashes, drip, banner: null, notice: null, focusVesselId: targetId,
+    ...state, current, flashes, drip, banner: null, notice: null, focusVesselId: targetId, conclusions: {},
     history: [...state.history, { snapshot: before, labelVi: describeAction(state, op) }].slice(-HISTORY_LIMIT),
   };
   const phenomena = op.type === "empty_vessel" ? ["Vật chứa đã sạch, sẵn sàng thử lại"]
@@ -214,12 +258,16 @@ function applyHeld(state: BenchUiState, held: Held, target: Target, now: number)
   if (target.kind === "bottle") {
     const reagent = reagentById(target.reagentId);
     if (!reagent) return state;
-    if (held.kind === "tool" && (held.tool === "dropper" || held.tool === "tongs")) {
-      if (reagent.dispenser !== (held.tool === "dropper" ? "dropper" : "tongs")) return notice(state, held.tool === "dropper" ? "Lọ này đựng chất rắn: hãy dùng kẹp gắp." : "Lọ này đựng dung dịch: hãy dùng ống nhỏ giọt.", now);
+    if (held.kind === "tool" && (held.tool === "dropper" || held.tool === "tongs" || held.tool === "spatula")) {
+      if (reagent.dispenser !== held.tool) {
+        if (reagent.dispenser === "pour") return notice(state, "Chai nước rót trực tiếp: chọn chai rồi chọn vật chứa, không cần dụng cụ.", now);
+        const wanted = reagent.dispenser === "dropper" ? "ống nhỏ giọt" : reagent.dispenser === "spatula" ? "thìa" : "kẹp gắp";
+        return notice(state, `Lọ này cần dùng ${wanted}.`, now);
+      }
       return { ...state, held: { kind: "reagent", reagentId: reagent.id }, notice: null };
     }
     if (held.kind === "reagent") return { ...state, held: { kind: "reagent", reagentId: reagent.id }, notice: null };
-    return notice(state, "Chọn ống nhỏ giọt hoặc kẹp gắp trước, rồi chọn lọ hoá chất.", now);
+    return notice(state, "Chọn ống nhỏ giọt, kẹp gắp hoặc thìa trước, rồi chọn lọ hoá chất.", now);
   }
   if (target.kind === "slot") {
     if (held.kind !== "vessel") return state;
@@ -248,13 +296,21 @@ function applyHeld(state: BenchUiState, held: Held, target: Target, now: number)
   }
   if (held.kind === "tool") {
     if (held.tool === "stopper") return runOperation({ ...state, held: null }, { type: "toggle_stopper", vesselId }, now);
-    if (held.tool === "dropper" || held.tool === "tongs") return notice(state, held.tool === "dropper" ? "Ống nhỏ giọt đang trống: hãy chọn một lọ dung dịch để hút trước." : "Kẹp gắp đang trống: hãy chọn một lọ chất rắn để gắp trước.", now);
+    if (held.tool === "glass_rod") return runOperation(state, { type: "stir", vesselId }, now);
+    if (held.tool === "dropper" || held.tool === "tongs" || held.tool === "spatula") {
+      return notice(state, held.tool === "dropper" ? "Ống nhỏ giọt đang trống: hãy chọn một lọ dung dịch để hút trước." : held.tool === "spatula" ? "Thìa đang trống: hãy chọn một lọ chất bột để lấy trước." : "Kẹp gắp đang trống: hãy chọn một lọ chất rắn để gắp trước.", now);
+    }
     return measureWith(state, held.tool, vesselId, now);
   }
   const reagent = reagentById(held.reagentId);
   if (!reagent) return state;
   const composition = reagent.composition;
   if (composition.kind === "solid") return runOperation(state, { type: "add_solid", vesselId, reagentId: reagent.id, pieces: 1 }, now);
+  if (composition.kind === "powder") return runOperation(state, { type: "add_solid_mass", vesselId, reagentId: reagent.id, milligrams: state.powderMilligrams }, now);
+  // A bottle that is poured straight from (water for FL-11): the preset volume each time, no dropper to fill.
+  if (reagent.dispenser === "pour" && composition.kind === "solution") {
+    return runOperation(state, { type: "add_liquid", vesselId, reagentId: reagent.id, microliters: state.presetMicroliters }, now);
+  }
   const loaded = state.loadedMicroliters;
   if (loaded <= 0) return emptyDropper(state, now);
   const dose = Math.min(loaded, composition.kind === "indicator" ? Math.min(state.presetMicroliters, 250) : state.presetMicroliters);
@@ -304,6 +360,35 @@ function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
       return { ...state, current: takePen ? { ...state.current, probeIn: null } : state.current, stripColour: null, held: action.held, notice: null, focusVesselId: action.held?.kind === "vessel" ? action.held.vesselId : state.focusVesselId };
     }
     case "preset": return { ...state, presetMicroliters: action.microliters };
+    case "set_powder": return { ...state, powderMilligrams: Math.max(1, Math.min(POWDER_MAX_MILLIGRAMS, Math.round(Number.isFinite(action.milligrams) ? action.milligrams : POWDER_DEFAULT_MILLIGRAMS))) };
+    case "tare": {
+      const zero = scaleDisplayMicrograms({ ...state, scaleZero: 0 });
+      return pushLog({ ...state, scaleZero: zero, notice: null }, {
+        at: action.now, vesselId: null, locationVi: "Cân điện tử", actionVi: "Nhấn nút về 0 trên cân",
+        phenomenaVi: [zero ? "Cân về 0 với vật đang đặt trên đĩa" : "Cân về 0"], equations: [], readings: { scale: formatGrams(0) }, reactions: [], measurement: "scale",
+      });
+    }
+    case "fill_mark": {
+      const water = state.config.availableReagents.map((item) => reagentById(item.reagentId)).find((reagent) => reagent?.composition.kind === "solution" && reagent.composition.solute === null);
+      if (!water) return notice(state, "Bài này không có lọ nước để thêm đến vạch.", action.now);
+      return runOperation(state, { type: "fill_to_mark", vesselId: action.vesselId, reagentId: water.id }, action.now);
+    }
+    case "conclude": {
+      const target = state.config.targets?.find((item) => item.id === action.targetId);
+      const vessel = state.current.bench.vessels[action.vesselId];
+      if (!target || !vessel) return state;
+      const result = assessSolution(vessel, target);
+      if (!result.ok) {
+        const textVi = result.code === "NOT_DISSOLVED" ? "Chất rắn chưa tan hết, cần thêm nước và khuấy đều." : result.code === "NO_SOLUTION" ? "Vật chứa này chưa có dung dịch." : "Vật chứa này chưa có chất tan của mục tiêu.";
+        return notice(state, textVi, action.now);
+      }
+      const label = apparatusLabel(state.config, action.vesselId);
+      return pushLog({ ...state, conclusions: { ...state.conclusions, [target.id]: { targetId: target.id, vesselId: action.vesselId, result } }, focusVesselId: action.vesselId, notice: null }, {
+        at: action.now, vesselId: action.vesselId, locationVi: label, actionVi: `Kết luận: ${target.titleVi}`,
+        phenomenaVi: [`Nồng độ phần trăm ${formatPercent(result.tenthsPercent)}, nồng độ mol ${formatMolar(result.millimolar)}`, result.withinTarget ? "Nằm trong dung sai của mục tiêu" : "Nằm ngoài dung sai của mục tiêu"],
+        equations: [], readings: {}, reactions: [],
+      });
+    }
     case "apply": {
       if (!state.held) return state;
       const next = applyHeld(state, state.held, action.target, action.now);
@@ -321,7 +406,7 @@ function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
         const refill = isDropperReagent(held.reagentId) && state.loadedMicroliters < DROPPER_CAPACITY_MICROLITERS;
         return refill ? { ...state, loadedMicroliters: DROPPER_CAPACITY_MICROLITERS, notice: null } : { ...state, held: null };
       }
-      if (held && ((held.kind === "tool" && (held.tool === "dropper" || held.tool === "tongs")) || held.kind === "reagent")) return benchReducer(state, { type: "apply", target: { kind: "bottle", reagentId: action.reagentId }, now: action.now });
+      if (held && ((held.kind === "tool" && (held.tool === "dropper" || held.tool === "tongs" || held.tool === "spatula")) || held.kind === "reagent")) return benchReducer(state, { type: "apply", target: { kind: "bottle", reagentId: action.reagentId }, now: action.now });
       return { ...state, held: { kind: "reagent", reagentId: action.reagentId }, stripColour: null, notice: null };
     }
     case "click_slot": return state.held ? benchReducer(state, { type: "apply", target: { kind: "slot", slotId: action.slotId }, now: action.now }) : state;
@@ -336,12 +421,12 @@ function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
     case "undo": {
       const last = state.history.at(-1);
       if (!last) return notice(state, "Chưa có thao tác nào để hoàn tác.", action.now);
-      return pushLog({ ...state, current: last.snapshot, history: state.history.slice(0, -1), banner: null, notice: null, flashes: {} }, {
+      return pushLog({ ...state, current: last.snapshot, history: state.history.slice(0, -1), banner: null, notice: null, flashes: {}, conclusions: {} }, {
         at: action.now, vesselId: null, locationVi: "Bàn thí nghiệm", actionVi: `Hoàn tác: ${last.labelVi}`, phenomenaVi: ["Bàn trở về trạng thái trước thao tác"], equations: [], readings: {}, reactions: [],
       });
     }
     case "reset":
-      return pushLog({ ...state, current: state.initial, history: [], held: null, banner: null, notice: null, flashes: {}, focusVesselId: null }, {
+      return pushLog({ ...state, current: state.initial, history: [], held: null, banner: null, notice: null, flashes: {}, focusVesselId: null, conclusions: {}, scaleZero: 0 }, {
         at: action.now, vesselId: null, locationVi: "Bàn thí nghiệm", actionVi: "Làm mới bàn thí nghiệm", phenomenaVi: ["Mọi vật chứa trở về trạng thái ban đầu"], equations: [], readings: {}, reactions: [],
       });
     case "dismiss_banner": return { ...state, banner: null };
@@ -370,9 +455,10 @@ export function validTargets(state: BenchUiState, held: Held | null): Target[] {
       : [];
     return [...vessels.filter((id) => id !== held.vesselId).map((vesselId): Target => ({ kind: "vessel", vesselId })), ...slots];
   }
-  const bottles = (dispenser: "dropper" | "tongs") => state.config.availableReagents.filter((item) => reagentById(item.reagentId)?.dispenser === dispenser).map((item): Target => ({ kind: "bottle", reagentId: item.reagentId }));
+  const bottles = (dispenser: "dropper" | "tongs" | "spatula") => state.config.availableReagents.filter((item) => reagentById(item.reagentId)?.dispenser === dispenser).map((item): Target => ({ kind: "bottle", reagentId: item.reagentId }));
   if (held.kind === "tool" && held.tool === "dropper") return bottles("dropper");
   if (held.kind === "tool" && held.tool === "tongs") return bottles("tongs");
+  if (held.kind === "tool" && held.tool === "spatula") return bottles("spatula");
   if (held.kind === "tool" && held.tool === "stopper") {
     return vessels.filter((id) => state.current.bench.vessels[id].stopperable).map((vesselId) => ({ kind: "vessel", vesselId }));
   }

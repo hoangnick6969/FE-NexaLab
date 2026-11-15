@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { SPECIES, type VesselVisualState } from "@nexalab/sim/wet-bench";
 import { Beaker3D as SharedBeaker3D, BEAKER_DEFAULT_SIZE, beakerAnchors, beakerInnerHeight, type BeakerSize } from "../../../shared/items/beaker";
 import { GLASS, LiquidColumn as Liquid, prefersReducedMotion } from "../../../shared/items/glass";
+import { GraduatedCylinder3D as SharedCylinder3D } from "../../../shared/items/graduated-cylinder";
+import { CYLINDER_DEFAULT_SIZE, cylinderAnchors, cylinderInnerHeight } from "../../../shared/items/item-layout";
 import { CATEGORY_COLOR, LITMUS_HEX, visualFill, type BottleCategory, type Look } from "./liquid-look";
 
 export { prefersReducedMotion };
@@ -67,6 +69,16 @@ function Precipitate({ visual, radius, floorY }: { visual: VesselVisualState; ra
   return <mesh position={[0, floorY + h / 2, 0]}><cylinderGeometry args={[radius * 0.95, radius * 0.95, h, 24]} /><meshStandardMaterial color={visual.precipitate.color} roughness={1} /></mesh>;
 }
 
+/** Undissolved powder: a low heap on the floor of the vessel that grows with the mass (up to 20 g). */
+function Powder({ visual, radius, floorY }: { visual: VesselVisualState; radius: number; floorY: number }) {
+  if (!visual.powder) return null;
+  const heap = 0.008 + 0.05 * visual.powder.amount;
+  return <mesh position={[0, floorY + heap / 2, 0]}>
+    <cylinderGeometry args={[radius * 0.15, radius * (0.55 + 0.35 * visual.powder.amount), heap, 24]} />
+    <meshStandardMaterial color={visual.powder.color} roughness={1} />
+  </mesh>;
+}
+
 export type VesselProps = { visual: VesselVisualState; look: Look; flashAt: number | null; strip?: "red" | "purple" | "blue" };
 
 export function TestTube3D({ visual, look, flashAt, strip }: VesselProps) {
@@ -92,6 +104,7 @@ export function Beaker3D({ visual, look, flashAt, radius = BEAKER_DEFAULT_SIZE.r
   const floorY = beakerAnchors(size).inside[1];
   return <SharedBeaker3D radius={radius} height={height} fill={fill} liquid={look}>
     <Precipitate visual={visual} radius={radius * 0.85} floorY={floorY} />
+    <Powder visual={visual} radius={radius * 0.85} floorY={floorY} />
     <Solids visual={visual} floorY={floorY} spread={0.05} />
     {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={radius * 0.6} height={Math.max(fill * beakerInnerHeight(size), 0.05)} bottom={0.03} />}
     <Collider size={[radius * 2, height + 0.04, radius * 2]} y={height / 2} />
@@ -268,4 +281,69 @@ export function TargetRing({ radius, tone }: { radius: number; tone: "valid" | "
     <ringGeometry args={[radius, radius + (tone === "active" ? 0.03 : 0.018), 40]} />
     <meshBasicMaterial color={color} transparent opacity={tone === "valid" ? 0.7 : 0.95} depthWrite={false} />
   </mesh>;
+}
+
+/**
+ * Graduated cylinder from the shared item library. The liquid follows the volume linearly (no easing curve), so the level
+ * is the same measurement the bench reports: it is read to the nearest millilitre.
+ */
+export function Cylinder3D({ visual, look, flashAt }: VesselProps) {
+  const size = CYLINDER_DEFAULT_SIZE;
+  const floorY = cylinderAnchors(size).inside[1];
+  return <SharedCylinder3D fill={visual.liquidLevel} liquid={look} divisions={20} majorEvery={2}>
+    <Powder visual={visual} radius={size.radius * 0.8} floorY={floorY} />
+    {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={size.radius * 0.5} height={Math.max(visual.liquidLevel * cylinderInnerHeight(size), 0.05)} bottom={0.03} />}
+    <Collider size={[size.radius * 2, size.height + 0.04, size.radius * 2]} y={size.height / 2} />
+  </SharedCylinder3D>;
+}
+
+const FLASK = { bulbRadius: 0.13, bulbHeight: 0.2, neckRadius: 0.026, neckHeight: 0.2, markFraction: 0.9 } as const;
+/** Volumetric flask: a round body and a long neck with one ring mark. Full (100 mL) puts the liquid at the mark. */
+export function VolumetricFlask3D({ visual, look }: VesselProps) {
+  const { bulbRadius, bulbHeight, neckRadius, neckHeight, markFraction } = FLASK;
+  const level = visual.liquidLevel;
+  const inBulb = Math.min(1, level / markFraction) * bulbHeight * 0.95;
+  const inNeck = level > markFraction ? ((level - markFraction) / (1 - markFraction)) * neckHeight * 0.6 : 0;
+  return <group>
+    <mesh position={[0, bulbHeight / 2, 0]}><cylinderGeometry args={[bulbRadius * 0.9, bulbRadius, bulbHeight, 36, 1, true]} /><meshPhysicalMaterial {...GLASS} /></mesh>
+    <mesh position={[0, 0.008, 0]}><cylinderGeometry args={[bulbRadius, bulbRadius, 0.016, 36]} /><meshPhysicalMaterial {...GLASS} opacity={0.5} /></mesh>
+    <mesh position={[0, bulbHeight + 0.015, 0]}><cylinderGeometry args={[neckRadius, bulbRadius * 0.9, 0.03, 28, 1, true]} /><meshPhysicalMaterial {...GLASS} /></mesh>
+    <mesh position={[0, bulbHeight + 0.03 + (neckHeight - 0.03) / 2, 0]}><cylinderGeometry args={[neckRadius, neckRadius, neckHeight - 0.03, 20, 1, true]} /><meshPhysicalMaterial {...GLASS} /></mesh>
+    <mesh position={[0, bulbHeight + neckHeight * 0.6, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[neckRadius + 0.002, 0.0025, 6, 24]} /><meshStandardMaterial color="#1c3e78" /></mesh>
+    {inBulb > 0.002 && <mesh position={[0, 0.016 + inBulb / 2, 0]}><cylinderGeometry args={[bulbRadius * 0.86, bulbRadius * 0.93, inBulb, 32]} /><meshStandardMaterial color={look.color} transparent opacity={look.opacity} roughness={0.25} depthWrite={false} /></mesh>}
+    {inNeck > 0.001 && <mesh position={[0, bulbHeight + 0.015 + inNeck / 2, 0]}><cylinderGeometry args={[neckRadius * 0.85, neckRadius * 0.85, inNeck, 16]} /><meshStandardMaterial color={look.color} transparent opacity={look.opacity} roughness={0.25} depthWrite={false} /></mesh>}
+    <Powder visual={visual} radius={bulbRadius * 0.8} floorY={0.016} />
+    <Collider size={[bulbRadius * 2, bulbHeight + neckHeight, bulbRadius * 2]} y={(bulbHeight + neckHeight) / 2} />
+  </group>;
+}
+
+/** Spatula resting on its tray: a thin handle and a small scoop. */
+export function Spatula3D() {
+  return <group rotation={[0, 0.5, 0]}>
+    <mesh position={[0, 0.012, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.006, 0.006, 0.22, 10]} /><meshStandardMaterial color="#94a3b8" metalness={0.7} roughness={0.3} /></mesh>
+    <mesh position={[0.13, 0.012, 0]} scale={[1, 0.35, 0.8]} castShadow><sphereGeometry args={[0.03, 14, 10]} /><meshStandardMaterial color="#cbd5e1" metalness={0.7} roughness={0.3} /></mesh>
+    <Collider size={[0.28, 0.05, 0.08]} y={0.02} />
+  </group>;
+}
+
+/** Spatula in the hand (scoop at the origin, handle rising); `powder` is the colour of what it holds. */
+export function SpatulaHolding({ powder }: { powder: string | null }) {
+  return <group rotation={[0, 0, -0.5]}>
+    <mesh position={[0, 0.12, 0]} castShadow><cylinderGeometry args={[0.005, 0.005, 0.24, 10]} /><meshStandardMaterial color="#94a3b8" metalness={0.7} roughness={0.3} /></mesh>
+    <mesh scale={[1, 0.35, 0.8]} castShadow><sphereGeometry args={[0.028, 14, 10]} /><meshStandardMaterial color="#cbd5e1" metalness={0.7} roughness={0.3} /></mesh>
+    {powder && <mesh position={[0, 0.012, 0]} scale={[1, 0.6, 0.8]}><sphereGeometry args={[0.022, 12, 8]} /><meshStandardMaterial color={powder} roughness={1} /></mesh>}
+  </group>;
+}
+
+/** Glass rod lying on its tray, and in the hand (tip at the origin). */
+export function GlassRod3D() {
+  return <group rotation={[0, -0.3, 0]}>
+    <mesh position={[0, 0.012, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.008, 0.008, 0.34, 12]} /><meshPhysicalMaterial {...GLASS} opacity={0.55} /></mesh>
+    <Collider size={[0.36, 0.05, 0.06]} y={0.02} />
+  </group>;
+}
+export function GlassRodHolding() {
+  return <group rotation={[0, 0, 0.18]}>
+    <mesh position={[0, 0.17, 0]}><cylinderGeometry args={[0.008, 0.008, 0.34, 12]} /><meshPhysicalMaterial {...GLASS} opacity={0.6} /></mesh>
+  </group>;
 }
