@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { fl13Config } from "../src/features/labs/chemistry/wet-bench/labs/fl-13.config";
 
 // SPEC-lab-mode-foundation-p0 C1.1/C1.2: `/labs/:id` runs Explore only from the server-pinned config in `GET /labs`.
@@ -20,7 +21,7 @@ async function signIn(page: Page, role: "STUDENT" | "TEACHER", rows: unknown[]) 
   return requests;
 }
 
-test("FL-13 opens from the pinned config with the draft label, apparatus list and a pH reading, and creates no run", async ({ page }) => {
+test("FL-13 opens from the pinned config, saves and exports a pH observation, and creates no run", async ({ page }) => {
   const requests = await signIn(page, "STUDENT", [exploreRow("acid-base-indicators", fl13Config)]);
   await page.goto("/labs/acid-base-indicators");
   const dialog = page.getByRole("dialog");
@@ -35,6 +36,31 @@ test("FL-13 opens from the pinned config with the draft label, apparatus list an
   await page.getByRole("group", { name: "Dụng cụ" }).getByRole("button", { name: "Bút đo pH" }).click();
   await page.getByRole("group", { name: "Vật chứa" }).getByRole("button", { name: /^Cốc 100 mL/ }).click();
   await expect(page.getByRole("complementary", { name: "Thông tin Cốc 100 mL" })).toContainText(/pH \d/);
+  const notebook = page.getByRole("region", { name: "Nhật ký quan sát" });
+  await expect(notebook).toContainText(/pH = \d/);
+  await expect.poll(() => page.evaluate((key) => new Promise<boolean>((resolve) => {
+    const open = indexedDB.open("nexalab-k2-observation-log", 1);
+    open.onerror = () => resolve(false);
+    open.onsuccess = () => {
+      const db = open.result;
+      const read = db.transaction("logs").objectStore("logs").get(key);
+      read.onsuccess = () => {
+        resolve(Boolean(read.result?.entries.some((entry: { readings: { ph?: string } }) => entry.readings.ph)));
+        db.close();
+      };
+      read.onerror = () => { db.close(); resolve(false); };
+    };
+  }), `acid-base-indicators@${activity.id}`)).toBe(true);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Vào bàn thí nghiệm" }).click();
+  await expect(notebook).toContainText(/pH = \d/);
+  const download = page.waitForEvent("download");
+  await notebook.getByRole("button", { name: "Xuất nhật ký (JSON)" }).click();
+  const path = await (await download).path();
+  const exported = JSON.parse(await readFile(path, "utf8"));
+  expect(exported).toMatchObject({ schema: "k2-observation-log/1", labId: "acid-base-indicators", scored: false });
+  expect(exported.entries).toEqual(expect.arrayContaining([expect.objectContaining({ readings: { ph: expect.any(String) } })]));
   expect(requests).toEqual([]);
 });
 

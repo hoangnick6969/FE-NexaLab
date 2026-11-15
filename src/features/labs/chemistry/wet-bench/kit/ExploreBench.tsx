@@ -2,12 +2,13 @@
  * K2 Explore-first Lab: Stage 1 intro & safety → Stage 2 free workbench → Stage 3 optional prompts.
  * Unscored and client-only: no LabRun, no attempt, no evidence.
  */
-import { useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { LabHeaderActionsContext, LabSpace } from "../../../shared/LabSpace";
 import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
 import { ObservationDrawer, usePromptAnswers } from "../../../shared/ObservationDrawer";
+import { observationLogKey } from "../../../shared/explore/observation-log";
 import { listWetBenchKitItems } from "./kit-items";
 import { benchReducer, initialBenchState } from "./bench-reducer";
 import { BenchHud } from "./BenchHud";
@@ -31,7 +32,7 @@ export function ExploreBench({ onExit, exitTo, ...props }: BenchProps & { onExit
   </LabSpace>;
 }
 
-function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, storageKey = `${config.labId}@${config.configVersion}` }: BenchProps) {
+function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, storageKey = observationLogKey(config.labId, config.configVersion) }: BenchProps) {
   const [state, dispatch] = useReducer(benchReducer, config, initialBenchState);
   const [introOpen, setIntroOpen] = useState(true);
   const [reopened, setReopened] = useState(false);
@@ -43,22 +44,22 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
   const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
   const headerActions = useContext(LabHeaderActionsContext);
   const kitItems = useMemo(() => listWetBenchKitItems(config), [config]);
-  const logLoaded = useRef(false);
+  const [loadedLogKey, setLoadedLogKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     void loadObservationLog(storageKey).then((entries) => {
       if (!active) return;
       if (entries.length) dispatch({ type: "load_log", entries });
-      logLoaded.current = true;
+      setLoadedLogKey(storageKey);
     });
     return () => { active = false; };
   }, [storageKey]);
   useEffect(() => {
-    if (!logLoaded.current) return;
-    const timer = window.setTimeout(() => void saveObservationLog(config, storageKey, state.log), 300);
+    if (loadedLogKey !== storageKey) return;
+    const timer = window.setTimeout(() => void saveObservationLog(storageKey, state.log), 300);
     return () => window.clearTimeout(timer);
-  }, [config, storageKey, state.log]);
+  }, [loadedLogKey, storageKey, state.log]);
 
   useEffect(() => {
     if (introOpen) return;

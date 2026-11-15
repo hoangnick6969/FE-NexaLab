@@ -9,6 +9,7 @@ import {
 import { K2_APPARATUS, isVesselKind, type HeldTool } from "./apparatus-manifest";
 import { isPlacementSlot, slotById } from "./bench-layout";
 import { describeVesselChange, equationsFor, formatGrams, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
+import { OBSERVATION_LOG_LIMIT } from "../../../shared/explore/observation-log";
 
 /** A dropper draws up to 1.0 mL (20 standard drops of 0.05 mL) per fill. */
 export const DROPPER_CAPACITY_MICROLITERS = 1000;
@@ -109,7 +110,7 @@ function pushLog(state: BenchUiState, entry: Omit<ObservationLogEntry, "seq">): 
     const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters)} ${last.merge.label}` };
     return { ...state, log: [...state.log.slice(0, -1), merged], seen };
   }
-  return { ...state, log: [...state.log, { ...entry, seq }].slice(-500), seen };
+  return { ...state, log: [...state.log, { ...entry, seq }].slice(-OBSERVATION_LOG_LIMIT), seen };
 }
 
 const notice = (state: BenchUiState, textVi: string, now: number): BenchUiState => ({ ...state, notice: { textVi, at: now } });
@@ -350,7 +351,7 @@ function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
       const present = new Set(state.log.map(key));
       const stored = action.entries.filter((entry) => !present.has(key(entry)));
       if (!stored.length) return state;
-      return { ...state, log: [...stored, ...state.log].sort((a, b) => a.at - b.at).slice(-500) };
+      return { ...state, log: [...stored, ...state.log].sort((a, b) => a.at - b.at).slice(-OBSERVATION_LOG_LIMIT) };
     }
     case "clear_log": return { ...state, log: [], seen: { reactions: [], measurements: [] } };
   }

@@ -6,6 +6,7 @@
 import { useNavigate } from "react-router-dom";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import type { ExplorePageProps } from "../../../runtime/explore-registry";
+import { observationLogKey } from "../../../shared/explore/observation-log";
 import { ExploreBench } from "./ExploreBench";
 
 export default function ExploreLabPage({ labId, title, config: raw, activity }: ExplorePageProps) {
@@ -13,7 +14,7 @@ export default function ExploreLabPage({ labId, title, config: raw, activity }: 
   const config = raw as ChemistryLabConfig;
   const draft = config.review.status !== "reviewed";
   return <ExploreBench
-    storageKey={`${labId}@${activity.id}`}
+    storageKey={observationLogKey(labId, activity.id)}
     config={{ ...config, title: title || config.title }}
     onExit={() => navigate("/labs")}
     exitTo="/labs"
