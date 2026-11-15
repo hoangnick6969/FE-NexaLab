@@ -7,7 +7,7 @@
 | ID | Component | Bàn truyền vào | Điểm gắn |
 |---|---|---|---|
 | `beaker` | `Beaker3D` (`beaker.tsx`) | `radius`, `height`, `fill` (0–1), `liquid` (màu), `graduations`, `children` | `base`, `inside`, `mouth` qua `beakerAnchors(size)` |
-| `digital-scale` | `DigitalScale3D` (`digital-scale.tsx`) | `reading` (chuỗi đã định dạng, kèm đơn vị) | `base`, `pan`, `display` |
+| `digital-scale` | `DigitalScale3D` (`digital-scale.tsx`) | `reading` (chuỗi đã định dạng, kèm đơn vị); `children` là vật trên đĩa, vẽ tại `pan` với y = 0 là mặt đĩa; `onTare` (tùy chọn) hiện phím trừ bì | `base`, `pan`, `display` |
 | `graduated-cylinder` | `GraduatedCylinder3D` (`graduated-cylinder.tsx`) | `radius`, `height`, `fill` (0–1), `liquid`, `divisions`, `majorEvery`, `children` | `base`, `inside`, `mouth` qua `cylinderAnchors(size)`; `cylinderMarkHeights(size, divisions)` cho nhãn số của bàn |
 | `thermometer` | `Thermometer3D` (`thermometer.tsx`) | `length`, `fill` (0–1 của thang), `reading` (chuỗi đã định dạng, kèm đơn vị), `divisions`, `children` | `bulb` (đầu đo), `top`, `display` qua `thermometerAnchors(length)` |
 | `stopwatch` | `Stopwatch3D` (`stopwatch.tsx`) | `reading` (chuỗi đã định dạng), `running`, `children` | `base`, `display`, `button` |
