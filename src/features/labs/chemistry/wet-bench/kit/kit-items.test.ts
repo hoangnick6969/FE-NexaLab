@@ -2,6 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import { SHARED_ITEM_META } from "../../../shared/items/catalog.ts";
 import { k2LabConfigs } from "../labs/index.ts";
 import { K2_APPARATUS } from "./apparatus-manifest.ts";
 import { apparatusLabel } from "./bench-reducer.ts";
@@ -42,4 +43,19 @@ test("instruments and materials get their own category", () => {
   const items = listWetBenchKitItems(k2LabConfigs["fl-13"]);
   assert.equal(items.find((item) => item.id === "meter")?.category, "instrument");
   assert.equal(items.find((item) => item.id === "HCl_0_1M")?.category, "material");
+});
+
+test("every apparatus points to its renderer; beakers and the scale point to shared items", () => {
+  for (const config of Object.values(k2LabConfigs)) {
+    for (const item of listWetBenchKitItems(config)) {
+      if (item.category === "material") { assert.equal(item.rendererKey, undefined); continue; }
+      assert.ok((item.rendererKey ?? "") in K2_APPARATUS, `${item.id} has no renderer key`);
+      if (item.sharedItemId) assert.ok(item.sharedItemId in SHARED_ITEM_META);
+    }
+  }
+  const fl10 = listWetBenchKitItems(k2LabConfigs["fl-10"]);
+  assert.deepEqual(fl10.filter((item) => item.sharedItemId).map((item) => [item.id, item.sharedItemId]),
+    [["scale", "digital-scale"], ["C1", "beaker"], ["C2", "beaker"], ["waste", "beaker"]]);
+  const tube = listWetBenchKitItems(k2LabConfigs["fl-13"]).find((item) => item.rendererKey === "test_tube");
+  assert.equal(tube?.sharedItemId, undefined);
 });
