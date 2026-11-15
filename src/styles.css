@@ -65,6 +65,52 @@ textarea:focus {
   outline: 2px solid var(--line-green-75);
 }
 
+/* Feature styles also set control colors. Keep select values on the brand token. */
+select {
+  color: var(--brand-ink) !important;
+}
+
+:root[data-theme="dark"] select {
+  background-color: var(--surface) !important;
+}
+
+select option {
+  color: var(--text-base);
+  background-color: var(--surface);
+}
+
+select option:checked {
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
+/* Let supporting browsers render the picker with the same theme as the trigger. */
+@supports (appearance: base-select) and selector(::picker(select)) {
+  select:not([multiple], [size]),
+  select.lab-sort-select,
+  select.student-class-grade-select,
+  select:not([multiple], [size])::picker(select) {
+    appearance: base-select;
+  }
+
+  select:not([multiple], [size])::picker(select) {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+  }
+
+  select:not([multiple], [size]) option:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  /* These controls already draw their own arrow. */
+  select.lab-sort-select::picker-icon,
+  select.student-class-grade-select::picker-icon {
+    display: none;
+  }
+}
+
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--green);
@@ -8468,6 +8514,41 @@ td small {
 }
 
 .lesson-structured-content .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .25rem 0;
+}
+
+/* Tables and formulas rebuilt from Markdown left inside stored lesson HTML (lesson-html-format.ts). */
+.lesson-content .lesson-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: .75rem 0 1rem;
+}
+
+.lesson-content .lesson-table-scroll table {
+  font-size: .92em;
+}
+
+.lesson-content .lesson-table-scroll th,
+.lesson-content .lesson-table-scroll td {
+  padding: .55rem .7rem;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.lesson-content .lesson-table-scroll th {
+  background: var(--fill-neutral-96-2);
+  color: inherit;
+  font-weight: 650;
+}
+
+.lesson-content .katex-display {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;

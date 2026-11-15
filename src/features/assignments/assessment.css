@@ -1,0 +1,30 @@
+/* TAI-07 (TAI7-T1): graded assessment countdown, kept visible while the student scrolls the paper. */
+.assessment-timer {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--fill-neutral-90);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.assessment-timer b {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-teal-34);
+}
+.assessment-timer small {
+  flex-basis: 100%;
+  color: var(--ink-neutral-55);
+}
+.assessment-timer[data-urgent] {
+  border-color: var(--fill-red-92);
+}
+.assessment-timer[data-urgent] b {
+  color: var(--ink-red-52);
+}

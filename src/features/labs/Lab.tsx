@@ -185,9 +185,15 @@ const STATION_HINT_RENDERERS = new Set(["density-bench", "gene-expression", "eye
  * decides by its server-declared `mode`. Explore runs only the server-pinned config: a failed
  * resolution shows its error code and never falls back to GuidedLab or a bundled config.
  */
+const ExploreClassAssignment = lazy(() => import("./class-explore/ExploreClassAssignment"));
+
 export default function Lab() {
   const [searchParams] = useSearchParams();
-  if (searchParams.get("assignmentId") || searchParams.get("resourceId")) return <GuidedLab key="guided" />;
+  const assignmentId = searchParams.get("assignmentId");
+  // Class Explore (P0 C3.4): the assignment page links here with `explore=1`; every other assignment/resource link stays Guided.
+  if (assignmentId && searchParams.get("explore") === "1")
+    return <Suspense fallback={<p role="status" className="panel">Đang tải bài…</p>}><ExploreClassAssignment key={assignmentId} assignmentId={assignmentId} /></Suspense>;
+  if (assignmentId || searchParams.get("resourceId")) return <GuidedLab key="guided" />;
   return <LibraryLab />;
 }
 

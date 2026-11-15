@@ -170,7 +170,7 @@ html, body {
   width: 100%;
 }
 
-button.study-flip {
+.study-flip {
   display: block;
   width: 100%;
   padding: 0;
@@ -183,7 +183,7 @@ button.study-flip {
   border-radius: 16px;
 }
 
-button.study-flip:focus-visible {
+.study-flip:focus-visible {
   outline: 2px solid var(--brand, #1f6f78);
   outline-offset: 4px;
 }
@@ -217,7 +217,7 @@ button.study-flip:focus-visible {
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-button.study-flip:hover .study-face-front {
+.study-flip:hover .study-face-front {
   border-color: #cbd5e1;
   box-shadow: 0 4px 14px rgba(35, 60, 52, 0.06);
 }
@@ -227,7 +227,7 @@ button.study-flip:hover .study-face-front {
   border-color: var(--brand, #1f6f78);
 }
 
-button.study-flip:hover .study-face-back {
+.study-flip:hover .study-face-back {
   box-shadow: 0 4px 14px rgba(31, 111, 120, 0.08);
 }
 
@@ -437,5 +437,211 @@ button.study-flip:hover .study-face-back {
   }
   .study-progress-indicator {
     transition: none;
+  }
+}
+
+/* Quiz card back: the explanation under the answer. */
+.study-explanation {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted, #5f6f68);
+}
+
+/* "Làm thử đề": left-aligned question list inside the centered completion card. */
+.study-selftest {
+  align-items: stretch;
+  text-align: left;
+}
+
+.study-selftest h2,
+.study-selftest .completion-summary {
+  align-self: center;
+  text-align: center;
+}
+
+/* Quiz card front: A-D options listed under the prompt. */
+.study-content-question {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 20px 8px;
+  font-size: inherit;
+  font-weight: 400;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.study-question-prompt {
+  font-size: clamp(18px, 2.4vw, 24px);
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text-base, #233c34);
+}
+
+.study-question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-base, #233c34);
+}
+
+.study-question-option b {
+  color: var(--brand, #1f6f78);
+  margin-right: 4px;
+}
+
+/* "Làm thử đề": one card per question, answers in a 2x2 grid. */
+.selftest-card {
+  border: 1px solid var(--line, #e4e8df);
+  border-radius: 14px;
+  background: var(--surface, #ffffff);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selftest-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.selftest-prompt {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-base, #233c34);
+}
+
+.selftest-counter {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted, #7a857c);
+}
+
+.selftest-option-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-base, #233c34);
+}
+
+.selftest-pick-label {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted, #7a857c);
+}
+
+.selftest-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.selftest-answer {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line, #e4e8df);
+  border-radius: 12px;
+  background: var(--surface, #ffffff);
+  color: var(--text-base, #233c34);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.selftest-answer:hover:not(:disabled) {
+  border-color: var(--brand, #1f6f78);
+}
+
+.selftest-answer:disabled {
+  cursor: default;
+}
+
+.selftest-answer-letter {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--brand, #1f6f78);
+}
+
+.selftest-answer.is-selected {
+  border-color: var(--brand, #1f6f78);
+  background: color-mix(in srgb, var(--brand, #1f6f78) 8%, transparent);
+}
+
+.selftest-answer.is-correct {
+  border-color: #16a34a;
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+}
+
+.selftest-answer.is-wrong {
+  border-color: #dc2626;
+  background: color-mix(in srgb, #dc2626 10%, transparent);
+}
+
+.selftest-answer.is-correct .selftest-answer-letter { color: #15803d; }
+.selftest-answer.is-wrong .selftest-answer-letter { color: #b91c1c; }
+
+.selftest-skip {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand, #1f6f78);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selftest-skip:hover {
+  text-decoration: underline;
+}
+
+.selftest-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.selftest-verdict {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.selftest-verdict.is-correct { color: #15803d; }
+.selftest-verdict.is-wrong { color: #b91c1c; }
+
+.selftest-explanation {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted, #5f6f68);
+}
+
+@media (max-width: 560px) {
+  .selftest-answer-grid {
+    grid-template-columns: 1fr;
   }
 }
