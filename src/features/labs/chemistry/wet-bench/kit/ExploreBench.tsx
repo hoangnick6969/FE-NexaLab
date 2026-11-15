@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { LabHeaderActionsContext, LabSpace } from "../../../shared/LabSpace";
 import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
+import { LabKitItemsPanel, LabKitItemsToggle } from "../../../shared/LabKitItemsPanel";
 import { ObservationDrawer, usePromptAnswers } from "../../../shared/ObservationDrawer";
 import { observationLogKey } from "../../../shared/explore/observation-log";
 import { listWetBenchKitItems } from "./kit-items";
@@ -39,6 +40,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
   const [acknowledged, setAcknowledged] = useState(() => readAck(storageKey));
   const [hovered, setHovered] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
   const [viewReset, setViewReset] = useState(0);
   const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${storageKey}`);
   const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
@@ -107,6 +109,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
   const actions = <div className="k2-header-actions">
     <span className="k2-mode-badge" title={configSource === "bundled" ? "Cấu hình lấy từ bộ Kit trong ứng dụng" : configSource === "database" ? "Cấu hình lấy từ cơ sở dữ liệu" : undefined}>Khám phá tự do · không chấm điểm</span>
     <button type="button" className="secondary" onClick={() => { setReopened(true); setIntroOpen(true); }}>Giới thiệu & an toàn</button>
+    <LabKitItemsToggle open={kitOpen} onOpenChange={setKitOpen} count={kitItems.length} />
     <button type="button" className="secondary" disabled={!state.history.length} onClick={() => dispatch({ type: "undo", now: Date.now() })}>↶ Hoàn tác</button>
     <button type="button" className="secondary" onClick={() => { if (window.confirm("Làm mới bàn thí nghiệm? Các vật chứa trở về trạng thái ban đầu; nhật ký vẫn được giữ.")) { dispatch({ type: "reset", now: Date.now() }); setViewReset((value) => value + 1); } }}>Làm mới</button>
     {headerExtra}
@@ -118,6 +121,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
     <div className="k2-layout" aria-hidden={introOpen}>
       <BenchHud state={state} dispatch={dispatch} />
       <ObservationLogPanel config={config} entries={state.log} dispatch={dispatch} />
+      <LabKitItemsPanel items={kitItems} open={kitOpen} onOpenChange={setKitOpen} />
     </div>
     {!introOpen && <ObservationDrawer open={drawerOpen} onOpenChange={setDrawerOpen} prompts={prompts} answers={answers} onAnswer={setAnswer} onFocus={focusPrompt} onSeen={markSeen}
       afterChoiceVi="Hãy kiểm chứng trên bàn: nhỏ từng giọt, theo dõi màu dung dịch và số đo pH, rồi so với lựa chọn của em." />}

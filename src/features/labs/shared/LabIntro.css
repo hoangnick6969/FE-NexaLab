@@ -49,3 +49,16 @@
   .lab-intro-head, .lab-intro-body, .lab-intro-foot { padding-left: 16px; padding-right: 16px; }
   .observation-drawer { top: auto; height: 70dvh; bottom: 70px; }
 }
+
+/* "Dụng cụ và thành phần" panel (P0 C2.2): top-left of the bench, above the HUD, opened from the header. */
+.lab-kit-items { position: absolute; top: 84px; left: max(16px, env(safe-area-inset-left)); z-index: 22; width: min(360px, calc(100% - 32px)); max-height: min(420px, calc(54dvh - 110px)); overflow: auto; padding: 14px 16px; background: var(--surface); color: var(--text-base); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 36px rgba(18, 38, 30, 0.18); }
+.lab-kit-items[hidden] { display: none; }
+.lab-kit-items header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lab-kit-items h2 { margin: 0; font-size: 17px; }
+.lab-kit-items h3 { margin: 12px 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+.lab-kit-items ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lab-kit-items li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.lab-kit-items li > span:not(.lab-intro-hazard), .lab-kit-items small { flex-basis: 100%; color: var(--muted); font-size: 13px; }
+@media (max-width: 760px) {
+  .lab-kit-items { top: auto; bottom: calc(40dvh + 84px); max-height: 30dvh; }
+}
