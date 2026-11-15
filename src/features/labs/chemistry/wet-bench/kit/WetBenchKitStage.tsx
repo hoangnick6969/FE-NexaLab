@@ -10,10 +10,11 @@ import type { Group } from "three";
 import * as THREE from "three";
 import { measure, observeVessel, reagentById, scaleReadingMicrograms, SPECIES, type VesselKind } from "@nexalab/sim/wet-bench";
 import { PhysicsStage, type BenchViewPreset } from "../../../physics/shared/PhysicsStage";
+import { DigitalScale3D } from "../../../shared/items/digital-scale";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
 import {
   Beaker3D, Collider, Droplet, Dropper3D, DropperUpright, Flask3D, LitmusBox3D, LitmusStrip3D, PhMeter3D, prefersReducedMotion, Rack3D, ReagentBottle3D,
-  RestPhMeter3D, Scale3D, Stopper3D, TargetRing, TestTube3D, Tongs3D, TongsHolding,
+  RestPhMeter3D, Stopper3D, TargetRing, TestTube3D, Tongs3D, TongsHolding,
 } from "./apparatus3d";
 import { BENCH_TOP_Y, shelfPosition, slotById } from "./bench-layout";
 import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
@@ -390,11 +391,10 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
           : item.kind === "digital_ph_meter" ? <RestPhMeter3D />
             : item.kind === "tongs" ? <Tongs3D />
               : item.kind === "stopper" ? <Stopper3D />
-                : item.kind === "electronic_scale" ? <Scale3D /> : null;
+                : item.kind === "electronic_scale" ? <DigitalScale3D reading={scaleText} /> : null;
     items.push(<group key={id} position={home} {...(held ? { onPointerDown: begin({ held, label }, onClick) } : { onPointerDown: (event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); } })} {...hover(id)}>
       {body}
       {held && isHeld(held) && <TargetRing radius={0.12} tone="held" />}
-      {item.kind === "electronic_scale" && <Html position={[0, 0.06, 0.27]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}><span className="k2-lcd">{scaleText}</span></Html>}
       {showTooltip(id) && <Tooltip y={item.kind === "test_tube_rack_6" ? 0.4 : 0.3} title={label} detail={def.purposeVi} />}
     </group>);
   }

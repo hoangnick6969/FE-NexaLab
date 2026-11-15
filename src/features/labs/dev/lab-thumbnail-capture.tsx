@@ -37,7 +37,7 @@ function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unk
   return <div className="k2-thumbnail">
     <WetBenchKitStage state={state} dispatch={() => undefined} hovered={null} onHover={() => undefined} viewResetSignal={0} view={k2ThumbnailView} />
     {/* Text tags are hidden so the card reads in any language (and kit.css is not loaded here). */}
-    <style>{`.k2-vessel-tag, .k2-bottle-tag, .k2-strip-chip, .k2-drag-tag, .k2-lcd { display: none !important; }`}</style>
+    <style>{`.k2-vessel-tag, .k2-bottle-tag, .k2-strip-chip, .k2-drag-tag, .k2-lcd, .lab-item-lcd { display: none !important; }`}</style>
   </div>;
 }
 /** Capture-only framing: the tube rack and the reagent shelf fill the card, no HUD insets. */
