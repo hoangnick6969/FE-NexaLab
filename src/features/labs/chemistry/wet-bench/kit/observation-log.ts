@@ -1,4 +1,5 @@
 import { observeVessel, reactionById, reagentById, type ChemistryLabConfig, type Transition, type VesselState } from "@nexalab/sim/wet-bench";
+import { buildObservationLogExport, createObservationLogStore } from "../../../shared/explore/observation-log";
 
 /** One line of the learner's lab notebook. Local, unscored, never evidence. */
 export type ObservationLogEntry = {
@@ -70,64 +71,25 @@ export function equationsFor(transition: Transition | null, config: ChemistryLab
 
 export const reagentLabel = (reagentId: string) => reagentById(reagentId)?.labelVi ?? reagentId;
 
-/** Standard JSON for handing the notebook to a Class Lab endpoint later. */
+/** Versioned JSON for the learner to download. */
 export function exportObservationLog(config: ChemistryLabConfig, entries: readonly ObservationLogEntry[]) {
-  return {
+  return buildObservationLogExport({
     schema: "k2-observation-log/1" as const,
     labId: config.labId,
     catalogId: config.catalogId,
     configVersion: config.configVersion,
     engine: config.engine,
-    exportedAt: new Date().toISOString(),
-    scored: false as const,
-    entries: entries.map((entry) => ({
-      seq: entry.seq,
-      at: new Date(entry.at).toISOString(),
-      location: entry.locationVi,
-      action: entry.actionVi,
-      phenomena: entry.phenomenaVi,
-      equations: entry.equations,
-      readings: entry.readings,
-      reactions: entry.reactions,
-      outOfScope: Boolean(entry.outOfScope),
-    })),
-  };
+  }, entries.map((entry) => ({
+    seq: entry.seq,
+    at: new Date(entry.at).toISOString(),
+    location: entry.locationVi,
+    action: entry.actionVi,
+    phenomena: entry.phenomenaVi,
+    equations: entry.equations,
+    readings: entry.readings,
+    reactions: entry.reactions,
+    outOfScope: Boolean(entry.outOfScope),
+  })));
 }
 
-const DB_NAME = "nexalab-k2-observation-log";
-const STORE = "logs";
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => { request.result.createObjectStore(STORE, { keyPath: "key" }); };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-const logKey = (config: ChemistryLabConfig) => `${config.labId}@${config.configVersion}`;
-
-/** Loads the saved notebook; storage failures (private mode, blocked) yield an empty one. */
-export async function loadObservationLog(config: ChemistryLabConfig): Promise<ObservationLogEntry[]> {
-  try {
-    const db = await openDb();
-    try {
-      const record = await new Promise<{ entries?: ObservationLogEntry[] } | undefined>((resolve, reject) => {
-        const request = db.transaction(STORE, "readonly").objectStore(STORE).get(logKey(config));
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-      return Array.isArray(record?.entries) ? record!.entries.slice(-500) : [];
-    } finally { db.close(); }
-  } catch { return []; }
-}
-
-export async function saveObservationLog(config: ChemistryLabConfig, entries: readonly ObservationLogEntry[]) {
-  try {
-    const db = await openDb();
-    try {
-      db.transaction(STORE, "readwrite").objectStore(STORE).put({ key: logKey(config), labId: config.labId, configVersion: config.configVersion, entries: entries.slice(-500), updatedAt: Date.now() });
-    } finally { db.close(); }
-  } catch { /* Notebook still works for this session without storage. */ }
-}
+export const { load: loadObservationLog, save: saveObservationLog } = createObservationLogStore<ObservationLogEntry>("nexalab-k2-observation-log");

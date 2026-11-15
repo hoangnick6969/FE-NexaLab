@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useState, useMemo, useRef, type ComponentType } from "react";
 import "../classes/class-resource-preview.css";
 import { simulate } from "@nexalab/sim";
 import { Link, useParams, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -32,9 +32,15 @@ import { toLocalInput } from "../classes/class-ui";
 import { StudentClassLabAdditionalResponses } from "../classes/ClassLabAdditionalResponses";
 
 import { loadLabActivity } from "./runtime/lazy-lab-activity";
-import { isExploreLab } from "./runtime/explore-labs";
+import { resolveExploreConfig, type ExploreRow } from "./runtime/explore-labs";
+import type { ExploreBenchEntry, ExplorePageProps } from "./runtime/explore-registry";
 
-const ExploreLabPage = lazy(() => import("./chemistry/wet-bench/kit/ExploreLabPage"));
+/** One lazy page per Explore bench, created once so React keeps it mounted across renders. */
+const explorePages = new Map<string, ReturnType<typeof lazy<ComponentType<ExplorePageProps>>>>();
+const explorePage = (bench: ExploreBenchEntry) => {
+  if (!explorePages.has(bench.kit)) explorePages.set(bench.kit, lazy(bench.loadPage));
+  return explorePages.get(bench.kit)!;
+};
 
 const MassConservationActivity = loadLabActivity(() => import("./chemistry/wet-bench/MassConservationActivity").then((module) => ({ default: module.MassConservationActivity })));
 const ThermalEnergyActivity = loadLabActivity(() => import("./physics/thermal/ThermalEnergyActivity").then((module) => ({ default: module.ThermalEnergyActivity })));
@@ -174,11 +180,38 @@ const t = text();
 /** Station Labs with after-submit hints (SAI-01A step 2); checkpoint Labs are covered by their envelope. */
 const STATION_HINT_RENDERERS = new Set(["density-bench", "gene-expression", "eye-anatomy-optics", "buoyancy-bench"]);
 
-/** Explore-first K2 Labs open the kit directly; every other Lab keeps the guided LabRun flow below. */
+/**
+ * P0 C1.1 routing: an assignment/class resource keeps its existing path; otherwise the `GET /labs` row
+ * decides by its server-declared `mode`. Explore runs only the server-pinned config: a failed
+ * resolution shows its error code and never falls back to GuidedLab or a bundled config.
+ */
 export default function Lab() {
-  const { id } = useParams();
-  if (isExploreLab(id)) return <Suspense fallback={<p role="status" className="panel">Đang mở bàn thí nghiệm…</p>}><ExploreLabPage key={`explore:${id}`} labId={id!} /></Suspense>;
-  return <GuidedLab key="guided" />;
+  const [searchParams] = useSearchParams();
+  if (searchParams.get("assignmentId") || searchParams.get("resourceId")) return <GuidedLab key="guided" />;
+  return <LibraryLab />;
+}
+
+function LibraryLab() {
+  const { id = "" } = useParams();
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
+  if (labs.isPending) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><p role="status" className="panel">Đang tải bài thực hành…</p></LabSpace>;
+  if (labs.isError) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><section className="panel" role="alert">
+    <p>Không tải được danh sách bài thực hành.</p>
+    <button type="button" className="primary" onClick={() => void labs.refetch()}>Thử lại</button>
+  </section></LabSpace>;
+  const row = labs.data.find((item) => item.id === id);
+  // No row: GuidedLab keeps its existing "chưa được phát hành" screen.
+  if (!row || row.mode !== "explore") return <GuidedLab key="guided" />;
+  const resolved = resolveExploreConfig(row);
+  if (!resolved.ok) return <LabSpace title={row.title || "Phòng thí nghiệm"} exitTo="/labs"><section className="panel" role="alert" data-testid="explore-error">
+    <h1>Không mở được bàn thí nghiệm</h1>
+    <p>Cấu hình đã phát hành của bài này không hợp lệ, nên bàn thí nghiệm không được mở.</p>
+    <p>Mã lỗi: <code>{resolved.code}</code></p>
+  </section></LabSpace>;
+  const ExplorePage = explorePage(resolved.bench);
+  return <Suspense fallback={<p role="status" className="panel">Đang mở bàn thí nghiệm…</p>}>
+    <ExplorePage key={`explore:${id}@${resolved.activity.id}`} labId={id} title={row.title} config={resolved.config} activity={resolved.activity} />
+  </Suspense>;
 }
 
 function GuidedLab() {

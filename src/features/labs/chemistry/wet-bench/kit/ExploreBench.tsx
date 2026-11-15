@@ -2,56 +2,64 @@
  * K2 Explore-first Lab: Stage 1 intro & safety → Stage 2 free workbench → Stage 3 optional prompts.
  * Unscored and client-only: no LabRun, no attempt, no evidence.
  */
-import { useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { LabHeaderActionsContext, LabSpace } from "../../../shared/LabSpace";
 import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
 import { ObservationDrawer, usePromptAnswers } from "../../../shared/ObservationDrawer";
-import { K2_APPARATUS } from "./apparatus-manifest";
-import { apparatusLabel, benchReducer, initialBenchState } from "./bench-reducer";
+import { observationLogKey } from "../../../shared/explore/observation-log";
+import { listWetBenchKitItems } from "./kit-items";
+import { benchReducer, initialBenchState } from "./bench-reducer";
 import { BenchHud } from "./BenchHud";
 import { loadObservationLog, saveObservationLog } from "./observation-log";
 import { ObservationLogPanel } from "./ObservationLogPanel";
 import { WetBenchKitStage } from "./WetBenchKitStage";
 import "./kit.css";
 
-const ackKey = (config: ChemistryLabConfig) => `nexalab:k2-safety-ack:${config.labId}@${config.configVersion}`;
-const readAck = (config: ChemistryLabConfig) => { try { return localStorage.getItem(ackKey(config)) === "1"; } catch { return false; } };
+const ackKey = (storageKey: string) => `nexalab:k2-safety-ack:${storageKey}`;
+const readAck = (storageKey: string) => { try { return localStorage.getItem(ackKey(storageKey)) === "1"; } catch { return false; } };
 
-export function ExploreBench({ config, onExit, exitTo, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; onExit: () => void; exitTo?: string; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
-  return <LabSpace title={config.title} onExit={onExit} exitTo={exitTo}>
-    <ExploreBenchBody config={config} headerExtra={headerExtra} draftNotice={draftNotice} configSource={configSource} />
+type BenchProps = {
+  config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled";
+  /** Key for the local notebook, safety ack and answers: `/labs/:id` passes `labId@activity.id` (P0 C1.2); the dev route keeps `labId@configVersion`. */
+  storageKey?: string;
+};
+
+export function ExploreBench({ onExit, exitTo, ...props }: BenchProps & { onExit: () => void; exitTo?: string }) {
+  return <LabSpace title={props.config.title} onExit={onExit} exitTo={exitTo}>
+    <ExploreBenchBody {...props} />
   </LabSpace>;
 }
 
-function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled" }) {
+function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, storageKey = observationLogKey(config.labId, config.configVersion) }: BenchProps) {
   const [state, dispatch] = useReducer(benchReducer, config, initialBenchState);
   const [introOpen, setIntroOpen] = useState(true);
   const [reopened, setReopened] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(() => readAck(config));
+  const [acknowledged, setAcknowledged] = useState(() => readAck(storageKey));
   const [hovered, setHovered] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewReset, setViewReset] = useState(0);
-  const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${config.labId}@${config.configVersion}`);
+  const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${storageKey}`);
   const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
   const headerActions = useContext(LabHeaderActionsContext);
-  const logLoaded = useRef(false);
+  const kitItems = useMemo(() => listWetBenchKitItems(config), [config]);
+  const [loadedLogKey, setLoadedLogKey] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    void loadObservationLog(config).then((entries) => {
+    void loadObservationLog(storageKey).then((entries) => {
       if (!active) return;
       if (entries.length) dispatch({ type: "load_log", entries });
-      logLoaded.current = true;
+      setLoadedLogKey(storageKey);
     });
     return () => { active = false; };
-  }, [config]);
+  }, [storageKey]);
   useEffect(() => {
-    if (!logLoaded.current) return;
-    const timer = window.setTimeout(() => void saveObservationLog(config, state.log), 300);
+    if (loadedLogKey !== storageKey) return;
+    const timer = window.setTimeout(() => void saveObservationLog(storageKey, state.log), 300);
     return () => window.clearTimeout(timer);
-  }, [config, state.log]);
+  }, [loadedLogKey, storageKey, state.log]);
 
   useEffect(() => {
     if (introOpen) return;
@@ -89,7 +97,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { 
   };
 
   const enter = () => {
-    if (config.safetyBriefing.acknowledgeRequired) { try { localStorage.setItem(ackKey(config), "1"); } catch { /* per-session only */ } setAcknowledged(true); }
+    if (config.safetyBriefing.acknowledgeRequired) { try { localStorage.setItem(ackKey(storageKey), "1"); } catch { /* per-session only */ } setAcknowledged(true); }
     setIntroOpen(false);
     setReopened(false);
   };
@@ -123,15 +131,10 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource }: { 
       acknowledgeRequired={config.safetyBriefing.acknowledgeRequired}
       acknowledged={acknowledged}
       draftNotice={draftNotice}
-      apparatus={config.enabledApparatus.filter((item, index, all) => item.kind !== "test_tube" || all.findIndex((other) => other.kind === "test_tube") === index).map((item) => ({
-        id: item.id,
-        label: item.kind === "test_tube" ? `${K2_APPARATUS.test_tube.labelVi} × ${config.enabledApparatus.filter((other) => other.kind === "test_tube").length}` : apparatusLabel(config, item.id),
-        purpose: K2_APPARATUS[item.kind].purposeVi,
+      apparatus={kitItems.filter((item) => item.category !== "material").map((item) => ({ id: item.id, label: item.labelVi, purpose: item.purposeVi }))}
+      materials={kitItems.filter((item) => item.category === "material").map((item) => ({
+        id: item.id, label: item.labelVi, hazardLevel: item.safety?.level ?? "none", hazardTags: item.safety?.tags ?? [], noteSim: item.safety?.noteSim, noteReal: item.safety?.noteReal,
       }))}
-      materials={[...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).flatMap((bottle) => {
-        const reagent = reagentById(bottle.reagentId);
-        return reagent ? [{ id: reagent.id, label: reagent.labelVi, hazardLevel: reagent.hazard.level, hazardTags: reagent.hazard.tags, noteSim: reagent.safetyNoteSim, noteReal: reagent.safetyNoteRealLab }] : [];
-      })}
       onEnter={enter}
       onClose={reopened ? () => { setIntroOpen(false); setReopened(false); } : undefined}
     />}
