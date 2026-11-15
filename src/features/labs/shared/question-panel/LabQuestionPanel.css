@@ -1,0 +1,122 @@
+/* Shared Lab Space question panel, taken from the K8 ecology panels (FL-20, FL-21) and FL-25.
+   Placement uses :where() so each activity's own `${prefix}-panel` rules (phone bottom sheet) always win. */
+:root {
+  --lqp-panel-bg: rgb(255 255 255 / 92%);
+  --lqp-panel-solid: #fbfcfa;
+  --lqp-panel-shadow: 0 16px 44px rgb(18 38 30 / 10%), 0 2px 6px rgb(18 38 30 / 3%);
+  --lqp-panel-w: clamp(288px, 25vw, 340px);
+  --lqp-track: rgb(0 0 0 / 8%);
+  --lqp-accent: var(--brand-green);
+  --lqp-accent-soft: rgb(36 91 71 / 9%);
+  --lqp-ink: var(--text-base);
+  --lqp-muted: var(--muted);
+  --lqp-focus: #287875;
+  --lqp-error: #b3261e;
+}
+:root[data-theme="dark"] {
+  --lqp-panel-bg: rgb(24 32 32 / 94%);
+  --lqp-panel-solid: #182020;
+  --lqp-panel-shadow: 0 16px 44px rgb(0 0 0 / 40%);
+  --lqp-track: rgb(255 255 255 / 12%);
+  --lqp-accent-soft: rgb(124 195 164 / 14%);
+  --lqp-focus: #7cc3a4;
+  --lqp-error: #f2b8b5;
+}
+
+:where(.lqp-badge) { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 20; }
+.lqp-badge { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--lqp-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lqp-badge[aria-expanded="true"] { visibility: hidden; opacity: 0; pointer-events: none; }
+
+:where(.lqp-panel) { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 25; width: min(var(--lqp-panel-w), calc(100% - 36px)); max-height: calc(100dvh - 32px); }
+.lqp-panel { font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 14px 16px; border: 0; border-radius: 20px; background: var(--lqp-panel-bg); box-shadow: var(--lqp-panel-shadow); backdrop-filter: blur(20px) saturate(180%); transform-origin: top right; transition: opacity .2s ease-out, transform .2s ease-out; }
+/* The panel still scrolls by wheel, touch and keyboard; the bar itself is hidden so it never cuts the rounded edge */
+.lqp-panel { scrollbar-width: none; }
+.lqp-panel::-webkit-scrollbar { display: none; }
+.lqp-panel[data-open="false"] { opacity: 0; transform: scale(.96) translateY(-4px); pointer-events: none; visibility: hidden; }
+/* The step stays visible when the panel scrolls on short screens */
+.lqp-header { position: sticky; top: -14px; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: -14px -16px 0; padding: 14px 16px 8px; border-radius: 20px 20px 0 0; background: var(--lqp-panel-solid); color: var(--lqp-ink); }
+.lqp-eyebrow { margin: 0; color: var(--lqp-muted); font-size: 12px; }
+.lqp-step { margin: 0; color: var(--lqp-accent); font-size: 13px; font-weight: 650; }
+.lqp-close { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--lqp-muted); cursor: pointer; }
+.lqp-badge:focus-visible, .lqp-close:focus-visible { outline: 3px solid var(--lqp-focus); outline-offset: 3px; transition: none; }
+.lqp-progress { display: grid; grid-template-columns: repeat(var(--lqp-steps, 13), minmax(0, 1fr)); gap: 4px; }
+.lqp-progress span { height: 3px; border-radius: 999px; background: var(--lqp-track); transform-origin: center; transition: transform .25s ease-out; }
+.lqp-progress span[data-state="done"], .lqp-progress span[data-state="current"] { background: var(--lqp-accent); }
+.lqp-progress span[data-state="current"] { transform: scaleY(1.5); }
+.lqp-heading { margin: 0; color: var(--lqp-ink); font-size: 15px; font-weight: 650; line-height: 1.4; overflow-wrap: break-word; min-width: 0; }
+
+/* One spacing rhythm for every activity, taken from the ecology panels: 12px between blocks, 8px between a label
+   and its control. Blocks get no margins; the panel's gap and .lqp-section's gap do all the spacing, so an
+   activity's stylesheet never adds its own margins inside the panel. */
+.lqp-panel :where(p, h2, h3, h4, ul, ol, table, details, fieldset, label, nav, figure, svg) { margin-block: 0; }
+.lqp-section { display: grid; gap: 12px; min-width: 0; padding-top: 12px; border-top: 1px dashed var(--line); }
+.lqp-section :where(section) { display: grid; gap: 12px; min-width: 0; }
+.lqp-section > h3, .lqp-section :where(section) > h3 { color: var(--lqp-ink); font-size: 14px; font-weight: 650; line-height: 1.4; }
+.lqp-panel label:where(:not(.lqp-choice, .lqp-segment-option)) { display: grid; gap: 8px; }
+.lqp-panel details[open] > :where(:not(summary)) { margin-top: 8px; }
+/* Every disclosure looks the same and shows that it opens: a 44px row with a turning chevron */
+.lqp-panel summary { display: flex; align-items: center; gap: 8px; min-height: 44px; list-style: none; cursor: pointer; font-weight: 600; }
+.lqp-panel summary::-webkit-details-marker { display: none; }
+.lqp-panel summary::before { content: ""; flex: none; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s ease-out; }
+.lqp-panel details[open] > summary::before { transform: rotate(45deg); }
+.lqp-panel summary:focus-visible { outline: 3px solid var(--lqp-focus); outline-offset: 2px; }
+
+/* Choices: native radios or checkboxes, one per row */
+.lqp-choices { display: grid; gap: 8px; margin: 0; padding: 12px 0 0; border: 0; border-top: 1px dashed var(--line); }
+.lqp-choices legend, .lqp-segment legend { padding: 0 0 8px; color: var(--lqp-muted); font-size: 13px; font-weight: 600; }
+.lqp-choice { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.lqp-choice span { min-width: 0; line-height: 1.5; }
+.lqp-letter { min-width: 18px; color: var(--lqp-accent); font-weight: 700; }
+/* Segment: short options in a row */
+.lqp-segment { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.lqp-segment legend { width: 100%; }
+.lqp-segment-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+/* :is(...) > input[type] outranks an activity's broad `.x-panel input` rule, so a radio never inherits text-field sizing */
+:is(.lqp-choice, .lqp-segment-option) > input[type] { display: inline-block; flex: none; width: 18px; height: 18px; min-height: 0; padding: 0; margin: 2px 0 0; border: 0; background: none; accent-color: var(--lqp-accent); }
+.lqp-segment-option > input[type] { margin: 0; }
+.lqp-choice:has(input:checked), .lqp-segment-option:has(input:checked) { border-color: var(--lqp-accent); background: var(--lqp-accent-soft); }
+.lqp-choice:has(input:focus-visible), .lqp-segment-option:has(input:focus-visible) { outline: 3px solid var(--lqp-focus); outline-offset: 2px; }
+.lqp-choice[data-result="false"], .lqp-segment-option[data-result="false"] { border-color: var(--lqp-error); }
+/* Secondary action inside the panel (the ecology tool button) and a removable chip for items already placed */
+.lqp-tool, .lqp-chip { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--line); color: var(--lqp-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.lqp-tool { justify-self: start; padding: 8px 16px; border-radius: 12px; background: var(--surface); }
+.lqp-chip { padding: 8px 12px 8px 16px; border-color: var(--lqp-accent); border-radius: 999px; background: var(--lqp-accent-soft); font-variant-numeric: tabular-nums; }
+.lqp-chip svg { color: var(--lqp-muted); }
+.lqp-tool:disabled, .lqp-chip:disabled { color: var(--lqp-muted); cursor: not-allowed; }
+.lqp-tool:focus-visible, .lqp-chip:focus-visible { outline: 3px solid var(--lqp-focus); outline-offset: 2px; }
+.lqp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Class Lab teacher content: always after the activity's own steps, never in place of them */
+.lqp-class { display: grid; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.lqp-class .panel { display: grid; gap: 12px; width: auto; max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.lqp-class .field { margin: 0; }
+.lqp-class h2 { margin: 0; font-size: 15px; font-weight: 650; }
+/* Inside a form the form draws the divider */
+form .lqp-choices { padding-top: 0; border-top: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lqp-panel, .lqp-progress span, .lqp-panel summary::before { transition: none; }
+}
+/* Run result (verdict, explanation, hints) joins the panel after the activity's own steps */
+.lqp-result { display: grid; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.lqp-result .lab-space-results { max-height: none; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+.lqp-result .lab-space-results > summary { padding: 0; font-size: 15px; font-weight: 650; }
+.lqp-result .lab-space-results[open] > summary { margin-bottom: 4px; }
+.lqp-result .panel { width: auto; max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.lqp-result .panel + .panel { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.lqp-result .result-panel > h3 { display: none; }
+.lqp-result ul { display: grid; gap: 8px; padding-left: 20px; line-height: 1.45; }
+/* Station tabs (station Labs): chips in a wrapping row, the current one filled */
+.lqp-stations { display: flex; flex-wrap: wrap; gap: 8px; }
+.lqp-station { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--lqp-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lqp-station[aria-selected="true"] { border-color: var(--lqp-accent); background: var(--lqp-accent); color: var(--on-accent, #fff); }
+.lqp-station:focus-visible { outline: 3px solid var(--lqp-focus); outline-offset: 2px; }
+.lqp-instruction { color: var(--lqp-ink); font-size: 14px; line-height: 1.5; }
+/* Phones: a bottom sheet above the actions dock unless the activity places it itself */
+@media (max-width: 640px) {
+  :where(.lqp-panel) { top: auto; bottom: max(84px, calc(env(safe-area-inset-bottom) + 76px)); right: 10px; width: calc(100% - 20px); max-height: 46dvh; }
+  :where(.lqp-badge) { top: auto; bottom: max(94px, calc(env(safe-area-inset-bottom) + 86px)); right: 10px; }
+}
+.lqp-panel, .lqp-badge { pointer-events: auto; }
+/* Radios and checkboxes inside the panel keep their native size, whatever an activity or the Lab Space sets for inputs */
+.lqp-panel input:is([type="radio"], [type="checkbox"]) { flex: none; width: 18px; height: 18px; min-height: 0; margin: 2px 0 0; padding: 0; accent-color: var(--lqp-accent); }
+.lqp-panel label:has(> input:is([type="radio"], [type="checkbox"])):not(.lqp-choice, .lqp-segment-option) { display: inline-flex; align-items: flex-start; gap: 8px; }

@@ -6,7 +6,7 @@
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 430px);
+  grid-template-columns: minmax(0, 1fr);
   color: var(--k2-ink);
   background: #b9cbd0;
 }
@@ -14,46 +14,10 @@
 .k2-stage { position: relative; min-width: 0; overflow: hidden; background: #829a98; }
 .k2-stage canvas { display: block; }
 .k2-stage-2d-reading .k2-scale-readout { display: none; }
-.k2-panel {
-  position: relative;
-  z-index: 5;
-  max-height: 100dvh;
-  overflow-y: auto;
-  padding: 26px 26px 32px;
-  background: var(--k2-surface);
-  border-left: 1px solid #d4ded9;
-  box-shadow: -10px 0 30px #1d37331b;
-  scrollbar-color: #b8c9c1 transparent;
-  scrollbar-width: thin;
-}
-.k2-panel-top {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--k2-border);
-  color: #43665a;
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: .075em;
-}
-.k2-panel h2 { margin: 20px 0 6px; font-size: clamp(23px, 2vw, 28px); line-height: 1.16; letter-spacing: -.025em; }
-.k2-step { margin: 0 0 18px; color: var(--k2-muted); font-size: 13px; line-height: 1.45; }
-.k2-panel section {
-  margin: 0 0 16px;
-  padding: 17px;
-  border: 1px solid var(--k2-border);
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: 0 2px 7px #193a3210;
-}
-.k2-panel h3 { margin: 0 0 10px; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
-.k2-panel p { margin: 9px 0; font-size: 14px; line-height: 1.55; }
+.k2-phases { color: var(--k2-muted); font-size: 13px; line-height: 1.45; }
+.k2-panel p { font-size: 14px; line-height: 1.55; }
 .k2-panel small { color: var(--k2-muted); }
-.k2-panel label { display: grid; gap: 8px; margin: 15px 0; font-size: 13px; font-weight: 650; line-height: 1.4; }
+.k2-panel label:not(.lqp-choice):not(.lqp-segment-option) { font-size: 13px; font-weight: 650; line-height: 1.4; }
 .k2-panel textarea, .k2-panel select {
   width: 100%;
   min-height: 44px;
@@ -70,7 +34,7 @@
   outline: 3px solid #7ab3a2;
   outline-offset: 2px;
 }
-.k2-options { display: grid; gap: 9px; margin: 14px 0; }
+.k2-options { display: grid; gap: 8px; }
 .k2-options button {
   min-height: 48px;
   padding: 11px 13px;
@@ -88,11 +52,10 @@
 }
 .k2-options button:hover, .k2-options button[aria-pressed="true"] { border-color: #287875; background: #edf6f1; box-shadow: inset 3px 0 #287875; }
 .k2-options button:disabled { opacity: .58; cursor: wait; }
-.k2-panel .primary, .k2-panel .secondary { min-height: 44px; margin-top: 12px; }
+.k2-panel .primary, .k2-panel .secondary { min-height: 44px; }
 .k2-panel .primary { width: 100%; }
 .k2-panel .secondary { width: 100%; }
 .k2-error { padding: 10px 12px; border: 1px solid #efc0ae; border-radius: 10px; background: #fff3ed; color: #7e2f1c; }
-.k2-application { display: grid; gap: 8px; margin: 17px 0 4px; padding-top: 15px; border-top: 1px solid var(--k2-border); }
 .k2-application > strong { font-size: 13px; }
 .k2-result { border-color: #b6d7c7 !important; background: #f2faf5 !important; }
 .k2-result h3 { color: #28644d; }
@@ -311,7 +274,15 @@
 }
 @keyframes k2-pour { 0% { transform: none; } 42%, 70% { transform: translate(70px, -20px) rotate(52deg); } 100% { transform: none; } }
 
-@media (max-width: 950px) { .k2-activity { grid-template-columns: minmax(0, 1fr) minmax(340px, 42vw); } .k2-panel { padding-inline: 19px; } }
+/* The question panel floats on the right (shared LabQuestionPanel); the 2D bench and the feedback card keep clear of it */
+@media (min-width: 761px) {
+  .k2-stage-2d { padding-right: calc(var(--lqp-panel-w) + 40px); }
+  .k2-response-effect { right: calc(var(--lqp-panel-w) + 40px); }
+}
+.k2-view-toggle { position: absolute; top: 84px; left: 22px; z-index: 6; }
+/* The event-lab hint button sits bottom-left (RunHintPanel .event-lab-run-hint); readings stay above it */
+.lab-space:has(.event-lab-run-hint) .k2-scale-readout { bottom: 84px; }
+.lab-space:has(.event-lab-run-hint) .k2-scene-label { bottom: 160px; }
 @media (max-width: 760px) {
   .k2-activity { position: relative; min-height: calc(100dvh - 96px); display: flex; flex-direction: column; }
   .k2-stage { flex: none; height: min(44dvh, 360px); min-height: 260px; }
@@ -320,8 +291,9 @@
   .k2-cup > span { top: -34px; padding: 4px 6px; font-size: 10px; }
   .k2-scale { top: auto; bottom: 18px; width: min(280px, calc(100% - 36px)); min-height: 54px; }
   .k2-scene-label { display: none; }
-  .k2-panel { max-height: none; overflow: visible; padding: 17px 16px 48px; border-left: 0; border-top: 1px solid #d4ded9; box-shadow: 0 -6px 22px #1d373312; }
-  .k2-panel section { padding: 15px; }
+  /* Phone: the bench on top, the question panel as a bottom sheet */
+  .lab-space .k2-panel, .k2-panel { top: auto; bottom: 76px; right: 10px; width: calc(100% - 20px); max-height: 46dvh; }
+  .k2-question-badge { top: auto; bottom: 86px; right: 10px; }
   .k2-scale-readout { left: 12px; bottom: 12px; min-width: 168px; padding: 8px 10px; }
   .k2-scale-readout strong { font-size: 18px; }
   .k2-scene-label { left: 12px; bottom: 74px; font-size: 10px; }

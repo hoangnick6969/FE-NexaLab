@@ -1,0 +1,11 @@
+/* The 3D/2D switch: one segmented control, always in the Lab Space header (layout A), same look in every Lab */
+.lab-renderer-toggle { position: static; display: inline-flex; flex: none; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--fill-neutral-96, rgb(0 0 0 / 4%)); pointer-events: auto; }
+.lab-renderer-toggle button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 52px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.lab-renderer-toggle button[aria-pressed="true"] { background: var(--brand-green); color: var(--on-accent, #fff); }
+.lab-renderer-toggle button:disabled { opacity: .48; cursor: not-allowed; }
+.lab-renderer-toggle button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.lab-renderer-status { max-width: 220px; align-self: center; padding: 2px 8px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+@media (max-width: 640px) {
+  .lab-renderer-toggle button { min-width: 44px; padding: 0 8px; }
+  .lab-renderer-toggle svg { display: none; }
+}

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CircleHelp, Compass, Info, Play, X } from "lucide-react";
+import { LabHeaderSlot } from "../../../shared/LabSpace";
+import { LabRendererToggle } from "../../../shared/LabRendererToggle";
+import { Check, Compass, Info, Play, X } from "lucide-react";
 import { ECOLOGY_POPULATIONS } from "@nexalab/sim";
 import { defineText, getLocale } from "../../../../../i18n";
 import { WhatIfPanel } from "../WhatIfPanel";
@@ -8,6 +10,7 @@ import { useReducedMotion } from "../../../physics/electricity/induction/apparat
 import { PondScene, type FishState } from "./PondScene";
 import { PondView3D, vigorAt } from "./PondView3D";
 import { webglAvailable } from "../kit";
+import { ChoiceGroup, LabQuestionPanel } from "../../../shared/question-panel/LabQuestionPanel";
 import { ComparisonGraph, ToleranceGraph } from "./ToleranceGraph";
 import { AgePyramid, PopulationPlot } from "./PopulationViews";
 import {
@@ -94,7 +97,7 @@ const text = defineText({
     },
     pyramid: { title: "Tháp tuổi", pre: "Trước sinh sản", reproductive: "Sinh sản", post: "Sau sinh sản", illustrative: "Số liệu minh hoạ." },
     sceneLabel: "Ao nuôi cá rô phi cắt ngang, có nhiệt kế đo nhiệt độ nước.",
-    view2d: "Xem sơ đồ 2D", view3d: "Xem cảnh 3D",
+   
     modelLimit: "Mô hình đơn giản: chỉ thay đổi một nhân tố (nhiệt độ), các nhân tố khác coi như thuận lợi. Cá A, B, C, khoảng nhiệt độ ở địa phương và các tháp tuổi là số liệu minh hoạ.",
     explore: {
       show: "Khám phá thêm", hide: "Đóng khám phá", title: "Khám phá tự do",
@@ -183,7 +186,7 @@ const text = defineText({
     },
     pyramid: { title: "Age pyramid", pre: "Pre-reproductive", reproductive: "Reproductive", post: "Post-reproductive", illustrative: "Illustrative data." },
     sceneLabel: "Cross-section of a tilapia pond with a thermometer in the water.",
-    view2d: "Show 2D diagram", view3d: "Show 3D scene",
+   
     modelLimit: "Simple model: only one factor (temperature) changes; the others are assumed favourable. Fish A, B, C, the site range and the age pyramids are illustrative data.",
     explore: {
       show: "Explore more", hide: "Close explore", title: "Free explore",
@@ -408,9 +411,7 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           {!pond3d && <PondScene valueDeciC={pondValue} fish={fish} label={pondLabel} />}
           <ToleranceGraph limits={limits} valueDeciC={pondValue}
             showLimits={limitsShown || exploring} labels={t.graph} />
-          {canRender3d && <button type="button" className="eco-link eco-view-toggle" data-testid="eco-view-toggle" onClick={() => chooseView(view === "3d" ? "2d" : "3d")}>
-            {view === "3d" ? t.view2d : t.view3d}
-          </button>}
+          {canRender3d && <LabHeaderSlot><LabRendererToggle mode={view} onChange={chooseView} /></LabHeaderSlot>}
         </>}
         {scene === "compare" && comparison && <ComparisonGraph comparison={comparison} revealed={evidence.observed.IMPORT} labels={t.compare} />}
         {scene === "population" && <PopulationPlot selected="bap-cai" labels={t.population} />}
@@ -431,21 +432,9 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
       </button>
     </div>
 
-    <button type="button" className="eco-question-badge" aria-expanded={questionOpen} aria-controls="eco-questions" onClick={() => setQuestionOpen((open) => !open)}>
-      <CircleHelp size={16} aria-hidden="true" /><span>{t.questions}, {t.step(step).toLowerCase()}</span>
-    </button>
-    <div id="eco-questions" className="eco-panel" data-open={questionOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setQuestionOpen(false); } }}>
-      <div className="eco-panel-header">
-        <div>
-          <p className="eco-discipline">{t.discipline}</p>
-          <p className="eco-step">{t.step(step)}</p>
-        </div>
-        <button type="button" className="eco-close" aria-label={t.closeQuestions} title={t.closeQuestions} onClick={() => setQuestionOpen(false)}><X size={15} aria-hidden="true" /></button>
-      </div>
-      <div className="eco-progress" aria-hidden="true">
-        {Array.from({ length: ECO_STEP_COUNT }, (_, i) => <span key={i} data-state={i + 1 < step ? "done" : i + 1 === step ? "current" : "todo"} />)}
-      </div>
-      <h3 className="eco-heading" aria-live="polite">{heading}</h3>
+    <LabQuestionPanel id="eco-questions" prefix="eco" open={questionOpen} onOpenChange={setQuestionOpen}
+      badgeLabel={`${t.questions}, ${t.step(step).toLowerCase()}`} eyebrow={t.discipline} stepLabel={t.step(step)}
+      progress={{ count: ECO_STEP_COUNT, current: step }} heading={heading} closeLabel={t.closeQuestions}>
 
       {!review && awaitingCheck && current && <p className="eco-chosen" data-testid="eco-chosen">
         {t.review.chosen}: <b>{answerText(current.id, current.prediction)}</b>
@@ -455,13 +444,8 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
         <li data-done={seen.warm}>{seen.warm && <Check size={14} aria-hidden="true" />}{t.sweepSeen.warm}</li>
       </ul>}
 
-      {!review && phase.kind === "predict" && phase.id !== "DENSITY" && <fieldset className="eco-choices" data-testid={`eco-answer-${phase.id.toLowerCase()}`}>
-        <legend>{t.answerLegend}</legend>
-        {ECO_CHOICES[phase.id].map((choice) => <label key={choice} className="eco-choice">
-          <input type="radio" name={`eco-answer-${phase.id}`} value={choice} checked={current?.prediction === choice} onChange={() => predict(choice)} />
-          <span>{t.choice[choice]}</span>
-        </label>)}
-      </fieldset>}
+      {!review && phase.kind === "predict" && phase.id !== "DENSITY" && <ChoiceGroup testId={`eco-answer-${phase.id.toLowerCase()}`} legend={t.answerLegend} name={`eco-answer-${phase.id}`}
+        options={ECO_CHOICES[phase.id].map((choice) => ({ value: choice, label: t.choice[choice] }))} value={current?.prediction as EcoChoice | undefined} onChange={predict} />}
       {!review && phase.kind === "predict" && phase.id === "DENSITY" && <form className="eco-density" data-testid="eco-answer-density" onSubmit={(event) => { event.preventDefault(); saveDensity(); }}>
         <label className="eco-field-label">
           <span>{t.densityValue}</span>
@@ -497,14 +481,8 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
           : <p className="eco-hint"><Info size={15} aria-hidden="true" /> {t.predictHint}</p>}
       </div>}
 
-      {done && !review && <fieldset className="eco-choices" data-testid="eco-explanation">
-        <legend>{t.explanation}</legend>
-        {(["A", "B", "C"] as const).map((answer) => <label key={answer} className="eco-choice">
-          <input type="radio" name="eco-explanation" value={answer} checked={evidence.explanation === answer} onChange={() => explain(answer)} />
-          <span className="eco-letter">{answer}</span>
-          <span>{t[answer.toLowerCase() as "a" | "b" | "c"]}</span>
-        </label>)}
-      </fieldset>}
+      {done && !review && <ChoiceGroup testId="eco-explanation" legend={t.explanation} name="eco-explanation" value={evidence.explanation}
+        options={(["A", "B", "C"] as const).map((answer) => ({ value: answer, letter: answer, label: t[answer.toLowerCase() as "a" | "b" | "c"] }))} onChange={explain} />}
       {phase.kind === "ready" && !review && <p className="eco-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
 
       {done && !review && <div className="eco-explore" data-testid="eco-explore">
@@ -514,13 +492,8 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
         {exploring && <div id="eco-explore-controls" className="eco-explore-controls">
           <h4 className="eco-explore-title">{t.explore.title}</h4>
           <p className="eco-note">{t.explore.intro}</p>
-          <fieldset className="eco-segment">
-            <legend>{t.explore.scene}</legend>
-            {(["pond", "population", "pyramid", "factors"] as const).map((option) => <label key={option} className="eco-segment-option">
-              <input type="radio" name="eco-explore-scene" checked={explore === option} onChange={() => { setExplore(option); setWhatIf(null); }} />
-              <span>{t.explore[option]}</span>
-            </label>)}
-          </fieldset>
+          <ChoiceGroup variant="segment" legend={t.explore.scene} name="eco-explore-scene" value={explore}
+            options={(["pond", "population", "pyramid", "factors"] as const).map((option) => ({ value: option, label: t.explore[option] }))} onChange={(option) => { setExplore(option); setWhatIf(null); }} />
           {explore === "pond" && <p className="eco-note">{tolerance(exploreValue)?.canPersist ? t.persists(formatDeciC(exploreValue)) : t.gone(formatDeciC(exploreValue))}</p>}
           {explore === "population" && <ul className="eco-density-list">
             {(Object.keys(ECOLOGY_POPULATIONS) as Array<keyof typeof ECOLOGY_POPULATIONS>).map((id) => {
@@ -529,24 +502,17 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
             })}
           </ul>}
           {explore === "pyramid" && <>
-            <fieldset className="eco-segment">
-              <legend>{t.explore.sample}</legend>
-              {(["P1", "P2", "P3"] as const).map((sample) => <label key={sample} className="eco-segment-option">
-                <input type="radio" name="eco-explore-sample" checked={exploreSample === sample} onChange={() => { setExploreSample(sample); setWhatIf(null); }} />
-                <span>{sample}</span>
-              </label>)}
-            </fieldset>
+            <ChoiceGroup variant="segment" legend={t.explore.sample} name="eco-explore-sample" value={exploreSample}
+              options={(["P1", "P2", "P3"] as const).map((sample) => ({ value: sample, label: sample }))} onChange={(sample) => { setExploreSample(sample); setWhatIf(null); }} />
             {ageObservation && <p className="eco-note">{t.age[ageObservation.pyramid]}</p>}
           </>}
           {explore === "factors" && <div className="eco-factors" data-testid="eco-factors">
             <p className="eco-note">{t.explore.factorsIntro}</p>
-            {FACTORS.map((factor) => <fieldset key={factor.id} className="eco-segment eco-factor">
-              <legend>{t.explore.factorNames[factor.id]}</legend>
-              {[false, true].map((biotic) => <label key={String(biotic)} className="eco-segment-option" data-result={factorChecked && factorAnswers[factor.id] === biotic ? String(biotic === factor.biotic) : undefined}>
-                <input type="radio" name={`eco-factor-${factor.id}`} checked={factorAnswers[factor.id] === biotic} onChange={() => { setFactorAnswers({ ...factorAnswers, [factor.id]: biotic }); setFactorChecked(false); }} />
-                <span>{biotic ? t.explore.biotic : t.explore.abiotic}</span>
-              </label>)}
-            </fieldset>)}
+            {FACTORS.map((factor) => <ChoiceGroup key={factor.id} variant="segment" className="eco-factor" legend={t.explore.factorNames[factor.id]} name={`eco-factor-${factor.id}`}
+              value={factorAnswers[factor.id] === undefined ? null : String(factorAnswers[factor.id]) as "true" | "false"}
+              options={([false, true] as const).map((biotic) => ({ value: String(biotic) as "true" | "false", label: biotic ? t.explore.biotic : t.explore.abiotic,
+                result: factorChecked && factorAnswers[factor.id] === biotic ? biotic === factor.biotic : undefined }))}
+              onChange={(value) => { setFactorAnswers({ ...factorAnswers, [factor.id]: value === "true" }); setFactorChecked(false); }} />)}
             <button type="button" className="eco-tool" onClick={() => setFactorChecked(true)}>{t.explore.check}</button>
             {factorChecked && <p className="eco-note" role="status">{t.explore.factorResult(factorScore, FACTORS.length)}</p>}
           </div>}
@@ -555,6 +521,6 @@ export function EcologyToleranceActivity({ state, onChange }: { state: unknown; 
         </div>}
       </div>}
       <p className="eco-note">{t.modelLimit}</p>
-    </div>
+    </LabQuestionPanel>
   </section>;
 }

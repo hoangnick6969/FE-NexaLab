@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, idempotencyKey, mutate, useAuth } from "../../lib/api";
 import { Badge, ErrorBox, useAction, verdictLabel } from "../../components/ui";
 import { useLabRunHost } from "./runtime/lab-run-host";
-import { CheckpointHintPanel, FloatingCheckpointHint } from "./runtime/CheckpointHintPanel";
+import { CheckpointHintPanel, CheckpointResultSection } from "./runtime/CheckpointHintPanel";
 import { VerdictExplanationPanel } from "./runtime/VerdictExplanationPanel";
 import { RunHintPanel } from "./runtime/RunHintPanel";
 import { LegacyHintPanel } from "./runtime/LegacyHintPanel";
@@ -24,6 +24,7 @@ import { checkpointViewForRenderer } from "./runtime/checkpoint-views";
 import { hasLabRenderer, labRenderer, previewLabRenderer } from "./runtime/activity-renderers";
 import { defineText } from "../../i18n";
 import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
+import { revealInPanel } from "./shared/question-panel/LabQuestionPanel";
 import { LabSpace } from "./shared/LabSpace";
 import { labInfo } from "./lab-info";
 import { buoyancyStepQuestions } from "./physics/fluid/buoyancy/buoyancy-questions";
@@ -327,6 +328,15 @@ function GuidedLab() {
     navigate(`/classes/${encodeURIComponent(classId)}?tab=${labDraft.assignment ? "work" : "resources"}`);
   });
   const result = attempt?.simulationResult;
+  // A new result scrolls into view inside the question panel, so the learner sees the verdict at once. The result
+  // section can remount while the activity settles, so it is looked up a frame later instead of held by a ref.
+  const hasResult = Boolean(result);
+  useEffect(() => {
+    if (!hasResult) return;
+    let stop = () => undefined as void;
+    const frame = requestAnimationFrame(() => { stop = revealInPanel(document.querySelector<HTMLElement>(".lab-space .lqp-result .lab-space-results")); });
+    return () => { cancelAnimationFrame(frame); stop(); };
+  }, [hasResult]);
   const runtimeReady = user.role === "TEACHER" || Boolean(labRun.launch && labRun.rendererKey);
   const change = (next: any) => {
     if (user.role === "STUDENT") labRun.change(next);
@@ -340,7 +350,13 @@ function GuidedLab() {
   const responseClassId = classId ?? assignment.data?.classId ?? assignment.data?.classroom?.id;
   const responseResourceId = resourceId ?? pedagogy?.resourceId;
   const exitTo = responseClassId && (responseResourceId || labDraft) ? `/classes/${encodeURIComponent(responseClassId)}?tab=${labDraft?.assignment ? "work" : "resources"}` : returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
-  const space = (content: React.ReactNode) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo}>{user.role === "STUDENT" && pedagogy && <section className="panel class-lab-instructions"><h2>{t.teacherInstructions}</h2><b>{pedagogy.learningObjective}</b><p className="resource-plain-text">{pedagogy.instructions}</p>{id !== "buoyancy" && pedagogy.reportPrompts?.length > 0 && <ol>{pedagogy.reportPrompts.map((prompt: string, index: number) => <li key={index}>{prompt}</li>)}</ol>}<p className="tiny muted">{t.customSupplement}{responseResourceId ? ` ${t.unscoredClassPractice}` : ""}</p></section>}{user.role === "STUDENT" && responseClassId && responseResourceId && pedagogy?.reportPrompts?.length > 0 && <StudentClassLabAdditionalResponses classId={responseClassId} resourceId={responseResourceId} assignmentId={assignmentId} prompts={pedagogy.reportPrompts} />}<ErrorBox error={classResource.error} />{content}</LabSpace>;
+  const showResponses = Boolean(user.role === "STUDENT" && responseClassId && responseResourceId && pedagogy?.reportPrompts?.length > 0);
+  // Teacher content has one place in the Lab Space; each prompt is listed once (in the answer form when there is one).
+  const classSection = user.role === "STUDENT" && pedagogy ? <>
+    <section className="panel class-lab-instructions"><h2>{t.teacherInstructions}</h2><b>{pedagogy.learningObjective}</b><p className="resource-plain-text">{pedagogy.instructions}</p>{id !== "buoyancy" && !showResponses && pedagogy.reportPrompts?.length > 0 && <ol>{pedagogy.reportPrompts.map((prompt: string, index: number) => <li key={index}>{prompt}</li>)}</ol>}<p className="tiny muted">{t.customSupplement}{responseResourceId ? ` ${t.unscoredClassPractice}` : ""}</p></section>
+    {showResponses && <StudentClassLabAdditionalResponses classId={responseClassId!} resourceId={responseResourceId!} assignmentId={assignmentId} prompts={pedagogy.reportPrompts} />}
+  </> : undefined;
+  const space = (content: React.ReactNode, extra?: { tools?: React.ReactNode; result?: React.ReactNode }) => <LabSpace title={lab?.title ?? t.discoveryRoom} exitTo={exitTo} classSection={classSection} tools={extra?.tools} result={extra?.result}><ErrorBox error={classResource.error} />{content}</LabSpace>;
   const tuningPanel = labDraft && user.role === "TEACHER" && <section className="panel" aria-label="Tùy biến thông số Lab">
     <h2>Thiết kế đề bài trong phòng thí nghiệm</h2>
     <p className="tiny muted">Chọn nội dung cho lớp. Mô hình và cách chấm của Lab nguồn vẫn được ghim.</p>
@@ -386,111 +402,44 @@ function GuidedLab() {
   if (user.role === "STUDENT" && !assignmentId && !resourceId && labs.isSuccess && !publicLab)
     return space(<section className="panel"><h1>{t.notPublished}</h1><p>{t.notInCurriculum}</p><Link className="primary" to="/labs">{t.backToList}</Link></section>);
   // SAI-01A step 3 + B2: event-scored Labs render their own result, so the explanation and hint float beside it.
-  const eventHint = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
-    ? <FloatingCheckpointHint key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"}
+  // After submit the explanation and hint join the activity's question panel, under its own server result.
+  const eventResult = user.role === "STUDENT" && labRun.attempt?.id && labRun.attempt.verdict
+    ? <CheckpointResultSection key={labRun.attempt.id} attemptId={labRun.attempt.id} passed={labRun.attempt.verdict === "passed"}
         whatIf={id === "lever-equilibrium" ? "lever" : id === "thermal-energy" ? "thermal" : undefined} />
-    // While working (no attempt yet): moment-A hints on a step the learner picks.
-    : user.role === "STUDENT" && labRun.launch && !labRun.attempt ? <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} placement="floating" /> : null;
+    : null;
+  // While working (no attempt yet): moment-A hints on a step the learner picks, in the bottom-left dock.
+  const eventHint = user.role === "STUDENT" && labRun.launch && !labRun.attempt ? <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} placement="floating" /> : null;
   if (id === "mass-conservation") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-10 cần phiên LabRun của học sinh để ghi dự đoán trước khi mở số cân.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu hoạt động bảo toàn khối lượng. Số cân chỉ mở sau khi em ghi dự đoán.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
       : <><MassConservationActivity runId={labRun.launch.runId} state={state} onChange={change}
           onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()}
-          attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
+          attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>, { result: eventResult });
   if (id === "lever-equilibrium") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-06 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành đòn bẩy. Dự đoán được ghi trước khi mở kết quả.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <><LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>);
+      : <><LeverInvestigationActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} />{eventHint}</>, { result: eventResult });
   if (id === "thermal-energy") return space(user.role !== "STUDENT"
     ? <section className="panel"><p>FL-07 cần phiên LabRun của học sinh để lưu dự đoán trước khi quan sát.</p></section>
     : !labRun.launch || !labRun.rendererKey
       ? <div className="lab-session-gate"><div className="lab-session-card"><p>Bắt đầu bài thực hành năng lượng nhiệt.</p><button className="primary" disabled={labRun.pending || !lab || !challengeId} onClick={() => void labRun.open()}>{labRun.pending ? "Đang mở…" : "Bắt đầu thí nghiệm"}</button><ErrorBox error={labRun.error} /></div></div>
-      : <><ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />{eventHint}</>);
-  return space(
-    <>
-      <ErrorBox error={assignmentId ? assignment.error : labs.error} />
-      {runtimeReady && preview && !guided && (id === "circuit" || typeof preview.extent === "number") && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
-      <div className="lab-layout">
-        <section className="lab-workspace">
-          {runtimeReady && <div className="workspace-toolbar">
-            <b>{id === "eye" ? t.eyeModel : t.bench}</b>
-            <button
-              className="text-button"
-              onClick={() => {
-                const next = renderer?.defaultState() ?? {};
-                if (user.role === "STUDENT") labRun.reset(next);
-                else change(next);
-                setResetKey((k) => k + 1);
-              }}
-            >
-              <RotateCcw size={14} />
-              {t.reset}
-            </button>
-          </div>}
-          {user.role === "STUDENT" && !runtimeReady ? (
-            <div className="lab-session-gate" role="status" data-testid="lab-session-gate">
-              <div className="lab-session-card">
-                <div className="lab-session-meta">
-                  <span className="lab-session-dot" aria-hidden="true" />
-                  <span className="lab-session-help">{t.sessionHelp}</span>
-                </div>
-                <button
-                  type="button"
-                  className="primary lab-session-btn"
-                  data-testid="lab-session-start"
-                  onClick={() => void labRun.open()}
-                  disabled={labRun.pending || !lab || !challengeId}
-                >
-                  <Play size={16} /> {labRun.pending ? t.startingSession : t.startSession}
-                </button>
-              </div>
-            </div>
-          ) : null}
-          {runtimeReady && labRun.restoreCandidate && (
-            <div className="lab-draft-backdrop" role="dialog" aria-modal="true" aria-labelledby="lab-draft-restore-title">
-              <div className="notice lab-draft-modal" role="status" data-testid="lab-draft-restore">
-                <b id="lab-draft-restore-title">{t.restoreTitle}</b>
-                <p>{t.restoreBody}</p>
-                <div className="lab-actions">
-                  <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
-                  <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
-                </div>
-              </div>
-            </div>
-          )}
-          {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} runtimeConfig={labRun.launch?.runtimeConfig} displayQuestions={pedagogy?.reportPrompts} />}
-          {runtimeReady && <div className="lab-actions">
-            <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
-            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer?.envelope === "checkpoints" && (() => {
-              const view = checkpointViewForRenderer(renderer.key);
-              if (!view) return null;
-              const step = view.hintStep(state);
-              return <RunHintPanel key={`${step.ask?.criterion ?? ""}|${step.reflect?.criterion ?? ""}`} runId={labRun.launch.runId} step={step}
-                labelOf={(criterion) => view.stepLabel(criterion.replace(/^prediction:/, ""))} />;
-            })()}
-            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer && STATION_HINT_RENDERERS.has(renderer.key) && (
-              <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} />
-            )}
-
-            <button
-              className="primary"
-              data-testid="lab-run-submit"
-              onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
-              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (guided !== null && !guided.ready(state))}
-            >
-              <Play size={15} />
-              {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
-                ? t.computing
-                : guidedCopy ? guidedCopy.submit : id === "eye"
-                  ? t.gradeParts
-                  : t.run}
-            </button>
-          </div>}
-          <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
-        </section>
-        {runtimeReady && <aside className="lab-aside"><details className="lab-space-results" open={Boolean(result)}><summary>{guidedCopy ? guidedCopy.resultTitle : t.result}</summary>
+      : <><ThermalEnergyActivity runId={labRun.launch.runId} onSubmit={() => void labRun.submit()} onNewRun={() => void labRun.open()} attempt={labRun.attempt} pendingSubmit={labRun.pending} submissionError={labRun.error} />{eventHint}</>, { result: eventResult });
+  // One layout for every Lab: reset sits in the header after the view toggle; the result, explanation and hints
+  // join the activity's question panel (or the Lab Space result drawer when the activity has none).
+  const resetTool = runtimeReady ? <button type="button" className="lab-reset" title={t.reset} aria-label={t.reset}
+    onClick={() => {
+        const next = renderer?.defaultState() ?? {};
+        if (user.role === "STUDENT") labRun.reset(next);
+        else change(next);
+        setResetKey((k) => k + 1);
+      }}
+    >
+      <RotateCcw size={14} aria-hidden="true" />
+      <span>{t.reset}</span>
+    </button> : null;
+  const resultSection = runtimeReady ? <details className="lab-space-results" open={Boolean(result)}><summary>{guidedCopy ? guidedCopy.resultTitle : t.result}</summary>
           {runtimeReady && !guided && <section className="panel challenge-panel">
             <span className="eyebrow">{t.challenge}</span>
             <h3>
@@ -608,9 +557,77 @@ function GuidedLab() {
               previousLevel={lastHintLevel} onHint={(next) => setLastHintLevel(next.level)} />
           )}
           {user.role === "STUDENT" && runtimeReady && <TutorChat contextKind="LAB" contextId={id} />}
-        </details></aside>}
+        </details> : null;
+  return space(
+    <>
+      <ErrorBox error={assignmentId ? assignment.error : labs.error} />
+      {runtimeReady && preview && !guided && (id === "circuit" || typeof preview.extent === "number") && <div className="preview-strip">{t.devicePreview} {id === "circuit" ? `${preview.currentMa ?? '∞'} mA · ${preview.status}` : t.product(Number(preview.extent.toFixed(6)))} · {t.runToSave}</div>}
+      <div className="lab-layout">
+        <section className="lab-workspace">
+          {user.role === "STUDENT" && !runtimeReady ? (
+            <div className="lab-session-gate" role="status" data-testid="lab-session-gate">
+              <div className="lab-session-card">
+                <div className="lab-session-meta">
+                  <span className="lab-session-dot" aria-hidden="true" />
+                  <span className="lab-session-help">{t.sessionHelp}</span>
+                </div>
+                <button
+                  type="button"
+                  className="primary lab-session-btn"
+                  data-testid="lab-session-start"
+                  onClick={() => void labRun.open()}
+                  disabled={labRun.pending || !lab || !challengeId}
+                >
+                  <Play size={16} /> {labRun.pending ? t.startingSession : t.startSession}
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {runtimeReady && labRun.restoreCandidate && (
+            <div className="lab-draft-backdrop" role="dialog" aria-modal="true" aria-labelledby="lab-draft-restore-title">
+              <div className="notice lab-draft-modal" role="status" data-testid="lab-draft-restore">
+                <b id="lab-draft-restore-title">{t.restoreTitle}</b>
+                <p>{t.restoreBody}</p>
+                <div className="lab-actions">
+                  <button type="button" className="secondary" onClick={labRun.discardDraft}>{t.discard}</button>
+                  <button type="button" className="primary" onClick={() => { labRun.restoreDraft(); setResetKey((key) => key + 1); }}>{t.restore}</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {runtimeReady && renderer && <renderer.Activity state={state} onChange={change} result={result} resetKey={resetKey} runtimeParams={labRun.launch?.runtimeParams ?? null} runtimeConfig={labRun.launch?.runtimeConfig} displayQuestions={pedagogy?.reportPrompts} />}
+          {runtimeReady && <div className="lab-actions">
+            <span>{guidedCopy ? guidedCopy.assessment : labRun.launch ? `${labRun.launch.modelRef} · ${labRun.launch.engineVersion}` : t.engine}</span>
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer?.envelope === "checkpoints" && (() => {
+              const view = checkpointViewForRenderer(renderer.key);
+              if (!view) return null;
+              const step = view.hintStep(state);
+              return <RunHintPanel key={`${step.ask?.criterion ?? ""}|${step.reflect?.criterion ?? ""}`} runId={labRun.launch.runId} step={step}
+                labelOf={(criterion) => view.stepLabel(criterion.replace(/^prediction:/, ""))} />;
+            })()}
+            {user.role === "STUDENT" && runtimeReady && labRun.launch && !attempt && renderer && STATION_HINT_RENDERERS.has(renderer.key) && (
+              <StepPickerHint key={labRun.launch.runId} runId={labRun.launch.runId} />
+            )}
+
+            <button
+              className="primary"
+              data-testid="lab-run-submit"
+              onClick={() => user.role === "STUDENT" ? void labRun.submit() : teacherRun.mutate(null)}
+              disabled={(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending) || !lab || Boolean(attempt) || (guided !== null && !guided.ready(state))}
+            >
+              <Play size={15} />
+              {(user.role === "STUDENT" ? labRun.pending : teacherRun.isPending)
+                ? t.computing
+                : guidedCopy ? guidedCopy.submit : id === "eye"
+                  ? t.gradeParts
+                  : t.run}
+            </button>
+          </div>}
+          <ErrorBox error={user.role === "STUDENT" ? labRun.error : teacherRun.error} />
+        </section>
       </div>
       {!guided && <p className="tiny muted">{t.disclaimer}</p>}
-    </>
+    </>,
+    { tools: resetTool, result: resultSection },
   );
 }

@@ -1,7 +1,8 @@
-import { Component, createContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Component, createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { defineText } from "../../../i18n";
+import { LabClassSectionProvider } from "./LabClassSection";
 import "./LabSpace.css";
 
 const text = defineText({ vi: { enter: "Vào phòng thực hành", exit: "← Quay về", unavailable: "Không thể tải giao diện thí nghiệm. Bài làm vẫn được giữ trong phiên này.", retry: "Thử tải lại" }, en: { enter: "Enter lab space", exit: "← Back", unavailable: "The experiment view could not load. Your work is retained in this session.", retry: "Retry view" } });
@@ -16,7 +17,12 @@ class LabViewBoundary extends Component<{ children: ReactNode }, { failed: boole
   render() { return this.state.failed ? <div className="panel" role="alert"><p>{text().unavailable}</p><button type="button" className="secondary" onClick={() => this.setState({ failed: false })}>{text().retry}</button></div> : this.props.children; }
 }
 
-export function LabSpace({ title, exitTo, onExit, children, active = true }: { active?: boolean; title: string; exitTo?: string; onExit?: () => void; children: ReactNode }) {
+/**
+ * One layout for every Lab: the header (exit, title, view toggle, then `tools` such as reset) top left, the scene
+ * full screen behind, the question panel on the right and the actions dock bottom left. `result` (verdict, hints)
+ * and `classSection` (teacher content) join the activity's question panel; see LabClassSection.
+ */
+export function LabSpace({ title, exitTo, onExit, children, classSection, result, tools, active = true }: { active?: boolean; title: string; exitTo?: string; onExit?: () => void; children: ReactNode; classSection?: ReactNode; result?: ReactNode; tools?: ReactNode }) {
   const exit = useRef<HTMLButtonElement>(null);
   const [headerActions, setHeaderActions] = useState<HTMLDivElement | null>(null);
   const [sceneRoot, setSceneRoot] = useState<HTMLDivElement | null>(null);
@@ -37,10 +43,17 @@ export function LabSpace({ title, exitTo, onExit, children, active = true }: { a
     };
   }, [active]);
   return createPortal(<section hidden={!active} className="lab-space" aria-label={title} data-testid="lab-space">
-    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1><div className="lab-space-header-actions" ref={setHeaderActions} /></header>
+    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1><div className="lab-space-header-actions" ref={setHeaderActions} />{tools && <div className="lab-space-header-tools">{tools}</div>}</header>
     <div className="lab-space-scene" ref={setSceneRoot} />
-    <LabHeaderActionsContext.Provider value={headerActions}><LabSceneContext.Provider value={sceneRoot}><div className="lab-space-body"><LabViewBoundary>{children}</LabViewBoundary></div></LabSceneContext.Provider></LabHeaderActionsContext.Provider>
+    <LabHeaderActionsContext.Provider value={headerActions}><LabSceneContext.Provider value={sceneRoot}><div className="lab-space-body"><LabClassSectionProvider section={classSection} result={result} headerActions={headerActions}><LabViewBoundary>{children}</LabViewBoundary></LabClassSectionProvider></div></LabSceneContext.Provider></LabHeaderActionsContext.Provider>
   </section>, document.body);
+}
+
+/** Puts a control in the Lab Space header (view toggle and the like); outside a Lab Space it stays in place. */
+export function LabHeaderSlot({ children, fallbackClassName }: { children: ReactNode; fallbackClassName?: string }) {
+  const header = useContext(LabHeaderActionsContext);
+  if (header) return createPortal(children, header);
+  return fallbackClassName ? <div className={fallbackClassName}>{children}</div> : <>{children}</>;
 }
 
 // Keep the lesson step mounted: entry changes presentation, never its attempt identity.

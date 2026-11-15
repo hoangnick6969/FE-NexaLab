@@ -1,6 +1,5 @@
-import { createPortal } from "react-dom";
-import { useContext, useEffect, useState } from "react";
-import { LabHeaderActionsContext } from "../../../shared/LabSpace";
+import { useEffect, useState } from "react";
+import { LabHeaderSlot } from "../../../shared/LabSpace";
 import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
 import { BasePicker, CODON_MEANINGS, DNA_BASES, ELEMENT_COLORS, GeneLabBench3D, K7Hud, RNA_BASES, SequenceTrack, type Base, type CodonMeaning, type DnaBase, type RnaBase } from "../kit";
 import { fl27GeneConfig as config } from "./fl27-gene.config";
@@ -42,7 +41,6 @@ function erase<T>(values: readonly (T | null)[], active: number | null): { value
  */
 export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams = null }: { state: unknown; onChange: (next: GeneEvidence) => void; resetKey: number; runtimeParams?: Record<string, string | number> | null }) {
   const t = geneText();
-  const headerActions = useContext(LabHeaderActionsContext);
   const evidence = applyRunPins(geneEvidenceFrom(state), runtimeParams);
   const [station, setStation] = useState<StationId>("structure");
   const [bench, setBench] = useState<GeneBench>(() => initialGeneBench());
@@ -192,7 +190,7 @@ export function GeneProteinActivity({ state, onChange, resetKey, runtimeParams =
   })();
 
   return <section className="gene-activity" data-testid="gene-activity" aria-label={t.title}>
-    {headerActions && createPortal(<LabRendererToggle mode={viewMode} onChange={setViewMode} />, headerActions)}
+    <LabHeaderSlot><LabRendererToggle mode={viewMode} onChange={setViewMode} /></LabHeaderSlot>
     {viewMode === "3d"
       ? atBench
         ? <GeneLabBench3D onOpenMicroscope={() => setScene("zooming")} zooming={scene === "zooming"} onZoomArrive={() => setScene("molecule")} microscopeLabel={t.microscopeLabel} />

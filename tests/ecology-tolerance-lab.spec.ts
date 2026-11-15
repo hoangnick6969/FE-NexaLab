@@ -155,9 +155,9 @@ test("FL-20 ecology activity: predictions before observations, F5 restore, keybo
   await expect(page.getByTestId("lab-run-submit")).toBeEnabled();
   await page.getByTestId("lab-run-submit").click();
   await expect(page.getByText("Nước 44,0 °C: cá rô phi không tồn tại được, trả lời đúng")).toBeVisible();
-  // The result drawer must sit above the question panel, not behind it.
+  // Layout A: the result is the last section of the question panel, visible and on top.
   const line = (await page.getByText("Nước 44,0 °C: cá rô phi không tồn tại được, trả lời đúng").boundingBox())!;
-  expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest(".lab-aside")), [line.x + 8, line.y + line.height / 2])).toBe(true);
+  expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest("#eco-questions [data-testid=lab-panel-result]")), [line.x + 8, line.y + line.height / 2])).toBe(true);
 
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toEqual(expect.objectContaining({
@@ -212,12 +212,12 @@ test("FL-20 K8 pond: 3D diorama by default, 2D diagram on request, same fish con
   const panel = (await page.locator(".eco-panel").boundingBox())!;
   expect(card.x + card.width).toBeLessThanOrEqual(panel.x);
 
-  await page.getByTestId("eco-view-toggle").click();
+  await page.locator(".lab-space-header").getByRole("button", { name: "2D", exact: true }).click();
   await expect(stage).toHaveAttribute("data-view", "2d");
   await expect(page.locator("svg.eco-pond")).toHaveAttribute("data-fish", "hidden");
   await page.reload();
   await page.getByTestId("lab-session-start").click();
   await expect(page.getByTestId("eco-stage")).toHaveAttribute("data-view", "2d");
-  await page.getByTestId("eco-view-toggle").click();
+  await page.locator(".lab-space-header").getByRole("button", { name: "3D", exact: true }).click();
   await expect(page.getByTestId("eco-stage")).toHaveAttribute("data-view", "3d");
 });

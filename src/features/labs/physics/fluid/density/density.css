@@ -84,42 +84,6 @@
 .fluid-kit-shell .k3-actions button[aria-pressed="true"], .fluid-kit-shell .fl03-segment button[aria-pressed="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
 .fluid-kit-shell .k3-actions button, .fluid-kit-shell .fl03-segment button { min-height: 44px; }
 
-/* View toggle: larger touch targets on phones (the 3D/2D choice must be easy to hit). */
-.lab-space:has(.density-activity) .lab-renderer-toggle button { min-width: 64px; min-height: 44px; }
-.lab-space:has(.density-activity) .lab-renderer-toggle button:focus-visible { outline: 3px solid var(--k3-selected); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) {
-  .lab-space:has(.density-activity) .lab-renderer-toggle button { transition: none; }
-}
-
-/* The view control belongs to the shared header, above either stage and the HUD. */
-.lab-space:has(.density-activity) .lab-space-header {
-  right: max(16px, env(safe-area-inset-right));
-  max-width: none;
-  padding: 4px 8px;
-  gap: 8px;
-}
-.lab-space:has(.density-activity) .lab-space-header h1 {
-  flex: 1;
-  min-width: 0;
-  max-width: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.lab-space:has(.density-activity) .lab-space-header > .secondary { flex-shrink: 0; }
-.lab-space:has(.density-activity) .lab-space-header-actions { margin-left: auto; flex-shrink: 0; }
-.lab-space:has(.density-activity) .lab-space-header .lab-renderer-toggle {
-  position: static;
-  box-shadow: none;
-}
-@media (max-width: 640px) {
-  .lab-space:has(.density-activity) .lab-space-header { left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); }
-  .lab-space:has(.density-activity) .lab-space-header > .secondary { padding-inline: 6px; }
-  .lab-space:has(.density-activity) .lab-space-header h1 { font-size: 13px; }
-  .lab-space:has(.density-activity) .lab-renderer-toggle button { min-width: 44px; padding-inline: 5px; gap: 3px; }
-}
-
-
 .fluid-kit-shell .fluid-kit-renderer { position: absolute; inset: 0; min-width: 0; min-height: 0; overflow: hidden; }
 .fluid-kit-shell .fluid-kit-renderer-2d { visibility: hidden; opacity: 0; pointer-events: none; }
 .fluid-kit-shell .fluid-kit-renderer-2d.is-active { visibility: visible; opacity: 1; }

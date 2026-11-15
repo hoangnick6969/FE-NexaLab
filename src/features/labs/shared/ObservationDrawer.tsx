@@ -2,7 +2,8 @@
  * Stage 3 of the Explore-first flow, shared by every kit: optional observation prompts and challenges.
  * Never blocks the bench; answers stay on this device and are not scored.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLabPanelSections } from "./LabClassSection";
 import "./LabIntro.css";
 
 export type DrawerPrompt = {
@@ -30,18 +31,18 @@ export function ObservationDrawer({ open, onOpenChange, prompts, answers, onAnsw
 }) {
   const fresh = prompts.filter((prompt) => prompt.isNew).length;
   useEffect(() => { if (open) onSeen(); }, [open, onSeen, fresh]);
-  useEffect(() => {
-    if (!open) return;
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape") onOpenChange(false); };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [open, onOpenChange]);
+  // Class Lab teacher questions (when the Lab Space has them) join the drawer after the observation prompts.
+  const { classSection, result } = useLabPanelSections();
+  const toggle = useRef<HTMLButtonElement>(null);
+  // Esc only acts while focus is inside the drawer (SPEC-lab-space-shared-ui §3): on the bench it releases the tool.
+  const collapse = () => { onOpenChange(false); requestAnimationFrame(() => toggle.current?.focus({ preventScroll: true })); };
   return <>
-    <button type="button" className="observation-drawer-toggle" aria-expanded={open} aria-controls="observation-drawer" onClick={() => onOpenChange(!open)}>
+    <button ref={toggle} type="button" className="observation-drawer-toggle" aria-expanded={open} aria-controls="observation-drawer" onClick={() => onOpenChange(!open)}>
       Gợi ý quan sát{fresh > 0 && <span className="observation-drawer-badge">{fresh} mới</span>}
     </button>
-    <aside id="observation-drawer" className={`observation-drawer${open ? " is-open" : ""}`} aria-label="Gợi ý quan sát và thử thách" hidden={!open}>
-      <header><h2>Gợi ý quan sát</h2><button type="button" className="text-button" onClick={() => onOpenChange(false)}>Thu gọn</button></header>
+    <aside id="observation-drawer" className={`observation-drawer${open ? " is-open" : ""}`} aria-label="Gợi ý quan sát và thử thách" hidden={!open}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); collapse(); } }}>
+      <header><h2>Gợi ý quan sát</h2><button type="button" className="text-button" onClick={collapse}>Thu gọn</button></header>
       <p className="lab-intro-small">Không bắt buộc và không chấm điểm. Em vẫn thao tác trên bàn khi đang mở mục này.</p>
       <ol className="observation-prompts">{prompts.map((prompt) => <li key={prompt.id} className={prompt.challenge ? "is-challenge" : ""}>
         <div className="observation-prompt-head">
@@ -59,7 +60,8 @@ export function ObservationDrawer({ open, onOpenChange, prompts, answers, onAnsw
         </label>}
         {prompt.canFocus && <button type="button" className="text-button" onClick={() => onFocus(prompt.id)}>Chỉ cho em trên bàn</button>}
       </li>)}</ol>
-      {teacherSection}
+      {result}
+      {teacherSection ?? classSection}
     </aside>
   </>;
 }

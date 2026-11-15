@@ -19,10 +19,10 @@ const VIEW: BenchViewPreset = {
   // Magnet at rest to the LED board, with a little air on each side.
   fitWidth: 4.4,
   // The question panel covers the right side on wide screens and the lower part on phones.
-  // Panel width mirrors --em-panel-w in EmInductionActivity.css.
+  // Panel width mirrors --lqp-panel-w in LabQuestionPanel.css.
   insets: ({ width, height }) => width <= 720
     ? { right: 0, bottom: Math.round(height * .42 + 130), top: 120 }
-    : { right: Math.min(380, Math.max(300, width * .34)) + 36, bottom: 130, top: 110 },
+    : { right: Math.min(340, Math.max(288, width * .25)) + 36, bottom: 130, top: 110 },
 };
 
 /** World position of a point given in an apparatus' local frame (rotation about y only). */

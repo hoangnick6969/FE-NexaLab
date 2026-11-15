@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Html, Line } from "@react-three/drei";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { defineText } from "../../../../../i18n";
 import { AnatomyStage, CalloutPins, type Callout, type FocusTarget } from "../kit/AnatomyStage";
 import { EYE_PART_ANCHORS, EYE_PART_IDS, EyeModel, MM, type EyePartId } from "../kit/EyeModel";
@@ -11,6 +10,7 @@ import {
   DISTANCE_OPTIONS_M, EYE_OPTICS_SCENARIOS, GLASSES_RANGE_D, LENS_RANGE_D, POWER_STEP_D,
   eyeOpticsEvidenceFrom, eyeOpticsEvidenceReady, type EyeOpticsEvidence, type Phase2Attempt,
 } from "./eye-optics-evidence";
+import { LabQuestionPanel, StationTabs } from "../../../shared/question-panel/LabQuestionPanel";
 import "./eye-optics.css";
 
 const text = defineText({
@@ -197,19 +197,10 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
           </group>
         </AnatomyStage>
 
-      <aside className={`eye-optics-hud ${hudOpen ? "is-open" : "is-closed"}`} aria-label={t.title}>
-        <header className="eye-optics-hud-header">
-          <h2>{t.title}</h2>
-          <button type="button" className="eye-optics-icon-button" aria-expanded={hudOpen} onClick={() => setHudOpen(!hudOpen)}>
-            {hudOpen ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
-            <span className="visually-hidden">{hudOpen ? t.hideGuide : t.showGuide}</span>
-          </button>
-        </header>
-        <div className="eye-optics-hud-body" hidden={!hudOpen}>
-        <div className="eye-optics-phases" role="tablist" aria-label={t.phaseNames}>
-          <button type="button" role="tab" aria-selected={phase === "names"} className={phase === "names" ? "is-active" : ""} onClick={() => setPhase("names")}>{t.phaseNames}</button>
-          <button type="button" role="tab" aria-selected={phase === "optics"} className={phase === "optics" ? "is-active" : ""} disabled={optionalLocked} onClick={() => setPhase("optics")}>{t.phaseOptics}</button>
-        </div>
+      <LabQuestionPanel id="eye-optics-questions" prefix="eye-optics" className="eye-optics-hud" ariaLabel={t.title} open={hudOpen} onOpenChange={setHudOpen}
+        badgeLabel={t.showGuide} heading={t.title} closeLabel={t.hideGuide}>
+        <StationTabs label={t.phaseNames} current={phase} onSelect={(id) => setPhase(id as typeof phase)} className="eye-optics-phases"
+          stations={[{ id: "names", label: t.phaseNames }, { id: "optics", label: t.phaseOptics, disabled: optionalLocked }]} />
         {optionalLocked && phase === "names" && atEye && <p className="tiny muted">{t.lockedOptics}</p>}
         {atEye && <button type="button" className="secondary eye-optics-room-button" onClick={backToRoom}>{t.backToRoom}</button>}
 
@@ -275,8 +266,7 @@ export function EyeOpticsActivity({ state, onChange, resetKey }: { state: unknow
           </section>
         )}
         <p className="tiny muted">{t.fallback}</p>
-        </div>
-      </aside>
+      </LabQuestionPanel>
     </div>
   );
 }

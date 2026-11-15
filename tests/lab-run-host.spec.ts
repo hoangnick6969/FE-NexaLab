@@ -179,11 +179,12 @@ test("bulb activity restores its predictions and sends checkpoint evidence to th
   await page.getByText("Tắt", { exact: true }).click();
   await page.getByTestId("bulb-diagram-switch").press("Space");
   await expect(page.getByTestId("bulb-observation")).toContainText("Bóng đèn tắt");
-  await page.locator("label.bulb-explanation-choice").filter({ hasText: /Công tắc mở làm ngắt đường đi/ }).click();
+  await page.getByTestId("bulb-explanation").getByRole("radio", { name: /Công tắc mở làm ngắt đường đi/ }).click();
   await page.getByTestId("lab-run-submit").click();
   await expect(page.getByText("Công tắc đóng: Bóng đèn sáng", { exact: false })).toBeVisible();
-  // The result drawer takes the question panel's place instead of overlapping it.
-  await expect(page.locator(".bulb-content")).toBeHidden();
+  // Layout A: the result is the last section of the question panel; no drawer floats over the panel.
+  await expect(page.locator("#bulb-questions").getByTestId("lab-panel-result")).toContainText("Công tắc đóng: Bóng đèn sáng");
+  await expect(page.locator(".lab-aside")).toHaveCount(0);
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toMatchObject({ runId: "bulb-run-2", explanation: "A", checkpoints: [
     { id: "CLOSED", prediction: "ON", state: { nodes: expect.arrayContaining([{ id: "switch", type: "switch", closed: true }]) } },

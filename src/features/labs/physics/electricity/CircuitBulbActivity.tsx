@@ -1,10 +1,12 @@
 import { circuit, evidenceFrom, switchClosed, phaseOf, type BulbEvidence, type Checkpoint, type Phase, type Prediction } from "./circuit-bulb-evidence";
 export { defaultBulbEvidence, bulbEvidenceReady, type BulbEvidence } from "./circuit-bulb-evidence";
-import { useEffect, useRef, useState } from "react";
-import { Check, CircleHelp, Info, Lightbulb, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Info } from "lucide-react";
 import { defineText } from "../../../../i18n";
 import { CircuitBulb3DStage } from "./CircuitBulb3DStage";
 import { LabRendererToggle, useLabRendererMode } from "../../shared/LabRendererToggle";
+import { LabHeaderSlot } from "../../shared/LabSpace";
+import { ChoiceGroup, LabQuestionPanel } from "../../shared/question-panel/LabQuestionPanel";
 import "./CircuitBulbActivity.css";
 
 const text = defineText({
@@ -43,7 +45,7 @@ const text = defineText({
     battery: "Nguồn điện",
     bulb: "Bóng đèn",
     switchName: "Công tắc",
-    question: "Câu hỏi", closeQuestion: "Đóng câu hỏi",
+    question: "Câu hỏi", closeQuestion: "Đóng câu hỏi", discipline: "Vật lý · Khám phá mạch",
     modelLimit: "Mô hình lý tưởng để học về mạch kín và mạch hở; không tính dòng điện, độ sáng hay độ an toàn của mạch thật.",
   },
   en: {
@@ -81,7 +83,7 @@ const text = defineText({
     battery: "Power source",
     bulb: "Bulb",
     switchName: "Switch",
-    question: "Questions", closeQuestion: "Close questions",
+    question: "Questions", closeQuestion: "Close questions", discipline: "Physics · Circuit discovery",
     modelLimit: "An idealised model for learning about complete and broken circuits. It does not calculate current, brightness or real-circuit safety.",
   },
 });
@@ -99,19 +101,6 @@ const phaseIndex: Record<Phase, number> = {
 export function CircuitBulbActivity({ state, onChange }: { state: unknown; onChange: (value: BulbEvidence) => void }) {
   const [viewMode, setViewMode] = useLabRendererMode("nexalab:lab-view:circuit-bulb");
   const [questionOpen, setQuestionOpen] = useState(true);
-  const badge = useRef<HTMLButtonElement>(null);
-  const close = useRef<HTMLButtonElement>(null);
-
-  const toggleQuestion = (open: boolean) => {
-    setQuestionOpen(open);
-    requestAnimationFrame(() => {
-      if (open) {
-        close.current?.focus({ preventScroll: true });
-      } else {
-        badge.current?.focus({ preventScroll: true });
-      }
-    });
-  };
   const evidence = evidenceFrom(state);
   const phase = phaseOf(evidence);
   const checkpointIndex = phase === "predict-closed" || phase === "switch-closed" ? 0 : 1;
@@ -136,7 +125,7 @@ export function CircuitBulbActivity({ state, onChange }: { state: unknown; onCha
       phase === "explain" ? t.explanation : t.ready;
 
   return <section className="bulb-activity" data-testid="bulb-activity" aria-label={t.title}>
-    <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+    <LabHeaderSlot><LabRendererToggle mode={viewMode} onChange={setViewMode} /></LabHeaderSlot>
     {viewMode === "3d" ? <CircuitBulb3DStage closed={closed} switchIsActive={switchIsActive} onToggleSwitch={toggleDiagramSwitch} isLit={showObservation && closed} /> : <div className="bulb-2d-stage" data-testid="bulb-2d-stage">
       <svg viewBox="0 0 900 500" role="img" aria-label={`${t.title}: ${closed ? t.circuitClosed : t.circuitOpen}; ${showObservation && closed ? t.bulbOn : t.bulbOff}`}>
         <defs><filter id="bulb-glow"><feGaussianBlur stdDeviation="12" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
@@ -165,50 +154,12 @@ export function CircuitBulbActivity({ state, onChange }: { state: unknown; onCha
       <span className={`bulb-switch-dot ${closed ? "is-closed" : "is-open"}`} aria-hidden="true" />
       <span className="bulb-switch-text">{closed ? t.openSwitch : t.closeSwitch}</span>
     </button>
-    <button ref={badge} type="button" className="secondary bulb-question-badge" aria-expanded={questionOpen} aria-controls="bulb-questions" onClick={() => toggleQuestion(!questionOpen)}>
-      <CircleHelp size={16} aria-hidden="true" />
-      <span>{t.question} · {phaseIndex[phase]+1}/6</span>
-    </button>
-    <div id="bulb-questions" className={`bulb-content ${questionOpen ? "is-open question-open" : "is-closed question-closed"}`} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); toggleQuestion(false); } }}>
-      <div className="bulb-companion-header">
-        <div className="bulb-companion-badge">
-          <span className="bulb-companion-discipline">VẬT LÝ · KHÁM PHÁ MẠCH</span>
-          <span className="bulb-question-label">{t.steps[phaseIndex[phase]]} · {phaseIndex[phase]+1}/6</span>
-        </div>
-        <button ref={close} type="button" className="bulb-question-close-btn" aria-label={t.closeQuestion} title={t.closeQuestion} onClick={() => toggleQuestion(false)}>
-          <X size={15} aria-hidden="true" />
-        </button>
-      </div>
-
-      <div className="bulb-stepper-track" aria-hidden="true">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <span
-            key={i}
-            className={`bulb-stepper-pill ${i < phaseIndex[phase] ? "is-done" : i === phaseIndex[phase] ? "is-current" : ""}`}
-          />
-        ))}
-      </div>
-
-      <div className="bulb-question" aria-live="polite">
-        <h3 className="bulb-question-text">{question}</h3>
-      </div>
-
-      {(phase === "predict-closed" || phase === "predict-open") && <fieldset className="bulb-prediction" data-testid={`bulb-prediction-${checkpoint.id.toLowerCase()}`}>
-        <legend>{t.predict}</legend>
-        {(["ON", "OFF"] as const).map(prediction => (
-          <label key={prediction} className="bulb-choice">
-            <input
-              type="radio"
-              name={`prediction-${checkpoint.id}`}
-              value={prediction}
-              checked={checkpoint.prediction === prediction}
-              onChange={() => predict(prediction)}
-            />
-            <Lightbulb size={18} aria-hidden="true" />
-            <span>{prediction === "ON" ? t.on : t.off}</span>
-          </label>
-        ))}
-      </fieldset>}
+    <LabQuestionPanel id="bulb-questions" prefix="bulb" className="bulb-content" open={questionOpen} onOpenChange={setQuestionOpen}
+      badgeLabel={`${t.question} · ${phaseIndex[phase] + 1}/6`} eyebrow={t.discipline} stepLabel={`${t.steps[phaseIndex[phase]]} · ${phaseIndex[phase] + 1}/6`}
+      progress={{ count: 6, current: phaseIndex[phase] + 1 }} heading={question} closeLabel={t.closeQuestion}>
+      {(phase === "predict-closed" || phase === "predict-open") && <ChoiceGroup variant="segment" legend={t.predict} name={`prediction-${checkpoint.id}`}
+        testId={`bulb-prediction-${checkpoint.id.toLowerCase()}`} value={checkpoint.prediction ?? null} onChange={predict}
+        options={[{ value: "ON", label: t.on }, { value: "OFF", label: t.off }] as const} />}
 
       <div className="bulb-observation" role="status" aria-live="polite" data-testid="bulb-observation">
         {showObservation ? (
@@ -227,25 +178,11 @@ export function CircuitBulbActivity({ state, onChange }: { state: unknown; onCha
         )}
       </div>
 
-      {phase === "explain" && <fieldset className="bulb-explanation" data-testid="bulb-explanation">
-        <legend>{t.explanation}</legend>
-        {(["A", "B", "C"] as const).map(answer => (
-          <label key={answer} className="bulb-explanation-choice">
-            <input
-              type="radio"
-              name="bulb-explanation"
-              value={answer}
-              checked={evidence.explanation === answer}
-              onChange={() => setExplanation(answer)}
-            />
-            <span className="bulb-explanation-letter">{answer}</span>
-            <span className="bulb-explanation-text">{t[answer.toLowerCase() as "a" | "b" | "c"]}</span>
-          </label>
-        ))}
-      </fieldset>}
+      {phase === "explain" && <ChoiceGroup legend={t.explanation} name="bulb-explanation" testId="bulb-explanation" value={evidence.explanation ?? null} onChange={setExplanation}
+        options={(["A", "B", "C"] as const).map((answer) => ({ value: answer, letter: answer, label: t[answer.toLowerCase() as "a" | "b" | "c"] }))} />}
 
       {phase === "ready" && <div className="bulb-ready" role="status"><Check size={18} aria-hidden="true" /><span>{t.ready}</span></div>}
       <p className="bulb-model-limit">{t.modelLimit}</p>
-    </div>
+    </LabQuestionPanel>
   </section>;
 }

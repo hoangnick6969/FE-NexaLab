@@ -1,10 +1,2 @@
-/* SAI-01A step 3: the after-submit hint beside an event-scored Lab (FL-06/07/10), under the Lab Space header. */
-.event-lab-hint {
-  position: absolute; z-index: 25;
-  left: max(16px, env(safe-area-inset-left)); top: 140px;
-  width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - 300px); overflow: auto;
-}
-.event-lab-hint .panel { margin: 0; box-shadow: 0 16px 40px rgba(18, 38, 30, 0.14); }
-.event-lab-hint[data-open="false"] { width: auto; }
-.event-lab-hint-close { position: absolute; top: 8px; right: 8px; z-index: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; background: transparent; border: 0; color: var(--muted); }
-.event-lab-hint-pill { display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 8px 24px rgba(18, 38, 30, 0.12); }
+/* SAI-01A step 3: the after-submit explanation and hint of an event-scored Lab, inside its question panel. */
+.event-lab-hint { display: grid; gap: 12px; }
