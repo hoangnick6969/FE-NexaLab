@@ -11,6 +11,7 @@ for (const { lab, apparatus, material, hazard } of CASES) {
   test(`${lab}: bench panel lists the same items as the intro`, async ({ page }) => {
     await page.goto(`/dev/lab-kits/k2?lab=${lab}`);
     const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("button", { name: "Vào bàn thí nghiệm" })).toBeVisible();
     const introItems = await dialog.locator(".lab-intro-apparatus b, .lab-intro-materials li > span:first-child").allInnerTexts();
     const ack = dialog.getByRole("checkbox", { name: "Em đã đọc lưu ý an toàn" });
     if (await ack.count()) await ack.check();
