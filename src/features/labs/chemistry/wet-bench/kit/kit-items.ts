@@ -17,6 +17,7 @@ export function listWetBenchKitItems(config: ChemistryLabConfig): KitItem[] {
       labelVi: item.kind === "test_tube" ? `${K2_APPARATUS.test_tube.labelVi} × ${tubes}` : apparatusLabel(config, item.id),
       purposeVi: K2_APPARATUS[item.kind].purposeVi,
       rendererKey: item.kind,
+      kindLabelVi: K2_APPARATUS[item.kind].labelVi,
       ...(K2_APPARATUS[item.kind].sharedItem ? { sharedItemId: K2_APPARATUS[item.kind].sharedItem } : {}),
     }));
   const materials = [...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).flatMap((bottle): KitItem[] => {
