@@ -17,6 +17,7 @@ const text = defineText({
     removeLastOption: "Bớt phương án cuối",
     correct: (n: number) => `Đáp án đúng câu ${n}`,
     optionN: (n: number) => `Phương án ${n}`,
+    noAnswer: "Chưa chọn đáp án",
     removeQuestion: (n: number) => `Xóa câu hỏi ${n}`,
     addQuestion: "Thêm câu hỏi",
     writtenPrompt: (n: number) => `Câu tự luận ${n}`,
@@ -54,6 +55,7 @@ const text = defineText({
     removeLastOption: "Remove the last option",
     correct: (n: number) => `Correct answer for question ${n}`,
     optionN: (n: number) => `Option ${n}`,
+    noAnswer: "No answer selected",
     removeQuestion: (n: number) => `Remove question ${n}`,
     addQuestion: "Add a question",
     writtenPrompt: (n: number) => `Written question ${n}`,
@@ -105,7 +107,8 @@ export function resourceInput(kind: ResourceKind, value: ResourceContent) {
   return kind === "DECK" ? { cards: value.cards?.map(({ front, back }) => ({ front, back })) } : {
     ...(kind === "TEST" && value.thumbnailUrl?.trim() ? { thumbnailUrl: value.thumbnailUrl.trim() } : {}),
     questions: value.questions?.map((question) => ({ prompt: question.prompt, options: question.options.map((option) => typeof option === "string" ? option : option.text),
-      ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 } : {}) })),
+      ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 }
+        : kind === "STUDY_QUIZ" && typeof question.correctOption === "number" ? { correctOption: question.correctOption } : {}) })),
   };
 }
 
@@ -178,12 +181,14 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
           </div>
           <div className="button-row resource-subcard-actions">
             <button type="button" className="secondary" disabled={question.options.length >= 6} onClick={() => update(index, { options: [...question.options, ""] })}>{t.addOption}</button>
-            <button type="button" className="secondary" disabled={question.options.length <= 2} onClick={() => update(index, { options: question.options.slice(0, -1), ...(kind === "TEST" ? { correctOption: Math.min(question.correctOption ?? 0, question.options.length - 2) } : {}) })}>{t.removeLastOption}</button>
+            <button type="button" className="secondary" disabled={question.options.length <= 2} onClick={() => update(index, { options: question.options.slice(0, -1), ...(kind === "TEST" || typeof question.correctOption === "number" ? { correctOption: Math.min(question.correctOption ?? 0, question.options.length - 2) } : {}) })}>{t.removeLastOption}</button>
           </div>
-          {kind === "TEST" && (
+          {(kind === "TEST" || kind === "STUDY_QUIZ") && (
             <label className="field">
               <span>{t.correct(index + 1)}</span>
-              <select value={question.correctOption ?? 0} onChange={(e) => update(index, { correctOption: Number(e.target.value) })}>
+              {/* An older or CSV-imported practice quiz may have no answer yet; it is never silently set to option 1. */}
+              <select value={question.correctOption ?? (kind === "TEST" ? 0 : "")} onChange={(e) => update(index, { correctOption: e.target.value === "" ? undefined : Number(e.target.value) })}>
+                {kind === "STUDY_QUIZ" && <option value="">{t.noAnswer}</option>}
                 {question.options.map((_, optionIndex) => <option key={optionIndex} value={optionIndex}>{t.optionN(optionIndex + 1)}</option>)}
               </select>
             </label>
@@ -194,7 +199,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
         type="button"
         className="resource-add-item-btn"
         disabled={questions.length >= 100}
-        onClick={() => onChange({ ...value, questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" ? { correctOption: 0 } : {}) }] })}
+        onClick={() => onChange({ ...value, questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" || kind === "STUDY_QUIZ" ? { correctOption: 0 } : {}) }] })}
       >
         <Plus size={15} aria-hidden="true" />
         <span>{t.addQuestion}</span>

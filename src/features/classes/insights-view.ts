@@ -75,7 +75,9 @@ export function evidencePath(classId: string, studentId: string, ref: InsightEvi
 /** What the card says about one insight, in the page language. Unknown rule codes fall back to the API message. */
 export function insightCopy(insight: Pick<InsightItem, "ruleCode" | "message" | "values" | "thresholds">) {
   const t = insightText();
-  const rule = (t.rules as Record<string, { title: string; summary: (...args: any[]) => string; threshold: (...args: any[]) => string } | undefined>)[insight.ruleCode];
+  // A score change between resubmissions of one assigned test reads as a retake, not as progress across work.
+  const key = insight.ruleCode === "SCORE_CHANGE_UNUSUAL" && insight.values?.context === "RETAKE_SAME_ASSIGNMENT" ? "SCORE_CHANGE_RETAKE" : insight.ruleCode;
+  const rule = (t.rules as Record<string, { title: string; summary: (...args: any[]) => string; threshold: (...args: any[]) => string } | undefined>)[key];
   if (!rule) {
     return {
       title: t.unknownTitle,
@@ -84,6 +86,17 @@ export function insightCopy(insight: Pick<InsightItem, "ruleCode" | "message" | 
     };
   }
   return { title: rule.title, summary: rule.summary(insight.values, t.evidenceKind), threshold: rule.threshold(insight.thresholds) };
+}
+
+/** One-line badge for a table row: the score change with its sign, or the insight title for every other rule. */
+export function insightBadge(insight: Pick<InsightItem, "ruleCode" | "message" | "values" | "thresholds">): string {
+  const t = insightText();
+  if (insight.ruleCode === "SCORE_CHANGE_UNUSUAL") {
+    const delta = insight.values.delta;
+    if (insight.values.context === "RETAKE_SAME_ASSIGNMENT") return t.badge.retake(delta);
+    return Number(delta) >= 0 ? t.badge.up(delta) : t.badge.down(delta);
+  }
+  return insightCopy(insight).title;
 }
 
 /** The written assignment a similarity insight points to, or null for every other insight. */

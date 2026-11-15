@@ -1,5 +1,11 @@
 import { defineText } from "../../i18n/index.ts";
 
+/** At most one decimal, in the page language's number format (33.3333 -> "33,3" in Vietnamese). */
+const num = (locale: string) => (value: number | string) => Number(value).toLocaleString(locale, { maximumFractionDigits: 1 });
+const vi = num("vi-VN");
+const en = num("en-US");
+const signed = (format: (v: number | string) => string, value: number | string) => `${Number(value) > 0 ? "+" : Number(value) < 0 ? "−" : ""}${format(Math.abs(Number(value)))}`;
+
 /**
  * Teacher insight copy (TAI4-T4). Neutral wording only: nothing here names cheating, ability or ranking, and no raw
  * rule code is shown. Rule texts are keyed by `ruleCode`; an unknown code falls back to the message from the API.
@@ -54,11 +60,22 @@ export const insightMessages = {
     archived: "Lớp đã lưu trữ nên không thể ghi nhận gợi ý.",
     patternNote: (message: string) => message,
     unknownTitle: "Gợi ý",
+    badge: {
+      up: (d: number | string) => `Tăng đột biến ${signed(vi, d)}đ`,
+      down: (d: number | string) => `Giảm đột biến ${signed(vi, d)}đ`,
+      retake: (d: number | string) => `Làm lại cùng bài ${signed(vi, d)}đ`,
+    },
     rules: {
       SCORE_CHANGE_UNUSUAL: {
         title: "Kết quả gần nhất khác đáng kể so với các lần trước",
-        summary: (v: Record<string, number | string>) => `Lần gần nhất ${v.latest} điểm, trung bình các lần trước ${v.mean} điểm (chênh ${Number(v.delta) > 0 ? "+" : ""}${v.delta} điểm).`,
+        summary: (v: Record<string, number | string>) => `Lần gần nhất ${vi(v.latest)} điểm, trung bình các lần trước ${vi(v.mean)} điểm (chênh ${signed(vi, v.delta)} điểm).`,
         threshold: (t: Record<string, number>) => `Chênh lệch từ ${t.minDelta} điểm trở lên và từ ${t.sigmaMultiplier} lần độ lệch chuẩn trở lên (lấy giá trị lớn hơn); so với tối đa ${t.baselineMax} lần trước đó, cần ít nhất ${t.baselineMin} lần.`,
+      },
+      /** SCORE_CHANGE_UNUSUAL whose compared results are resubmissions of one assigned test (values.context). */
+      SCORE_CHANGE_RETAKE: {
+        title: "Điểm thay đổi lớn giữa các lần làm lại cùng một bài",
+        summary: (v: Record<string, number | string>) => `Lần làm lại gần nhất ${vi(v.latest)} điểm, trung bình các lần làm trước của cùng bài ${vi(v.mean)} điểm (chênh ${signed(vi, v.delta)} điểm). Nên xem học sinh đã nắm vững kiến thức hay chỉ nhớ đáp án của đề đã làm; khác với tiến bộ qua các bài kiểm tra khác nhau.`,
+        threshold: (t: Record<string, number>) => `Chênh lệch từ ${t.minDelta} điểm trở lên và từ ${t.sigmaMultiplier} lần độ lệch chuẩn trở lên (lấy giá trị lớn hơn); các lần nộp cùng một bài giao trong vòng 24 giờ.`,
       },
       INSUFFICIENT_EVIDENCE: {
         title: "Chưa đủ bài có điểm để so sánh",
@@ -140,11 +157,21 @@ export const insightMessages = {
     archived: "The class is archived, so insights cannot be acknowledged.",
     patternNote: (message: string) => message,
     unknownTitle: "Insight",
+    badge: {
+      up: (d: number | string) => `Sharp rise ${signed(en, d)} pts`,
+      down: (d: number | string) => `Sharp drop ${signed(en, d)} pts`,
+      retake: (d: number | string) => `Retake of same work ${signed(en, d)} pts`,
+    },
     rules: {
       SCORE_CHANGE_UNUSUAL: {
         title: "The latest result differs noticeably from earlier ones",
-        summary: (v: Record<string, number | string>) => `Latest ${v.latest} points, average of earlier results ${v.mean} points (difference ${Number(v.delta) > 0 ? "+" : ""}${v.delta}).`,
+        summary: (v: Record<string, number | string>) => `Latest ${en(v.latest)} points, average of earlier results ${en(v.mean)} points (difference ${signed(en, v.delta)}).`,
         threshold: (t: Record<string, number>) => `A difference of at least ${t.minDelta} points and at least ${t.sigmaMultiplier} standard deviations (the larger applies); compared with up to ${t.baselineMax} earlier results, at least ${t.baselineMin} needed.`,
+      },
+      SCORE_CHANGE_RETAKE: {
+        title: "Large score change between retakes of the same work",
+        summary: (v: Record<string, number | string>) => `Latest retake ${en(v.latest)} points, average of earlier attempts at the same work ${en(v.mean)} points (difference ${signed(en, v.delta)}). Check whether the student has mastered the content or remembers the answers of the test already taken; this differs from progress across different tests.`,
+        threshold: (t: Record<string, number>) => `A difference of at least ${t.minDelta} points and at least ${t.sigmaMultiplier} standard deviations (the larger applies); submissions of one assigned work within 24 hours.`,
       },
       INSUFFICIENT_EVIDENCE: {
         title: "Too few scored items to compare",

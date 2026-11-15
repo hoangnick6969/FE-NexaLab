@@ -2371,6 +2371,12 @@ body {
 
 /* Teacher AI workspace (TAI-T5). Uses the shared tokens so light and dark themes both work. */
 .teacher-ai-panel { display: grid; gap: 16px; }
+.teacher-ai-submit {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 12px;
+}
 .teacher-ai-head { display: flex; gap: 10px; align-items: flex-start; color: var(--brand-ink); }
 .teacher-ai-head h3 { margin: 2px 0 4px; color: var(--text); }
 .teacher-ai-form textarea,
