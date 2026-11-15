@@ -29,6 +29,11 @@ const text = defineText({
     metalReactivity: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Kim loại với acid và dung dịch muối", description: "Thả kẽm, sắt, đồng vào acid loãng và dung dịch CuSO₄ để so sánh mức độ hoạt động của kim loại." },
     reactionRate: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Tốc độ phản ứng", description: "Cho đá vôi (viên hoặc bột) vào acid HCl, bấm giờ và đo khí thu được để so sánh tốc độ phản ứng theo nồng độ và dạng chất rắn." },
     solutionConcentration: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Dung dịch và nồng độ", description: "Tự tính khối lượng chất tan, cân, hòa tan và thêm nước đến vạch để pha dung dịch NaCl 0,10 M và CuSO₄ 5 %; rồi kiểm tra nồng độ thực." },
+    fl26Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Lai Mendel một tính trạng", description: "Chọn cặp bố mẹ, lật từng ô bảng Punnett và tìm tỉ lệ kiểu gen, kiểu hình của đời con." },
+    fl20Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Giới hạn sinh thái: nhiệt độ", description: "Đổi nhiệt độ nước và tìm vùng sống của cá rô phi." },
+    fl21Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Lưới thức ăn và cân bằng", description: "Bỏ một loài khỏi lưới thức ăn và xem loài nào tăng, loài nào giảm." },
+    fl27Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Từ gene đến protein: đột biến", description: "Chọn biến thể gene, đọc mRNA, codon và xem một đột biến điểm đổi axit amin ra sao." },
+    fl16Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Cấu tạo mắt và điều tiết", description: "So sánh độ tụ mắt cần có khi nhìn gần, nhìn xa, khi cận thị và viễn thị." },
   },
   en: {
     buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
@@ -48,6 +53,11 @@ const text = defineText({
     metalReactivity: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Metals with acid and salt solutions", description: "Drop zinc, iron and copper into dilute acid and CuSO₄ solution to compare how reactive the metals are." },
     reactionRate: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Reaction rate", description: "Drop limestone (chips or powder) into hydrochloric acid, time it and measure the gas collected to compare rates by concentration and by form of the solid." },
     solutionConcentration: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Solutions and concentration", description: "Work out the mass of solute, weigh, dissolve and fill to the mark to prepare 0.10 M NaCl and 5 % CuSO₄, then check the real concentration." },
+    fl26Explore: { subject: "BIOLOGY", tag: "EXPLORE", title: "Mendel's monohybrid cross", description: "Pick two parents, reveal each Punnett cell and find the genotype and phenotype ratios." },
+    fl20Explore: { subject: "BIOLOGY", tag: "EXPLORE", title: "Tolerance limits: temperature", description: "Change the water temperature and find where the tilapia can live." },
+    fl21Explore: { subject: "BIOLOGY", tag: "EXPLORE", title: "Food webs and balance", description: "Remove one species from the food web and see which species rise or fall." },
+    fl27Explore: { subject: "BIOLOGY", tag: "EXPLORE", title: "From gene to protein: mutation", description: "Pick a gene variant, read the mRNA and codons, and see how a point mutation changes an amino acid." },
+    fl16Explore: { subject: "BIOLOGY", tag: "EXPLORE", title: "The eye and accommodation", description: "Compare the lens power the eye needs for near and far vision, and with myopia and hyperopia." },
   },
 });
 const t = text();
@@ -108,9 +118,21 @@ const catalogEntries = [
   { id: "metal-reactivity", ...t.metalReactivity, className: "chemistry", number: "13", grade: 8 },
   { id: "solution-concentration", ...t.solutionConcentration, className: "chemistry", number: "14", grade: 8 },
   { id: "reaction-rate", ...t.reactionRate, className: "chemistry", number: "15", grade: 8 },
+  // Explore benches (Kit Sinh học, Dev 2). `artOf` reuses the thumbnail and icon of the Guided Lab on the same topic.
+  { id: "fl-26-explore", ...t.fl26Explore, className: "biology", number: "26", grade: 9, artOf: "gene-protein" },
+  { id: "fl-20-explore", ...t.fl20Explore, className: "biology", number: "20", grade: 8, artOf: "ecology-tolerance" },
+  { id: "fl-21-explore", ...t.fl21Explore, className: "biology", number: "21", grade: 8, artOf: "food-web" },
+  { id: "fl-27-explore", ...t.fl27Explore, className: "biology", number: "27", grade: 9, artOf: "gene-protein" },
+  { id: "fl-16-explore", ...t.fl16Explore, className: "biology", number: "16", grade: 8, artOf: "eye-optics" },
 ];
 
-export const labInfo = catalogEntries.map((entry) => ({
-  ...entry,
-  thumbnail: thumbnailFor(entry.id) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
-}));
+export const labInfo = catalogEntries.map((entry) => {
+  const artOf = "artOf" in entry ? entry.artOf : undefined;
+  return {
+    ...entry,
+    /** Lab id whose icon the card draws; Explore benches borrow the Guided Lab on the same topic. */
+    artId: artOf ?? entry.id,
+    // FL-26 has no picture of its own yet: it shows the icon instead of borrowing the gene-protein scene.
+    thumbnail: entry.id === "fl-26-explore" ? undefined : thumbnailFor(artOf ?? entry.id) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
+  };
+});
