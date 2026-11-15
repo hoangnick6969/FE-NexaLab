@@ -314,7 +314,21 @@ export function LessonDetail() {
     onError: () => toast({ title: t.progressErrorToast, description: t.saveAgain, tone: "error" }),
   });
   const ebookUrl = httpsUrl(lesson?.subject?.ebookUrl);
-  const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url));
+  const curriculumSubject = curriculum.data?.subjects?.find((item: any) => item.id === (lesson?.subjectId ?? lesson?.subject?.id));
+  const gradeEdition = (curriculumSubject as any)?.ebookEditions?.find((ed: any) => {
+    const match = `${ed.version ?? ""} ${ed.url ?? ""}`.match(/(?:khtn|grade)[-_ ]?(\d{1,2})/i);
+    return match && Number(match[1]) === Number(lesson?.grade) && httpsUrl(ed.url);
+  });
+  const ebookEdition = lesson?.ebookEditions?.find((edition: any) => httpsUrl(edition.url)) ?? gradeEdition;
+  const structuredStartPage = (() => {
+    const start = Number(structuredContent?.pdfPageRange?.start);
+    if (Number.isInteger(start) && start > 0) return start;
+    const blockPage = (structuredContent?.sourceBlocks ?? [])
+      .map((block: any) => Number(block?.physicalPageIndex))
+      .find((page: number) => Number.isInteger(page) && page > 0);
+    return blockPage ?? null;
+  })();
+  const ebookTargetPage = ebookEdition?.locator?.physicalPageIndex ?? structuredStartPage ?? ebookEdition?.fallbackPhysicalPage ?? 1;
   const reconcileVideo = (updated: any) => {
     const pathway = updated.pathway ?? updated;
     const videoCompleted = pathway.steps?.some((step: any) => step.id === videoStep?.id && step.state === "COMPLETED");
@@ -520,7 +534,7 @@ export function LessonDetail() {
           </header>
           {(ebookEdition || ebookUrl) && <section className="lesson-resource-group">
             <h3>{t.textbook}</h3>
-            <Link className="lesson-material-card" to={`/ebooks/${lesson.subjectId}`} state={{ fromLessonId: lesson.id, editionId: ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url, initialPhysicalPage: ebookEdition?.locator?.physicalPageIndex ?? ebookEdition?.fallbackPhysicalPage ?? 1, externalResource: true }}>
+            <Link className="lesson-material-card" to={`/ebooks/${lesson.subjectId ?? lesson.subject.id}`} state={{ fromLessonId: lesson.id, grade: lesson.grade, editionId: ebookEdition?.id ?? ebookEdition?.version ?? null, ebookUrl: ebookEdition?.url ?? ebookUrl, initialPhysicalPage: ebookTargetPage, externalResource: true }}>
               <span className="lesson-material-icon"><BookOpen size={18} aria-hidden="true" /></span>
               <span className="lesson-material-copy"><strong>{lesson.subject.name}</strong><small>{t.externalNote}</small></span>
               <span className="lesson-material-action">{t.openMaterial}<ArrowRight size={16} aria-hidden="true" /></span>
