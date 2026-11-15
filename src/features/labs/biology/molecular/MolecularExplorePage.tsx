@@ -24,6 +24,7 @@ export default function MolecularExplorePage({ labId, title, config: raw, activi
         <p>mRNA: <code>{result.mrna}</code></p>
         <p>Codon: {result.codons.join(" ")}</p>
         <p>Chuỗi axit amin: {result.aminoAcids.join(" – ")}</p>
+        <p data-testid="mutated-codon">Codon sau đột biến (vị trí {mutation.codonIndex + 1}): {mutation.codon} → {mutation.aminoAcid}</p>
         <p data-testid="mutation-effect">
           Vị trí {mutation.position + 1}: {mutation.from} → {mutation.to}. Axit amin {mutation.originalAminoAcid} → {mutation.aminoAcid} ({mutation.effect === "SILENT" ? "đột biến im lặng" : mutation.effect === "MISSENSE" ? "đột biến sai nghĩa" : "đột biến vô nghĩa"}).
         </p>
