@@ -1,0 +1,60 @@
+KHTN 8 · FL-13
+Acid – base, chỉ thị và pH
+Bản dev: dữ liệu hoá học là bản nháp kỹ thuật, chưa được reviewer môn Hoá duyệt.
+Em sẽ tìm hiểu
+Nhận biết dung dịch acid, base và trung tính bằng chất chỉ thị màu (quỳ tím, phenolphthalein).
+Đo pH bằng bút đo điện tử và so sánh độ acid của các dung dịch.
+Quan sát hiện tượng đổi màu khi trung hoà acid – base.
+Lưu ý an toàn
+Trong mô phỏng 3D
+Em có thể tự do pha thử các dung dịch, nhúng quỳ tím và đo pH mà không lo nguy hiểm.
+Màu sắc trong mô phỏng là màu minh hoạ; số đo là số liệu mô phỏng lý tưởng.
+Trong phòng thí nghiệm thật
+HCl, H₂SO₄ và NaOH là hoá chất ăn mòn (GHS05): bắt buộc đeo kính bảo hộ và găng tay.
+Tuyệt đối không nếm hoá chất, không để dính vào da hoặc mắt.
+Không đổ nước vào acid đặc; chỉ làm thí nghiệm khi có giáo viên hướng dẫn.
+Lab ảo không thay thế hướng dẫn của giáo viên khi làm thí nghiệm thật.
+Hoá chất trên kệ
+Dung dịch HCl 0,1 M
+Nguy hiểm · Ăn mòn (GHS05)
+Khi làm thật: Ăn mòn da và mắt (GHS05): đeo kính, găng tay; rửa ngay bằng nhiều nước nếu dính.
+Dung dịch H₂SO₄ loãng 0,05 M
+Nguy hiểm · Ăn mòn (GHS05)
+Khi làm thật: Ăn mòn (GHS05). Khi pha loãng acid đặc phải rót từ từ acid vào nước, không làm ngược lại.
+Dung dịch CH₃COOH 0,1 M (giấm)
+Cẩn thận · Gây kích ứng
+Khi làm thật: Gây kích ứng mắt; không nếm hoá chất trong phòng thí nghiệm dù là giấm.
+Nước cất
+Khi làm thật: Không uống nước cất trong phòng thí nghiệm.
+Dung dịch NaOH 0,1 M
+Nguy hiểm · Ăn mòn (GHS05)
+Khi làm thật: Ăn mòn (GHS05), đặc biệt nguy hiểm cho mắt: luôn đeo kính bảo hộ.
+Nước vôi trong Ca(OH)₂ 0,01 M
+Cẩn thận · Gây kích ứng
+Khi làm thật: Gây kích ứng da, mắt; rửa tay sau thí nghiệm.
+Dung dịch phenolphthalein
+Cẩn thận · Dễ cháy
+Khi làm thật: Pha trong cồn, dễ cháy: để xa ngọn lửa.
+Dụng cụ trên bàn
+Giá ống nghiệm
+Giữ 6 ống nghiệm thẳng đứng để so sánh song song.
+Ống nghiệm × 6
+Chứa lượng nhỏ dung dịch để thử và so sánh màu.
+Cốc 100 mL
+Pha trộn, trung hoà dung dịch với lượng lớn hơn.
+Cốc thải
+Đổ bỏ dung dịch để làm sạch vật chứa và thử lại.
+Ống nhỏ giọt
+Bấm vào lọ để hút dung dịch, rồi nhỏ vào ống nghiệm hoặc cốc: 1 giọt = 0,05 mL.
+Giấy quỳ tím
+Nhúng vào dung dịch: đỏ khi acid, xanh khi base, giữ tím khi trung tính.
+Bút đo pH
+Cắm vào dung dịch để đọc pH chính xác đến 0,1.
+Trên bàn, di chuột hoặc chạm vào từng món để xem tên và công dụng.
+Giới hạn của mô hình
+Mô hình ở 25 °C, dung dịch loãng lý tưởng; chưa mô phỏng nhiệt độ.
+HCl, H₂SO₄, NaOH và Ca(OH)₂ được coi là phân li hoàn toàn; CH₃COOH là acid yếu (Ka = 1,8·10⁻⁵).
+Giọt chất chỉ thị chỉ làm tăng thể tích, không làm thay đổi pH.
+Trộn H₂SO₄ với nước vôi trong nằm ngoài phạm vi mô hình (có thể tạo CaSO₄ ít tan).
+Em đã đọc lưu ý an toàn
+Vào bàn thí nghiệm

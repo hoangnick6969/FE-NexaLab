@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Html } from "@react-three/drei";
-import { PhysicsStage } from "../../shared/PhysicsStage";
+import { PhysicsStage, type BenchViewPreset } from "../../shared/PhysicsStage";
 import { LabSceneContext } from "../../../shared/LabSpace";
 
 export type K5Attachment = { kind: "WEIGHT" | "GAUGE"; positionMillimetres: number; forceMilliNewtons: number };
@@ -31,25 +31,39 @@ export function K5Stage2D({ attachments, tilt }: { attachments: readonly K5Attac
 
 function Apparatus({ attachments, tilt, reduced }: { attachments: readonly K5Attachment[]; tilt: K5Tilt; reduced: boolean }) {
   const bar = useRef<THREE.Group>(null);
+  // Hangers hang plumb from their hole whatever the bar's angle, like real weights and a spring gauge.
+  const hangers = useRef<Array<THREE.Group | null>>([]);
   useFrame((_, delta) => {
     if (!bar.current) return;
     const target = angle(tilt);
     bar.current.rotation.z = reduced ? target : THREE.MathUtils.damp(bar.current.rotation.z, target, 7, delta);
+    for (const hanger of hangers.current) if (hanger) hanger.rotation.z = -bar.current.rotation.z;
   });
-  return <group position={[0, .9, 0]}>
-    <mesh position={[0, -.65, 0]} castShadow><cylinderGeometry args={[.55, .85, .6, 4]} /><meshStandardMaterial color="#77858a" metalness={.45} roughness={.35} /></mesh>
+  // Pivot 1.3 above the bench: an end hanger tilted 0.18 rad still clears the top by about 0.17.
+  return <group position={[0, 1.3, 0]}>
+    <mesh position={[0, -.98, 0]} castShadow><cylinderGeometry args={[.55, .85, .6, 4]} /><meshStandardMaterial color="#77858a" metalness={.45} roughness={.35} /></mesh>
+    <mesh position={[0, -.4, 0]} castShadow><cylinderGeometry args={[.08, .1, .62, 16]} /><meshStandardMaterial color="#77858a" metalness={.45} roughness={.35} /></mesh>
     <mesh position={[0, 0, .12]} castShadow rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[.13, .13, .5, 32]} /><meshStandardMaterial color="#c2ccd0" metalness={.8} roughness={.25} /></mesh>
     <group ref={bar}>
       <mesh castShadow><boxGeometry args={[5.2, .18, .28]} /><meshStandardMaterial color="#ab7649" roughness={.5} /></mesh>
       {K5_HOLES.map(position => <group key={position} position={[position / 100, .105, .16]}><mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[.06, .013, 8, 16]} /><meshStandardMaterial color={position === 0 ? "#eab653" : "#243a42"} metalness={.55} roughness={.35} /></mesh><mesh position={[0, .09, 0]}><boxGeometry args={[.012, .09, .012]} /><meshStandardMaterial color="#f5ede0" /></mesh><Html position={[0, .3, .1]} center style={{ pointerEvents: "none" }}><span className={`k5-3d-mark${position === 0 ? " k5-3d-mark-origin" : ""}`}>{position === 0 ? "O · 0" : position > 0 ? `+${position}` : position}</span></Html></group>)}
-      {attachments.map(item => <group key={item.positionMillimetres} position={[item.positionMillimetres / 100, -.28, .08]}>
-        <mesh castShadow><cylinderGeometry args={[.035, .035, .42, 8]} /><meshStandardMaterial color="#5b6869" metalness={.7} roughness={.3} /></mesh>
-        <mesh position={[0, -.28, 0]} castShadow><cylinderGeometry args={[.18, .18, .2, 24]} /><meshStandardMaterial color={item.kind === "GAUGE" ? "#dfae52" : "#6d8390"} metalness={.35} roughness={.45} /></mesh>
+      {attachments.map((item, index) => <group key={item.positionMillimetres} ref={node => { hangers.current[index] = node; }} position={[item.positionMillimetres / 100, -.07, .08]}>
+        <mesh position={[0, -.21, 0]} castShadow><cylinderGeometry args={[.035, .035, .42, 8]} /><meshStandardMaterial color="#5b6869" metalness={.7} roughness={.3} /></mesh>
+        <mesh position={[0, -.49, 0]} castShadow><cylinderGeometry args={[.18, .18, .2, 24]} /><meshStandardMaterial color={item.kind === "GAUGE" ? "#dfae52" : "#6d8390"} metalness={.35} roughness={.45} /></mesh>
       </group>)}
     </group>
   </group>;
 }
 
+/** Canvas covered by the Lab Space overlays: the question panel on the right (bottom sheet on phones), the header
+ *  and status card on top, the dock below. Mirrors --lqp-panel-w in LabQuestionPanel.css. */
+const K5_INSETS = ({ width, height }: { width: number; height: number }, narrow: boolean) => narrow || width <= 720
+  ? { right: 0, bottom: Math.round(height * .46 + 90), top: 130 }
+  : { right: Math.min(340, Math.max(288, width * .25)) + 36, bottom: 90, top: 140 };
+
+/** One stable object: a new `view` on every render made PhysicsStage replay its camera transition on each click. */
+const K5_VIEW: BenchViewPreset = { wide: { position: [0, 3.3, 6.8], target: [0, .75, 0] }, narrow: { position: [0, 4.8, 9], target: [0, .6, 0] }, fitWidth: 5.8, maxDistance: 17, insets: K5_INSETS };
+
 export function K5Stage3D({ attachments, tilt, reduced }: { attachments: readonly K5Attachment[]; tilt: K5Tilt; reduced: boolean }) {
-  return <div className="k5-visual k5-visual-3d" aria-label="Bàn đòn bẩy 3D"><LabSceneContext.Provider value={undefined}><PhysicsStage realism frameloop="always" view={{ wide: { position: [0, 2.9, 6.8], target: [0, .35, 0] }, narrow: { position: [0, 4.4, 9], target: [0, .2, 0] }, fitWidth: 5.4, maxDistance: 14 }}><Apparatus attachments={attachments} tilt={tilt} reduced={reduced} /></PhysicsStage></LabSceneContext.Provider></div>;
+  return <div className="k5-visual k5-visual-3d" aria-label="Bàn đòn bẩy 3D"><LabSceneContext.Provider value={undefined}><PhysicsStage realism frameloop="always" view={K5_VIEW}><Apparatus attachments={attachments} tilt={tilt} reduced={reduced} /></PhysicsStage></LabSceneContext.Provider></div>;
 }

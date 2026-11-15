@@ -1,0 +1,12 @@
+{
+  "lab": "fl10-guided",
+  "task": "D1-0.1",
+  "note": "Readings shown to the learner before step B; D1-2.4 compares against them.",
+  "readings": {
+    "0 event order": "PREDICTED → READ_BEFORE → MIXED → READ_AFTER",
+    "1 scale before": "435,0 g",
+    "2 2D stage label before": "Sơ đồ cân điện tử; 2 cốc trên cân; số chỉ 435,0 g",
+    "3 scale after": "435,0 g",
+    "4 2D stage label after": "Sơ đồ cân điện tử; 2 cốc trên cân; số chỉ 435,0 g"
+  }
+}

@@ -1,0 +1,48 @@
+KHTN 8 · FL-10 EXPLORE (MẪU)
+Khối lượng trước và sau phản ứng
+Bản dev: dữ liệu hoá học là bản nháp kỹ thuật, chưa được reviewer môn Hoá duyệt.
+Em sẽ tìm hiểu
+Cân hệ trước và sau phản ứng tạo kết tủa.
+So sánh khi khí thoát ra khỏi cốc hở và khi khí bị giữ trong bình có nút.
+Lưu ý an toàn
+Trong mô phỏng 3D
+Kết tủa trắng BaSO₄ là hình minh hoạ; số cân là số liệu mô phỏng lý tưởng.
+Trong phòng thí nghiệm thật
+Muối barium tan có độc tính: không tự làm tại nhà, dùng kính và găng tay.
+Không đậy kín bình khi có phản ứng sinh khí mạnh ngoài đời thật.
+Lab ảo không thay thế hướng dẫn của giáo viên khi làm thí nghiệm thật.
+Hoá chất trên kệ
+Dung dịch HCl 0,1 M
+Nguy hiểm · Ăn mòn (GHS05)
+Khi làm thật: Ăn mòn da và mắt (GHS05): đeo kính, găng tay; rửa ngay bằng nhiều nước nếu dính.
+Đá vôi (CaCO₃) dạng viên
+Khi làm thật: Dùng kẹp, không cầm bằng tay ướt acid.
+Dung dịch BaCl₂ 0,1 M
+Rất nguy hiểm · Độc khi nuốt
+Khi làm thật: Muối barium tan có độc tính: chỉ làm khi có giáo viên, xử lý chất thải theo quy định.
+Dung dịch Na₂SO₄ 0,1 M
+Khi làm thật: Đeo kính khi rót dung dịch.
+Dụng cụ trên bàn
+Cân điện tử
+Cân tổng khối lượng các vật chứa đặt trên đĩa cân (0,01 g).
+Cốc 1
+Pha trộn, trung hoà dung dịch với lượng lớn hơn.
+Cốc 2
+Pha trộn, trung hoà dung dịch với lượng lớn hơn.
+Bình tam giác
+Bình miệng hẹp, đậy được nút cao su.
+Cốc thải
+Đổ bỏ dung dịch để làm sạch vật chứa và thử lại.
+Ống nhỏ giọt
+Bấm vào lọ để hút dung dịch, rồi nhỏ vào ống nghiệm hoặc cốc: 1 giọt = 0,05 mL.
+Nút cao su
+Đậy hoặc mở miệng bình tam giác.
+Kẹp gắp
+Gắp chất rắn (hạt, viên, đinh, lá kim loại) từ lọ rồi thả vào ống nghiệm.
+Trên bàn, di chuột hoặc chạm vào từng món để xem tên và công dụng.
+Giới hạn của mô hình
+Không mô phỏng bắn, bay hơi hay sai số cân.
+Với bình có nút, thả chất vào được coi như đậy nút lại ngay, khí không thoát ra.
+Hai cốc hở không phải hệ kín.
+Em đã đọc lưu ý an toàn
+Vào bàn thí nghiệm

@@ -26,6 +26,7 @@ const K8KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/b
 const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/molecular/gene-protein/dev/GeneProteinPilotPreview")) : null;
 const EyeOpticsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/anatomy/eye-optics/dev/EyeOpticsPreview")) : null;
 const K2KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/chemistry/wet-bench/kit/dev/K2KitPreview")) : null;
+const LeverExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/mechanics/explore/dev/LeverExplorePreview")) : null;
 const SharedItemsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/shared/items/dev/SharedItemsPreview")) : null;
 
 const PublicLanding = lazy(() =>
@@ -251,6 +252,8 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><EyeOpticsPreview /></Suspense>;
   if (K2KitPreview && location.pathname === "/dev/lab-kits/k2")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><K2KitPreview /></Suspense>;
+  if (LeverExplorePreview && location.pathname === "/dev/lab-kits/lever-explore")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><LeverExplorePreview /></Suspense>;
   if (SharedItemsPreview && location.pathname === "/dev/lab-kits/shared-items")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><SharedItemsPreview /></Suspense>;
   if (user?.mustChangePassword) return <PasswordGate />;

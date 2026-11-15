@@ -1,0 +1,14 @@
+{
+  "lab": "fl03-density",
+  "task": "D1-0.1",
+  "note": "Readings shown to the learner before step B; D1-2.4 compares against them.",
+  "readings": {
+    "1 empty balance": "Cân: 0,0 g",
+    "2 iron on balance": "Cân: 78,0 g",
+    "3 copper on balance": "Cân: 89,0 g",
+    "4 water cylinder": "Cân: 0,0 g, ống đong: 50 mL",
+    "5 water +5 mL": "Cân: 0,0 g, ống đong: 55 mL",
+    "6 beaker with water on balance": "Cân: 103,6 g, ống đong: 0 mL",
+    "7 pebble displacement": "Cân: 0,0 g, ống đong: 62 mL"
+  }
+}

@@ -1,0 +1,26 @@
+{
+ "shelf": [
+  "HCl 0,1 M",
+  "H₂SO₄ loãng 0,05 M",
+  "CH₃COOH 0,1 M (giấm)",
+  "Nước cất",
+  "NaOH 0,1 M",
+  "Nước vôi trong Ca(OH)₂ 0,01 M",
+  "phenolphthalein"
+ ],
+ "tools": [
+  "Ống nhỏ giọt",
+  "Giấy quỳ tím",
+  "Bút đo pH"
+ ],
+ "vessels": [
+  "Ống 1",
+  "Ống 2",
+  "Ống 3",
+  "Ống 4",
+  "Ống 5",
+  "Ống 6",
+  "Cốc 100 mL",
+  "Cốc thải"
+ ]
+}
