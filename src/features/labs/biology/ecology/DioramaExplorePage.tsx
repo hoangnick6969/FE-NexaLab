@@ -7,7 +7,7 @@ import { LabSpace } from "../../shared/LabSpace";
 import { ExploreJournal } from "../../shared/explore/ExploreJournal";
 import { foodWebSummary, toleranceSummary } from "./diorama-bench";
 
-const SPECIES_LABEL: Record<string, string> = { co: "Cỏ", "cay-xanh": "Cây xanh", "chau-chau": "Châu chấu", sau: "Sâu", tho: "Thỏ", ech: "Ếch", "chim-sau": "Chim sâu", ran: "Rắn", cao: "Cáo", "dai-bang": "Đại bàng", "nam-vi-khuan": "Nấm, vi khuẩn" };
+const SPECIES_LABEL: Record<string, string> = { "ca-ro-phi": "Cá rô phi", co: "Cỏ", "cay-xanh": "Cây xanh", "chau-chau": "Châu chấu", sau: "Sâu", tho: "Thỏ", ech: "Ếch", "chim-sau": "Chim sâu", ran: "Rắn", cao: "Cáo", "dai-bang": "Đại bàng", "nam-vi-khuan": "Nấm, vi khuẩn" };
 const label = (id: string) => SPECIES_LABEL[id] ?? id;
 
 function FoodWebPanel({ allowed, removed, onRemove }: { allowed: string[]; removed: string | null; onRemove: (id: string) => void }) {
