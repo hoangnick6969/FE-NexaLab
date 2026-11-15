@@ -11,8 +11,8 @@ import * as THREE from "three";
 import { measure, observeVessel, reagentById, scaleReadingMicrograms, SPECIES } from "@nexalab/sim/wet-bench";
 import { PhysicsStage, type BenchViewPreset } from "../../../physics/shared/PhysicsStage";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
-import { FIXTURE_RENDERERS, VESSEL_RENDERERS } from "./apparatus-renderers";
-import { Collider, Droplet, DropperUpright, LitmusStrip3D, PhMeter3D, prefersReducedMotion, ReagentBottle3D, Stopper3D, TargetRing, TongsHolding } from "./apparatus3d";
+import { FIXTURE_RENDERERS, HELD_TOOL_RENDERERS, VESSEL_RENDERERS } from "./apparatus-renderers";
+import { Collider, Droplet, DropperUpright, PhMeter3D, prefersReducedMotion, ReagentBottle3D, TargetRing, TongsHolding } from "./apparatus3d";
 import { BENCH_TOP_Y, shelfPosition, slotById } from "./bench-layout";
 import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
 import { bottleCategory, LITMUS_HEX, reagentLook, vesselLook, visualFill } from "./liquid-look";
@@ -279,15 +279,10 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     const carriedTool = carriedHeld.tool;
     if (carriedTool !== "litmus_paper" && rest) hidden.add(rest.id);
     if (carriedTool === "ph_meter") for (const item of config.enabledApparatus) if (item.kind === "digital_ph_meter") hidden.add(item.id);
-    carriedNode = <FollowGroup home={home} active scale={carriedTool === "stopper" ? 1 : carriedTool === "litmus_paper" ? 1.15 : 1.6} getTarget={carriedTool === "dropper" ? dropperTarget : carriedTool === "ph_meter" ? penTarget : carriedTool === "litmus_paper" ? stripTarget : carriedTool === "tongs" ? tongsTarget : stopperTarget}>
-      {carriedTool === "dropper" && <DropperUpright liquid={null} squeezeAt={null} />}
-      {carriedTool === "tongs" && <TongsHolding piece={null} shape={null} />}
-      {carriedTool === "stopper" && <Stopper3D />}
-      {carriedTool === "litmus_paper" && <LitmusStrip3D colour={state.stripColour} />}
-      {carriedTool === "ph_meter" && <>
-        <PhMeter3D inserted />
-        <Html position={[0, 0.34, 0]} center style={{ pointerEvents: "none" }}><span className="k2-lcd">pH —</span></Html>
-      </>}
+    const heldRenderer = HELD_TOOL_RENDERERS[carriedTool];
+    const toolTargets = { dropper: dropperTarget, ph_meter: penTarget, litmus_paper: stripTarget, tongs: tongsTarget, stopper: stopperTarget };
+    carriedNode = <FollowGroup home={home} active scale={heldRenderer.scale} getTarget={toolTargets[carriedTool]}>
+      <heldRenderer.Body stripColour={state.stripColour} />
     </FollowGroup>;
   }
   const penHeld = carriedHeld?.kind === "tool" && carriedHeld.tool === "ph_meter";

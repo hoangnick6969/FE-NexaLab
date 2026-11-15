@@ -4,11 +4,16 @@
  * branches on the kind to pick a mesh or a layout number.
  */
 import type { ComponentType, ReactNode } from "react";
+import { Html } from "@react-three/drei";
 import type { ApparatusKind, VesselKind } from "@nexalab/sim/wet-bench";
 import { BEAKER_DEFAULT_SIZE, beakerAnchors, beakerInnerHeight, type BeakerSize } from "../../../shared/items/beaker";
 import { DigitalScale3D } from "../../../shared/items/digital-scale";
-import { Beaker3D, Dropper3D, Flask3D, LitmusBox3D, Rack3D, RestPhMeter3D, Stopper3D, TestTube3D, Tongs3D, type VesselProps } from "./apparatus3d";
-import type { Look } from "./liquid-look";
+import type { HeldTool } from "./apparatus-manifest";
+import {
+  Beaker3D, Dropper3D, DropperUpright, Flask3D, LitmusBox3D, LitmusStrip3D, PhMeter3D, Rack3D, RestPhMeter3D, Stopper3D, TestTube3D, Tongs3D, TongsHolding,
+  type VesselProps,
+} from "./apparatus3d";
+import type { LITMUS_HEX, Look } from "./liquid-look";
 
 /** What the bench state gives a vessel body, beyond its own visual state. */
 export type VesselBodyProps = VesselProps & { wasteMicroliters: number };
@@ -60,4 +65,21 @@ export const FIXTURE_RENDERERS: Readonly<Record<Exclude<ApparatusKind, VesselKin
   tongs: fixture(Tongs3D),
   stopper: fixture(Stopper3D),
   electronic_scale: { Body: ({ scaleReading }) => <DigitalScale3D reading={scaleReading} />, tooltipY: 0.3 },
+};
+
+/** A tool while the learner carries it empty-handed (tip at the origin), and how large it is drawn in the hand. */
+export type HeldToolRenderer = { Body: ComponentType<{ stripColour: keyof typeof LITMUS_HEX | null }>; scale: number };
+
+export const HELD_TOOL_RENDERERS: Readonly<Record<HeldTool, HeldToolRenderer>> = {
+  dropper: { Body: () => <DropperUpright liquid={null} squeezeAt={null} />, scale: 1.6 },
+  tongs: { Body: () => <TongsHolding piece={null} shape={null} />, scale: 1.6 },
+  stopper: { Body: () => <Stopper3D />, scale: 1 },
+  litmus_paper: { Body: ({ stripColour }) => <LitmusStrip3D colour={stripColour} />, scale: 1.15 },
+  ph_meter: {
+    Body: () => <>
+      <PhMeter3D inserted />
+      <Html position={[0, 0.34, 0]} center style={{ pointerEvents: "none" }}><span className="k2-lcd">pH —</span></Html>
+    </>,
+    scale: 1.6,
+  },
 };
