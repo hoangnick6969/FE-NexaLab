@@ -35,6 +35,7 @@ const text = defineText({
     overdueCount: (n: number) => `${n} quá hạn`,
     badgeLesson: "Bài học lý thuyết",
     badgeLab: "Thí nghiệm ảo",
+    badgeExplore: "Thực hành của lớp",
     badgeTest: "Bài kiểm tra",
     teacher: "GV",
     assignedAt: (date: string) => `Giao lúc ${date}`,
@@ -62,6 +63,7 @@ const text = defineText({
     overdueCount: (n: number) => `${n} overdue`,
     badgeLesson: "Theory lesson",
     badgeLab: "Virtual lab",
+    badgeExplore: "Class practical",
     badgeTest: "Assessment",
     teacher: "Teacher",
     assignedAt: (date: string) => `Assigned ${date}`,
@@ -141,9 +143,9 @@ export function StudentAssignments() {
           const thumbnail = item.thumbnailUrl || (item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined);
           return <Link className="student-assignment-row" to={`/assignments/${encodeURIComponent(item.id)}`}>
             {thumbnail && <img className="student-assignment-thumbnail" src={thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.nextElementSibling?.removeAttribute("hidden"); }} />}
-            <span className="class-test-thumbnail" hidden={item.contentType === "lesson" || Boolean(thumbnail)} aria-hidden="true">{item.contentType === "lab" ? <FlaskConical size={30} /> : <ClipboardCheck size={30} />}</span>
+            <span className="class-test-thumbnail" hidden={item.contentType === "lesson" || Boolean(thumbnail)} aria-hidden="true">{item.contentType === "lab" || item.contentType === "explore_lab" ? <FlaskConical size={30} /> : <ClipboardCheck size={30} />}</span>
             <span className="student-assignment-icon-wrap" aria-hidden="true">
-              {item.contentType === "lab" ? (
+              {item.contentType === "lab" || item.contentType === "explore_lab" ? (
                 <FlaskConical size={18} />
               ) : item.contentType === "test" || item.contentType === "written" ? (
                 <ClipboardCheck size={18} />
@@ -157,6 +159,8 @@ export function StudentAssignments() {
                 <span className={`student-content-badge ${item.contentType}`}>
                   {item.contentType === "lab"
                     ? t.badgeLab
+                    : item.contentType === "explore_lab"
+                      ? t.badgeExplore
                     : item.contentType === "test"
                       ? t.badgeTest
                       : item.contentType === "written"
