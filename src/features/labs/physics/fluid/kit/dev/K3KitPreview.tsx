@@ -7,7 +7,7 @@ import { LabSpace } from "../../../../shared/LabSpace";
 import { LabRendererToggle, useLabRendererMode } from "../../../../shared/LabRendererToggle";
 import { fl03DensityConfig, fl03Stations } from "../../density/fl03-density.config";
 import { Balance2D, Cylinder2D, DigitalBalance3D, FluidBench3D, GraduatedCylinder3D, K3Hud, K3Slot, K3_SLOTS, Specimen3D, FluidKitLayoutShell, formatReading, k3Material, k3Specimen } from "..";
-import { BALANCE_PAN_TOP_MM } from "../apparatus/DigitalBalance3D";
+import { BALANCE_PAN_TOP_MM, BALANCE_PAN_Z_MM } from "../apparatus/DigitalBalance3D";
 import { K3_MOTION, dampedSpringStep, usePrefersReducedMotion } from "../k3-motion";
 
 function MovingSpecimen3D({ specimen, material, targetPosition, massG, visible, immersed, forceN, buoyantForceN, cylinderInnerRadiusMm }: {
@@ -93,7 +93,7 @@ export default function K3KitPreview() {
     : immersed
       ? [K3_SLOTS.beaker[0], beakerSurfaceMm + submergedVolumeMl * 1000 / beakerAreaMm2 - immersionFraction * specimenHeightMm, K3_SLOTS.beaker[2]]
       : onPan
-        ? [K3_SLOTS.balance[0], BALANCE_PAN_TOP_MM - 0.5, K3_SLOTS.balance[2] - 12]
+        ? [K3_SLOTS.balance[0], BALANCE_PAN_TOP_MM - 0.5, K3_SLOTS.balance[2] + BALANCE_PAN_Z_MM]
         : [...K3_SLOTS.sampleStaging];
 
   const selectStation = (id: string) => {
