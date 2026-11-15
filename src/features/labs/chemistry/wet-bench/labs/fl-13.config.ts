@@ -8,7 +8,7 @@ export const fl13Config: ChemistryLabConfig = {
   schema: "k2-lab-config/1",
   labId: "acid-base-indicators",
   catalogId: "FL-13",
-  configVersion: 1,
+  configVersion: 2,
   kit: "k2-wet-bench@1",
   engine: "wet-bench@1.0.0",
   reactionCatalog: "k2-reactions@1",
@@ -68,6 +68,11 @@ export const fl13Config: ChemistryLabConfig = {
         focus: { apparatusId: "litmus" }, highlightWhen: { measurement: "litmus_paper" },
       },
       {
+        id: "compare-two-samples", kind: "free_text",
+        textVi: "Dùng bút đo pH đo hai mẫu. Mẫu nào có tính acid mạnh hơn (hoặc tính base mạnh hơn)? Em dựa vào số đo nào để kết luận?",
+        focus: { apparatusId: "meter" }, highlightWhen: { measurement: "ph_meter" },
+      },
+      {
         id: "strong-vs-weak", kind: "free_text",
         textVi: "Dùng bút đo pH so sánh HCl 0,1 M và CH₃COOH 0,1 M (cùng nồng độ). Vì sao pH của chúng khác nhau?",
         focus: { apparatusId: "meter" }, highlightWhen: { measurement: "ph_meter" },
@@ -83,4 +88,24 @@ export const fl13Config: ChemistryLabConfig = {
     ],
   },
   review: { status: "draft", notes: "Dữ liệu hoá học FL-13 chờ reviewer môn Hoá duyệt." },
+  /**
+   * Class Explore (P0 C3.1): the teacher picks two of the six samples and one question; the student measures the pH of
+   * each and explains. `strong-vs-weak` names HCl and CH₃COOH, so it is offered only when exactly those are picked.
+   */
+  classTemplates: [
+    {
+      id: "ph-compare-two-samples",
+      titleVi: "So sánh pH của hai mẫu",
+      requiredApparatusIds: ["rack", "T1", "T2", "dropper", "waste", "meter"],
+      reagentGroups: [{
+        id: "samples", labelVi: "Hai mẫu cần đo pH", count: 2,
+        options: ["HCl_0_1M", "H2SO4_0_05M", "CH3COOH_0_1M", "H2O_distilled", "NaOH_0_1M", "CaOH2_0_01M"],
+      }],
+      promptChoices: [
+        { promptId: "compare-two-samples" },
+        { promptId: "strong-vs-weak", onlyWithReagents: ["HCl_0_1M", "CH3COOH_0_1M"] },
+      ],
+      requirements: { measure: { measurement: "ph_meter", perGroup: "samples" }, explain: true },
+    },
+  ],
 };
