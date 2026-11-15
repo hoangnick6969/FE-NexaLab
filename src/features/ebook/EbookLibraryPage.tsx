@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
 import { CardSkeleton, ErrorBox } from "../../components/ui";
-import { api, inlineMaterial } from "../../lib/api";
+import { api, inlineMaterial, useAuth } from "../../lib/api";
 import { httpsUrl } from "../../lib/urls";
 import { defineText } from "../../i18n";
 import "./ebook-library.css";
@@ -23,7 +23,13 @@ const text = defineText({
     empty: "Chưa có sách phù hợp. Hãy thử từ khóa hoặc khối lớp khác.",
     loadFailed: "Không tải được thư viện ebook.",
     back: "Quay lại bài học",
-    volume: (version: string) => version && !/^khtn[-_ ]?\d+$/i.test(version) ? version : "Bản điện tử",
+    volume: (version: string) => version && !/^(?:sgk[-_ ]?)?khtn[-_ ]?\d+$/i.test(version) ? version : "Bản điện tử",
+    cardSubtitle: (grade: number | null, chapters: number, lessons: number) =>
+      chapters > 0 && lessons > 0
+        ? `${chapters} chương · ${lessons} bài học tương tác · Sách giáo khoa chuẩn chương trình`
+        : grade
+          ? `Sách giáo khoa lớp ${grade} · Hỗ trợ đánh dấu, gạch chân và ghi chú cá nhân`
+          : "Sách giáo khoa điện tử · Hỗ trợ đánh dấu, gạch chân và ghi chú cá nhân",
   },
   en: {
     eyebrow: "STUDY MATERIALS",
@@ -38,7 +44,13 @@ const text = defineText({
     empty: "No books match. Try another search or grade.",
     loadFailed: "The ebook library could not be loaded.",
     back: "Back to lessons",
-    volume: (version: string) => version && !/^khtn[-_ ]?\d+$/i.test(version) ? version : "Digital edition",
+    volume: (version: string) => version && !/^(?:sgk[-_ ]?)?khtn[-_ ]?\d+$/i.test(version) ? version : "Digital edition",
+    cardSubtitle: (grade: number | null, chapters: number, lessons: number) =>
+      chapters > 0 && lessons > 0
+        ? `${chapters} chapters · ${lessons} interactive lessons · Official textbook`
+        : grade
+          ? `Grade ${grade} textbook · Supports highlights, underlines and personal notes`
+          : "Digital textbook · Supports highlights, underlines and personal notes",
   },
 });
 
@@ -51,6 +63,8 @@ type Book = {
   grade: number | null;
   initialPage: number;
   coverAssetVersionId?: string | null;
+  chapterCount: number;
+  lessonCount: number;
 };
 
 function gradeFrom(...values: string[]): number | null {
@@ -61,14 +75,29 @@ function gradeFrom(...values: string[]): number | null {
   return null;
 }
 
-async function loadBooks(): Promise<Book[]> {
+async function loadBooks(includeCurriculum: boolean): Promise<Book[]> {
   const [curriculum, subjects] = await Promise.all([
-    api<{ subjects?: Array<{ id: string; name: string; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }> }>("/open-curriculum"),
+    includeCurriculum
+      ? api<{ subjects?: Array<{ id: string; name: string; grades?: Array<{ grade: number; chapters?: Array<{ lessonCount?: number; lessons?: unknown[]; topics?: Array<{ lessons?: unknown[] }> }> }>; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }> }>("/open-curriculum")
+      : { subjects: [] },
     api<Array<{ id: string; name: string; ebookUrl?: string | null; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }>>("/subjects"),
   ]);
   const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
   const curriculumById = new Map((curriculum.subjects ?? []).map((subject) => [subject.id, subject]));
   const books: Book[] = [];
+
+  const countsFor = (subjectId: string, grade: number | null) => {
+    const subject = curriculumById.get(subjectId);
+    const gradeEntry = grade !== null ? subject?.grades?.find((g) => g.grade === grade) : subject?.grades?.[0];
+    const chapters = gradeEntry?.chapters ?? [];
+    const lessonCount = chapters.reduce((sum, ch) => {
+      if (typeof ch.lessonCount === "number") return sum + ch.lessonCount;
+      const direct = ch.lessons?.length ?? 0;
+      const topicLessons = (ch.topics ?? []).reduce((tSum, top) => tSum + (top.lessons?.length ?? 0), 0);
+      return sum + direct + topicLessons;
+    }, 0);
+    return { chapterCount: chapters.length, lessonCount };
+  };
 
   for (const subjectId of new Set([...subjectById.keys(), ...curriculumById.keys()])) {
     const fallback = subjectById.get(subjectId);
@@ -79,28 +108,36 @@ async function loadBooks(): Promise<Book[]> {
     for (const edition of editions) {
       const url = httpsUrl(edition.url);
       if (!url) continue;
+      const grade = gradeFrom(edition.version, url);
+      const { chapterCount, lessonCount } = countsFor(subjectId, grade);
       books.push({
         id: edition.id,
         subjectId,
         subjectName,
         url,
         version: edition.version,
-        grade: gradeFrom(edition.version, url),
+        grade,
         initialPage: edition.fallbackPhysicalPage ?? 1,
         coverAssetVersionId: edition.coverAssetVersionId,
+        chapterCount,
+        lessonCount,
       });
     }
     if (editions.length) continue;
     const url = httpsUrl(fallback?.ebookUrl);
     if (url) {
+      const grade = gradeFrom(url);
+      const { chapterCount, lessonCount } = countsFor(subjectId, grade);
       books.push({
         id: subjectId,
         subjectId,
         subjectName,
         url,
         version: "",
-        grade: gradeFrom(url),
+        grade,
         initialPage: 1,
+        chapterCount,
+        lessonCount,
       });
     }
   }
@@ -129,9 +166,17 @@ function EbookCover({ book }: { book: Book }) {
 
 export function EbookLibraryPage() {
   const t = text();
+  const role = useAuth((state) => state.user?.role);
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState<number | null>(null);
-  const query = useQuery({ queryKey: ["ebook-library"], queryFn: loadBooks });
+  useEffect(() => {
+    void import("pdfjs-dist").catch(() => undefined);
+  }, []);
+  const query = useQuery({
+    queryKey: ["ebook-library", role],
+    queryFn: () => loadBooks(role === "STUDENT"),
+    enabled: Boolean(role),
+  });
   const books = query.data ?? [];
   const grades = useMemo(() => [...new Set(books.flatMap((book) => book.grade ? [book.grade] : []))].sort((a, b) => a - b), [books]);
   const filtered = books.filter((book) => (grade === null || book.grade === grade)
@@ -150,14 +195,15 @@ export function EbookLibraryPage() {
         {grades.map((item) => <button key={item} type="button" className={grade === item ? "active" : ""} aria-pressed={grade === item} onClick={() => setGrade(item)}>{t.grade(item)}</button>)}
       </div>
     </section>
-    {query.isLoading ? <div className="ebook-library-grid"><CardSkeleton count={4} /></div> : query.error ? <><ErrorBox error={query.error} /><button className="secondary" type="button" onClick={() => void query.refetch()}>{t.loadFailed}</button></> : filtered.length ? (
+    {query.isLoading ? <div className="ebook-library-grid"><CardSkeleton count={2} /></div> : query.error ? <><ErrorBox error={query.error} /><button className="secondary" type="button" onClick={() => void query.refetch()}>{t.loadFailed}</button></> : filtered.length ? (
       <section className="ebook-library-grid" aria-label={t.title}>
         {filtered.map((book) => <article key={`${book.subjectId}:${book.id}`} className="ebook-library-card">
           <EbookCover book={book} />
           <div className="ebook-library-card-body">
             <div className="ebook-library-card-meta"><span>{book.grade ? t.grade(book.grade) : t.subject}</span><small>{t.volume(book.version)}</small></div>
-            <h2>{book.subjectName}</h2>
-            <Link className="ebook-library-open" to={`/ebooks/${encodeURIComponent(book.subjectId)}`} state={{ ebookUrl: book.url, initialPhysicalPage: book.initialPage, fromLibrary: true }}>
+            <h2>{book.subjectName}{book.grade ? ` ${book.grade}` : ""}</h2>
+            <p className="ebook-library-card-desc">{t.cardSubtitle(book.grade, book.chapterCount, book.lessonCount)}</p>
+            <Link className="ebook-library-open" to={`/ebooks/${encodeURIComponent(book.subjectId)}`} state={{ ebookUrl: book.url, initialPhysicalPage: book.initialPage, fromLibrary: true, grade: book.grade, editionId: book.id }}>
               {t.open}<ArrowRight size={17} aria-hidden="true" />
             </Link>
           </div>

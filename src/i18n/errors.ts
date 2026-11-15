@@ -196,6 +196,63 @@ const en: Record<string, string | ((server: string) => string)> = {
 
 const byStatus: Record<number, string> = { 400: "VALIDATION_FAILED", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND", 409: "CONFLICT", 413: "PAYLOAD_TOO_LARGE", 429: "RATE_LIMITED", 503: "DEPENDENCY_FAILURE" };
 
+// Lab launch and run codes. The API often throws them without a message, so it fills in its per-status
+// fallback ("Dữ liệu đã tồn tại" for every 409), which hides the real cause.
+const labEn: Record<string, string> = {
+  LAB_TUPLE_INCOMPLETE: "This lab has no active simulation pack and configuration for this challenge yet; ask an administrator to activate a lab version",
+  LAB_TUPLE_INCOMPATIBLE: "The lab's simulation pack and configuration versions do not match",
+  LAB_TUPLE_INVALID: "The lab version set is not valid",
+  SIM_PACK_CONFIG_INCOMPATIBLE: "The simulation pack is not compatible with the lab configuration",
+  LAB_RELEASE_NOT_ACTIVE: "This lab has no active release",
+  LAB_RELEASE_CHANGED: "The lab release just changed; reload the page and try again",
+  LAB_RELEASE_CONTEXT_MISMATCH: "This lab is part of assigned work; open it from the assignment",
+  LAB_RELEASE_REQUIRED: "This lab needs an approved release",
+  RUN_REVOKED: "This practice session was revoked because the lab was updated; start a new session",
+  RUN_EXPIRED: "This practice session has expired; start a new session",
+  LAB_RUN_ALREADY_SUBMITTED: "This practice session was already submitted",
+  ASSIGNMENT_CHALLENGE_NOT_PINNED: "The assigned work has not pinned this lab challenge",
+  PINNED_MODEL_UNAVAILABLE: "The lab model pinned for this assignment is no longer available",
+  PINNED_VERSION_MISSING: "The lab version pinned for this assignment is missing",
+  PINNED_EVIDENCE_INVALID: "The lab version pinned for this assignment is not valid",
+  CLASS_LAB_SNAPSHOT_INVALID: "The class's saved lab is not valid",
+};
+
+const labVi: Record<string, string> = {
+  LAB_TUPLE_INCOMPLETE: "Lab chưa có gói mô phỏng và cấu hình đang hoạt động cho thử thách này. Hãy báo quản trị viên kích hoạt phiên bản lab",
+  LAB_TUPLE_INCOMPATIBLE: "Phiên bản gói mô phỏng và cấu hình của lab không khớp nhau",
+  LAB_TUPLE_INVALID: "Bộ phiên bản của lab không hợp lệ",
+  SIM_PACK_CONFIG_INCOMPATIBLE: "Gói mô phỏng không tương thích với cấu hình lab",
+  LAB_RELEASE_NOT_ACTIVE: "Lab chưa có bản phát hành đang hoạt động",
+  LAB_RELEASE_CHANGED: "Bản phát hành của lab vừa thay đổi. Hãy tải lại trang rồi thử lại",
+  LAB_RELEASE_CONTEXT_MISMATCH: "Lab này thuộc bài được giao. Hãy mở lab từ bài được giao",
+  LAB_RELEASE_REQUIRED: "Lab cần một bản phát hành đã được duyệt",
+  RUN_REVOKED: "Phiên thực hành đã bị thu hồi vì lab vừa được cập nhật. Hãy bắt đầu phiên mới",
+  RUN_EXPIRED: "Phiên thực hành đã hết hạn. Hãy bắt đầu phiên mới",
+  LAB_RUN_ALREADY_SUBMITTED: "Phiên thực hành này đã được nộp",
+  ASSIGNMENT_CHALLENGE_NOT_PINNED: "Bài được giao chưa ghim thử thách lab này",
+  PINNED_MODEL_UNAVAILABLE: "Mô hình lab đã ghim cho bài được giao không còn khả dụng",
+  PINNED_VERSION_MISSING: "Thiếu phiên bản lab đã ghim cho bài được giao",
+  PINNED_EVIDENCE_INVALID: "Phiên bản lab đã ghim cho bài được giao không hợp lệ",
+  CLASS_LAB_SNAPSHOT_INVALID: "Bản lưu lab của lớp không hợp lệ",
+  IDEMPOTENCY_KEY_REUSED: "Yêu cầu này đã được gửi với nội dung khác. Hãy thử lại",
+};
+Object.assign(en, labEn);
+
+// The API's per-status fallback messages (BE-NexaLab src/common/errors.ts) and its generic codes.
+const serverFallbackMessages = new Set(["Yêu cầu không hợp lệ", "Vui lòng đăng nhập lại", "Không có quyền thực hiện", "Không tìm thấy dữ liệu", "Dữ liệu đã tồn tại", "Thao tác quá nhanh, thử lại sau", "Dịch vụ tạm thời không khả dụng, thử lại sau"]);
+const genericCodes = new Set([...Object.values(byStatus), "INTERNAL_ERROR"]);
+const viByStatus: Record<number, string> = { 409: "Yêu cầu xung đột với trạng thái hiện tại của dữ liệu" };
+
+/** Vietnamese message for a specific code the server sent with only its generic fallback text. */
+function viMessage(status: number, code: string, serverMessage: string | undefined) {
+  const specific = !genericCodes.has(code) && !code.startsWith("HTTP_");
+  if (!specific) return serverMessage ?? "Không thể kết nối máy chủ";
+  // A message the server wrote for this case carries detail (e.g. which config is incompatible); keep it.
+  if (serverMessage && !serverFallbackMessages.has(serverMessage)) return labVi[code] ? `${serverMessage} (mã lỗi: ${code})` : serverMessage;
+  if (labVi[code]) return `${labVi[code]} (mã lỗi: ${code})`;
+  return `${viByStatus[status] ?? serverMessage ?? "Không thể thực hiện yêu cầu"} (mã lỗi: ${code})`;
+}
+
 /** Message shown for an API error in the current language. */
 export function apiErrorMessage(status: number, code: string, serverMessage: string | undefined, details?: unknown) {
   const vi = getLocale() === "vi";
@@ -210,7 +267,7 @@ export function apiErrorMessage(status: number, code: string, serverMessage: str
     if (fields.includes("email")) return vi ? "Nhập địa chỉ email hợp lệ." : "Enter a valid email address.";
     return vi ? "Kiểm tra lại thông tin đã nhập rồi thử lại." : "Check the information you entered and try again.";
   }
-  if (getLocale() === "vi") return serverMessage ?? "Không thể kết nối máy chủ";
+  if (vi) return viMessage(status, code, serverMessage);
   // Unknown codes fall back to their status class; a body-less gateway error means the server was not reached.
   if (!serverMessage && code.startsWith("HTTP_") && status >= 500) return "Cannot reach the server";
   const entry = en[code] ?? en[byStatus[status] ?? (status >= 500 ? "INTERNAL_ERROR" : "VALIDATION_FAILED")];

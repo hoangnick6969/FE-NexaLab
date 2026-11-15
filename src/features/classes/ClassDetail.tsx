@@ -175,7 +175,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
           <Assignments classroom={classroom} />
         </>}
         {activeTab === "resources" && <TeacherClassResources classId={classroom.id} disabled={archived} />}
-        {activeTab === "progress" && !archived && <PracticeAnalytics classId={classroom.id} />}
+        {activeTab === "progress" && !archived && <PracticeAnalytics classId={classroom.id} classroom={classroom} />}
         {activeTab === "insights" && !archived && <ClassInsights classId={classroom.id} />}
       </section>
       {modal === "edit" && (

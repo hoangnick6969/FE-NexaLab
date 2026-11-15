@@ -1,3 +1,4 @@
+import { AssessmentBanner, AttemptCell, scoreCell, type StudentAttempts, type TeacherAssessment } from "./AssessmentControls";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, idempotencyKey } from "../../lib/api";
@@ -210,7 +211,8 @@ function ReviseDeadline({ classId, assignmentId, revision, dueAt, submissionId, 
 type TestTrackingData = {
   deadlines: Array<{ revision: number; dueAt: string; note: string | null; createdAt: string }>;
   permittedDecisions: Array<"REJECT_ZERO" | "REVISE_DEADLINE_FOR_CLASS">;
-  students: Array<TestState & { student: { id: string; fullName: string; username: string } }>;
+  students: Array<TestState & { student: { id: string; fullName: string; username: string }; attempts?: StudentAttempts }>;
+  assignment?: { assessment?: TeacherAssessment };
 };
 
 /** I3 / 3.5: server-derived status of every original recipient of one assigned test. */
@@ -228,6 +230,7 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
       <LoadError query={data} what={t.testStatus} />
       {data.data && latest && (
         <>
+          <AssessmentBanner classId={classroom.id} assignmentId={assignment.id} assessment={data.data.assignment?.assessment ?? assignment.assessment} />
           <p>
             {t.currentDue} <b>{dateTime(latest.dueAt)}</b>
             {data.data.deadlines.length > 1 && ` · ${t.extendedTimes(data.data.deadlines.length - 1)}`}
@@ -270,7 +273,7 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
                       {row.current ? (
                         <>
                           {dateTime(row.current.submittedAt)} · {submissionStatusLabel[row.current.status]}
-                          {row.current.score !== null && ` · ${t.points(row.current.score)}`}
+                          {(row.current.score !== null || (row.current as any).score10 != null) && ` · ${scoreCell(row.current as any, t.points)}`}
                           {row.current.lateReason && <small> · {t.reason} {row.current.lateReason}</small>}
                           {row.history.length > 1 && <small> · {t.submissions(row.history.length)}</small>}
                         </>
@@ -279,6 +282,7 @@ export function TestTracking({ classroom, assignment, onClose }: { classroom: Cl
                       )}
                     </td>
                     <td>
+                      <AttemptCell classId={classroom.id} assignmentId={assignment.id} student={row.student} attempts={row.attempts ?? null} />
                       {row.status === "LATE_REVIEW_PENDING" && row.current && (
                         <button className="danger-text" onClick={() => setRejecting({ submissionId: row.current!.id, student: row.student })}>
                           {t.reject}

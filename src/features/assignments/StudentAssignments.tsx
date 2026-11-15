@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, ErrorBox, PageLoader } from "../../components/ui";
 import { testStatusLabel, testStatusTone } from "../../lib/test-status";
+import { assessmentLabel, type AssessmentType } from "./assessment-timer";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { defineText, formatDate, formatDateTime } from "../../i18n";
 import { commonText } from "../../i18n/common";
@@ -83,7 +84,18 @@ type AssignmentItem = HierarchyItem & {
   notice?: string | null;
   testStatus?: { status: string; dueSoon?: boolean; extended?: boolean } | null;
   writtenStatus?: { status: string; dueSoon?: boolean; extended?: boolean } | null;
+  /** TAI-07: graded 15-minute / midterm work; results stay hidden until the teacher publishes. */
+  assessment?: { type: AssessmentType; graded: boolean; resultPublished: boolean; durationMinutes: number | null } | null;
 };
+
+/** TAI-07: badge for graded work ("Kiểm tra 15 phút · chờ công bố điểm"). */
+function AssessmentBadge({ item }: { item: any }) {
+  const a = item.assessment;
+  if (!a?.graded) return null;
+  const status = item.testStatus ?? item.writtenStatus;
+  const waiting = status?.resultHidden;
+  return <Badge tone={waiting ? "partial" : "gold"}>{assessmentLabel[a.type as AssessmentType]}{a.durationMinutes ? ` ${a.durationMinutes}′` : ""}{waiting ? " · chờ công bố điểm" : ""}</Badge>;
+}
 
 export function StudentAssignments() {
   const t = text();
@@ -102,7 +114,7 @@ export function StudentAssignments() {
     itemOrder: item.curriculumOrder ?? item.topicOrder,
     thumbnail: item.contentType === "lab" ? labInfo.find((lab) => lab.id === item.contentId)?.thumbnail : undefined,
   })) as AssignmentItem[];
-  const tests = assignments.filter((item) => item.contentType === "test" || item.contentType === "written");
+  const tests = assignments.filter((item) => item.contentType === "test" || item.contentType === "written" || item.contentType === "exam");
   const ungroupedTests = tests.filter((item) => item.canOpen !== false && (!item.subject || !item.grade));
   const closed = assignments.filter((item) => item.canOpen === false);
   return (
@@ -147,7 +159,7 @@ export function StudentAssignments() {
             <span className="student-assignment-icon-wrap" aria-hidden="true">
               {item.contentType === "lab" || item.contentType === "explore_lab" ? (
                 <FlaskConical size={18} />
-              ) : item.contentType === "test" || item.contentType === "written" ? (
+              ) : item.contentType === "test" || item.contentType === "written" || item.contentType === "exam" ? (
                 <ClipboardCheck size={18} />
               ) : (
                 <BookOpen size={18} />
@@ -163,10 +175,12 @@ export function StudentAssignments() {
                       ? t.badgeExplore
                     : item.contentType === "test"
                       ? t.badgeTest
+                      : item.contentType === "exam" ? "Đề kiểm tra tổng hợp"
                       : item.contentType === "written"
                         ? t.badgeWritten
                         : t.badgeLesson}
                 </span>
+                <AssessmentBadge item={item} />
                 {(() => {
                   const status = item.testStatus ?? item.writtenStatus;
                   if (!status) return null;
@@ -211,6 +225,7 @@ export function StudentAssignments() {
                   <span className="student-assignment-title-line">
                     <strong className="student-assignment-title">{item.title}</strong>
                     <span className="student-content-badge test">{t.badgeTest}</span>
+                    <AssessmentBadge item={item} />
                     {item.testStatus && (
                       <Badge tone={testStatusTone[item.testStatus.status as keyof typeof testStatusTone]}>
                         {testStatusLabel[item.testStatus.status as keyof typeof testStatusLabel]}

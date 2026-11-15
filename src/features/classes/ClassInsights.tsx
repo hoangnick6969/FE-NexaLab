@@ -7,7 +7,7 @@ import { formatDateTime } from "../../i18n";
 import { LoadError } from "./class-ui";
 import { insightText } from "./insights-copy";
 import {
-  ackBody, ackErrorKind, ackLabel, evidencePath, insightCopy, isHandled, noteLength, noteTooLong, NOTE_MAX, partitionStudents, similarityAssignmentId, statusTone, withSimilarityTarget,
+  ackBody, ackErrorKind, ackLabel, evidencePath, evidenceText, insightCopy, isHandled, noteLength, noteTooLong, NOTE_MAX, partitionStudents, similarityAssignmentId, statusTone, withSimilarityTarget,
   type ClassInsightsResponse, type InsightAckAction, type InsightEvidenceRef, type InsightItem, type StudentInsightsResponse,
 } from "./insights-view";
 
@@ -40,7 +40,7 @@ function EvidenceRow({ classId, studentId, item }: { classId: string; studentId:
   const detail = useQuery<any>({ queryKey: ["insight-evidence", item.kind, item.id], queryFn: () => api(path!), enabled: open && path !== null });
   return (
     <li>
-      {t.evidenceKind[item.kind] ?? item.kind} · {formatDateTime(item.at)}
+      {evidenceText(item)} · {formatDateTime(item.at)}
       {path ? (
         <button type="button" className="text-button" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? t.evidenceClose : t.evidenceOpen}</button>
       ) : (
@@ -75,7 +75,7 @@ function InsightReplay({ classId, studentId, fingerprint }: { classId: string; s
       <p>{copy.summary}</p>
       <p className="tiny muted"><b>{t.thresholdsLabel}:</b> {copy.threshold}</p>
       <ul className="tiny">
-        {replay.data.evidence.map((item) => <li key={item.id}>{t.evidenceKind[item.kind] ?? item.kind} · {formatDateTime(item.at)}</li>)}
+        {replay.data.evidence.map((item) => <li key={item.id}>{evidenceText(item)} · {formatDateTime(item.at)}</li>)}
       </ul>
     </section>
   );

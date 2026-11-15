@@ -25,9 +25,9 @@ const feedback: Record<string, string> = {
 const APPLICATION_CHOICES = [{ value: "increase", label: "Lớn hơn" }, { value: "decrease", label: "Nhỏ hơn" }, { value: "same", label: "Bằng nhau" }];
 const grams = (mg: number | null) => mg == null ? null : `${(mg / 1000).toFixed(1).replace(".", ",")} g`;
 
-export function MassConservationActivity({ runId, state, onChange, onSubmit, onNewRun, attempt, pendingSubmit }: {
+export function MassConservationActivity({ runId, state, onChange, onSubmit, onNewRun, attempt, pendingSubmit, examMode = false }: {
   runId: string; state: unknown; onChange: (state: Answers) => void;
-  onSubmit: () => void; onNewRun: () => void; attempt: any; pendingSubmit: boolean;
+  onSubmit: () => void; onNewRun: () => void; attempt: any; pendingSubmit: boolean; examMode?: boolean;
 }) {
   const answers = (state ?? {}) as Answers;
   const [mode, setMode] = useLabRendererMode("nexalab:lab-view:wet-bench");
@@ -174,7 +174,7 @@ export function MassConservationActivity({ runId, state, onChange, onSubmit, onN
         <p className="k2-note">Hai cốc mở trong mô phỏng này cho số cân bằng nhau vì giả định không có chất rời khỏi phạm vi được cân. Thí nghiệm thật có sai số.</p>
         <button className="primary" disabled={!ready || pendingSubmit || Boolean(attempt)} onClick={onSubmit}>{pendingSubmit ? "Đang nộp…" : "Nộp kết quả"}</button>
       </section>}
-      {attempt && <section className="lqp-section k2-result" role="status"><h3>Kết quả từ máy chủ</h3><p>{attempt.verdict === "passed" ? "Em đã hoàn thành hoạt động." : "Em có thể xem lại phần giải thích và thử lượt mới."}</p><p>Trong mô phỏng lý tưởng này, mọi chất vẫn nằm trong phạm vi được cân nên tổng khối lượng trước và sau bằng nhau. Thí nghiệm thật có sai số; lab ảo không thay thế thực hành thật.</p><button className="secondary" onClick={() => { if (window.confirm("Bắt đầu lượt mới? Bài làm hiện tại sẽ được giữ trong lịch sử.")) onNewRun(); }}>Bắt đầu lượt mới</button></section>}
+      {attempt && !examMode && <section className="lqp-section k2-result" role="status"><h3>Kết quả từ máy chủ</h3><p>{attempt.verdict === "passed" ? "Em đã hoàn thành hoạt động." : "Em có thể xem lại phần giải thích và thử lượt mới."}</p><p>Trong mô phỏng lý tưởng này, mọi chất vẫn nằm trong phạm vi được cân nên tổng khối lượng trước và sau bằng nhau. Thí nghiệm thật có sai số; lab ảo không thay thế thực hành thật.</p><button className="secondary" onClick={() => { if (window.confirm("Bắt đầu lượt mới? Bài làm hiện tại sẽ được giữ trong lịch sử.")) onNewRun(); }}>Bắt đầu lượt mới</button></section>}
     </LabQuestionPanel>
   </div>;
 }

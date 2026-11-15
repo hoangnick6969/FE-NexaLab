@@ -392,7 +392,14 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
       const currentIdx = chapters.findIndex(([k]) => k === selectedChapter[0]);
       const prevChap = currentIdx > 0 ? chapters[currentIdx - 1] : null;
       const nextChap = currentIdx >= 0 && currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
-      const firstLessonId = chapterItems[0]?.id;
+      const firstItem = chapterItems[0] as (T & { assignments?: Array<{ id: string }> }) | undefined;
+      const firstItemHref = firstItem
+        ? basePath.startsWith("/assignments") || basePath.startsWith("/classes/")
+          ? `/assignments/${encodeURIComponent(firstItem.id)}`
+          : firstItem.assignments?.[0]?.id
+            ? `/lessons/${encodeURIComponent(firstItem.id)}?assignmentId=${encodeURIComponent(firstItem.assignments[0].id)}`
+            : `/lessons/${encodeURIComponent(firstItem.id)}`
+        : null;
       return (
         <>
           <header className="hierarchy-screen-heading chapter-view-heading">
@@ -401,8 +408,8 @@ export function SubjectGradeChapterBrowser<T extends HierarchyItem>({
               <h2>{selectedChapter[1].title}</h2>
               <p>{chapterItems.length} {itemLabel}</p>
             </div>
-            {firstLessonId && (
-              <Link className="primary chapter-start-cta" to={`/lessons/${encodeURIComponent(firstLessonId)}`}>
+            {firstItemHref && (
+              <Link className="primary chapter-start-cta" to={firstItemHref}>
                 {t.startLearning} <ArrowRight size={16} />
               </Link>
             )}

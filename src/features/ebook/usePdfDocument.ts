@@ -3,8 +3,24 @@ import type { PDFDataRangeTransport, PDFDocumentLoadingTask, PDFDocumentProxy } 
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { t } from "./ebookText";
 
+const RANGE_CHUNK_SIZE = 1_048_576;
+
+let pdfjsModulePromise: Promise<typeof import("pdfjs-dist")> | null = null;
+function loadPdfjs() {
+  if (!pdfjsModulePromise) {
+    pdfjsModulePromise = import("pdfjs-dist").then((module) => {
+      module.GlobalWorkerOptions.workerSrc = workerUrl;
+      return module;
+    }).catch((error) => {
+      pdfjsModulePromise = null;
+      throw error;
+    });
+  }
+  return pdfjsModulePromise;
+}
+
 /**
- * Loads pdf.js on demand, then the book: HTTP range requests (256 KB chunks) when storage supports them,
+ * Loads pdf.js on demand in parallel with the initial HTTP range request (1 MB chunks) when storage supports them,
  * otherwise a plain URL load. `onPageChange` gets 1 when a load starts and the clamped start page when it ends.
  */
 export function usePdfDocument(url: string | null | undefined, initialPage: number | undefined, onPageChange: (page: number) => void) {
@@ -18,41 +34,55 @@ export function usePdfDocument(url: string | null | undefined, initialPage: numb
   onPage.current = onPageChange;
 
   useEffect(() => {
-    let active = true;
-    void import("pdfjs-dist").then((module) => {
-      module.GlobalWorkerOptions.workerSrc = workerUrl;
-      if (active) setPdfjs(module);
-    }).catch((error: unknown) => {
-      if (active) setLoadError(error instanceof Error ? error.message : t.readerFailed);
-    });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!url || !pdfjs) return;
+    if (!url) return;
     let active = true;
     let task: PDFDocumentLoadingTask | undefined;
     let rangeTransport: PDFDataRangeTransport | undefined;
     const rangeControllers = new Set<AbortController>();
     const loadController = new AbortController();
-    setLoadError(""); setDocument(null); setFingerprint(""); onPage.current(1); setPageCount(0);
+    const initialPageValue = Number.isInteger(initialPage) && initialPage! > 0 ? initialPage! : 1;
+    setLoadError(""); setDocument(null); setFingerprint(""); onPage.current(initialPageValue); setPageCount(0);
+
+    const fetchInitialRange = async () => {
+      try {
+        const firstRange = await fetch(url, {
+          headers: { Range: `bytes=0-${RANGE_CHUNK_SIZE - 1}` },
+          signal: loadController.signal,
+        });
+        if (firstRange.status !== 206) {
+          await firstRange.body?.cancel();
+          return { length: 0, initialData: null as Uint8Array | null };
+        }
+        const contentRange = firstRange.headers.get("content-range") ?? "";
+        const totalMatch = /\/(\d+)\s*$/.exec(contentRange);
+        let length = totalMatch ? Number(totalMatch[1]) : 0;
+        const initialData = new Uint8Array(await firstRange.arrayBuffer());
+        if (!Number.isSafeInteger(length) || length <= 0) {
+          try {
+            const head = await fetch(url, { method: "HEAD", signal: loadController.signal });
+            const headLen = Number(head.headers.get("content-length"));
+            if (head.ok && Number.isSafeInteger(headLen) && headLen > 0) length = headLen;
+          } catch {
+            // Ignore HEAD fallback failure.
+          }
+        }
+        return { length, initialData };
+      } catch {
+        return { length: 0, initialData: null as Uint8Array | null };
+      }
+    };
+
     const load = async () => {
       try {
-        let length = 0;
-        let firstRange: Response | null = null;
-        try {
-          const head = await fetch(url, { method: "HEAD", signal: loadController.signal });
-          length = Number(head.headers.get("content-length"));
-          if (!head.ok || !Number.isSafeInteger(length) || length <= 0) length = 0;
-          if (length) firstRange = await fetch(url, { headers: { Range: "bytes=0-262143" }, signal: loadController.signal });
-        } catch {
-          // Fall back to PDF.js URL loading when storage does not support range metadata.
-        }
+        const [pdfjsModule, { length, initialData }] = await Promise.all([
+          loadPdfjs(),
+          fetchInitialRange(),
+        ]);
         if (!active) return;
-        if (length && firstRange?.status === 206) {
-          const initialData = new Uint8Array(await firstRange.arrayBuffer());
-          if (!active) return;
-          rangeTransport = new pdfjs.PDFDataRangeTransport(length, initialData);
+        setPdfjs(pdfjsModule);
+
+        if (length > 0 && initialData) {
+          rangeTransport = new pdfjsModule.PDFDataRangeTransport(length, initialData);
           rangeTransport.requestDataRange = (begin, end) => {
             const controller = new AbortController();
             rangeControllers.add(controller);
@@ -71,15 +101,12 @@ export function usePdfDocument(url: string | null | undefined, initialPage: numb
               .finally(() => rangeControllers.delete(controller));
           };
           rangeTransport.abort = () => { rangeControllers.forEach((controller) => controller.abort()); rangeControllers.clear(); };
-          task = pdfjs.getDocument({ range: rangeTransport, rangeChunkSize: 262144, disableStream: true, disableAutoFetch: true });
-        } else {
-          await firstRange?.body?.cancel();
+          task = pdfjsModule.getDocument({ range: rangeTransport, rangeChunkSize: RANGE_CHUNK_SIZE, disableStream: true, disableAutoFetch: true });
         }
-        task ??= pdfjs.getDocument({ url, withCredentials: false });
+        task ??= pdfjsModule.getDocument({ url, withCredentials: false, rangeChunkSize: RANGE_CHUNK_SIZE });
         const loaded = await task.promise;
         if (!active) return;
-        const initial = Number.isInteger(initialPage) ? initialPage! : 1;
-        const startPage = Math.min(loaded.numPages, Math.max(1, initial));
+        const startPage = Math.min(loaded.numPages, Math.max(1, initialPageValue));
         setDocument(loaded); setPageCount(loaded.numPages); onPage.current(startPage);
         setFingerprint(loaded.fingerprints.find((value): value is string => Boolean(value)) ?? "");
       } catch (error) {
@@ -88,7 +115,7 @@ export function usePdfDocument(url: string | null | undefined, initialPage: numb
     };
     void load();
     return () => { active = false; loadController.abort(); rangeTransport?.abort(); void task?.destroy(); };
-  }, [pdfjs, url, reloadKey, initialPage]);
+  }, [url, reloadKey, initialPage]);
 
   return { pdfjs, document, pageCount, fingerprint, loadError, reload: () => setReloadKey((value) => value + 1) };
 }

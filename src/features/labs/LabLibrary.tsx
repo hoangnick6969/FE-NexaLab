@@ -316,7 +316,13 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
         {filteredCards.map((l) => (
           <article key={l.id} id={`lab-${l.id}`} className="lab-library-item">
             <Link
-              to={guided && role === "STUDENT" ? "/lessons" : ["STUDENT", "TEACHER"].includes(role) ? "/labs/" + l.id : "/labs"}
+              to={
+                guided && role === "STUDENT"
+                  ? (l.lessonLinks?.[0]?.lessonId ? `/lessons/${encodeURIComponent(l.lessonLinks[0].lessonId)}` : "/lessons")
+                  : ["STUDENT", "TEACHER"].includes(role)
+                    ? "/labs/" + l.id
+                    : "/labs"
+              }
               className="lab-card"
               key={l.id}
             >
@@ -346,7 +352,11 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
             </Link>
             {!!l.lessonLinks?.length && <div className="lab-library-lesson-row">
               <span className="lab-library-lesson-label">{t.relatedLesson}:</span>
-              <Link className="lab-library-lesson-primary" to={relatedLessonHref(l.lessonLinks[0].lessonId)}>
+              <Link
+                className="lab-library-lesson-primary"
+                aria-label={`${t.relatedLesson}: ${l.lessonLinks[0].title}`}
+                to={relatedLessonHref(l.lessonLinks[0].lessonId)}
+              >
                 <span>{l.lessonLinks[0].title}</span><ArrowUpRight size={15} aria-hidden="true" />
               </Link>
               {l.lessonLinks.length > 1 && <details className="lab-library-lesson-more">

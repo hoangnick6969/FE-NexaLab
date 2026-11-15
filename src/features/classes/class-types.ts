@@ -1,3 +1,4 @@
+import type { TeacherAssessment } from "./AssessmentControls";
 export type ClassSummary = {
   id: string;
   name: string;
@@ -32,9 +33,11 @@ export type TeacherAssignment = {
   recipientCount: number;
   targetStudentIds?: string[];
   testSummary?: { revision: number; extended: boolean; counts: Record<"SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED" | "OVERDUE_UNSUBMITTED" | "NOT_SUBMITTED", number> };
+  /** TAI-07: PRACTICE for every pre-existing assignment. */
+  assessment?: TeacherAssessment;
 };
 
-export type AssignableType = "lesson" | "lab" | "test" | "written" | "explore_lab";
+export type AssignableType = "lesson" | "lab" | "test" | "written" | "explore_lab" | "exam";
 
 // ---------------- Student ----------------
 
