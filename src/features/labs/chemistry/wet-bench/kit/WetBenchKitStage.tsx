@@ -8,13 +8,11 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Group } from "three";
 import * as THREE from "three";
-import { measure, observeVessel, reagentById, scaleReadingMicrograms, SPECIES, type VesselKind } from "@nexalab/sim/wet-bench";
+import { measure, observeVessel, reagentById, scaleReadingMicrograms, SPECIES } from "@nexalab/sim/wet-bench";
 import { PhysicsStage, type BenchViewPreset } from "../../../physics/shared/PhysicsStage";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
-import {
-  Beaker3D, Collider, Droplet, Dropper3D, DropperUpright, Flask3D, LitmusBox3D, LitmusStrip3D, PhMeter3D, prefersReducedMotion, Rack3D, ReagentBottle3D,
-  RestPhMeter3D, Scale3D, Stopper3D, TargetRing, TestTube3D, Tongs3D, TongsHolding,
-} from "./apparatus3d";
+import { FIXTURE_RENDERERS, HELD_TOOL_RENDERERS, VESSEL_RENDERERS } from "./apparatus-renderers";
+import { Collider, Droplet, DropperUpright, PhMeter3D, prefersReducedMotion, ReagentBottle3D, TargetRing, TongsHolding } from "./apparatus3d";
 import { BENCH_TOP_Y, shelfPosition, slotById } from "./bench-layout";
 import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
 import { bottleCategory, LITMUS_HEX, reagentLook, vesselLook, visualFill } from "./liquid-look";
@@ -29,8 +27,6 @@ const VIEW: BenchViewPreset = {
 const CLICK_SLOP = 5;
 const SNAP_RADIUS = 0.26;
 const CURSOR_PLANE_Y = BENCH_TOP_Y + 0.12;
-const VESSEL_TOP: Record<VesselKind, number> = { test_tube: 0.5, beaker_100ml: 0.3, erlenmeyer_flask_100ml: 0.34, waste_beaker: 0.34 };
-const VESSEL_INNER: Record<VesselKind, number> = { test_tube: 0.43, beaker_100ml: 0.27, erlenmeyer_flask_100ml: 0.24, waste_beaker: 0.31 };
 const BOTTLE_TOP = 0.32;
 
 export const shortReagent = (id: string) => (reagentById(id)?.labelVi ?? id).replace(/^Dung dịch /, "");
@@ -200,7 +196,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     if (target?.kind === "vessel") {
       const at = targetPoint(current, target);
       const kind = current.current.bench.vessels[target.vesselId]?.kind;
-      if (at && kind) return { pos: new THREE.Vector3(at.x, at.y + VESSEL_TOP[kind] + snapLift, at.z), tilt };
+      if (at && kind) return { pos: new THREE.Vector3(at.x, at.y + VESSEL_RENDERERS[kind].mouthY + snapLift, at.z), tilt };
     }
     if (target?.kind === "bottle") {
       const at = targetPoint(current, target);
@@ -216,7 +212,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     if (target?.kind === "vessel") {
       const at = targetPoint(current, target);
       const kind = current.current.bench.vessels[target.vesselId]?.kind;
-      if (at && kind) return { pos: new THREE.Vector3(at.x + 0.2, at.y + VESSEL_TOP[kind] + 0.06, at.z), tilt: 0.7 };
+      if (at && kind) return { pos: new THREE.Vector3(at.x + 0.2, at.y + VESSEL_RENDERERS[kind].mouthY + 0.06, at.z), tilt: 0.7 };
     }
     if (target?.kind === "slot") {
       const at = targetPoint(current, target);
@@ -236,8 +232,8 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
       const vessel = current.current.bench.vessels[target.vesselId];
       if (at && vessel) {
         // The lower end touches the liquid surface, so the strip is never longer than the glass is tall.
-        const y0 = vessel.kind === "test_tube" ? 0.025 : vessel.kind === "erlenmeyer_flask_100ml" ? 0.016 : 0.02;
-        const surface = y0 + visualFill(vessel.solutionMicroliters / vessel.capacityMicroliters) * VESSEL_INNER[vessel.kind];
+        const { floorY, innerHeight } = VESSEL_RENDERERS[vessel.kind];
+        const surface = floorY + visualFill(vessel.solutionMicroliters / vessel.capacityMicroliters) * innerHeight;
         return { pos: new THREE.Vector3(at.x, at.y + surface, at.z), tilt: -0.1 };
       }
     }
@@ -283,15 +279,10 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     const carriedTool = carriedHeld.tool;
     if (carriedTool !== "litmus_paper" && rest) hidden.add(rest.id);
     if (carriedTool === "ph_meter") for (const item of config.enabledApparatus) if (item.kind === "digital_ph_meter") hidden.add(item.id);
-    carriedNode = <FollowGroup home={home} active scale={carriedTool === "stopper" ? 1 : carriedTool === "litmus_paper" ? 1.15 : 1.6} getTarget={carriedTool === "dropper" ? dropperTarget : carriedTool === "ph_meter" ? penTarget : carriedTool === "litmus_paper" ? stripTarget : carriedTool === "tongs" ? tongsTarget : stopperTarget}>
-      {carriedTool === "dropper" && <DropperUpright liquid={null} squeezeAt={null} />}
-      {carriedTool === "tongs" && <TongsHolding piece={null} shape={null} />}
-      {carriedTool === "stopper" && <Stopper3D />}
-      {carriedTool === "litmus_paper" && <LitmusStrip3D colour={state.stripColour} />}
-      {carriedTool === "ph_meter" && <>
-        <PhMeter3D inserted />
-        <Html position={[0, 0.34, 0]} center style={{ pointerEvents: "none" }}><span className="k2-lcd">pH —</span></Html>
-      </>}
+    const heldRenderer = HELD_TOOL_RENDERERS[carriedTool];
+    const toolTargets = { dropper: dropperTarget, ph_meter: penTarget, litmus_paper: stripTarget, tongs: tongsTarget, stopper: stopperTarget };
+    carriedNode = <FollowGroup home={home} active scale={heldRenderer.scale} getTarget={toolTargets[carriedTool]}>
+      <heldRenderer.Body stripColour={state.stripColour} />
     </FollowGroup>;
   }
   const penHeld = carriedHeld?.kind === "tool" && carriedHeld.tool === "ph_meter";
@@ -347,29 +338,23 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
       const ring = ringFor(target);
       const heldVessel = isHeld({ kind: "vessel", vesselId: item.id });
       const warning = state.banner?.vesselId === item.id;
-      const radius = item.kind === "test_tube" ? 0.07 : item.kind === "waste_beaker" ? 0.24 : 0.2;
-      const props = { visual, look, flashAt, strip: state.current.strips[item.id] };
-      const wasteVisual = { ...visual, liquidLevel: Math.min(0.85, state.current.wasteMicroliters / 120_000) };
-      const top = VESSEL_TOP[vessel.kind];
+      const renderer = VESSEL_RENDERERS[item.kind];
       const drip = state.drip?.vesselId === item.id ? state.drip : null;
       const dripReagent = drip ? reagentById(drip.reagentId) : null;
       const penHere = state.current.probeIn === item.id && !penHeld;
       const penHold: Held = { kind: "tool", tool: "ph_meter", apparatusId: penApparatusId };
       items.push(<FollowGroup key={id} home={home} active={heldVessel} getTarget={carryVessel}>
         <group onPointerDown={begin({ held: { kind: "vessel", vesselId: item.id }, label }, () => dispatch({ type: "click_vessel", vesselId: item.id, now: Date.now() }))} {...hover(id)}>
-          {item.kind === "test_tube" ? <TestTube3D {...props} />
-            : item.kind === "erlenmeyer_flask_100ml" ? <Flask3D {...props} />
-              : item.kind === "waste_beaker" ? <Beaker3D {...props} visual={wasteVisual} look={{ color: "#9ca3a0", opacity: 0.7, surface: "#cbd5e1" }} radius={0.2} height={0.34} />
-                : <Beaker3D {...props} />}
-          {(warning || heldVessel || ring || state.focusVesselId === item.id) && <TargetRing radius={radius} tone={warning ? "warning" : heldVessel ? "held" : ring ?? "focus"} />}
-          <Html position={[0, item.kind === "test_tube" ? 0.58 : 0.44, 0]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}><span className={`k2-vessel-tag${warning ? " is-warning" : ""}`}>{label}</span></Html>
-          {showTooltip(id) && <Tooltip y={item.kind === "test_tube" ? 0.78 : 0.66} title={label} detail={def.purposeVi} />}
+          <renderer.Body visual={visual} look={look} flashAt={flashAt} strip={state.current.strips[item.id]} wasteMicroliters={state.current.wasteMicroliters} />
+          {(warning || heldVessel || ring || state.focusVesselId === item.id) && <TargetRing radius={renderer.ringRadius} tone={warning ? "warning" : heldVessel ? "held" : ring ?? "focus"} />}
+          <Html position={[0, renderer.tagY, 0]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}><span className={`k2-vessel-tag${warning ? " is-warning" : ""}`}>{label}</span></Html>
+          {showTooltip(id) && <Tooltip y={renderer.tooltipY} title={label} detail={def.purposeVi} />}
         </group>
-        {state.current.strips[item.id] && <Html position={[0, item.kind === "test_tube" ? 0.66 : 0.52, 0]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}>
+        {state.current.strips[item.id] && <Html position={[0, renderer.tagY + 0.08, 0]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}>
           <span className="k2-strip-chip" title={`Kết quả giấy quỳ trên ${label}`}><i style={{ background: LITMUS_HEX[state.current.strips[item.id]!] }} aria-hidden="true" />Quỳ: {QUY_NAME[state.current.strips[item.id]!]}</span>
         </Html>}
-        {drip && dripReagent && <Droplet key={drip.at} at={drip.at} color={reagentLook(dripReagent).color} fromY={top + 0.07} toY={0.025 + visualFill(visual.liquidLevel) * VESSEL_INNER[vessel.kind]} />}
-        {penHere && <group position={[0.02, item.kind === "test_tube" ? 0.24 : 0.1, 0]} rotation={[0, 0, -0.06]}
+        {drip && dripReagent && <Droplet key={drip.at} at={drip.at} color={reagentLook(dripReagent).color} fromY={renderer.mouthY + 0.07} toY={renderer.floorY + visualFill(visual.liquidLevel) * renderer.innerHeight} />}
+        {penHere && <group position={[0.02, renderer.probeY, 0]} rotation={[0, 0, -0.06]}
           onPointerDown={begin({ held: penHold, label: "Bút đo pH" }, () => dispatch({ type: "hold", held: penHold }))}
           {...hover(`pen:${item.id}`)}>
           <PhMeter3D inserted />
@@ -384,18 +369,11 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     const held: Held | null = tool ? { kind: "tool", tool, apparatusId: item.id } : null;
     const onClick = () => { if (held) dispatch({ type: "hold", held: isHeld(held) ? null : held }); };
     if (item.kind === "digital_ph_meter" && (state.current.probeIn || penHeld)) continue;
-    const body = item.kind === "test_tube_rack_6" ? <Rack3D />
-      : item.kind === "dropper_pipette" ? <Dropper3D />
-        : item.kind === "litmus_strip_dispenser" ? <LitmusBox3D />
-          : item.kind === "digital_ph_meter" ? <RestPhMeter3D />
-            : item.kind === "tongs" ? <Tongs3D />
-              : item.kind === "stopper" ? <Stopper3D />
-                : item.kind === "electronic_scale" ? <Scale3D /> : null;
+    const renderer = FIXTURE_RENDERERS[item.kind];
     items.push(<group key={id} position={home} {...(held ? { onPointerDown: begin({ held, label }, onClick) } : { onPointerDown: (event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); } })} {...hover(id)}>
-      {body}
+      <renderer.Body scaleReading={scaleText} />
       {held && isHeld(held) && <TargetRing radius={0.12} tone="held" />}
-      {item.kind === "electronic_scale" && <Html position={[0, 0.06, 0.27]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}><span className="k2-lcd">{scaleText}</span></Html>}
-      {showTooltip(id) && <Tooltip y={item.kind === "test_tube_rack_6" ? 0.4 : 0.3} title={label} detail={def.purposeVi} />}
+      {showTooltip(id) && <Tooltip y={renderer.tooltipY} title={label} detail={def.purposeVi} />}
     </group>);
   }
 

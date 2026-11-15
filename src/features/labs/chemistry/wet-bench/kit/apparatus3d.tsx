@@ -1,15 +1,16 @@
 /** Procedural K2 apparatus meshes. Presentation only: every visual comes from `VesselVisualState`. */
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, InstancedMesh, Mesh } from "three";
+import type { InstancedMesh, Mesh } from "three";
 import * as THREE from "three";
 import { SPECIES, type VesselVisualState } from "@nexalab/sim/wet-bench";
+import { Beaker3D as SharedBeaker3D, BEAKER_DEFAULT_SIZE, beakerAnchors, beakerInnerHeight, type BeakerSize } from "../../../shared/items/beaker";
+import { GLASS, LiquidColumn as Liquid, prefersReducedMotion } from "../../../shared/items/glass";
 import { CATEGORY_COLOR, LITMUS_HEX, visualFill, type BottleCategory, type Look } from "./liquid-look";
 
-const LABEL_ARC = 1.9;
-const GLASS = { color: "#e0f2fe", transparent: true, opacity: 0.32, roughness: 0.15, metalness: 0.02, depthWrite: false, side: THREE.DoubleSide } as const;
+export { prefersReducedMotion };
 
-export const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const LABEL_ARC = 1.9;
 
 /** Invisible click target, about 1.4× the real part, so small tools and tubes are easy to grab. */
 export function Collider({ size, y = 0, x = 0, z = 0 }: { size: [number, number, number]; y?: number; x?: number; z?: number }) {
@@ -17,34 +18,6 @@ export function Collider({ size, y = 0, x = 0, z = 0 }: { size: [number, number,
     <boxGeometry args={size} />
     <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
   </mesh>;
-}
-
-/** Liquid column that eases up when volume is added, with a visible surface (meniscus). */
-function Liquid({ fullHeight, rBottom, rTop, y0, fill, look }: { fullHeight: number; rBottom: number; rTop: number; y0: number; fill: number; look: Look }) {
-  const group = useRef<Group>(null);
-  const current = useRef(fill);
-  const reduced = prefersReducedMotion();
-  useFrame((_, delta) => {
-    const node = group.current;
-    if (!node) return;
-    current.current += (fill - current.current) * Math.min(1, delta * (reduced ? 60 : 7));
-    node.scale.y = Math.max(current.current, 0.001);
-    node.visible = current.current > 0.004;
-  });
-  return <group ref={group} position={[0, y0, 0]} scale-y={Math.max(fill, 0.001)} visible={fill > 0.004}>
-    <mesh position={[0, fullHeight / 2, 0]}>
-      <cylinderGeometry args={[rTop, rBottom, fullHeight, 32]} />
-      <meshStandardMaterial color={look.color} transparent opacity={look.opacity} roughness={0.25} depthWrite={false} />
-    </mesh>
-    <mesh position={[0, fullHeight, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <circleGeometry args={[rTop * 0.98, 32]} />
-      <meshBasicMaterial color={look.surface} transparent opacity={0.6} depthWrite={false} />
-    </mesh>
-    <mesh position={[0, fullHeight, 0]} rotation={[Math.PI / 2, 0, 0]}>
-      <torusGeometry args={[rTop * 0.98, 0.004, 6, 32]} />
-      <meshBasicMaterial color={look.surface} transparent opacity={0.95} depthWrite={false} />
-    </mesh>
-  </group>;
 }
 
 /** Rising bubbles for a few seconds after a gas-producing change. */
@@ -112,20 +85,17 @@ export function TestTube3D({ visual, look, flashAt, strip }: VesselProps) {
   </group>;
 }
 
-export function Beaker3D({ visual, look, flashAt, strip, radius = 0.15, height = 0.3 }: VesselProps & { radius?: number; height?: number }) {
+/** Beaker from the shared item library; the bench adds what its engine reports inside the cup. */
+export function Beaker3D({ visual, look, flashAt, radius = BEAKER_DEFAULT_SIZE.radius, height = BEAKER_DEFAULT_SIZE.height }: VesselProps & Partial<BeakerSize>) {
+  const size = { radius, height };
   const fill = visualFill(visual.liquidLevel);
-  const inner = height - 0.03;
-  return <group>
-    <mesh position={[0, height / 2, 0]}><cylinderGeometry args={[radius, radius * 0.94, height, 36, 1, true]} /><meshPhysicalMaterial {...GLASS} /></mesh>
-    <mesh position={[0, 0.01, 0]}><cylinderGeometry args={[radius * 0.94, radius * 0.94, 0.02, 36]} /><meshPhysicalMaterial {...GLASS} opacity={0.5} /></mesh>
-    <mesh position={[0, height, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[radius, 0.008, 8, 36]} /><meshStandardMaterial color="#bae6fd" roughness={0.2} transparent opacity={0.85} /></mesh>
-    {[0.25, 0.5, 0.75].map((fraction) => <mesh key={fraction} position={[radius * 0.7, height * fraction, radius * 0.72]}><boxGeometry args={[0.05, 0.004, 0.002]} /><meshStandardMaterial color="#475569" /></mesh>)}
-    <Liquid fullHeight={inner} y0={0.02} rBottom={radius * 0.88} rTop={radius * 0.9} fill={fill} look={look} />
-    <Precipitate visual={visual} radius={radius * 0.85} floorY={0.02} />
-    <Solids visual={visual} floorY={0.02} spread={0.05} />
-    {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={radius * 0.6} height={Math.max(fill * inner, 0.05)} bottom={0.03} />}
+  const floorY = beakerAnchors(size).inside[1];
+  return <SharedBeaker3D radius={radius} height={height} fill={fill} liquid={look}>
+    <Precipitate visual={visual} radius={radius * 0.85} floorY={floorY} />
+    <Solids visual={visual} floorY={floorY} spread={0.05} />
+    {flashAt && <Bubbles intensity={visual.gasBubbles.intensity} at={flashAt} radius={radius * 0.6} height={Math.max(fill * beakerInnerHeight(size), 0.05)} bottom={0.03} />}
     <Collider size={[radius * 2, height + 0.04, radius * 2]} y={height / 2} />
-  </group>;
+  </SharedBeaker3D>;
 }
 
 export function Flask3D({ visual, look, flashAt, strip }: VesselProps) {
@@ -288,14 +258,6 @@ export function Stopper3D() {
   return <group>
     <mesh position={[0, 0.03, 0]} castShadow><cylinderGeometry args={[0.056, 0.042, 0.06, 20]} /><meshStandardMaterial color="#6b3d2a" roughness={0.8} /></mesh>
     <Collider size={[0.12, 0.08, 0.12]} y={0.03} />
-  </group>;
-}
-
-export function Scale3D() {
-  return <group>
-    <mesh position={[0, 0.04, 0]} castShadow receiveShadow><boxGeometry args={[0.78, 0.08, 0.5]} /><meshStandardMaterial color="#e2e8f0" roughness={0.5} /></mesh>
-    <mesh position={[0, 0.09, -0.04]}><boxGeometry args={[0.72, 0.012, 0.36]} /><meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.3} /></mesh>
-    <mesh position={[0, 0.05, 0.252]}><planeGeometry args={[0.3, 0.05]} /><meshStandardMaterial color="#bcd9a8" emissive="#5f8c4c" emissiveIntensity={0.3} /></mesh>
   </group>;
 }
 

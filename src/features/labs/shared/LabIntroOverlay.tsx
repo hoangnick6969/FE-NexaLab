@@ -8,8 +8,8 @@ import "./LabIntro.css";
 export type IntroMaterial = { id: string; label: string; hazardLevel: "none" | "caution" | "warning" | "danger"; hazardTags: readonly string[]; noteSim?: string; noteReal?: string };
 export type IntroApparatus = { id: string; label: string; purpose: string };
 
-const HAZARD_TAG_VI: Record<string, string> = { corrosive: "Ăn mòn (GHS05)", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy" };
-const HAZARD_LEVEL_VI = { none: "", caution: "Cẩn thận", warning: "Nguy hiểm", danger: "Rất nguy hiểm" } as const;
+export const HAZARD_TAG_VI: Record<string, string> = { corrosive: "Ăn mòn (GHS05)", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy" };
+export const HAZARD_LEVEL_VI = { none: "", caution: "Cẩn thận", warning: "Nguy hiểm", danger: "Rất nguy hiểm" } as const;
 
 export function LabIntroOverlay({ title, contextLabel, outcomes, apparatus, materials, safety, limitations, acknowledgeRequired, acknowledged, onEnter, onClose, draftNotice }: {
   title: string;

@@ -6,12 +6,17 @@ import type { ComponentType } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
 import { validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
+import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
 import { fixtureBench } from "./fixture-bench";
 
 /** One thing on a bench as students and teachers see it (C2.1 fields; `safety` only for materials). */
 export type KitItem = LabItemMetadata & {
+  /** Key of the entry that draws this item in the bench's renderer registry; items the bench does not draw one by one have none. */
+  rendererKey?: string;
+  /** Set when the bench draws this item with an item of the shared library (`shared/items/`). */
+  sharedItemId?: SharedItemId;
   safety?: { level: "none" | "caution" | "warning" | "danger"; tags: readonly string[]; noteSim?: string; noteReal?: string };
 };
 /** Every bench config carries these; the rest belongs to the bench schema. */
