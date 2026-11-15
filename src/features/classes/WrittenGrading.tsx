@@ -1,3 +1,4 @@
+import { AssessmentBanner, AttemptCell, scoreCell } from "./AssessmentControls";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, idempotencyKey, mutate } from "../../lib/api";
@@ -27,7 +28,7 @@ const text = defineText({
     board: "Bài tự luận đã giao",
     student: "Học sinh",
     status: "Trạng thái",
-    score: "Điểm (0–100)",
+    score: "Điểm (thang 10)",
     actions: "Thao tác",
     grade: "Chấm bài",
     similarity: "Kiểm tra nội dung tương đồng",
@@ -53,7 +54,7 @@ const text = defineText({
     board: "Written tasks assigned",
     student: "Student",
     status: "Status",
-    score: "Score (0–100)",
+    score: "Score (out of 10)",
     actions: "Actions",
     grade: "Grade",
     similarity: "Check similar content",
@@ -84,7 +85,7 @@ type BoardStudent = {
   /** Assist mode only (TAI2-T6). */
   aiSuggestion?: BoardAiState | null;
 };
-type BoardData = { students: BoardStudent[]; assignment: { title: string }; aiAssessment?: AiAssessmentFlags };
+type BoardData = { hasWritten?: boolean; students: BoardStudent[]; assignment: { title: string }; aiAssessment?: AiAssessmentFlags };
 
 type SubmissionData = {
   submission: { id: string; status: string; isCurrent: boolean; gradeable?: boolean; responses: Array<{ promptId: string; text: string }> };
@@ -109,6 +110,7 @@ export function WrittenTracking({ classroom, assignment, onClose, initialView }:
     refetchInterval: (query) => (query.state.data?.students.some((s) => isActiveJob(s.aiSuggestion)) ? AI_POLL_MS : false),
   });
   const ai = board.data?.aiAssessment;
+  const hasWritten = board.data?.hasWritten !== false;
   const names = Object.fromEntries((board.data?.students ?? []).filter((s) => s.current).map((s) => [s.current!.id, s.student.fullName]));
   return (
     <Modal title={assignment.title} onClose={onClose}>
@@ -123,9 +125,10 @@ export function WrittenTracking({ classroom, assignment, onClose, initialView }:
       ) : (
         board.data && (
           <>
-          <div className="button-row">
+          <AssessmentBanner classId={classroom.id} assignmentId={assignment.id} assessment={(board.data as any).assignment?.assessment ?? assignment.assessment} />
+          {hasWritten && <div className="button-row">
             <button type="button" className="secondary" onClick={() => setSimilarityOpen(true)}>{t.similarity}</button>
-          </div>
+          </div>}
           {ai?.available && (
             <AiSuggestionRequest
               classId={classroom.id}
@@ -141,14 +144,15 @@ export function WrittenTracking({ classroom, assignment, onClose, initialView }:
             </thead>
             <tbody>
               {board.data.students.map((row) => {
-                const gradeable = !!row.current && (row.status === "AWAITING_GRADE" || row.status === "GRADED");
+                const gradeable = hasWritten && !!row.current && (row.status === "AWAITING_GRADE" || row.status === "GRADED");
                 return (
                   <tr key={row.student.id}>
                     <td>{row.student.fullName} <small className="muted">{row.student.username}</small></td>
                     <td><Badge tone={testStatusTone[row.status]}>{testStatusLabel[row.status]}</Badge></td>
-                    <td>{row.status === "GRADED" && row.current?.score != null ? row.current.score : "—"}</td>
+                    <td>{row.status === "GRADED" ? scoreCell(row.current as any, (n) => String(n)) : "—"}</td>
                     {ai?.assist && <td><AiStateBadge state={row.aiSuggestion} /></td>}
                     <td>
+                      <AttemptCell classId={classroom.id} assignmentId={assignment.id} student={row.student} attempts={(row as any).attempts ?? null} />
                       {gradeable && (
                         <button type="button" className="text-button" onClick={() => setOpenSubmission(row.current!.id)}>{t.grade}</button>
                       )}

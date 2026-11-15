@@ -188,8 +188,8 @@ export function ClassLabs() {
                     <div className="teacher-class-lab-due">
                       <span>{t.due}</span>
                       <b>{dueLabel(assignment.dueDate) || t.noDue}</b>
+                      {view === "active" && assignment.overdue && assignment.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
                     </div>
-                    {view === "active" && assignment.overdue && assignment.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
                     <div className="teacher-class-lab-actions">
                       <Link className="secondary button-compact" to={`/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`}>
                         <Eye size={13} aria-hidden="true" />

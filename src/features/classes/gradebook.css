@@ -1,0 +1,93 @@
+/* TAI-07 (TAI7-T3): class gradebook. The shared modal is 760px; the gradebook needs the width of a 10-column table. */
+.modal:has(.gradebook) {
+  width: min(1180px, 96vw);
+}
+.gradebook-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.gradebook-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.gradebook-stats > div {
+  padding: 8px 10px;
+  border: 1px solid var(--fill-neutral-90);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.gradebook-stats > div.is-alert {
+  border-color: var(--fill-red-92);
+}
+.gradebook-stats dt {
+  font-size: 12px;
+  color: var(--ink-neutral-55);
+}
+.gradebook-stats dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gradebook-stats dd small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-neutral-55);
+}
+.gradebook-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
+}
+.gradebook-toolbar .field.compact {
+  margin: 0;
+  min-width: 170px;
+}
+.gradebook-toolbar .field.grow {
+  flex: 1 1 220px;
+}
+.gradebook-actions {
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.gradebook-export {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.gradebook-table {
+  max-height: 60vh;
+  overflow: auto;
+}
+.gradebook-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.gradebook-table td {
+  vertical-align: top;
+}
+.gradebook-total {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gradebook-table tr.is-absent td {
+  color: var(--ink-neutral-55);
+}
+.gradebook-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+@media (max-width: 640px) {
+  .gradebook-toolbar .field.compact {
+    min-width: 100%;
+  }
+}

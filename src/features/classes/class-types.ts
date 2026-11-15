@@ -1,3 +1,4 @@
+import type { TeacherAssessment } from "./AssessmentControls";
 export type ClassSummary = {
   id: string;
   name: string;
@@ -23,6 +24,8 @@ export type TeacherAssignment = {
   contentId: string;
   contentType: AssignableType;
   classLabSnapshot?: { resourceId: string; version: number; title: string; learningObjective: string; instructions: string; reportPrompts: string[]; contentDigest: string } | null;
+  /** Class Explore: a short description; the pinned bench stays on the server. */
+  explore?: { resourceId: string; version: number; templateId: string; requirementCount: number } | null;
   dueDate: string | null;
   overdue: boolean;
   audience: "CLASS" | "SUBSET";
@@ -30,9 +33,11 @@ export type TeacherAssignment = {
   recipientCount: number;
   targetStudentIds?: string[];
   testSummary?: { revision: number; extended: boolean; counts: Record<"SUBMITTED" | "LATE_REVIEW_PENDING" | "REJECTED" | "OVERDUE_UNSUBMITTED" | "NOT_SUBMITTED", number> };
+  /** TAI-07: PRACTICE for every pre-existing assignment. */
+  assessment?: TeacherAssessment;
 };
 
-export type AssignableType = "lesson" | "lab" | "test" | "written";
+export type AssignableType = "lesson" | "lab" | "test" | "written" | "explore_lab" | "exam";
 
 // ---------------- Student ----------------
 

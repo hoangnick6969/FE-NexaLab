@@ -17,7 +17,7 @@ const model = (attachments: K5Attachment[]) => evaluateLeverBench({ fixtureId: "
 const TILTS: Array<{ value: K5Tilt; label: string }> = [{ value: "TILT_LEFT", label: "Nghiêng trái" }, { value: "LEVEL", label: "Nằm ngang" }, { value: "TILT_RIGHT", label: "Nghiêng phải" }];
 const initial: K5Attachment[] = [{ kind: "WEIGHT", positionMillimetres: -100, forceMilliNewtons: 1000 }];
 
-export function LeverInvestigationActivity({ runId, onSubmit, onNewRun, attempt, pendingSubmit }: { runId: string; onSubmit: () => void; onNewRun: () => void; attempt: any; pendingSubmit: boolean }) {
+export function LeverInvestigationActivity({ runId, onSubmit, onNewRun, attempt, pendingSubmit, examMode = false }: { runId: string; onSubmit: () => void; onNewRun: () => void; attempt: any; pendingSubmit: boolean; examMode?: boolean }) {
   const [mode, setMode] = useLabRendererMode("nexalab:lab-view:mechanics-k5");
   const [attachments, setAttachments] = useState<K5Attachment[]>(initial);
   const [kind, setKind] = useState<"WEIGHT" | "GAUGE">("WEIGHT");
@@ -83,9 +83,9 @@ export function LeverInvestigationActivity({ runId, onSubmit, onNewRun, attempt,
           options={[{ value: "FULCRUM_BETWEEN" as const, label: "Điểm tựa ở giữa" }, { value: "LOAD_BETWEEN" as const, label: "Tải ở giữa" }, { value: "EFFORT_BETWEEN" as const, label: "Lực tác dụng ở giữa" }]} /><svg className="k5-case-diagram" viewBox="0 0 360 95" role="img" aria-label={`Sơ đồ: điểm tựa ${caseInput.fulcrumMillimetres} mm, tải ${caseInput.loadMillimetres} mm, lực tác dụng ${caseInput.effortMillimetres} mm`}><line x1="25" y1="60" x2="335" y2="60" stroke="#5f7880" strokeWidth="9" />{[[caseInput.fulcrumMillimetres,"O"],[caseInput.loadMillimetres,"Tải"],[caseInput.effortMillimetres,"Lực"]].map(([x,label])=><g key={String(label)}><circle cx={180+Number(x)*.6} cy="60" r="11" fill={label==="O"?"#cba34f":label==="Tải"?"#648395":"#7c9b67"}/><text x={180+Number(x)*.6} y="35" textAnchor="middle" fontSize="14">{label}</text></g>)}</svg><p>O = {caseInput.fulcrumMillimetres} mm; tải = {caseInput.loadMillimetres} mm; lực = {caseInput.effortMillimetres} mm.</p><ChoiceGroup variant="segment" legend="Lợi về lực?" name="k5-advantage" value={advantageAnswer || null} onChange={setAdvantageAnswer}
           options={[{ value: "GAIN" as const, label: "Có lợi" }, { value: "EQUAL" as const, label: "Bằng lực" }, { value: "NO_GAIN" as const, label: "Không lợi" }]} /><ChoiceGroup variant="segment" legend="Đổi hướng lực?" name="k5-direction" value={directionAnswer || null} onChange={setDirectionAnswer}
           options={[{ value: "yes" as const, label: "Có" }, { value: "no" as const, label: "Không" }]} /><button disabled={pending || !caseResult.ok || !advantageAnswer || !directionAnswer} onClick={() => void send({ type: "APPLIED_LEVER_CASE", ...caseInput, forceAdvantage: advantageAnswer, changesForceDirection: directionAnswer==="yes" })}>Ghi kết luận ứng dụng</button></section>}
-        {step === 6 && <section><h3>Hoàn thành sổ thí nghiệm</h3><p>Các bước đã được ghi trên máy chủ. Kết quả chấm chính thức do máy chủ tính lại.</p><button disabled={pendingSubmit || Boolean(attempt)} onClick={onSubmit}>{pendingSubmit ? "Đang nộp…" : "Nộp bài"}</button></section>}
+        {step === 6 && <section><h3>Hoàn thành sổ thí nghiệm</h3><p>Các bước đã được ghi trên máy chủ. Kết quả chấm chính thức do máy chủ tính lại.</p><button disabled={pendingSubmit || Boolean(attempt)} onClick={onSubmit}>{pendingSubmit ? "Đang lưu…" : examMode ? "Lưu lần chạy Lab" : "Nộp bài"}</button></section>}
       </div>}
-      {attempt && <section className="lqp-section" role="status"><h3>Kết quả từ máy chủ</h3><p>{attempt.verdict === "passed" ? "Đã đạt" : "Cần luyện tập thêm"}</p><button onClick={onNewRun}>Lượt mới</button></section>}
+      {attempt && !examMode && <section className="lqp-section" role="status"><h3>Kết quả từ máy chủ</h3><p>{attempt.verdict === "passed" ? "Đã đạt" : "Cần luyện tập thêm"}</p><button onClick={onNewRun}>Lượt mới</button></section>}
     </LabQuestionPanel>
   </div>;
 }

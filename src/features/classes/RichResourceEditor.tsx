@@ -19,7 +19,7 @@ export function cleanFileName(name?: string): string {
   return name.replace(/\ufffd/g, "");
 }
 
-export type ResourceKind = "DECK" | "STUDY_QUIZ" | "TEST" | "LAB" | "DOCUMENT" | "REPORT_TEMPLATE" | "LINK" | "WRITTEN_TASK";
+export type ResourceKind = "DECK" | "STUDY_QUIZ" | "TEST" | "LAB" | "DOCUMENT" | "REPORT_TEMPLATE" | "LINK" | "WRITTEN_TASK" | "EXAM";
 export const richNames = richResourceText().names;
 export const richSamples = {
   LAB: { source: { labId: "", releaseId: "", challengeId: "" }, learningObjective: "", instructions: "", reportPrompts: [] },

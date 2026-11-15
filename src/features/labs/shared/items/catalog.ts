@@ -7,6 +7,9 @@ import type { LabItemMetadata } from "./item";
 export const SHARED_ITEM_META = {
   beaker: { id: "beaker", category: "apparatus", labelVi: "Cốc thuỷ tinh", purposeVi: "Chứa và pha trộn chất lỏng; vạch chia giúp ước lượng thể tích." },
   "digital-scale": { id: "digital-scale", category: "instrument", labelVi: "Cân điện tử", purposeVi: "Hiện khối lượng của vật đặt trên đĩa cân." },
+  "graduated-cylinder": { id: "graduated-cylinder", category: "instrument", labelVi: "Ống đong", purposeVi: "Đo thể tích chất lỏng: đọc vạch chia ở đáy mặt khum của chất lỏng." },
+  thermometer: { id: "thermometer", category: "instrument", labelVi: "Nhiệt kế", purposeVi: "Đo nhiệt độ: nhúng bầu vào chất cần đo, đợi số ổn định rồi đọc.", safetyVi: "Không dùng nhiệt kế để khuấy; nhẹ tay vì ống thuỷ tinh dễ vỡ." },
+  stopwatch: { id: "stopwatch", category: "instrument", labelVi: "Đồng hồ bấm giờ", purposeVi: "Đo khoảng thời gian: bấm để bắt đầu, bấm lần nữa để dừng và đọc số." },
 } as const satisfies Record<string, LabItemMetadata>;
 
 export type SharedItemId = keyof typeof SHARED_ITEM_META;
