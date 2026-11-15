@@ -4,8 +4,10 @@ import type { MolecularExploreConfig } from "@nexalab/sim/explore-kits";
 import { fl27VariantResult } from "@nexalab/sim/explore-kits";
 import type { ExplorePageProps } from "../../runtime/explore-registry";
 import { LabSpace } from "../../shared/LabSpace";
+import { ExploreJournal } from "../../shared/explore/ExploreJournal";
+import { molecularSummary } from "./molecular-bench";
 
-export default function MolecularExplorePage({ labId, title, config: raw }: ExplorePageProps) {
+export default function MolecularExplorePage({ labId, title, config: raw, activity }: ExplorePageProps) {
   const config = raw as MolecularExploreConfig;
   const variants = config.spec.allowedVariants;
   const [variant, setVariant] = useState<string>(variants[0]);
@@ -26,6 +28,7 @@ export default function MolecularExplorePage({ labId, title, config: raw }: Expl
           Vị trí {mutation.position + 1}: {mutation.from} → {mutation.to}. Axit amin {mutation.originalAminoAcid} → {mutation.aminoAcid} ({mutation.effect === "SILENT" ? "đột biến im lặng" : mutation.effect === "MISSENSE" ? "đột biến sai nghĩa" : "đột biến vô nghĩa"}).
         </p>
       </section>
+      <ExploreJournal labId={labId} activityId={activity.id} kit={config.kit} engine={config.engine} summary={molecularSummary(variant)} canSave />
     </LabSpace>
   );
 }

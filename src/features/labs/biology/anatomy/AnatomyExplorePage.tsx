@@ -5,8 +5,10 @@ import type { AnatomyExploreConfig } from "@nexalab/sim/explore-kits";
 import { fl16PowerResult } from "@nexalab/sim/explore-kits";
 import type { ExplorePageProps } from "../../runtime/explore-registry";
 import { LabSpace } from "../../shared/LabSpace";
+import { ExploreJournal } from "../../shared/explore/ExploreJournal";
+import { anatomySummary } from "./anatomy-bench";
 
-export default function AnatomyExplorePage({ labId, title, config: raw }: ExplorePageProps) {
+export default function AnatomyExplorePage({ labId, title, config: raw, activity }: ExplorePageProps) {
   const config = raw as AnatomyExploreConfig;
   const scenarios = EYE_OPTICS_SCENARIOS.filter((item) => config.spec.allowedScenarios.includes(item.id));
   const [scenarioId, setScenarioId] = useState<string>(scenarios[0]?.id ?? "");
@@ -22,6 +24,7 @@ export default function AnatomyExplorePage({ labId, title, config: raw }: Explor
         </label>
         {scenario && result && <p data-testid="eye-power">Độ tụ cần có: {result.powerD.toFixed(2)} D (chiều dài trục mắt {(scenario.axialLengthM * 1000).toFixed(1)} mm).</p>}
       </section>
+      {scenarioId && <ExploreJournal labId={labId} activityId={activity.id} kit={config.kit} engine={config.engine} summary={anatomySummary(scenarioId)} canSave />}
     </LabSpace>
   );
 }

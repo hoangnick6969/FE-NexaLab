@@ -34,16 +34,12 @@ test("kit items list the configured apparatus", () => {
   assert.equal(anatomyBench.listKitItems(fl16Config as never)[0].labelVi, "Mô hình mắt");
 });
 
-// The sim copy of FL-16 (explore-kits) mirrors the released eye-optics@1.0.0 table; pin it here where both load.
+// FL-16 answers come straight from the released eye-optics model (one source, no copy).
 import { EYE_OPTICS_SCENARIOS, requiredPowerD } from "@nexalab/sim/eye-optics";
-import { FL16_SCENARIOS, fl16PowerResult } from "@nexalab/sim/explore-kits";
+import { fl16PowerResult } from "@nexalab/sim/explore-kits";
 
-test("the FL-16 scenario table matches the released eye-optics model", () => {
-  assert.deepEqual(FL16_SCENARIOS.map((item) => item.id), EYE_OPTICS_SCENARIOS.map((item) => item.id));
+test("the FL-16 answer is the released eye-optics power for each scenario", () => {
   for (const released of EYE_OPTICS_SCENARIOS) {
-    const mirrored = FL16_SCENARIOS.find((item) => item.id === released.id)!;
-    assert.equal(mirrored.axialLengthM, released.axialLengthM);
-    assert.equal(mirrored.objectDistanceM, released.objectDistanceM);
     assert.equal(fl16PowerResult(released.id).powerD, requiredPowerD(released.axialLengthM, released.objectDistanceM));
   }
 });
