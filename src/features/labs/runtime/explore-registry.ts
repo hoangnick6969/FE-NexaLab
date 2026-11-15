@@ -4,8 +4,10 @@
  */
 import type { ComponentType } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
+import { validateLeverLabConfig } from "@nexalab/sim/mechanics";
 import { validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
+import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -42,6 +44,16 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../chemistry/wet-bench/kit/ExploreLabPage"),
     listKitItems: listWetBenchKitItems,
+  },
+  {
+    kit: "k5-lever-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateLeverLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/mechanics/explore/LeverExploreLabPage"),
+    listKitItems: listLeverKitItems,
   },
 ];
 

@@ -1,0 +1,10 @@
+{
+  "lab": "fl05-buoyancy",
+  "task": "D1-0.1",
+  "note": "Readings shown to the learner before step B; D1-2.4 compares against them.",
+  "readings": {
+    "1 iron in air": "Lực kế: 0.765 N · Nước tràn: 0.0 mL",
+    "2 iron immersed": "Lực kế: 0.716 N · Nước tràn: 5.0 mL",
+    "3 2D table": "Sắt 0.765 0.716 0.049 5.0"
+  }
+}

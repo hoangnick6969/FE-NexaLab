@@ -1,0 +1,22 @@
+/* Mechanics bench Explore: the notebook dock and its drawer sit bottom left; the bar status sits under the header. */
+.lab-space:has(.k5-explore) .k5-observation { z-index: 5; top: 96px; bottom: auto; left: max(18px, env(safe-area-inset-left)); }
+.k5-explore-items { display: grid; gap: 8px; padding: 0; list-style: none; }
+.k5-explore-items li { display: grid; gap: 2px; }
+.k5-explore-items span, .k5-explore-limits { color: var(--muted); font-size: 13px; }
+.k5-explore-limits { display: grid; gap: 4px; padding-left: 18px; }
+.k5-explore-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.k5-explore-table th, .k5-explore-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.k5-explore-table th { color: var(--muted); font-weight: 600; }
+.k5-explore-sums { font-size: 13px; }
+.k5-explore-dock button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.k5-explore-log { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: 84px; z-index: 11; display: grid; gap: 8px; width: min(380px, calc(100% - var(--lqp-panel-w) - 72px)); max-height: calc(100% - 200px); overflow-y: auto; padding: 14px 16px; border-radius: 16px; background: var(--surface); box-shadow: 0 12px 36px rgb(18 38 30 / 14%); }
+.k5-explore-log h2 { margin: 0; font-size: 15px; }
+.k5-explore-log ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.k5-explore-log li { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.k5-explore-log small { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 780px) {
+  .lab-space:has(.k5-explore) .k5-observation { top: 88px; left: 8px; }
+  /* One sheet at a time on a phone: the open notebook takes the panel's place. */
+  .lab-space:has(.k5-explore-log) .k5-explore-panel { visibility: hidden; }
+  .k5-explore-log { left: 10px; right: 10px; width: auto; bottom: 84px; max-height: 46dvh; z-index: 26; }
+}
