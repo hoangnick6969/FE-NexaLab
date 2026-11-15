@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, CircleHelp, Compass, Info, Play, RotateCcw, Undo2, X } from "lucide-react";
+import { LabHeaderSlot } from "../../../shared/LabSpace";
+import { LabRendererToggle } from "../../../shared/LabRendererToggle";
+import { ArrowRight, Check, Compass, Info, Play, RotateCcw, Undo2 } from "lucide-react";
 import { FOOD_WEB_CAUSES, foodWebChains } from "@nexalab/sim";
 import { WhatIfPanel } from "../WhatIfPanel";
 import { foodWebAnswer, foodWebWhatIfs } from "../what-if";
@@ -7,6 +9,7 @@ import { defineText, getLocale } from "../../../../../i18n";
 import { EnergyPyramid, FoodWebScene } from "./FoodWebScene";
 import { FoodWebView3D } from "./FoodWebView3D";
 import { webglAvailable } from "../kit";
+import { ChoiceGroup, LabQuestionPanel } from "../../../shared/question-panel/LabQuestionPanel";
 import {
   ASKED, CAUSE_IDS, DECIMAL_PATTERN, EFFECTS, ENERGY_CHAIN, FW_STEP_COUNT, MAX_CHAIN, ROLES, ROLE_ITEMS,
   boardFocus, chainState, eatersOf, foodsOf, fwEvidenceFrom, fwPhaseOf, fwStepNumber, previewFw,
@@ -73,7 +76,7 @@ const text = defineText({
     b: "Vì rắn là sinh vật sản xuất của hệ sinh thái.",
     c: "Vì không còn rắn thì cỏ và cây xanh không mọc được.",
     ready: "Em đã hoàn thành các câu hỏi và phần giải thích.",
-    view2d: "Xem sơ đồ 2D", view3d: "Xem cảnh 3D",
+   
     relation: {
       hint: "Mũi tên đi từ thức ăn tới loài ăn nó. Rê chuột hoặc bấm vào một loài để xem nó ăn gì và là thức ăn của loài nào.",
       eats: (name: string, foods: string) => `${name} ăn: ${foods}.`,
@@ -152,7 +155,7 @@ const text = defineText({
     b: "Because the snake is the ecosystem's producer.",
     c: "Because without snakes grass and trees cannot grow.",
     ready: "You have completed the questions and your explanation.",
-    view2d: "Show 2D diagram", view3d: "Show 3D scene",
+   
     relation: {
       hint: "Arrows point from food to the organism that eats it. Hover or tap an organism to see what it eats and what eats it.",
       eats: (name: string, foods: string) => `${name} eats: ${foods}.`,
@@ -322,9 +325,7 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
             </>}
       </div> : null}
       {!showCauses && <p className="fw-relation" data-testid="fw-relation" aria-live="polite">{inspected ? relationText(inspected) : t.relation.hint}</p>}
-      {canRender3d && <button type="button" className="fw-view-toggle" data-testid="fw-view-toggle" onClick={() => chooseView(board3d ? "2d" : "3d")}>
-        {board3d ? t.view2d : t.view3d}
-      </button>}
+      {canRender3d && <LabHeaderSlot><LabRendererToggle mode={board3d ? "3d" : "2d"} onChange={chooseView} /></LabHeaderSlot>}
     </div>
 
     <div className="fw-dock" role="group" aria-label={t.title}>
@@ -342,30 +343,13 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
       </button></>}
     </div>
 
-    <button type="button" className="fw-question-badge" aria-expanded={questionOpen} aria-controls="fw-questions" onClick={() => setQuestionOpen((open) => !open)}>
-      <CircleHelp size={16} aria-hidden="true" /><span>{t.questions}, {t.step(step).toLowerCase()}</span>
-    </button>
-    <div id="fw-questions" className="fw-panel" data-open={questionOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setQuestionOpen(false); } }}>
-      <div className="fw-panel-header">
-        <div>
-          <p className="fw-discipline">{t.discipline}</p>
-          <p className="fw-step">{t.step(step)}</p>
-        </div>
-        <button type="button" className="fw-close" aria-label={t.closeQuestions} title={t.closeQuestions} onClick={() => setQuestionOpen(false)}><X size={15} aria-hidden="true" /></button>
-      </div>
-      <div className="fw-progress" aria-hidden="true">
-        {Array.from({ length: FW_STEP_COUNT }, (_, i) => <span key={i} data-state={i + 1 < step ? "done" : i + 1 === step ? "current" : "todo"} />)}
-      </div>
-      <h3 className="fw-heading" aria-live="polite">{heading}</h3>
+    <LabQuestionPanel id="fw-questions" prefix="fw" open={questionOpen} onOpenChange={setQuestionOpen}
+      badgeLabel={`${t.questions}, ${t.step(step).toLowerCase()}`} eyebrow={t.discipline} stepLabel={t.step(step)}
+      progress={{ count: FW_STEP_COUNT, current: step }} heading={heading} closeLabel={t.closeQuestions}>
 
       {phase.kind === "predict" && phase.id === "ROLES" && <form className="fw-form" data-testid="fw-answer-roles" onSubmit={(event) => { event.preventDefault(); if (rolesComplete) predict(roleDraft as RolesAnswer); }}>
-        {ROLE_ITEMS.map((item) => <fieldset key={item} className="fw-segment">
-          <legend>{t.names[item]}</legend>
-          {ROLES.map((role) => <label key={role} className="fw-segment-option">
-            <input type="radio" name={`fw-role-${item}`} checked={roleDraft[item] === role} onChange={() => setRoleDraft({ ...roleDraft, [item]: role })} />
-            <span>{t.roles[role]}</span>
-          </label>)}
-        </fieldset>)}
+        {ROLE_ITEMS.map((item) => <ChoiceGroup key={item} variant="segment" legend={t.names[item]} name={`fw-role-${item}`}
+          options={ROLES.map((role) => ({ value: role, label: t.roles[role] }))} value={roleDraft[item]} onChange={(role) => setRoleDraft({ ...roleDraft, [item]: role })} />)}
         <button type="submit" className="fw-tool" disabled={!rolesComplete}>{t.save}</button>
       </form>}
 
@@ -379,22 +363,11 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
         <button type="submit" className="fw-tool">{t.save}</button>
       </form>}
 
-      {phase.kind === "predict" && isRemoval(phase.id) && <fieldset className="fw-choices" data-testid={`fw-answer-${phase.id.toLowerCase()}`}>
-        <legend>{t.answerLegend}</legend>
-        {EFFECTS.map((effect) => <label key={effect} className="fw-choice">
-          <input type="radio" name={`fw-answer-${phase.id}`} value={effect} checked={current?.prediction === effect} onChange={() => predict(effect)} />
-          <span>{t.effects[effect]}</span>
-        </label>)}
-      </fieldset>}
+      {phase.kind === "predict" && isRemoval(phase.id) && <ChoiceGroup testId={`fw-answer-${phase.id.toLowerCase()}`} legend={t.answerLegend} name={`fw-answer-${phase.id}`}
+        options={EFFECTS.map((effect) => ({ value: effect, label: t.effects[effect] }))} value={current?.prediction as Effect | undefined} onChange={(effect) => predict(effect)} />}
 
       {phase.kind === "predict" && phase.id === "CAUSES" && <form className="fw-form" data-testid="fw-answer-causes" onSubmit={(event) => { event.preventDefault(); predict([...causeDraft].sort()); }}>
-        <fieldset className="fw-choices">
-          <legend>{t.answerLegend}</legend>
-          {CAUSE_IDS.map((id) => <label key={id} className="fw-choice">
-            <input type="checkbox" checked={causeDraft.includes(id)} onChange={() => setCauseDraft(causeDraft.includes(id) ? causeDraft.filter((c) => c !== id) : [...causeDraft, id])} />
-            <span>{t.causes[id]}</span>
-          </label>)}
-        </fieldset>
+        <ChoiceGroup multiple legend={t.answerLegend} name="fw-causes" options={CAUSE_IDS.map((id) => ({ value: id, label: t.causes[id] }))} value={causeDraft} onChange={setCauseDraft} />
         <button type="submit" className="fw-tool">{t.save}</button>
       </form>}
 
@@ -402,14 +375,9 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
         {shownText ? <p><Check size={15} aria-hidden="true" /> {shownText}</p> : <p className="fw-hint"><Info size={15} aria-hidden="true" /> {t.hint}</p>}
       </div>
 
-      {done && <fieldset className="fw-choices" data-testid="fw-explanation">
-        <legend>{t.explanation}</legend>
-        {(["A", "B", "C"] as const).map((answer) => <label key={answer} className="fw-choice">
-          <input type="radio" name="fw-explanation" value={answer} checked={evidence.explanation === answer} onChange={() => onChange({ ...evidence, explanation: answer })} />
-          <span className="fw-letter">{answer}</span>
-          <span>{t[answer.toLowerCase() as "a" | "b" | "c"]}</span>
-        </label>)}
-      </fieldset>}
+      {done && <ChoiceGroup testId="fw-explanation" legend={t.explanation} name="fw-explanation" value={evidence.explanation}
+        options={(["A", "B", "C"] as const).map((answer) => ({ value: answer, letter: answer, label: t[answer.toLowerCase() as "a" | "b" | "c"] }))}
+        onChange={(answer) => onChange({ ...evidence, explanation: answer })} />}
       {phase.kind === "ready" && <p className="fw-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
 
       {done && <div className="fw-explore" data-testid="fw-explore">
@@ -430,6 +398,6 @@ export function FoodWebActivity({ state, onChange }: { state: unknown; onChange:
         </div>}
       </div>}
       <p className="fw-note">{t.modelLimit}</p>
-    </div>
+    </LabQuestionPanel>
   </section>;
 }

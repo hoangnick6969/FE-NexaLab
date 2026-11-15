@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Check, CircleHelp, Compass, Eye, EyeOff, Info, RotateCcw, X } from "lucide-react";
+import { Check, Compass, Eye, EyeOff, Info, RotateCcw } from "lucide-react";
+import { ChoiceGroup, LabQuestionPanel } from "../../../shared/question-panel/LabQuestionPanel";
 import { defineText } from "../../../../../i18n";
 import { LabRendererToggle, useLabRendererMode } from "../../../shared/LabRendererToggle";
+import { LabHeaderSlot } from "../../../shared/LabSpace";
 import { ACTION_FOR, actionDuration, magnetRest, type EmAction, type EmCue } from "./choreography";
 import { EmInduction2DView } from "./EmInduction2DView";
 import { useReducedMotion } from "./apparatus/anim";
@@ -363,33 +365,16 @@ export function EmInductionActivity({ state, onChange }: { state: unknown; onCha
       {viewMode === "3d" && <button type="button" className="em-tool" title={t.resetView} onClick={() => setViewReset((value) => value + 1)}>
         <RotateCcw size={16} aria-hidden="true" /><span>{t.resetView}</span>
       </button>}
-      <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+      <LabHeaderSlot><LabRendererToggle mode={viewMode} onChange={setViewMode} /></LabHeaderSlot>
     </div>
 
-    <button type="button" className="em-question-badge" aria-expanded={questionOpen} aria-controls="em-questions" onClick={() => setQuestionOpen((open) => !open)}>
-      <CircleHelp size={16} aria-hidden="true" /><span>{t.questions}, {t.step(step).toLowerCase()}</span>
-    </button>
-    <div id="em-questions" className="em-panel" data-open={questionOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setQuestionOpen(false); } }}>
-      <div className="em-panel-header">
-        <div>
-          <p className="em-discipline">{t.discipline}</p>
-          <p className="em-step">{t.step(step)}</p>
-        </div>
-        <button type="button" className="em-close" aria-label={t.closeQuestions} title={t.closeQuestions} onClick={() => setQuestionOpen(false)}><X size={15} aria-hidden="true" /></button>
-      </div>
-      <div className="em-progress" aria-hidden="true">
-        {Array.from({ length: EM_STEP_COUNT }, (_, i) => <span key={i} data-state={i + 1 < step ? "done" : i + 1 === step ? "current" : "todo"} />)}
-      </div>
-      <h3 className="em-heading" aria-live="polite">{heading}</h3>
+    <LabQuestionPanel id="em-questions" prefix="em" open={questionOpen} onOpenChange={setQuestionOpen}
+      badgeLabel={`${t.questions}, ${t.step(step).toLowerCase()}`} eyebrow={t.discipline} stepLabel={t.step(step)}
+      progress={{ count: EM_STEP_COUNT, current: step }} heading={heading} closeLabel={t.closeQuestions}>
       {actId && t.dragHint[actId] && <p className="em-note" data-testid="em-drag-hint">{t.dragHint[actId]}</p>}
 
-      {phase.kind === "predict" && <fieldset className="em-choices" data-testid={`em-prediction-${phase.id.toLowerCase()}`}>
-        <legend>{t.predictLegend}</legend>
-        {EM_CHOICES[phase.id].map((choice) => <label key={choice} className="em-choice">
-          <input type="radio" name={`em-prediction-${phase.id}`} value={choice} checked={current?.prediction === choice} onChange={() => predict(choice)} />
-          <span>{t.choice[choice]}</span>
-        </label>)}
-      </fieldset>}
+      {phase.kind === "predict" && <ChoiceGroup testId={`em-prediction-${phase.id.toLowerCase()}`} legend={t.predictLegend} name={`em-prediction-${phase.id}`}
+        options={EM_CHOICES[phase.id].map((choice) => ({ value: choice, label: t.choice[choice] }))} value={current?.prediction as EmPrediction | undefined} onChange={predict} />}
 
       <div className="em-observation" role="status" aria-live="polite" data-testid="em-observation">
         {running && !exploring ? <p>{describe(checkpointObservation)} <small>{current?.id === "STILL" ? t.observing : t.duringMotion}</small></p>
@@ -400,14 +385,8 @@ export function EmInductionActivity({ state, onChange }: { state: unknown; onCha
           : <p className="em-hint"><Info size={15} aria-hidden="true" /> {t.predictHint}</p>}
       </div>
 
-      {phase.kind === "explain" || phase.kind === "ready" ? <fieldset className="em-choices" data-testid="em-explanation">
-        <legend>{t.explanation}</legend>
-        {(["A", "B", "C"] as const).map((answer) => <label key={answer} className="em-choice em-choice-explain">
-          <input type="radio" name="em-explanation" value={answer} checked={evidence.explanation === answer} onChange={() => explain(answer)} />
-          <span className="em-letter">{answer}</span>
-          <span>{t[answer.toLowerCase() as "a" | "b" | "c"]}</span>
-        </label>)}
-      </fieldset> : null}
+      {phase.kind === "explain" || phase.kind === "ready" ? <ChoiceGroup testId="em-explanation" legend={t.explanation} name="em-explanation" value={evidence.explanation}
+        options={(["A", "B", "C"] as const).map((answer) => ({ value: answer, letter: answer, label: t[answer.toLowerCase() as "a" | "b" | "c"] }))} onChange={explain} /> : null}
       {phase.kind === "ready" && <p className="em-ready" role="status"><Check size={16} aria-hidden="true" /> {t.ready}</p>}
       {exploreUnlocked && <div className="em-explore" data-testid="em-explore">
         <button type="button" className="em-tool em-explore-toggle" aria-expanded={exploring} aria-controls="em-explore-controls" disabled={running} onClick={toggleExplore}>
@@ -416,20 +395,10 @@ export function EmInductionActivity({ state, onChange }: { state: unknown; onCha
         {active && <div id="em-explore-controls" className="em-explore-controls">
           <h4 className="em-explore-title">{t.explore.title}</h4>
           <p className="em-note">{t.explore.intro}</p>
-          <fieldset className="em-segment" disabled={running}>
-            <legend>{t.explore.pole}</legend>
-            {(["N", "S"] as const).map((pole) => <label key={pole} className="em-segment-option">
-              <input type="radio" name="em-explore-pole" checked={active.pole === pole} onChange={() => setExplore({ ...active, pole })} />
-              <span>{pole}</span>
-            </label>)}
-          </fieldset>
-          <fieldset className="em-segment" disabled={running}>
-            <legend>{t.explore.circuit}</legend>
-            {(["CLOSED", "OPEN"] as const).map((circuit) => <label key={circuit} className="em-segment-option">
-              <input type="radio" name="em-explore-circuit" checked={active.circuit === circuit} onChange={() => setExplore({ ...active, circuit })} />
-              <span>{circuit === "CLOSED" ? t.explore.closed : t.explore.open}</span>
-            </label>)}
-          </fieldset>
+          <ChoiceGroup variant="segment" disabled={running} legend={t.explore.pole} name="em-explore-pole" value={active.pole}
+            options={(["N", "S"] as const).map((pole) => ({ value: pole, label: pole }))} onChange={(pole) => setExplore({ ...active, pole })} />
+          <ChoiceGroup variant="segment" disabled={running} legend={t.explore.circuit} name="em-explore-circuit" value={active.circuit}
+            options={(["CLOSED", "OPEN"] as const).map((circuit) => ({ value: circuit, label: circuit === "CLOSED" ? t.explore.closed : t.explore.open }))} onChange={(circuit) => setExplore({ ...active, circuit })} />
           <div className="em-explore-moves">
             <button type="button" className="em-tool" data-testid="em-explore-magnet" disabled={running} onClick={() => exploreMove("magnet")}>{active.position === "OUTSIDE" ? t.explore.push : t.explore.pull}</button>
             <button type="button" className="em-tool" data-testid="em-explore-hold" disabled={running} onClick={() => exploreMove("hold")}>{t.explore.hold}</button>
@@ -445,6 +414,6 @@ export function EmInductionActivity({ state, onChange }: { state: unknown; onCha
       </div>}
       {showField && <p className="em-note">{t.fieldNote}</p>}
       <p className="em-note">{t.modelLimit}</p>
-    </div>
+    </LabQuestionPanel>
   </section>;
 }

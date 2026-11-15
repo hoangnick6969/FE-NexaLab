@@ -34,23 +34,6 @@
   --k3-warn: #f0b36b;
 }
 
-.fluid-kit-shell .k3-hud {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  top: 76px;
-  z-index: 12;
-  box-sizing: border-box;
-  width: min(400px, calc(100vw - 32px));
-  max-height: calc(100dvh - 96px);
-  overflow: auto;
-  background: var(--surface);
-  color: var(--text-base);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--k3-hud-shadow);
-}
-.fluid-kit-shell .k3-hud-glass { background: color-mix(in srgb, var(--surface) 84%, transparent); backdrop-filter: blur(16px) saturate(1.25); -webkit-backdrop-filter: blur(16px) saturate(1.25); border-color: color-mix(in srgb, var(--line) 72%, white); }
-.fluid-kit-shell .k3-hud, .fluid-kit-shell .k3-hud * { min-width: 0; }
 .fluid-kit-shell .k3-camera-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 2px 0 4px; }
 .fluid-kit-shell .k3-camera-presets button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: normal; text-align: center; line-height: 1.25; padding: 8px; }
 .fluid-kit-shell .k3-camera-presets button:last-child { grid-column: 1 / -1; }
@@ -59,16 +42,6 @@
 .fluid-kit-shell .k3-formula { box-sizing: border-box; max-width: 100%; padding: 8px 10px; border-radius: 9px; background: color-mix(in srgb, var(--k3-water) 34%, var(--surface)); overflow-wrap: anywhere; }
 .fluid-kit-shell .k3-formula-math { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .fluid-kit-shell .k3-telemetry > *, .fluid-kit-shell .k3-actions > * { min-width: 0; max-width: 100%; }
-.fluid-kit-shell .k3-hud-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 8px 16px; }
-.fluid-kit-shell .k3-hud-header h2 { margin: 0; font-size: 1rem; line-height: 1.3; overflow-wrap: break-word; min-width: 0; }
-.fluid-kit-shell .k3-hud-body { padding: 0 16px 16px; display: grid; gap: 12px; }
-.fluid-kit-shell .k3-hud-body[hidden] { display: none; }
-.fluid-kit-shell .k3-icon-button { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
-.fluid-kit-shell .k3-stations { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; overflow: hidden; }
-.fluid-kit-shell .k3-station { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; font: inherit; font-size: 0.875rem; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
-.fluid-kit-shell .k3-station[aria-selected="true"] { background: var(--k3-selected); border-color: var(--k3-selected); color: var(--k3-selected-ink); }
-.fluid-kit-shell .k3-step { margin: 0; color: var(--muted); font-size: 0.875rem; }
-.fluid-kit-shell .k3-instruction { margin: 0; font-size: 1rem; line-height: 1.5; }
 .fluid-kit-shell .k3-student-question { margin: 0; padding: 10px 12px; border-left: 3px solid var(--k3-selected); border-radius: 8px; background: color-mix(in srgb, var(--k3-selected) 8%, var(--surface)); line-height: 1.45; }
 .fluid-kit-shell .k3-question-editor { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--k3-selected) 6%, var(--surface)); }
 .fluid-kit-shell .k3-question-editor p { margin: 0; line-height: 1.45; }
@@ -83,7 +56,6 @@
 .fluid-kit-shell .k3-actions button.secondary:disabled { opacity: 0.52; cursor: not-allowed; }
 .fluid-kit-shell .k3-notice { display: flex; gap: 8px; align-items: flex-start; margin: 0; color: var(--muted); font-size: 0.8125rem; line-height: 1.45; }
 .fluid-kit-shell .k3-notice svg { flex: none; margin-top: 2px; }
-.fluid-kit-shell .k3-hud :is(button, input, select):focus-visible { outline: 3px solid var(--k3-selected); outline-offset: 2px; transition: none; }
 
 .fluid-kit-shell .k3-2d { display: block; width: 100%; height: auto; max-height: 60vh; }
 .fluid-kit-shell .k3-2d-lcd { font: 600 26px ui-monospace, Consolas, monospace; fill: var(--k3-lcd-ink); }
@@ -96,12 +68,9 @@
 
 @media (max-width: 640px) {
   .fluid-kit-shell .k3-preview-2d { inset: 76px 12px 54dvh 12px; }
-  .fluid-kit-shell .k3-hud { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); right: 12px; width: calc(100% - 24px); max-height: 52dvh; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fluid-kit-shell .k3-station { transition: none; }
-}
-@supports not ((backdrop-filter: blur(1px))) { .fluid-kit-shell .k3-hud-glass { background: var(--surface); } }
+  }
 
 /* Shared stage frame: overlay slots never participate in the canvas sizing flow. */
 .fluid-kit-shell { position: absolute; inset: 0; box-sizing: border-box; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; }
@@ -119,4 +88,3 @@
 .lab-space .lab-space-body > .fluid-kit-shell { pointer-events: none; }
 .fluid-kit-shell .fluid-kit-renderer { pointer-events: none; }
 
-.fluid-kit-shell .k3-hud { pointer-events: auto; }

@@ -1,6 +1,6 @@
 import { AiChip } from "../../student-ai/AiChip";
 import { useState } from "react";
-import { Lightbulb, X } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import { api } from "../../../lib/api";
 import { Badge, ErrorBox, useAction } from "../../../components/ui";
 import { defineText } from "../../../i18n";
@@ -22,9 +22,6 @@ type CheckpointHint = {
 const text = defineText({
   vi: {
     title: "Gợi ý từng bước",
-    collapse: "Thu gọn gợi ý",
-    expand: "Gợi ý",
-    expandPassed: "Giải thích",
     intro: "Chưa đạt? Nhận một gợi ý cho bước đầu tiên em còn sai. Gợi ý không cho đáp án.",
     getHint: "Nhận gợi ý",
     level: (n: number) => `Mức ${n}/4 · ${["Câu hỏi gợi mở", "Gợi ý khái niệm", "Gợi ý thao tác", "Giải thích"][n - 1]}`,
@@ -35,9 +32,6 @@ const text = defineText({
   },
   en: {
     title: "Step-by-step hint",
-    collapse: "Collapse the hint",
-    expand: "Hint",
-    expandPassed: "Explanation",
     intro: "Not there yet? Get a hint for the first step you still have wrong. Hints never give the answer.",
     getHint: "Get a hint",
     level: (n: number) => `Level ${n}/4 · ${["Guiding question", "Concept hint", "Action hint", "Explanation"][n - 1]}`,
@@ -81,23 +75,16 @@ export function CheckpointHintPanel({ attemptId }: { attemptId: string }) {
 }
 
 /**
- * Event-scored Labs draw their own full-screen layout: the B2 explanation (any verdict) and, when not passed,
- * the hint float beside it and can be collapsed to a pill.
+ * Event-scored Labs (FL-06/07/10): the B2 explanation (any verdict) and, when not passed, the hint. It is passed to
+ * the Lab Space as the run result, so it joins the activity's question panel under its own server result.
  */
-export function FloatingCheckpointHint({ attemptId, passed = false, whatIf }: { attemptId: string; passed?: boolean; whatIf?: LabWhatIfKind }) {
-  const t = text();
-  const [open, setOpen] = useState(true);
+export function CheckpointResultSection({ attemptId, passed = false, whatIf }: { attemptId: string; passed?: boolean; whatIf?: LabWhatIfKind }) {
   return (
-    <div className="event-lab-hint" data-open={open}>
-      {/* Kept mounted while collapsed so the hint already received is still there when reopened. */}
-      <div hidden={!open}>
-        <button type="button" className="event-lab-hint-close" aria-label={t.collapse} onClick={() => setOpen(false)}><X size={16} aria-hidden /></button>
-        <VerdictExplanationPanel attemptId={attemptId} passed={passed} />
-        {!passed && <CheckpointHintPanel attemptId={attemptId} />}
-        {/* B3: only after a pass, so no what-if answer can help a retry. */}
-        {passed && whatIf && <section className="panel"><LabWhatIf kind={whatIf} /></section>}
-      </div>
-      {!open && <button type="button" className="secondary event-lab-hint-pill" onClick={() => setOpen(true)}><Lightbulb size={15} aria-hidden /> {passed ? t.expandPassed : t.expand}</button>}
+    <div className="event-lab-hint">
+      <VerdictExplanationPanel attemptId={attemptId} passed={passed} />
+      {!passed && <CheckpointHintPanel attemptId={attemptId} />}
+      {/* B3: only after a pass, so no what-if answer can help a retry. */}
+      {passed && whatIf && <section className="panel"><LabWhatIf kind={whatIf} /></section>}
     </div>
   );
 }

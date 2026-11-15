@@ -1,6 +1,7 @@
 import { Box, PanelsTopLeft } from "lucide-react";
 import { useState } from "react";
 import { defineText } from "../../../i18n";
+import "./LabRendererToggle.css";
 
 const text = defineText({ vi: { label: "Chế độ hiển thị mô phỏng", unavailable: "Bài thực hành này hiện chưa có mô hình 2D." }, en: { label: "Simulation view", unavailable: "A 2D model is not available for this lab yet." } });
 

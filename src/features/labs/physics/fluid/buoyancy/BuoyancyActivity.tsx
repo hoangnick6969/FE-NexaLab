@@ -1,6 +1,5 @@
-import { useContext, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
-import { LabHeaderActionsContext } from "../../../shared/LabSpace";
+import { useEffect, useMemo } from "react";
+import { LabHeaderSlot } from "../../../shared/LabSpace";
 import { LabRendererToggle } from "../../../shared/LabRendererToggle";
 import { FluidKitLayoutShell } from "../kit";
 import { BuoyancyRig3D } from "./BuoyancyRig3D";
@@ -20,7 +19,6 @@ export function BuoyancyActivity({ state: evidence, onChange, resetKey = 0, runt
 
 function BuoyancyScene({ evidence, onChange, displayQuestions, authoring, onDisplayQuestionChange }: { evidence: BuoyancyEvidence; onChange: (next: BuoyancyEvidence) => void; displayQuestions?: string[]; authoring: boolean; onDisplayQuestionChange?: (index: number, value: string) => void }) {
   const state = useBuoyancyStore();
-  const headerActions = useContext(LabHeaderActionsContext);
   const specimen = [...state.config.specimens, ...EXPLORATION_SPECIMENS].find((item) => item.id === state.specimenId)!;
   const graded = state.config.specimens.some(item => item.id === state.specimenId);
   const evidenceVolume = graded ? state.submergedVolumeMl : 0;
@@ -31,7 +29,7 @@ function BuoyancyScene({ evidence, onChange, displayQuestions, authoring, onDisp
       onChange({ ...evidence, specimenId: state.specimenId, submergedVolumeMl: evidenceVolume, ...(evidence.specimenId !== state.specimenId ? { overflowMl: null, measuredBuoyantForceN: null } : {}) });
   }, [evidence, onChange, state.specimenId, evidenceVolume]);
   return <FluidKitLayoutShell mode={state.mode} ariaLabel="FL-05 Buoyancy">
-    {headerActions ? createPortal(<LabRendererToggle mode={state.mode} onChange={state.setMode} />, headerActions) : <div className="buoyancy-view-toggle"><LabRendererToggle mode={state.mode} onChange={state.setMode} /></div>}
+    <LabHeaderSlot fallbackClassName="buoyancy-view-toggle"><LabRendererToggle mode={state.mode} onChange={state.setMode} /></LabHeaderSlot>
     <BuoyancyRig3D />
     <div className={`buoyancy-table${state.mode === "2d" ? " is-active" : ""}`} aria-hidden={state.mode !== "2d"}>
       <Buoyancy2DStage />

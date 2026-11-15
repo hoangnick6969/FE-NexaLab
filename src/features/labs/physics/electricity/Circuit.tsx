@@ -7,6 +7,8 @@ import { PhysicsStage } from "../shared/PhysicsStage";
 import { Wire } from "./CircuitBulb3DStage";
 import { Circuit2DEditor } from "./Circuit2DEditor";
 import { LabRendererToggle, useLabRendererMode } from "../../shared/LabRendererToggle";
+import { LabHeaderSlot } from "../../shared/LabSpace";
+import { LabQuestionPanel } from "../../shared/question-panel/LabQuestionPanel";
 
 const text = defineText({
   vi: {
@@ -23,7 +25,7 @@ const text = defineText({
     closeSwitch: "Đóng công tắc",
     removePart: "Xóa linh kiện",
     selectPart: "Chọn một linh kiện để chỉnh tham số.",
-    parts: "Linh kiện", source: "Đầu dây nguồn", target: "Đầu dây đích", connect: "Nối dây", wires: "Dây nối", removeWire: "Xóa dây", controls: "Điều khiển mạch điện",
+    parts: "Linh kiện", source: "Đầu dây nguồn", target: "Đầu dây đích", connect: "Nối dây", wires: "Dây nối", removeWire: "Xóa dây", controls: "Điều khiển mạch điện", closeControls: "Thu gọn điều khiển",
     autoWire: "Nối nhanh một vòng theo thứ tự linh kiện",
   },
   en: {
@@ -40,7 +42,7 @@ const text = defineText({
     closeSwitch: "Close the switch",
     removePart: "Remove part",
     selectPart: "Select a part to adjust it.",
-    parts: "Parts", source: "Wire source", target: "Wire target", connect: "Connect wire", wires: "Connections", removeWire: "Remove wire", controls: "Circuit controls",
+    parts: "Parts", source: "Wire source", target: "Wire target", connect: "Connect wire", wires: "Connections", removeWire: "Remove wire", controls: "Circuit controls", closeControls: "Collapse controls",
     autoWire: "Quick-wire a loop in part order",
   },
 });
@@ -76,6 +78,7 @@ export function Circuit({ initial, onChange }: { initial: CircuitState; onChange
   const [state, setState] = useState<CircuitState>(() => initial);
   const preview = useMemo(() => { try { return simulate("circuit", state) as any; } catch { return null; } }, [state]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [controlsOpen, setControlsOpen] = useState(true);
   const [source, setSource] = useState("");
   const [target, setTarget] = useState("");
   const current = state.nodes.find(part => part.id === selected);
@@ -90,12 +93,12 @@ export function Circuit({ initial, onChange }: { initial: CircuitState; onChange
     emit({ ...state, nodes: [...state.nodes, part] }); setSelected(part.id);
   };
   if (viewMode === "2d") return <div className="circuit-editor circuit-editor-2d" data-testid="circuit-2d-stage">
-    <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+    <LabHeaderSlot><LabRendererToggle mode={viewMode} onChange={setViewMode} /></LabHeaderSlot>
     <Circuit2DEditor initial={state} onChange={emit} />
   </div>;
   return <div className="circuit-editor">
     <div className="circuit-renderer-stage">
-      <LabRendererToggle mode={viewMode} onChange={setViewMode} />
+      <LabHeaderSlot><LabRendererToggle mode={viewMode} onChange={setViewMode} /></LabHeaderSlot>
       <PhysicsStage>
         {state.nodes.map((part, index) => <Apparatus key={part.id} part={part} index={index} lit={preview?.ledState === "ON"} selected={selected === part.id} onSelect={() => setSelected(part.id)} />)}
         {state.edges.map((edge, index) => {
@@ -104,7 +107,8 @@ export function Circuit({ initial, onChange }: { initial: CircuitState; onChange
         })}
       </PhysicsStage>
     </div>
-    <details className="circuit-controls" open><summary>{t.controls}</summary>
+    <LabQuestionPanel id="circuit-controls" prefix="circuit" className="circuit-controls" open={controlsOpen} onOpenChange={setControlsOpen}
+      badgeLabel={t.controls} heading={t.controls} closeLabel={t.closeControls}>
       <p className="tiny muted">{t.instructions}</p>
       <div className="component-tray">{Object.keys(icons).map(kind => <button type="button" key={kind} onClick={() => add(kind)}><span>{icons[kind]}</span>+ {labels[kind]}</button>)}</div>
       <label>{t.parts}<select aria-label={t.parts} value={selected ?? ""} onChange={event => setSelected(event.target.value)}><option value="">{t.selectPart}</option>{state.nodes.map((part,index) => <option key={part.id} value={part.id}>{index+1}. {labels[part.type]}</option>)}</select></label>
@@ -118,6 +122,6 @@ export function Circuit({ initial, onChange }: { initial: CircuitState; onChange
       <button type="button" className="secondary" disabled={!state.nodes.some(part => part.id === source) || !state.nodes.some(part => part.id === target) || source === target} onClick={connect}>{t.connect}</button></div>
       <ul aria-label={t.wires}>{state.edges.map((edge,index) => <li key={index}>{state.nodes.findIndex(part => part.id === edge.source)+1} → {state.nodes.findIndex(part => part.id === edge.target)+1}<button type="button" className="text-button" aria-label={`${t.removeWire} ${index+1}`} onClick={() => emit({ ...state, edges: state.edges.filter((_,i) => i !== index) })}>{t.removeWire}</button></li>)}</ul>
       <button type="button" className="text-button sample-button" disabled={state.nodes.length < 2} onClick={() => emit({ ...state, edges: state.nodes.map((part,index) => ({ source: part.id, target: state.nodes[(index+1)%state.nodes.length].id })) })}>{t.autoWire}</button>
-    </details>
+    </LabQuestionPanel>
   </div>;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { ChoiceGroup } from "../../../shared/question-panel/LabQuestionPanel";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { getLocale } from "../../../../../i18n";
 import { CODON_MEANINGS, CodonTable, type CodonMeaning } from "../kit";
@@ -32,14 +33,10 @@ function NumberRow({ label, value, onChange, testId }: { label: string; value: n
   </div>;
 }
 
+/** The notebook's single-choice questions use the Lab Space choice style (layout A). */
 function Choices<T extends string>({ legend, options, value, onChange, name }: { legend: string; options: Record<T, string>; value: T | null; onChange: (value: T) => void; name: string }) {
-  return <fieldset className="k7-choices">
-    <legend>{legend}</legend>
-    {(Object.keys(options) as T[]).map((key) => <label key={key} className="k7-choice">
-      <input type="radio" name={name} value={key} checked={value === key} onChange={() => onChange(key)} />
-      <span>{options[key]}</span>
-    </label>)}
-  </fieldset>;
+  return <ChoiceGroup legend={legend} name={name} value={value} onChange={onChange}
+    options={(Object.keys(options) as T[]).map((key) => ({ value: key, label: options[key] }))} />;
 }
 
 function AminoSelect({ label, value, onChange, testId }: { label: string; value: CodonMeaning | null; onChange: (value: CodonMeaning | null) => void; testId: string }) {

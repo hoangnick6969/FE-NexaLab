@@ -148,7 +148,7 @@ test("FL-21 food web: answers before checks, a broken chain is shown, F5 restore
   const line = page.getByText("Mất rắn, ếch: tăng lên, trả lời đúng");
   await expect(line).toBeVisible();
   const box = (await line.boundingBox())!;
-  expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest(".lab-aside")), [box.x + 8, box.y + box.height / 2])).toBe(true);
+  expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest("#fw-questions [data-testid=lab-panel-result]")), [box.x + 8, box.y + box.height / 2])).toBe(true);
 
   expect(submissions).toHaveLength(1);
   expect(submissions[0]).toEqual(expect.objectContaining({
@@ -218,7 +218,7 @@ test("FL-21 K8 meadow: 3D by default on desktop, labels keep the node contract, 
   await expect(page.getByTestId("fw-chain-text")).toContainText("Cỏ → Châu chấu → Ếch → Rắn");
   await expect(page.locator('.fw-node[data-in-chain="true"]')).toHaveCount(4);
 
-  await page.getByTestId("fw-view-toggle").click();
+  await page.locator(".lab-space-header").getByRole("button", { name: "2D", exact: true }).click();
   await expect(stage).toHaveAttribute("data-view", "2d");
   await expect(page.locator(".fw-board .fw-node[data-in-chain=\"true\"]")).toHaveCount(4);
   await page.reload();
@@ -226,6 +226,6 @@ test("FL-21 K8 meadow: 3D by default on desktop, labels keep the node contract, 
   const restore = page.getByRole("button", { name: "Khôi phục", exact: true });
   if (await restore.isVisible().catch(() => false)) await restore.click();
   await expect(page.getByTestId("fw-stage")).toHaveAttribute("data-view", "2d");
-  await page.getByTestId("fw-view-toggle").click();
+  await page.locator(".lab-space-header").getByRole("button", { name: "3D", exact: true }).click();
   await expect(page.getByTestId("fw-stage")).toHaveAttribute("data-view", "3d");
 });

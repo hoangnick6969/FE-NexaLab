@@ -10,7 +10,6 @@
 .fluid-kit-shell:has(.buoyancy-table) { overflow: clip; }
 .fluid-kit-shell .buoyancy-table label { display: grid; gap: 8px; margin-top: 16px; }
 .fluid-kit-shell .buoyancy-table input { width: min(220px, 100%); padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: inherit; }
-.lab-space:has(.buoyancy-table) .lab-space-header { flex-wrap: wrap; }
 .physics-stage .buoyancy-scene-badge { display: inline-block; white-space: nowrap; padding: 5px 9px; color: #123a4c; background: rgb(239 251 255 / .94); border: 1px solid #b9dce8; border-radius: 8px; box-shadow: 0 3px 14px #16394920; font: 600 12px system-ui; font-variant-numeric: tabular-nums; }
 .physics-stage .buoyancy-scene-badge.is-weight { color: #b91c1c; border-color: #fecaca; }
 .physics-stage .buoyancy-scene-badge.is-buoyancy { color: #047857; border-color: #a7f3d0; }
@@ -19,8 +18,6 @@
 .fluid-kit-shell .buoyancy-hoist-scale { display: flex; justify-content: space-between; gap: 5px; color: var(--muted); font-size: 10px; }
 .fluid-kit-shell .buoyancy-drag-hint { font-size: 12px; line-height: 1.45; color: var(--muted); margin: 0; }
 .fluid-kit-shell .buoyancy-record { width: 100%; }
-.lab-space:has(.buoyancy-table) .lab-space-header .lab-renderer-toggle { position: static; box-shadow: none; }
-.lab-space:has(.buoyancy-table) .lab-space-header-actions { margin-left: auto; }
 .lab-space:has(.buoyancy-table) .lab-aside:not(:has([open])) { display: none; }
 .lab-space:has(.buoyancy-table) .lab-aside:has([open]) { position: fixed; left: 16px; right: auto; top: 140px; width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - 240px); overflow: auto; z-index: 25; }
 @media (max-width: 640px) { .fluid-kit-shell .buoyancy-table { inset: 150px 12px 54dvh; padding: 12px; } .fluid-kit-shell .buoyancy-table table { font-size: 12px; } }

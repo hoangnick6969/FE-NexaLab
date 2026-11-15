@@ -197,8 +197,9 @@ for (const width of [1280, 375]) {
       await expect(page.getByTestId(mode === "2D" ? "density-2d-stage" : "physics-stage")).toBeVisible();
       const box = (await toggle.boundingBox())!;
       const headerBox = (await header.boundingBox())!;
-      expect(box.x + box.width).toBeLessThanOrEqual(width);
-      expect(box.x + box.width).toBeGreaterThan(width - 40);
+      // Layout A: the toggle sits inside the compact header, top left, never past the screen edge.
+      expect(box.x + box.width).toBeLessThanOrEqual(Math.min(width, headerBox.x + headerBox.width));
+      expect(box.x).toBeGreaterThanOrEqual(headerBox.x);
       expect(box.y).toBeGreaterThanOrEqual(headerBox.y);
       expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height);
       for (const target of await toggle.getByRole("button").all()) {

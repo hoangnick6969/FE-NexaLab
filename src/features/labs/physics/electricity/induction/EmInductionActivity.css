@@ -31,7 +31,7 @@
   --em-tool-pressed: #e3eee8;
   --em-panel-solid: #fbfcfa;
   /* Side panel width; EmInduction3DStage frames the bench beside it with the same formula */
-  --em-panel-w: clamp(300px, 34vw, 380px);
+  --em-panel-w: var(--lqp-panel-w);
 }
 :root[data-theme="dark"] {
   --em-panel-bg: rgb(24 32 32 / 94%);
@@ -76,32 +76,9 @@
 .em-act-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--em-track); }
 .em-act-dot[data-active="true"] { background: var(--em-accent); }
 .em-tool[aria-pressed="true"] { background: var(--em-tool-pressed); border-color: var(--em-accent); }
-.em-act:focus-visible, .em-tool:focus-visible, .em-question-badge:focus-visible, .em-close:focus-visible { outline: 3px solid var(--em-focus); outline-offset: 3px; transition: none; }
+.em-act:focus-visible, .em-tool:focus-visible { outline: 3px solid var(--em-focus); outline-offset: 3px; transition: none; }
 
-/* Question panel */
-.em-question-badge { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 20; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--em-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.em-question-badge[aria-expanded="true"] { visibility: hidden; opacity: 0; pointer-events: none; }
-.lab-space .em-panel, .em-panel { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(16px, env(safe-area-inset-top)); z-index: 25; display: flex; flex-direction: column; gap: 12px; width: min(var(--em-panel-w), calc(100% - 36px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 16px 20px; border: 0; border-radius: 20px; background: var(--em-panel-bg); box-shadow: var(--em-panel-shadow); backdrop-filter: blur(20px) saturate(180%); transform-origin: top right; transition: opacity .2s ease-out, transform .2s ease-out; }
-.em-panel[data-open="false"] { opacity: 0; transform: scale(.96) translateY(-4px); pointer-events: none; visibility: hidden; }
-/* The step stays visible when the panel scrolls on short screens */
-.em-panel-header { position: sticky; top: -16px; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: -16px -20px 0; padding: 16px 20px 8px; border-radius: 20px 20px 0 0; background: var(--em-panel-solid); color: var(--em-ink); }
-.em-discipline { margin: 0; color: var(--em-muted); font-size: 13px; }
-.em-step { margin: 0; color: var(--em-accent); font-size: 14px; font-weight: 650; }
-.em-close { display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--em-muted); cursor: pointer; }
-.em-progress { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
-.em-progress span { height: 3px; border-radius: 999px; background: var(--em-track); transform-origin: center; transition: transform .25s ease-out; }
-.em-progress span[data-state="done"], .em-progress span[data-state="current"] { background: var(--em-accent); }
-.em-progress span[data-state="current"] { transform: scaleY(1.5); }
-.em-heading { margin: 0; color: var(--em-ink); font-size: 16px; font-weight: 650; line-height: 1.45; overflow-wrap: break-word; min-width: 0; }
-.em-choices { display: grid; gap: 8px; margin: 0; padding: 12px 0 0; border: 0; border-top: 1px dashed var(--line); }
-.em-choices legend { padding: 0 0 8px; color: var(--em-muted); font-size: 13px; font-weight: 600; }
-.em-choice { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
-.em-choice:has(input:checked) { border-color: var(--em-accent); background: var(--em-accent-soft); }
-.em-choice:has(input:focus-visible) { outline: 3px solid var(--em-focus); outline-offset: 2px; }
-.em-choice input, .em-segment-option input { flex: none; width: 18px; height: 18px; min-height: 0; padding: 0; margin: 2px 0 0; accent-color: var(--em-accent); }
-.em-choice { align-items: flex-start; }
-.em-choice span { min-width: 0; line-height: 1.5; }
-.em-letter { min-width: 18px; color: var(--em-accent); font-weight: 700; }
+/* Question panel: shared LabQuestionPanel; only the phone placement is FL-25 specific */
 .em-observation { padding: 12px; border-radius: 12px; background: var(--em-accent-soft); }
 .em-observation p { display: flex; align-items: flex-start; gap: 8px; margin: 0; }
 .em-observation p > svg { flex: none; margin-top: 4px; }
@@ -120,10 +97,6 @@
 
 /* The view toggle sits left of the question panel, as in the Circuit bulb space */
 /* The view toggle lives in the action dock, so it never collides with the header or the panel */
-.lab-space .em-dock .lab-renderer-toggle { position: static; display: inline-flex; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: none; backdrop-filter: none; }
-.lab-space .em-dock .lab-renderer-toggle button { min-height: 36px; min-width: 52px; color: var(--em-muted); }
-.lab-space .em-dock .lab-renderer-toggle button[aria-pressed="true"] { background: var(--em-accent); color: var(--em-on-accent); }
-.lab-space .em-dock .lab-renderer-toggle button:focus-visible { outline: 3px solid var(--em-focus); outline-offset: 2px; }
 /* Dock and submit bar stay left of the question panel */
 @media (min-width: 721px) {
   .em-dock, .lab-space:has(.em-activity) .lab-workspace > .lab-actions { max-width: calc(100% - var(--em-panel-w) - 72px); }
@@ -141,14 +114,12 @@
   .em-tool { padding: 8px 12px; }
   /* Icon-only tools on narrow screens; the label stays available to assistive technology */
   .em-tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .lab-space .em-dock .lab-renderer-toggle button { min-width: 40px; padding: 0 8px; }
-  .lab-space .em-dock .lab-renderer-toggle svg { display: none; }
   .em-act { padding: 8px 12px; white-space: nowrap; }
   .em-dock { gap: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .em-act, .em-tool, .em-panel, .em-progress span { transition: none; }
+  .em-act, .em-tool { transition: none; }
   .em-act:active:not(:disabled), .em-tool:active { transform: none; }
 }
 
@@ -158,12 +129,6 @@
 .em-explore-toggle:disabled, .em-explore-moves .em-tool:disabled { cursor: not-allowed; opacity: .6; }
 .em-explore-controls { display: grid; gap: 12px; }
 .em-explore-title { margin: 0; color: var(--em-ink); font-size: 15px; font-weight: 650; }
-.em-segment { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
-.em-segment legend { width: 100%; padding: 0 0 8px; color: var(--em-muted); font-size: 13px; font-weight: 600; }
-.em-segment-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
-.em-segment-option input { margin: 0; }
-.em-segment-option:has(input:checked) { border-color: var(--em-accent); background: var(--em-accent-soft); }
-.em-segment-option:has(input:focus-visible) { outline: 3px solid var(--em-focus); outline-offset: 2px; }
 .em-explore-moves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .em-explore-moves .em-tool { justify-content: center; text-align: center; }
 /* Why a pressed part did not move: sits above the action dock */

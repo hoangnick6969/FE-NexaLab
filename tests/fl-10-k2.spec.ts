@@ -65,12 +65,14 @@ test("FL-10 K2 records prediction before readings and keeps one state across 2D/
   await page.getByRole("button", { name: "Rót, lắc và quan sát" }).click();
   await page.getByRole("button", { name: "Bỏ qua hoạt cảnh" }).click();
   await page.getByRole("button", { name: "Đọc cân sau" }).click();
-  await page.getByLabel("So sánh hai số đo").selectOption("compare.same");
-  await page.getByRole("button", { name: /Nguyên tử không mất đi/ }).click();
+  // Shared question panel: every choice is a native radio group (SPEC-lab-space-shared-ui).
+  const group = (name: string) => page.getByRole("group", { name, exact: true });
+  await group("So sánh hai số đo").getByRole("radio", { name: "Bằng nhau" }).check();
+  await group("Lời giải thích nào phù hợp?").getByRole("radio", { name: /Nguyên tử không mất đi/ }).check();
   await page.getByText("Ví dụ tính toán").click();
-  await page.locator(".k2-panel details select").selectOption("35-and-35");
-  await page.getByLabel("Khí thoát khỏi cốc hở trên cân thì số chỉ sẽ…").selectOption("decrease");
-  await page.getByLabel("Khí ở lại trong bình kín, cả bình nằm trên cân thì số chỉ sẽ…").selectOption("same");
+  await group("Tổng khối lượng vế trước và vế sau").getByRole("radio", { name: "35,0 g và 35,0 g" }).check();
+  await group("Khí thoát khỏi cốc hở trên cân thì số chỉ sẽ…").getByRole("radio", { name: "Nhỏ hơn" }).check();
+  await group("Khí ở lại trong bình kín, cả bình nằm trên cân thì số chỉ sẽ…").getByRole("radio", { name: "Bằng nhau" }).check();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".k2-stage-2d")).toBeVisible();
   await page.screenshot({ path: "test-results/fl10-k2-mobile.png", fullPage: true });

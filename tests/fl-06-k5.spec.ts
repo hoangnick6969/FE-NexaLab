@@ -28,9 +28,9 @@ test("FL-06 K5 completes six ordered events with 2D, 3D, mobile and WebGL fallba
   await page.getByRole("group", { name: "Chế độ hiển thị mô phỏng" }).getByRole("button", { name: "2D" }).click();
   await expect(page.locator(".k5-visual-2d svg circle")).toHaveCount(12); // 11 holes plus pivot
   await expect(page.getByRole("button", { name: "Ghi dự đoán" })).toBeDisabled();
-  await page.getByLabel("Dự đoán bên trái").selectOption("TILT_LEFT");
-  await page.getByLabel("Dự đoán tại o").selectOption("LEVEL");
-  await page.getByLabel("Dự đoán bên phải").selectOption("TILT_RIGHT");
+  await page.getByRole("group", { name: "Dự đoán bên trái", exact: true }).getByRole("radio", { name: "Nghiêng trái", exact: true }).check();
+  await page.getByRole("group", { name: "Dự đoán tại o", exact: true }).getByRole("radio", { name: "Nằm ngang", exact: true }).check();
+  await page.getByRole("group", { name: "Dự đoán bên phải", exact: true }).getByRole("radio", { name: "Nghiêng phải", exact: true }).check();
   await page.getByRole("button", { name: "Ghi dự đoán" }).click();
   await expect(page.getByText(/Đầu trái nghiêng xuống/)).toBeVisible();
   const leftIsLower = await page.locator(".k5-visual-2d svg").evaluate(svg => {
@@ -38,11 +38,11 @@ test("FL-06 K5 completes six ordered events with 2D, 3D, mobile and WebGL fallba
     return circles[1].getBoundingClientRect().y > circles[6].getBoundingClientRect().y;
   });
   expect(leftIsLower).toBe(true);
-  await page.getByLabel("Trạng thái lần 1").selectOption("TILT_LEFT");
+  await page.getByRole("group", { name: "Trạng thái lần 1", exact: true }).getByRole("radio", { name: "Nghiêng trái", exact: true }).check();
   await page.getByRole("button", { name: "Tại O" }).click();
-  await page.getByLabel("Trạng thái lần 2").selectOption("LEVEL");
+  await page.getByRole("group", { name: "Trạng thái lần 2", exact: true }).getByRole("radio", { name: "Nằm ngang", exact: true }).check();
   await page.getByRole("button", { name: "Bên phải" }).click();
-  await page.getByLabel("Trạng thái lần 3").selectOption("TILT_RIGHT");
+  await page.getByRole("group", { name: "Trạng thái lần 3", exact: true }).getByRole("radio", { name: "Nghiêng phải", exact: true }).check();
   await page.getByRole("button", { name: "Ghi quan sát" }).click();
   await page.getByLabel("F (N)").fill("1,0");
   await page.getByLabel("d (m)").fill("0,10");
@@ -56,8 +56,8 @@ test("FL-06 K5 completes six ordered events with 2D, 3D, mobile and WebGL fallba
   await expect(page.locator(".k5-visual-2d")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await expect(page.locator(".k5-case-diagram")).toBeVisible();
-  await page.getByLabel("Lợi về lực?").selectOption("GAIN");
-  await page.getByLabel("Đổi hướng lực?").selectOption("yes");
+  await page.getByRole("group", { name: "Lợi về lực?", exact: true }).getByRole("radio", { name: "Có lợi", exact: true }).check();
+  await page.getByRole("group", { name: "Đổi hướng lực?", exact: true }).getByRole("radio", { name: "Có", exact: true }).check();
   await page.getByRole("button", { name: "Ghi kết luận ứng dụng" }).click();
   await page.getByRole("button", { name: "Nộp bài" }).click();
   await expect(page.getByText("Đã đạt")).toBeVisible();

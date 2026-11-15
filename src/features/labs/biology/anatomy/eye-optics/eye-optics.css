@@ -56,36 +56,10 @@
   box-shadow: 0 6px 18px rgba(6, 22, 30, 0.25);
 }
 
-.eye-optics-hud {
-  display: grid;
-  align-content: start;
-  border: 1px solid #d6dcd2;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.94);
-}
 
-.eye-optics-hud-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 12px 8px 16px;
-}
 
-.eye-optics-hud-header h2 {
-  margin: 0;
-  font-size: 1rem;
-}
 
-.eye-optics-hud-body {
-  display: grid;
-  gap: 0.75rem;
-  padding: 0 16px 16px;
-}
 
-.eye-optics-hud-body[hidden] {
-  display: none;
-}
 
 .eye-optics-hud .eye-optics-panel {
   padding: 0;
@@ -93,17 +67,6 @@
   background: transparent;
 }
 
-.eye-optics-icon-button {
-  display: inline-grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
 
 .lab-space .eye-optics {
   pointer-events: none;
@@ -114,18 +77,6 @@
   min-height: 2rem;
 }
 
-.lab-space .eye-optics-hud {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  top: 76px;
-  z-index: 12;
-  width: min(416px, calc(100% - 32px));
-  max-height: calc(100dvh - 96px);
-  overflow: auto;
-  pointer-events: auto;
-  box-shadow: 0 12px 36px rgba(6, 22, 30, 0.22);
-  backdrop-filter: blur(14px);
-}
 
 .anatomy-stage canvas {
   display: block;
@@ -175,13 +126,7 @@
   color: #1f2a24;
 }
 
-.eye-optics-phases {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
 
-.eye-optics-phases button,
 .eye-optics-scenarios button,
 .eye-optics-parts button {
   min-height: 2.5rem;
@@ -195,17 +140,12 @@
   transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.eye-optics-phases button.is-active,
 .eye-optics-scenarios button.is-active {
   background: #2f6b52;
   border-color: #2f6b52;
   color: #ffffff;
 }
 
-.eye-optics-phases button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .eye-optics-panel {
   display: grid;
@@ -343,15 +283,6 @@
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
-  .lab-space .eye-optics-hud {
-    top: auto;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    right: 12px;
-    width: calc(100% - 24px);
-    max-height: 50dvh;
-  }
-}
 
 @media (max-width: 760px) {
   .eye-optics {
@@ -369,7 +300,6 @@
   }
 
   .anatomy-pin,
-  .eye-optics-phases button,
   .eye-optics-scenarios button {
     transition: none;
   }
