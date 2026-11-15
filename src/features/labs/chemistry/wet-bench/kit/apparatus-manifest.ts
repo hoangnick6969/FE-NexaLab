@@ -2,7 +2,7 @@ import type { ApparatusKind, VesselKind } from "@nexalab/sim/wet-bench";
 import type { SharedItemId } from "../../../shared/items/catalog";
 
 /** How a held item is used on a target. */
-export type HeldTool = "litmus_paper" | "ph_meter" | "stopper" | "dropper" | "tongs";
+export type HeldTool = "litmus_paper" | "ph_meter" | "stopper" | "dropper" | "tongs" | "spatula" | "glass_rod";
 
 /** K2 apparatus defined once; Lab configs only choose which ones appear and where. */
 export type ApparatusDef = {
@@ -29,8 +29,12 @@ export const K2_APPARATUS: Readonly<Record<ApparatusKind, ApparatusDef>> = {
   digital_ph_meter: { kind: "digital_ph_meter", role: "instrument", tool: "ph_meter", labelVi: "Bút đo pH điện tử", purposeVi: "Cắm vào dung dịch để đọc pH chính xác đến 0,1." },
   tongs: { kind: "tongs", role: "tool", tool: "tongs", labelVi: "Kẹp gắp", purposeVi: "Gắp chất rắn (hạt, viên, đinh, lá kim loại) từ lọ rồi thả vào ống nghiệm." },
   stopper: { kind: "stopper", role: "tool", tool: "stopper", labelVi: "Nút cao su", purposeVi: "Đậy hoặc mở miệng bình tam giác." },
+  graduated_cylinder_100ml: { kind: "graduated_cylinder_100ml", role: "vessel", labelVi: "Ống đong 100 mL", purposeVi: "Đo thể tích chất lỏng: đọc vạch chia ở đáy mặt khum, chính xác đến 1 mL.", movable: true, sharedItem: "graduated-cylinder" },
+  volumetric_flask_100ml: { kind: "volumetric_flask_100ml", role: "vessel", labelVi: "Bình định mức 100 mL", purposeVi: "Pha dung dịch có thể tích chính xác: thêm nước đến vạch 100 mL.", movable: true },
+  glass_rod: { kind: "glass_rod", role: "tool", tool: "glass_rod", labelVi: "Đũa thuỷ tinh", purposeVi: "Khuấy để chất rắn tan: chọn đũa rồi chọn vật chứa." },
+  spatula: { kind: "spatula", role: "tool", tool: "spatula", labelVi: "Thìa lấy hoá chất", purposeVi: "Lấy chất rắn dạng bột: chọn thìa, chọn lọ, nhập khối lượng rồi chọn vật chứa." },
   electronic_scale: { kind: "electronic_scale", role: "instrument", labelVi: "Cân điện tử", purposeVi: "Cân tổng khối lượng các vật chứa đặt trên đĩa cân (0,01 g).", sharedItem: "digital-scale" },
 };
 
 export const isVesselKind = (kind: ApparatusKind): kind is VesselKind =>
-  kind === "test_tube" || kind === "beaker_100ml" || kind === "erlenmeyer_flask_100ml" || kind === "waste_beaker";
+  kind === "test_tube" || kind === "beaker_100ml" || kind === "erlenmeyer_flask_100ml" || kind === "waste_beaker" || kind === "graduated_cylinder_100ml" || kind === "volumetric_flask_100ml";

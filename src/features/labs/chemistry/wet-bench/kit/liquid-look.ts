@@ -13,6 +13,7 @@ const INDICATOR: Look = { color: "#fbcfe8", opacity: 0.7, surface: "#f9a8d4" };
 export function reagentLook(reagent: Reagent): Look {
   const composition = reagent.composition;
   if (composition.kind === "indicator") return INDICATOR;
+  if (composition.kind === "powder") return CLEAR;
   if (composition.kind === "solution") {
     if (composition.solute === "CuSO4") return COPPER_SULFATE;
     if (composition.solute === "CH3COOH") return VINEGAR;
@@ -43,6 +44,7 @@ export function bottleCategory(reagent: Reagent): BottleCategory {
   const composition = reagent.composition;
   if (composition.kind === "indicator") return "indicator";
   if (composition.kind === "solid") return composition.species === "CaCO3" ? "mineral" : "metal";
+  if (composition.kind === "powder") return SPECIES[composition.species].acidBase.kind === "neutral" ? "neutral" : "salt";
   if (!composition.solute) return "neutral";
   const role = SPECIES[composition.solute].acidBase;
   if (role.kind === "strong_acid" || role.kind === "weak_acid") return "acid";

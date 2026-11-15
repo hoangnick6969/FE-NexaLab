@@ -8,13 +8,13 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode } from "react";
 import type { Group } from "three";
 import * as THREE from "three";
-import { measure, observeVessel, reagentById, scaleReadingMicrograms, SPECIES } from "@nexalab/sim/wet-bench";
+import { measure, observeVessel, reagentById, SPECIES } from "@nexalab/sim/wet-bench";
 import { PhysicsStage, type BenchViewPreset } from "../../../physics/shared/PhysicsStage";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
 import { FIXTURE_RENDERERS, HELD_TOOL_RENDERERS, VESSEL_RENDERERS } from "./apparatus-renderers";
-import { Collider, Droplet, DropperUpright, PhMeter3D, prefersReducedMotion, ReagentBottle3D, TargetRing, TongsHolding } from "./apparatus3d";
+import { Collider, Droplet, DropperUpright, PhMeter3D, prefersReducedMotion, ReagentBottle3D, SpatulaHolding, TargetRing, TongsHolding } from "./apparatus3d";
 import { BENCH_TOP_Y, shelfPosition, slotById } from "./bench-layout";
-import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
+import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, scaleDisplayMicrograms, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
 import { bottleCategory, LITMUS_HEX, reagentLook, vesselLook, visualFill } from "./liquid-look";
 import { formatGrams, formatPh } from "./observation-log";
 
@@ -34,7 +34,7 @@ export const shortReagent = (id: string) => (reagentById(id)?.labelVi ?? id).rep
 export const bottleTag = (id: string) => {
   const composition = reagentById(id)?.composition;
   if (composition?.kind === "solution") return composition.solute ? SPECIES[composition.solute].formulaDisplay : "H₂O";
-  if (composition?.kind === "solid") return SPECIES[composition.species].formulaDisplay;
+  if (composition?.kind === "solid" || composition?.kind === "powder") return SPECIES[composition.species].formulaDisplay;
   if (composition?.kind === "indicator") return "Phenol.";
   return id;
 };
@@ -241,6 +241,9 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
   }, []);
   const tongsTarget = useMemo(() => carryAt(0.09, 0.2, -0.2), []);
   const stopperTarget = useMemo(() => carryAt(0.05, 0.14, 0), []);
+  const spatulaTarget = useMemo(() => carryAt(0.09, 0.2, -0.3), []);
+  const pourTarget = useMemo(() => carryAt(0.3, 0.32, 0.9), []);
+  const rodTarget = useMemo(() => carryAt(0.06, 0.2, 0.2), []);
 
   const restOf = (kind: string) => {
     const item = config.enabledApparatus.find((entry) => entry.kind === kind);
@@ -263,6 +266,19 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
           <TongsHolding piece={piece.color} shape={piece.shape} />
           <Html position={[0, 0.24, 0]} center style={{ pointerEvents: "none" }}><span className="k2-drag-tag">{shortReagent(reagent.id)}</span></Html>
         </FollowGroup>;
+      } else if (reagent.dispenser === "pour") {
+        carriedNode = <FollowGroup home={[at.x, BENCH_TOP_Y + 0.03, at.z]} active getTarget={pourTarget} scale={0.9}>
+          <ReagentBottle3D look={reagentLook(reagent)} solid={false} category={bottleCategory(reagent)} />
+          <Html position={[0, 0.42, 0]} center style={{ pointerEvents: "none" }}><span className="k2-drag-tag">{shortReagent(reagent.id)} · {(state.presetMicroliters / 1000).toFixed(1).replace(".", ",")} mL</span></Html>
+        </FollowGroup>;
+      } else if (reagent.dispenser === "spatula") {
+        const rest = restOf("spatula");
+        if (rest) hidden.add(rest.id);
+        const powderColor = reagent.composition.kind === "powder" ? (reagent.bottleColor) : null;
+        carriedNode = <FollowGroup home={rest?.home ?? [at.x, BENCH_TOP_Y + 0.35, at.z]} active getTarget={spatulaTarget} scale={1.5}>
+          <SpatulaHolding powder={powderColor} />
+          <Html position={[0, 0.3, 0]} center style={{ pointerEvents: "none" }}><span className="k2-drag-tag">{shortReagent(reagent.id)} · {(state.powderMilligrams / 1000).toFixed(3).replace(".", ",")} g</span></Html>
+        </FollowGroup>;
       } else {
         const rest = restOf("dropper_pipette");
         if (rest) hidden.add(rest.id);
@@ -280,7 +296,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     if (carriedTool !== "litmus_paper" && rest) hidden.add(rest.id);
     if (carriedTool === "ph_meter") for (const item of config.enabledApparatus) if (item.kind === "digital_ph_meter") hidden.add(item.id);
     const heldRenderer = HELD_TOOL_RENDERERS[carriedTool];
-    const toolTargets = { dropper: dropperTarget, ph_meter: penTarget, litmus_paper: stripTarget, tongs: tongsTarget, stopper: stopperTarget };
+    const toolTargets = { dropper: dropperTarget, ph_meter: penTarget, litmus_paper: stripTarget, tongs: tongsTarget, stopper: stopperTarget, spatula: spatulaTarget, glass_rod: rodTarget };
     carriedNode = <FollowGroup home={home} active scale={heldRenderer.scale} getTarget={toolTargets[carriedTool]}>
       <heldRenderer.Body stripColour={state.stripColour} />
     </FollowGroup>;
@@ -288,10 +304,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
   const penHeld = carriedHeld?.kind === "tool" && carriedHeld.tool === "ph_meter";
   const penApparatusId = config.enabledApparatus.find((entry) => entry.kind === "digital_ph_meter")?.id ?? "";
 
-  const scaleText = (() => {
-    const onScale = Object.values(bench.vessels).filter((vessel) => slotById(state.current.positions[vessel.vesselId] ?? "")?.kind === "scale");
-    return formatGrams(onScale.length ? scaleReadingMicrograms(onScale) : 0);
-  })();
+  const scaleText = formatGrams(scaleDisplayMicrograms(state));
   const probeReading = (() => {
     if (!state.current.probeIn) return "—";
     const reading = measure(bench.vessels[state.current.probeIn], "ph_meter");
@@ -314,7 +327,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     const ring = ringFor({ kind: "bottle", reagentId: reagent.id });
     const category = bottleCategory(reagent);
     items.push(<group key={id} position={[at.x, BENCH_TOP_Y + 0.03, at.z]} onPointerDown={begin({ held, label: shortReagent(reagent.id) }, () => dispatch({ type: "click_bottle", reagentId: reagent.id, now: Date.now() }))} {...hover(id)}>
-      <ReagentBottle3D look={reagentLook(reagent)} solid={reagent.composition.kind === "solid"} category={category} />
+      <ReagentBottle3D look={reagentLook(reagent)} solid={reagent.composition.kind === "solid" || reagent.composition.kind === "powder"} category={category} />
       {(isHeld(held) || ring) && <TargetRing radius={0.12} tone={ring ?? "held"} />}
       <Html position={[0, bottle.shelfPosition % 2 ? 0.4 : 0.52, 0]} center zIndexRange={[12, 10]} style={{ pointerEvents: "none" }}><span className={`k2-bottle-tag is-${category}`}>{bottleTag(reagent.id)}</span></Html>
       {showTooltip(id) && <Tooltip y={0.64} title={reagent.labelVi} detail={reagent.safetyNoteSim} />}

@@ -12,7 +12,7 @@
 | `thermometer` | `Thermometer3D` (`thermometer.tsx`) | `length`, `fill` (0–1 của thang), `reading` (chuỗi đã định dạng, kèm đơn vị), `divisions`, `children` | `bulb` (đầu đo), `top`, `display` qua `thermometerAnchors(length)` |
 | `stopwatch` | `Stopwatch3D` (`stopwatch.tsx`) | `reading` (chuỗi đã định dạng), `running`, `children` | `base`, `display`, `button` |
 
-Ống đong, nhiệt kế và đồng hồ bấm giờ do bước K2-3.3 thêm cho FL-11 và FL-12. Chưa có bàn nào dùng chúng: bàn FL-11 và FL-12 thêm kind tương ứng ở sim rồi trỏ `sharedItem` trong `apparatus-manifest.ts`. Bản riêng cũ (`GraduatedCylinder3D` của bàn chất lỏng, `Thermometer3D` của sinh thái, nhiệt kế của bàn nhiệt) giữ nguyên; chuyển sang item chung là việc của Dev 1 (D1-2.x) và Dev 2, qua PR riêng. Item không tính nhiệt độ, thể tích hay thời gian: bàn dùng engine của mình, đổi sang `fill` hoặc chuỗi, rồi truyền vào.
+Ống đong, nhiệt kế và đồng hồ bấm giờ do bước K2-3.3 thêm cho FL-11 và FL-12. Ống đong đã được bàn ướt FL-11 dùng (kind `graduated_cylinder_100ml`, `sharedItem: "graduated-cylinder"`, 20 vạch, đọc đến 1 mL). Nhiệt kế và đồng hồ bấm giờ chưa có bàn nào dùng: FL-12 thêm kind tương ứng ở sim rồi trỏ `sharedItem` trong `apparatus-manifest.ts`. Bản riêng cũ (`GraduatedCylinder3D` của bàn chất lỏng, `Thermometer3D` của sinh thái, nhiệt kế của bàn nhiệt) giữ nguyên; chuyển sang item chung là việc của Dev 1 (D1-2.x) và Dev 2, qua PR riêng. Item không tính nhiệt độ, thể tích hay thời gian: bàn dùng engine của mình, đổi sang `fill` hoặc chuỗi, rồi truyền vào.
 
 `glass.tsx` chứa vật liệu thủy tinh và `LiquidColumn`, dùng cho item chung và cho đồ thủy tinh riêng của bàn (ống nghiệm, bình tam giác).
 
