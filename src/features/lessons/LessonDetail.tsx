@@ -1,5 +1,6 @@
 import { chapterLessonHref } from "./lesson-navigation";
 import { groupLabOutcomes, markMissingFigureReferences, normalizeLessonMarkdown, stripRepeatedSectionHeading } from "./lesson-content-format";
+import { renderLessonMath, repairLessonHtml } from "./lesson-html-format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
@@ -800,10 +801,11 @@ function StructuredLessonBody({ value, sourceAvailable, onOpenSource, renderSect
 function LessonBody({ content, title, chapter }: { content: string; title: string; chapter: string }) {
   const htmlTags = /<\s*\/?\s*(?:h[1-6]|p|div|ul|ol|li|table|blockquote|img|figure|br|strong|em)\b/i;
   if (htmlTags.test(content)) {
-    const sanitized = DOMPurify.sanitize(content)
+    // Repair leftover Markdown first, sanitize, then render math: KaTeX output must not pass through DOMPurify.
+    const sanitized = DOMPurify.sanitize(repairLessonHtml(content))
       .replace(/<h1(?=[\s>])/gi, "<h2").replace(/<\/h1\s*>/gi, "</h2>")
       .replace(/<h[4-6](?=[\s>])/gi, "<h3").replace(/<\/h[4-6]\s*>/gi, "</h3>");
-    return <div className="lesson-content" dangerouslySetInnerHTML={{ __html: sanitized }} />;
+    return <div className="lesson-content" dangerouslySetInnerHTML={{ __html: renderLessonMath(sanitized) }} />;
   }
 
   const lines = content.replace(/\r\n?/g, "\n").split("\n")

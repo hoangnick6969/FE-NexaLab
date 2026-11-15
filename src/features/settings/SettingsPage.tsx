@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +17,8 @@ import { ErrorBox, Field, InlineLoader, useAction } from "../../components/ui";
 import { setThemePreference, THEME_OPTIONS, useThemePreference, type ThemePreference } from "../../lib/theme";
 import { defineText, formatDate, getLocale, LOCALE_OPTIONS, setLocale, type Locale } from "../../i18n";
 import { commonText } from "../../i18n/common";
+
+const TeacherAiUsageSettings = lazy(() => import("../ai-usage/TeacherAiUsageSettings"));
 
 const text = defineText({
   vi: {
@@ -312,6 +314,11 @@ export function SettingsPage() {
         </div>
 
         <div className="settings-col-side">
+          {user.role === "TEACHER" && (
+            <Suspense fallback={null}>
+              <TeacherAiUsageSettings />
+            </Suspense>
+          )}
           <section className="panel settings-card appearance-card" aria-labelledby="appearance-title">
             <div className="settings-card-header">
               <h2 id="appearance-title">{t.appearance}</h2>

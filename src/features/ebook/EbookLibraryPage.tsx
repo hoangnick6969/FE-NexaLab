@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
 import { CardSkeleton, ErrorBox } from "../../components/ui";
-import { api, inlineMaterial } from "../../lib/api";
+import { api, inlineMaterial, useAuth } from "../../lib/api";
 import { httpsUrl } from "../../lib/urls";
 import { defineText } from "../../i18n";
 import "./ebook-library.css";
@@ -75,9 +75,11 @@ function gradeFrom(...values: string[]): number | null {
   return null;
 }
 
-async function loadBooks(): Promise<Book[]> {
+async function loadBooks(includeCurriculum: boolean): Promise<Book[]> {
   const [curriculum, subjects] = await Promise.all([
-    api<{ subjects?: Array<{ id: string; name: string; grades?: Array<{ grade: number; chapters?: Array<{ lessonCount?: number; lessons?: unknown[]; topics?: Array<{ lessons?: unknown[] }> }> }>; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }> }>("/open-curriculum"),
+    includeCurriculum
+      ? api<{ subjects?: Array<{ id: string; name: string; grades?: Array<{ grade: number; chapters?: Array<{ lessonCount?: number; lessons?: unknown[]; topics?: Array<{ lessons?: unknown[] }> }> }>; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }> }>("/open-curriculum")
+      : { subjects: [] },
     api<Array<{ id: string; name: string; ebookUrl?: string | null; ebookEditions?: Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; coverAssetVersionId?: string | null }> }>>("/subjects"),
   ]);
   const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
@@ -164,12 +166,17 @@ function EbookCover({ book }: { book: Book }) {
 
 export function EbookLibraryPage() {
   const t = text();
+  const role = useAuth((state) => state.user?.role);
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState<number | null>(null);
   useEffect(() => {
     void import("pdfjs-dist").catch(() => undefined);
   }, []);
-  const query = useQuery({ queryKey: ["ebook-library"], queryFn: loadBooks });
+  const query = useQuery({
+    queryKey: ["ebook-library", role],
+    queryFn: () => loadBooks(role === "STUDENT"),
+    enabled: Boolean(role),
+  });
   const books = query.data ?? [];
   const grades = useMemo(() => [...new Set(books.flatMap((book) => book.grade ? [book.grade] : []))].sort((a, b) => a - b), [books]);
   const filtered = books.filter((book) => (grade === null || book.grade === grade)

@@ -78,15 +78,6 @@ export type AiJobView = {
   items?: AiJobItem[];
 };
 
-export type AiQuota = {
-  purpose: string;
-  dailyLimit: number;
-  usedLast24h: number;
-  activeJobs: number;
-  concurrencyLimit: number;
-  resetsAt: string | null;
-};
-
 export type CreateAiJobInput = {
   targetKind: AiTargetKind;
   lessonId: string;
@@ -103,7 +94,6 @@ export const ACTIVE_STATUSES: AiJobStatus[] = ["PENDING", "RUNNING"];
 export const POLL_INTERVAL_MS = 2_000;
 export const POLL_LIMIT_MS = 120_000;
 
-export const aiQuota = () => api<AiQuota>("/me/ai-quota");
 export const listAiJobs = (classId: string) => api<{ items: AiJobView[]; nextCursor: string | null }>(`/classes/${classId}/ai-jobs?limit=10`);
 export const getAiJob = (classId: string, jobId: string) => api<AiJobView>(`/classes/${classId}/ai-jobs/${jobId}`);
 export const createAiJob = (classId: string, input: CreateAiJobInput, key: string) =>
