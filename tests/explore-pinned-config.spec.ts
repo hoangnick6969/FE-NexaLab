@@ -78,3 +78,20 @@ test("a student without the row gets the not-released screen; a guided row still
   await expect(page.getByTestId("explore-error")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Vào bàn thí nghiệm" })).toHaveCount(0);
 });
+
+test("F0-2: /labs/:id opens a second bench chosen by explore.kit (dev fixture bench)", async ({ page }) => {
+  const config = { labId: "fixture-lab", kit: "explore-fixture@1", engine: "fixture@1", title: "Fixture",
+    items: [{ id: "ruler", labelVi: "Thước", purposeVi: "Đo độ dài." }, { id: "timer", labelVi: "Đồng hồ bấm giờ", purposeVi: "Đo thời gian." }] };
+  await signIn(page, "STUDENT", [
+    { id: "fixture-lab", title: "Bàn fixture", mode: "explore", explore: { ok: true, kit: "explore-fixture@1", engine: "fixture@1", activity: { ...activity, id: "pav-fixture" }, config } },
+    exploreRow("acid-base-indicators", fl13Config),
+  ]);
+  await page.goto("/labs/fixture-lab");
+  const bench = page.getByTestId("fixture-bench");
+  await expect(bench).toHaveAttribute("data-activity", "pav-fixture");
+  await expect(bench).toContainText("Thước");
+  await expect(bench).toContainText("Đồng hồ bấm giờ");
+  await page.goto("/labs/acid-base-indicators");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByTestId("fixture-bench")).toHaveCount(0);
+});

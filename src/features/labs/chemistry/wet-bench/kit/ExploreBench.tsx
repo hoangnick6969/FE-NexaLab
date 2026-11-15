@@ -4,12 +4,12 @@
  */
 import { useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { LabHeaderActionsContext, LabSpace } from "../../../shared/LabSpace";
 import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
 import { ObservationDrawer, usePromptAnswers } from "../../../shared/ObservationDrawer";
-import { K2_APPARATUS } from "./apparatus-manifest";
-import { apparatusLabel, benchReducer, initialBenchState } from "./bench-reducer";
+import { listWetBenchKitItems } from "./kit-items";
+import { benchReducer, initialBenchState } from "./bench-reducer";
 import { BenchHud } from "./BenchHud";
 import { loadObservationLog, saveObservationLog } from "./observation-log";
 import { ObservationLogPanel } from "./ObservationLogPanel";
@@ -42,6 +42,7 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
   const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${storageKey}`);
   const [seenPrompts, setSeenPrompts] = useState<string[]>([]);
   const headerActions = useContext(LabHeaderActionsContext);
+  const kitItems = useMemo(() => listWetBenchKitItems(config), [config]);
   const logLoaded = useRef(false);
 
   useEffect(() => {
@@ -129,15 +130,10 @@ function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, stor
       acknowledgeRequired={config.safetyBriefing.acknowledgeRequired}
       acknowledged={acknowledged}
       draftNotice={draftNotice}
-      apparatus={config.enabledApparatus.filter((item, index, all) => item.kind !== "test_tube" || all.findIndex((other) => other.kind === "test_tube") === index).map((item) => ({
-        id: item.id,
-        label: item.kind === "test_tube" ? `${K2_APPARATUS.test_tube.labelVi} × ${config.enabledApparatus.filter((other) => other.kind === "test_tube").length}` : apparatusLabel(config, item.id),
-        purpose: K2_APPARATUS[item.kind].purposeVi,
+      apparatus={kitItems.filter((item) => item.category !== "material").map((item) => ({ id: item.id, label: item.labelVi, purpose: item.purposeVi }))}
+      materials={kitItems.filter((item) => item.category === "material").map((item) => ({
+        id: item.id, label: item.labelVi, hazardLevel: item.safety?.level ?? "none", hazardTags: item.safety?.tags ?? [], noteSim: item.safety?.noteSim, noteReal: item.safety?.noteReal,
       }))}
-      materials={[...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).flatMap((bottle) => {
-        const reagent = reagentById(bottle.reagentId);
-        return reagent ? [{ id: reagent.id, label: reagent.labelVi, hazardLevel: reagent.hazard.level, hazardTags: reagent.hazard.tags, noteSim: reagent.safetyNoteSim, noteReal: reagent.safetyNoteRealLab }] : [];
-      })}
       onEnter={enter}
       onClose={reopened ? () => { setIntroOpen(false); setReopened(false); } : undefined}
     />}

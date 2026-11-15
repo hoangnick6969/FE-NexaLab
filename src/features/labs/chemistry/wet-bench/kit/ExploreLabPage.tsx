@@ -1,14 +1,16 @@
 /**
- * `/labs/:id` for Explore Labs on the K2 wet bench (FL-13, FL-14a): opens the bench with the config the
- * server pinned for this Lab (already resolved by `Lab.tsx`), with no LabRun, no submission and no score.
+ * `/labs/:id` page of the K2 wet bench (FL-13, FL-14a), registered as `k2-wet-bench@1` in
+ * `runtime/explore-registry.ts`. Opens the bench with the config the server pinned for this Lab
+ * (already resolved by `Lab.tsx`), with no LabRun, no submission and no score.
  */
 import { useNavigate } from "react-router-dom";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
-import type { ExploreActivity } from "../../../runtime/explore-labs";
+import type { ExplorePageProps } from "../../../runtime/explore-registry";
 import { ExploreBench } from "./ExploreBench";
 
-export default function ExploreLabPage({ labId, title, config, activity }: { labId: string; title: string; config: ChemistryLabConfig; activity: ExploreActivity }) {
+export default function ExploreLabPage({ labId, title, config: raw, activity }: ExplorePageProps) {
   const navigate = useNavigate();
+  const config = raw as ChemistryLabConfig;
   const draft = config.review.status !== "reviewed";
   return <ExploreBench
     storageKey={`${labId}@${activity.id}`}
