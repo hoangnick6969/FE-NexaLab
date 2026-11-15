@@ -7,10 +7,11 @@ import type { ComponentType, ReactNode } from "react";
 import { Html } from "@react-three/drei";
 import type { ApparatusKind, VesselKind } from "@nexalab/sim/wet-bench";
 import { BEAKER_DEFAULT_SIZE, beakerAnchors, beakerInnerHeight, type BeakerSize } from "../../../shared/items/beaker";
+import { CYLINDER_DEFAULT_SIZE, cylinderAnchors, cylinderInnerHeight } from "../../../shared/items/item-layout";
 import { DigitalScale3D } from "../../../shared/items/digital-scale";
 import type { HeldTool } from "./apparatus-manifest";
 import {
-  Beaker3D, Dropper3D, DropperUpright, Flask3D, LitmusBox3D, LitmusStrip3D, PhMeter3D, Rack3D, RestPhMeter3D, Stopper3D, TestTube3D, Tongs3D, TongsHolding,
+  Beaker3D, Cylinder3D, Dropper3D, DropperUpright, Flask3D, GlassRod3D, GlassRodHolding, LitmusBox3D, LitmusStrip3D, PhMeter3D, Rack3D, RestPhMeter3D, Spatula3D, SpatulaHolding, Stopper3D, TestTube3D, Tongs3D, TongsHolding, VolumetricFlask3D,
   type VesselProps,
 } from "./apparatus3d";
 import type { LITMUS_HEX, Look } from "./liquid-look";
@@ -50,6 +51,11 @@ export const VESSEL_RENDERERS: Readonly<Record<VesselKind, VesselRenderer>> = {
   test_tube: { Body: TestTube3D, mouthY: 0.5, floorY: 0.025, innerHeight: 0.43, ringRadius: 0.07, tagY: 0.58, tooltipY: 0.78, probeY: 0.24 },
   beaker_100ml: { Body: Beaker3D, ...beakerLayout(BEAKER_DEFAULT_SIZE), ringRadius: 0.2, tagY: 0.44, tooltipY: 0.66, probeY: 0.1 },
   erlenmeyer_flask_100ml: { Body: Flask3D, mouthY: 0.34, floorY: 0.016, innerHeight: 0.24, ringRadius: 0.2, tagY: 0.44, tooltipY: 0.66, probeY: 0.1 },
+  graduated_cylinder_100ml: {
+    Body: Cylinder3D, mouthY: cylinderAnchors().mouth[1], floorY: cylinderAnchors().inside[1], innerHeight: cylinderInnerHeight(CYLINDER_DEFAULT_SIZE),
+    ringRadius: 0.12, tagY: 0.6, tooltipY: 0.8, probeY: 0.24,
+  },
+  volumetric_flask_100ml: { Body: VolumetricFlask3D, mouthY: 0.4, floorY: 0.016, innerHeight: 0.38, ringRadius: 0.17, tagY: 0.5, tooltipY: 0.7, probeY: 0.2 },
   waste_beaker: {
     Body: ({ visual, wasteMicroliters, ...rest }) => <Beaker3D {...rest} {...WASTE_SIZE} look={WASTE_LOOK}
       visual={{ ...visual, liquidLevel: Math.min(0.85, wasteMicroliters / WASTE_FULL_MICROLITERS) }} />,
@@ -64,6 +70,8 @@ export const FIXTURE_RENDERERS: Readonly<Record<Exclude<ApparatusKind, VesselKin
   digital_ph_meter: fixture(RestPhMeter3D),
   tongs: fixture(Tongs3D),
   stopper: fixture(Stopper3D),
+  glass_rod: fixture(GlassRod3D, 0.16),
+  spatula: fixture(Spatula3D, 0.16),
   electronic_scale: { Body: ({ scaleReading }) => <DigitalScale3D reading={scaleReading} />, tooltipY: 0.3 },
 };
 
@@ -74,6 +82,8 @@ export const HELD_TOOL_RENDERERS: Readonly<Record<HeldTool, HeldToolRenderer>> =
   dropper: { Body: () => <DropperUpright liquid={null} squeezeAt={null} />, scale: 1.6 },
   tongs: { Body: () => <TongsHolding piece={null} shape={null} />, scale: 1.6 },
   stopper: { Body: () => <Stopper3D />, scale: 1 },
+  spatula: { Body: () => <SpatulaHolding powder={null} />, scale: 1.5 },
+  glass_rod: { Body: () => <GlassRodHolding />, scale: 1.2 },
   litmus_paper: { Body: ({ stripColour }) => <LitmusStrip3D colour={stripColour} />, scale: 1.15 },
   ph_meter: {
     Body: () => <>

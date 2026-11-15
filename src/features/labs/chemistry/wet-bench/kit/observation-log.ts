@@ -10,7 +10,7 @@ export type ObservationLogEntry = {
   actionVi: string;
   phenomenaVi: string[];
   equations: string[];
-  readings: { ph?: string; litmus?: string; scale?: string };
+  readings: { ph?: string; litmus?: string; scale?: string; volume?: string };
   reactions: string[];
   measurement?: "ph_meter" | "litmus_paper" | "scale";
   outOfScope?: boolean;
@@ -20,13 +20,21 @@ export type ObservationLogEntry = {
 
 const comma = (value: string) => value.replace(".", ",");
 export const formatPh = (tenths: number) => comma((tenths / 10).toFixed(1));
-export const formatGrams = (micrograms: number) => `${comma((micrograms / 1_000_000).toFixed(2))} g`;
+/** Scale text: grams to 0,01 g, rounded half up in integers (so 0,585 g reads 0,59 g, not 0,58 g from float noise). */
+export const formatGrams = (micrograms: number) => `${comma((Math.sign(micrograms) * Math.round(Math.abs(micrograms) / 10_000) / 100).toFixed(2))} g`;
 
-export function formatQuantity(microliters: number) {
+/** `plainMl`: solution benches name volumes in mL only, never in drops. */
+export function formatQuantity(microliters: number, plainMl = false) {
   const ml = comma(String(+(microliters / 1000).toFixed(3)));
-  if (microliters % 50 !== 0) return `${ml} mL`;
+  if (plainMl || microliters % 50 !== 0) return `${ml} mL`;
   return microliters <= 250 ? `${microliters / 50} giọt` : `${ml} mL (${microliters / 50} giọt)`;
 }
+
+/** Mass in a spatula scoop, in the learner's units: grams with a comma, to the milligram. */
+export const formatMilligrams = (milligrams: number) => `${comma(String(+(milligrams / 1000).toFixed(3)))} g`;
+/** Concentration in tenths of a percent and in mol/L from mmol/L. */
+export const formatPercent = (tenths: number) => `${comma((tenths / 10).toFixed(1))} %`;
+export const formatMolar = (millimolar: number) => `${comma((millimolar / 1000).toFixed(3))} M`;
 
 export const PIECE_NAME: Record<string, string> = { granule: "hạt", chips: "viên", nail: "chiếc đinh", foil: "lá" };
 
@@ -37,6 +45,10 @@ export function describeVesselChange(before: VesselState, after: VesselState, tr
   const prev = observeVessel(before).visual;
   const next = observeVessel(after, transition).visual;
   const phenomena: string[] = [];
+  if (next.powder && (!prev.powder || next.powder.amount > prev.powder.amount + 0.0001)) phenomena.push("Bột chất rắn nằm dưới đáy, chưa tan");
+  if (prev.powder && !next.powder && after.solutionMicroliters > 0) phenomena.push(next.liquidTint ? "Chất rắn tan hết, dung dịch có màu" : "Chất rắn tan hết, dung dịch trong suốt");
+  if (prev.powder && next.powder && next.powder.amount < prev.powder.amount - 0.0001) phenomena.push("Một phần chất rắn đã tan, còn lại nằm dưới đáy");
+  if (prev.powder && next.powder && Math.abs(next.powder.amount - prev.powder.amount) <= 0.0001 && before.solutionMicroliters > 0 && after.solutionMicroliters === before.solutionMicroliters) phenomena.push("Chất rắn không tan thêm, dung dịch đã bão hoà ở mức mô hình");
   const prevBand = prev.indicator?.band ?? null;
   const nextBand = next.indicator?.band ?? null;
   if (nextBand && nextBand !== prevBand) {
