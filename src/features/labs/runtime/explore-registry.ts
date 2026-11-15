@@ -2,14 +2,15 @@
  * Explore bench registry (P0 C2.3 / F0-2). One entry per bench, looked up by `row.explore.kit`.
  * Light module: pages load lazily, so `Lab.tsx` never pulls a 3D bench to decide a route.
  */
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
-import { validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import { deriveWetBenchEffectiveConfig, validateChemistryLabConfig, type ClassSelection } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
 import { fixtureBench } from "./fixture-bench";
+import type { ExploreRequirement } from "../class-explore/class-explore";
 
 /** One thing on a bench as students and teachers see it (C2.1 fields; `safety` only for materials). */
 export type KitItem = LabItemMetadata & {
@@ -22,6 +23,12 @@ export type KitItem = LabItemMetadata & {
 /** Every bench config carries these; the rest belongs to the bench schema. */
 export type BenchConfig = Pick<ExploreLabEnvelope, "labId" | "kit" | "engine" | "title">;
 export type ExplorePageProps = { labId: string; title: string; config: any; activity: ExploreActivity };
+/** A bench opened for a Class Explore assignment: the effective config, a notebook key per assignment, and the student's task panel. */
+export type ClassExplorePageProps = { title: string; config: any; storageKey: string; onExit: () => void; classSection: ReactNode };
+/** What a bench derives from a template and a teacher's selection (P0 C3.2); the server runs the same function. */
+export type ClassDerivation =
+  | { ok: true; config: any; requirements: ExploreRequirement[]; templateId: string; promptId: string }
+  | { ok: false; errors: string[] };
 export type ExploreBenchEntry = {
   kit: string;
   /** The subject Kit this bench belongs to (§2.1). */
@@ -30,6 +37,9 @@ export type ExploreBenchEntry = {
   loadPage: () => Promise<{ default: ComponentType<ExplorePageProps> }>;
   /** Items exactly as configured; the intro panel and the teacher picker read this. */
   listKitItems: (config: any) => KitItem[];
+  /** Class Explore (P0 C3): benches without these have no templates yet. */
+  deriveClass?: (config: any, selection: ClassSelection) => ClassDerivation;
+  loadClassPage?: () => Promise<{ default: ComponentType<ClassExplorePageProps> }>;
 };
 
 const benches: ExploreBenchEntry[] = [
@@ -42,6 +52,11 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../chemistry/wet-bench/kit/ExploreLabPage"),
     listKitItems: listWetBenchKitItems,
+    deriveClass: (config, selection) => {
+      const checked = validateChemistryLabConfig(config);
+      return checked.ok ? deriveWetBenchEffectiveConfig(checked.config, selection) : { ok: false, errors: checked.errors };
+    },
+    loadClassPage: () => import("../chemistry/wet-bench/kit/ClassExplorePage"),
   },
 ];
 

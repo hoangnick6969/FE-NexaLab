@@ -25,21 +25,23 @@ type BenchProps = {
   config: ChemistryLabConfig; headerExtra?: ReactNode; draftNotice?: string; configSource?: "database" | "bundled";
   /** Key for the local notebook, safety ack and answers: `/labs/:id` passes `labId@activity.id` (P0 C1.2); the dev route keeps `labId@configVersion`. */
   storageKey?: string;
+  /** Class Explore: opens the question drawer on entry, where the teacher's task and the submission form sit. */
+  drawerDefaultOpen?: boolean;
 };
 
-export function ExploreBench({ onExit, exitTo, ...props }: BenchProps & { onExit: () => void; exitTo?: string }) {
-  return <LabSpace title={props.config.title} onExit={onExit} exitTo={exitTo}>
+export function ExploreBench({ onExit, exitTo, classSection, ...props }: BenchProps & { onExit: () => void; exitTo?: string; classSection?: ReactNode }) {
+  return <LabSpace title={props.config.title} onExit={onExit} exitTo={exitTo} classSection={classSection}>
     <ExploreBenchBody {...props} />
   </LabSpace>;
 }
 
-function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, storageKey = observationLogKey(config.labId, config.configVersion) }: BenchProps) {
+function ExploreBenchBody({ config, headerExtra, draftNotice, configSource, drawerDefaultOpen = false, storageKey = observationLogKey(config.labId, config.configVersion) }: BenchProps) {
   const [state, dispatch] = useReducer(benchReducer, config, initialBenchState);
   const [introOpen, setIntroOpen] = useState(true);
   const [reopened, setReopened] = useState(false);
   const [acknowledged, setAcknowledged] = useState(() => readAck(storageKey));
   const [hovered, setHovered] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(drawerDefaultOpen);
   const [kitOpen, setKitOpen] = useState(false);
   const [viewReset, setViewReset] = useState(0);
   const [answers, setAnswer] = usePromptAnswers(`nexalab:k2-prompts:${storageKey}`);
