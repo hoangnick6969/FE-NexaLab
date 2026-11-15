@@ -4,11 +4,12 @@
  */
 import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
-import { validateLeverLabConfig } from "@nexalab/sim/mechanics";
+import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim/mechanics";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
+import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -85,6 +86,13 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/mechanics/explore/LeverExploreLabPage"),
     listKitItems: listLeverKitItems,
+    deriveClass: (config, selection) => {
+      const checked = validateLeverLabConfig(config);
+      return checked.ok ? deriveLeverEffectiveConfig(checked.config, selection) : { ok: false, errors: checked.errors };
+    },
+    loadClassPage: () => import("../physics/mechanics/explore/LeverClassExplorePage"),
+    ClassTemplateForm: LeverClassTemplateForm,
+    classItemLabels: () => ({ "moment-left": "bên trái", "moment-right": "bên phải" }),
   },
 ];
 
