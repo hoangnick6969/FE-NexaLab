@@ -148,22 +148,22 @@ const requirements = [
   { kind: "measure", itemId: "CH3COOH_0_1M", measurement: "ph_meter", unit: "tenthsPh" },
   { kind: "explain" },
 ];
-const assignmentView = (submission: any = null) => ({
-  id: "a1", title: "Đo pH hai mẫu", contentType: "explore_lab", dueDate: null, createdAt: "2026-11-15T08:00:00.000Z", overdue: false,
+const assignmentView = (submission: any = null, over: Record<string, unknown> = {}) => ({
+  id: "a1", title: "Đo pH hai mẫu", contentType: "explore_lab", dueDate: null, createdAt: "2026-11-15T08:00:00.000Z", overdue: false, ...over,
   classroom: { id: "class-1", name: "8A", grade: 8, teacher: { fullName: "Cô Lan", username: null } },
   content: { id: "acid-base-indicators", title: "Acid – base, chỉ thị và pH", subject: { id: "khtn", name: "KHTN" }, grade: 8, topic: "Thang pH" },
   explore: { snapshot: { title: "Đo pH hai mẫu", labId: "acid-base-indicators", activity, instructions: "Làm theo nhóm hai bạn.", requirements, effectiveConfig: effectiveConfig(), effectiveConfigDigest: "e".repeat(64) }, submission },
 });
 
 test.describe("student does a Class Explore assignment", () => {
-  test("opens the pinned bench, checks the readings, submits once with an idempotency key, and sees what was handed in", async ({ page }) => {
+  test("opens the pinned bench, checks the readings, submits, can edit and submit again, each with its own idempotency key", async ({ page }) => {
     const forbidden = await signIn(page, student);
     let submission: any = null;
     const posts: Array<{ body: any; key: string | undefined }> = [];
     await page.route("**/api/assignments/a1", (route) => route.fulfill({ json: assignmentView(submission) }));
     await page.route("**/api/assignments/a1/explore-submissions", (route) => {
       posts.push({ body: route.request().postDataJSON(), key: route.request().headers()["idempotency-key"] });
-      submission = { id: "sub-1", answers: route.request().postDataJSON(), status: "SUBMITTED", submittedAt: "2026-11-15T09:00:00.000Z", feedback: null, reviewedAt: null };
+      submission = { id: "sub-1", answers: route.request().postDataJSON(), status: "SUBMITTED", submittedAt: "2026-11-15T09:00:00.000Z", feedback: null, reviewedAt: null, late: false, canResubmit: true };
       return route.fulfill({ json: { submission, replayed: false } });
     });
 
@@ -204,23 +204,42 @@ test.describe("student does a Class Explore assignment", () => {
     expect(posts[0].body).toEqual({ measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "HCl phân li hoàn toàn nên pH nhỏ hơn." });
     expect(posts[0].key).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
     await expect(task.getByRole("button", { name: "Nộp bài" })).toHaveCount(0);
+
+    // Until the due date (here there is none) and before any comment, the student can correct and submit again.
+    await expect(task).toContainText("Em có thể sửa và nộp lại");
+    await task.getByRole("button", { name: "Sửa và nộp lại" }).click();
+    await expect(task.getByLabel(/pH của .*HCl/)).toHaveValue("1,0");
+    await expect(task.getByLabel(/pH của .*CH₃COOH/)).toHaveValue("2,9");
+    await task.getByLabel("Lời giải thích của em").fill("HCl là acid mạnh, CH₃COOH là acid yếu.");
+    await task.getByRole("button", { name: "Nộp lại" }).click();
+    await expect(task.getByTestId("explore-submitted")).toContainText("CH₃COOH là acid yếu");
+    expect(posts).toHaveLength(2);
+    expect(posts[1].body.explanation).toBe("HCl là acid mạnh, CH₃COOH là acid yếu.");
+    expect(posts[1].key).not.toBe(posts[0].key);
     expect(forbidden).toEqual([]);
   });
 
   test("shows the teacher's comment after review", async ({ page }) => {
     await signIn(page, student);
-    const reviewed = { id: "sub-1", answers: { measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "Vì HCl là acid mạnh." }, status: "REVIEWED", submittedAt: "2026-11-15T09:00:00.000Z", feedback: "Đúng hướng. Hãy nêu cả hai số đo.", reviewedAt: "2026-11-15T10:00:00.000Z" };
+    const reviewed = { id: "sub-1", answers: { measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "Vì HCl là acid mạnh." }, status: "REVIEWED", submittedAt: "2026-11-15T09:00:00.000Z", feedback: "Đúng hướng. Hãy nêu cả hai số đo.", reviewedAt: "2026-11-15T10:00:00.000Z", late: false, canResubmit: false };
     await page.route("**/api/assignments/a1", (route) => route.fulfill({ json: assignmentView(reviewed) }));
     await page.goto("/assignments/a1");
     await expect(page.getByTestId("explore-status")).toHaveText("Giáo viên đã nhận xét");
     await expect(page.getByTestId("explore-feedback")).toHaveText("Đúng hướng. Hãy nêu cả hai số đo.");
     await expect(page.getByRole("link", { name: "Xem lại bàn thí nghiệm" })).toBeVisible();
+    // Work the teacher commented on is not for rewriting.
+    await page.goto("/labs/acid-base-indicators?assignmentId=a1&explore=1");
+    const intro = page.getByRole("dialog");
+    await intro.getByRole("checkbox", { name: "Em đã đọc lưu ý an toàn" }).check();
+    await intro.getByRole("button", { name: "Vào bàn thí nghiệm" }).click();
+    await expect(page.getByTestId("explore-task").getByTestId("explore-feedback")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sửa và nộp lại|Nộp lại|Nộp bài/ })).toHaveCount(0);
   });
 
-  test("a second submit with other answers is refused with a clear message", async ({ page }) => {
+  test("a refused resubmission shows the reason the server gives", async ({ page }) => {
     await signIn(page, student);
     await page.route("**/api/assignments/a1", (route) => route.fulfill({ json: assignmentView() }));
-    await page.route("**/api/assignments/a1/explore-submissions", (route) => route.fulfill({ status: 409, json: { statusCode: 409, code: "EXPLORE_ALREADY_SUBMITTED", message: "Em đã nộp bài này" } }));
+    await page.route("**/api/assignments/a1/explore-submissions", (route) => route.fulfill({ status: 409, json: { statusCode: 409, code: "EXPLORE_RESUBMIT_CLOSED", message: "Đã quá hạn nộp; em không nộp lại được." } }));
     await page.goto("/labs/acid-base-indicators?assignmentId=a1&explore=1");
     const intro = page.getByRole("dialog");
     await intro.getByRole("checkbox", { name: "Em đã đọc lưu ý an toàn" }).check();
@@ -230,7 +249,30 @@ test.describe("student does a Class Explore assignment", () => {
     await task.getByLabel(/pH của .*CH₃COOH/).fill("2,9");
     await task.getByLabel("Lời giải thích của em").fill("Khác.");
     await task.getByRole("button", { name: "Nộp bài" }).click();
-    await expect(task.getByRole("alert")).toContainText("bài đã nộp không sửa được");
+    await expect(task.getByRole("alert")).toContainText("Đã quá hạn nộp; em không nộp lại được.");
+  });
+
+  test("after the due date a first submission is still possible, shows as late, and cannot be resubmitted", async ({ page }) => {
+    await signIn(page, student);
+    const due = new Date(Date.now() - 3_600_000).toISOString();
+    let submission: any = null;
+    await page.route("**/api/assignments/a1", (route) => route.fulfill({ json: assignmentView(submission, { dueDate: due, overdue: true }) }));
+    await page.route("**/api/assignments/a1/explore-submissions", (route) => {
+      submission = { id: "sub-1", answers: route.request().postDataJSON(), status: "SUBMITTED", submittedAt: new Date().toISOString(), feedback: null, reviewedAt: null, late: true, canResubmit: false };
+      return route.fulfill({ json: { submission, replayed: false } });
+    });
+    await page.goto("/labs/acid-base-indicators?assignmentId=a1&explore=1");
+    const intro = page.getByRole("dialog");
+    await intro.getByRole("checkbox", { name: "Em đã đọc lưu ý an toàn" }).check();
+    await intro.getByRole("button", { name: "Vào bàn thí nghiệm" }).click();
+    const task = page.getByTestId("explore-task");
+    await expect(task.getByTestId("explore-late-note")).toContainText("sẽ được đánh dấu là nộp trễ");
+    await task.getByLabel(/pH của .*HCl/).fill("1,0");
+    await task.getByLabel(/pH của .*CH₃COOH/).fill("2,9");
+    await task.getByLabel("Lời giải thích của em").fill("Nộp muộn.");
+    await task.getByRole("button", { name: "Nộp bài" }).click();
+    await expect(task.getByTestId("explore-late")).toHaveText("Nộp trễ");
+    await expect(task.getByRole("button", { name: /Sửa và nộp lại|Nộp lại/ })).toHaveCount(0);
   });
 
   test("a config that fails the bench schema stops the bench and shows the error code", async ({ page }) => {
@@ -257,7 +299,7 @@ test.describe("teacher reviews Class Explore submissions", () => {
     ] }));
     await page.route("**/api/classes/class-1/assignments/a1/explore-submissions", (route) => route.fulfill({ json: {
       assignment: { id: "a1", title: "Đo pH hai mẫu", dueDate: null, requirements, instructions: "Làm theo nhóm hai bạn." },
-      submissions: [{ id: "sub-1", assignmentId: "a1", answers: { measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "HCl phân li hoàn toàn." }, status, submittedAt: "2026-11-15T09:00:00.000Z", feedback, reviewedAt: null,
+      submissions: [{ id: "sub-1", assignmentId: "a1", answers: { measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "HCl phân li hoàn toàn." }, status, submittedAt: "2026-11-15T09:00:00.000Z", feedback, reviewedAt: null, late: true, canResubmit: false,
         student: { id: "student-1", fullName: "An", username: "an" } }],
       pending: [{ id: "student-2", fullName: "Bình", username: "binh" }],
     } }));
@@ -278,6 +320,7 @@ test.describe("teacher reviews Class Explore submissions", () => {
     await expect(card).toContainText("2,9");
     await expect(card).toContainText("HCl phân li hoàn toàn.");
     await expect(card.getByTestId("explore-submission-status")).toHaveText("Đã nộp");
+    await expect(card.getByTestId("explore-late")).toHaveText("Nộp trễ");
     await expect(board.getByTestId("explore-pending")).toHaveText("Bình");
     await expect(card.getByRole("button", { name: "Gửi nhận xét" })).toBeDisabled();
 

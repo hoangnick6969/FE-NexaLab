@@ -16,14 +16,14 @@ const text = defineText({
   vi: {
     title: (name: string) => `Bài nộp: ${name}`, asked: "Yêu cầu", measure: (name: string) => `Số đo pH của ${name}`, explain: "Lời giải thích",
     note: "Lời dặn", submitted: (n: number) => `Đã nộp (${n})`, pending: (n: number) => `Chưa nộp (${n})`, none: "Chưa có bài nộp nào.",
-    status: { SUBMITTED: "Đã nộp", REVIEWED: "Đã nhận xét" }, at: (when: string) => `Nộp lúc ${when}`,
+    status: { SUBMITTED: "Đã nộp", REVIEWED: "Đã nhận xét" }, late: "Nộp trễ", at: (when: string) => `Nộp lúc ${when}`,
     feedback: "Nhận xét", send: "Gửi nhận xét", sending: "Đang gửi…", sent: "Đã gửi nhận xét", failed: "Chưa gửi được nhận xét.",
     noScore: "Bài Explore không chấm điểm và không tính vào tiến độ.", close: "Đóng",
   },
   en: {
     title: (name: string) => `Submissions: ${name}`, asked: "What was asked", measure: (name: string) => `pH of ${name}`, explain: "Explanation",
     note: "Note", submitted: (n: number) => `Submitted (${n})`, pending: (n: number) => `Not submitted (${n})`, none: "No submissions yet.",
-    status: { SUBMITTED: "Submitted", REVIEWED: "Commented" }, at: (when: string) => `Submitted ${when}`,
+    status: { SUBMITTED: "Submitted", REVIEWED: "Commented" }, late: "Late", at: (when: string) => `Submitted ${when}`,
     feedback: "Comment", send: "Send comment", sending: "Sending…", sent: "Comment sent", failed: "Could not send the comment.",
     noScore: "Explore work is not graded and does not count towards progress.", close: "Close",
   },
@@ -74,7 +74,7 @@ function SubmissionCard({ classId, assignmentId, row, queryKey }: { classId: str
     onSuccess: () => { setSaved(true); void queryClient.invalidateQueries({ queryKey }); },
   });
   return <article className="panel" aria-label={who(row.student)} data-testid="explore-submission">
-    <header><strong>{who(row.student)}</strong> · <span data-testid="explore-submission-status">{t.status[row.status]}</span> · <span className="tiny muted">{t.at(formatDateTime(row.submittedAt))}</span></header>
+    <header><strong>{who(row.student)}</strong> · <span data-testid="explore-submission-status">{t.status[row.status]}</span>{row.late && <> · <strong data-testid="explore-late">{t.late}</strong></>} · <span className="tiny muted">{t.at(formatDateTime(row.submittedAt))}</span></header>
     <ul>{row.answers.measures.map((item) => <li key={item.itemId}>{t.measure(reagentName(item.itemId))}: <b>{formatTenthsPh(item.tenthsPh)}</b></li>)}</ul>
     {row.answers.explanation && <p>{row.answers.explanation}</p>}
     <label className="field"><span>{t.feedback}</span>

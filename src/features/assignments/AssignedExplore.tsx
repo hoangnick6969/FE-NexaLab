@@ -6,14 +6,14 @@ const text = defineText({
   vi: {
     eyebrow: "BÀI THỰC HÀNH CỦA LỚP", due: "Hạn nộp", noDue: "Không có hạn nộp", note: "Lời dặn của giáo viên",
     asks: "Em cần làm", measure: "Đo pH của hai mẫu và ghi số đo", explain: "Viết lời giải thích",
-    status: { none: "Chưa nộp", SUBMITTED: "Đã nộp, chờ giáo viên nhận xét", REVIEWED: "Giáo viên đã nhận xét" },
+    status: { none: "Chưa nộp", SUBMITTED: "Đã nộp, chờ giáo viên nhận xét", REVIEWED: "Giáo viên đã nhận xét" }, late: "Nộp trễ",
     open: "Mở bàn thí nghiệm", openAgain: "Xem lại bàn thí nghiệm", feedback: "Nhận xét của giáo viên", values: "Số đo em đã nộp",
     noScore: "Bài này không chấm điểm và không tính vào tiến độ.",
   },
   en: {
     eyebrow: "CLASS PRACTICAL", due: "Due", noDue: "No due date", note: "Teacher's note",
     asks: "What to do", measure: "Measure the pH of two samples and write the readings", explain: "Write an explanation",
-    status: { none: "Not submitted", SUBMITTED: "Submitted, waiting for your teacher", REVIEWED: "Your teacher has commented" },
+    status: { none: "Not submitted", SUBMITTED: "Submitted, waiting for your teacher", REVIEWED: "Your teacher has commented" }, late: "Late",
     open: "Open the bench", openAgain: "Look at the bench again", feedback: "Teacher's comment", values: "Your submitted values",
     noScore: "This work is not graded and does not count towards progress.",
   },
@@ -25,7 +25,7 @@ export function AssignedExplore({ assignment }: { assignment: ExploreAssignmentV
   const { snapshot, submission } = assignment.explore;
   const measures = snapshot.requirements.filter((item) => item.kind === "measure").length;
   const explains = snapshot.requirements.some((item) => item.kind === "explain");
-  const status = submission ? t.status[submission.status] : t.status.none;
+  const status = (submission ? t.status[submission.status] : t.status.none) + (submission?.late ? ` · ${t.late}` : "");
   return <div className="student-assigned-learning">
     <section className="panel" aria-labelledby="explore-assignment-title" data-testid="assigned-explore">
       <p className="eyebrow">{t.eyebrow}</p>

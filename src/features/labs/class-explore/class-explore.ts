@@ -11,6 +11,10 @@ export type ExploreSubmission = {
   submittedAt: string;
   feedback: string | null;
   reviewedAt: string | null;
+  /** Handed in after the teacher's due date (read against the current due date by the server). */
+  late?: boolean;
+  /** Until the due date, and only while the teacher has not commented. */
+  canResubmit?: boolean;
 };
 
 /** What `GET /assignments/:id` returns for a Class Explore assignment (student view). */

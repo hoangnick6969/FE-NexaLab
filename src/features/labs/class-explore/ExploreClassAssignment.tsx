@@ -23,11 +23,12 @@ const text = defineText({
     measureHelp: "Đo bằng bút đo pH trên bàn rồi ghi số em đọc được (ví dụ 7,0).",
     phOf: (name: string) => `pH của ${name}`, explanation: "Lời giải thích của em", explanationHelp: "Em dựa vào số đo nào để kết luận?",
     counter: (n: number, max: number) => `${n} / ${max} ký tự`,
-    submit: "Nộp bài", submitting: "Đang nộp…",
+    submit: "Nộp bài", submitting: "Đang nộp…", resubmit: "Nộp lại", edit: "Sửa và nộp lại", cancelEdit: "Hủy",
+    late: "Nộp trễ", lateNote: "Đã quá hạn nộp: bài nộp bây giờ sẽ được đánh dấu là nộp trễ.",
+    canResubmit: (due: string | null) => (due ? `Em có thể sửa và nộp lại đến ${due}.` : "Em có thể sửa và nộp lại cho tới khi giáo viên nhận xét."),
     phInvalid: "Nhập số từ 0 đến 14, tối đa một chữ số thập phân (ví dụ 7,0).", explainRequired: "Hãy viết lời giải thích.",
     submitted: "Em đã nộp bài", reviewed: "Giáo viên đã nhận xét", sentAt: (when: string) => `Nộp lúc ${when}`,
     yourValues: "Số đo em đã nộp", teacherFeedback: "Nhận xét của giáo viên", noScore: "Bài này không chấm điểm.",
-    already: "Em đã nộp bài này rồi; bài đã nộp không sửa được.",
     saveFailed: "Chưa nộp được bài.",
   },
   en: {
@@ -38,11 +39,12 @@ const text = defineText({
     measureHelp: "Measure with the pH pen on the bench and write the number you read (for example 7.0).",
     phOf: (name: string) => `pH of ${name}`, explanation: "Your explanation", explanationHelp: "Which measurement do you rely on?",
     counter: (n: number, max: number) => `${n} / ${max} characters`,
-    submit: "Submit", submitting: "Submitting…",
+    submit: "Submit", submitting: "Submitting…", resubmit: "Submit again", edit: "Edit and submit again", cancelEdit: "Cancel",
+    late: "Late", lateNote: "The due date has passed: work handed in now is marked late.",
+    canResubmit: (due: string | null) => (due ? `You can edit and submit again until ${due}.` : "You can edit and submit again until your teacher comments."),
     phInvalid: "Enter a number from 0 to 14 with at most one decimal (for example 7.0).", explainRequired: "Write your explanation.",
     submitted: "You have submitted", reviewed: "Your teacher has commented", sentAt: (when: string) => `Submitted ${when}`,
     yourValues: "Your submitted values", teacherFeedback: "Teacher's comment", noScore: "This work is not graded.",
-    already: "You have already submitted this; a submitted answer cannot be changed.",
     saveFailed: "Could not submit.",
   },
 });
@@ -80,17 +82,27 @@ export default function ExploreClassAssignment({ assignmentId }: { assignmentId:
   </Suspense>;
 }
 
-/** The task panel in the question drawer: the teacher's note, the form, or what was handed in. */
+/** The task panel in the question drawer: the teacher's note, the form, or what was handed in (editable until the due date). */
 function ExploreTaskPanel({ assignment, labels }: { assignment: ExploreAssignmentView; labels: Record<string, string> }) {
   const t = text();
   const { snapshot, submission } = assignment.explore;
+  const [editing, setEditing] = useState(false);
   return <section className="class-lab-instructions explore-task" aria-label={t.heading} data-testid="explore-task">
     <h3>{t.heading}</h3>
     {assignment.dueDate && <p className="tiny muted">{t.due}: {formatDateTime(assignment.dueDate)}</p>}
     {snapshot.instructions && <><h4>{t.teacherNote}</h4><p className="explore-task-note">{snapshot.instructions}</p></>}
-    {submission
-      ? <SubmittedWork submission={submission} requirements={snapshot.requirements} labels={labels} />
-      : <SubmitForm assignmentId={assignment.id} requirements={snapshot.requirements} labels={labels} />}
+    {submission && !editing && <>
+      <SubmittedWork submission={submission} requirements={snapshot.requirements} labels={labels} />
+      {submission.canResubmit && <>
+        <p className="tiny muted">{t.canResubmit(assignment.dueDate ? formatDateTime(assignment.dueDate) : null)}</p>
+        <button type="button" className="secondary" onClick={() => setEditing(true)}>{t.edit}</button>
+      </>}
+    </>}
+    {(!submission || editing) && <>
+      {!submission && assignment.overdue && <p className="notice" role="note" data-testid="explore-late-note">{t.lateNote}</p>}
+      <SubmitForm key={submission?.id ?? "new"} assignmentId={assignment.id} requirements={snapshot.requirements} labels={labels}
+        initial={editing ? submission?.answers : undefined} onDone={() => setEditing(false)} onCancel={editing ? () => setEditing(false) : undefined} />
+    </>}
   </section>;
 }
 
@@ -99,7 +111,8 @@ function SubmittedWork({ submission, requirements, labels }: { submission: Explo
   const order = requirements.flatMap((item) => (item.kind === "measure" ? [item.itemId] : []));
   const measures = [...submission.answers.measures].sort((a, b) => order.indexOf(a.itemId) - order.indexOf(b.itemId));
   return <div role="status" data-testid="explore-submitted">
-    <p><strong>{submission.status === "REVIEWED" ? t.reviewed : t.submitted}</strong> · <span className="tiny muted">{t.sentAt(formatDateTime(submission.submittedAt))}</span></p>
+    <p><strong>{submission.status === "REVIEWED" ? t.reviewed : t.submitted}</strong>
+      {submission.late && <> · <strong data-testid="explore-late">{t.late}</strong></>} · <span className="tiny muted">{t.sentAt(formatDateTime(submission.submittedAt))}</span></p>
     <h4>{t.yourValues}</h4>
     <ul>{measures.map((item) => <li key={item.itemId}>{t.phOf(labels[item.itemId] ?? item.itemId)}: <b>{formatTenthsPh(item.tenthsPh)}</b></li>)}</ul>
     {submission.answers.explanation && <p className="explore-task-note">{submission.answers.explanation}</p>}
@@ -108,19 +121,24 @@ function SubmittedWork({ submission, requirements, labels }: { submission: Explo
   </div>;
 }
 
-function SubmitForm({ assignmentId, requirements, labels }: { assignmentId: string; requirements: ExploreRequirement[]; labels: Record<string, string> }) {
+function SubmitForm({ assignmentId, requirements, labels, initial, onDone, onCancel }: {
+  assignmentId: string; requirements: ExploreRequirement[]; labels: Record<string, string>;
+  initial?: ExploreSubmission["answers"]; onDone: () => void; onCancel?: () => void;
+}) {
   const t = text();
   const queryClient = useQueryClient();
   const measures = requirements.flatMap((item) => (item.kind === "measure" ? [item] : []));
   const explain = requirements.some((item) => item.kind === "explain");
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [explanation, setExplanation] = useState("");
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries((initial?.measures ?? []).map((item) => [item.itemId, formatTenthsPh(item.tenthsPh)])));
+  const [explanation, setExplanation] = useState(initial?.explanation ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const key = useRef(idempotencyKey());
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["assignment", assignmentId] });
   const send = useMutation({
     mutationFn: (body: unknown) => mutate(`/assignments/${assignmentId}/explore-submissions`, "POST", body, key.current),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["assignment", assignmentId] }),
-    onError: (error) => { if (isApiError(error, "EXPLORE_ALREADY_SUBMITTED")) void queryClient.invalidateQueries({ queryKey: ["assignment", assignmentId] }); },
+    onSuccess: () => { void refresh(); onDone(); },
+    // The server's reason (reviewed, past the due date) is shown as it is; the page then reloads to the real state.
+    onError: (error) => { if (isApiError(error, "EXPLORE_ALREADY_REVIEWED") || isApiError(error, "EXPLORE_RESUBMIT_CLOSED")) void refresh(); },
   });
 
   const onSubmit = (event: FormEvent) => {
@@ -156,7 +174,10 @@ function SubmitForm({ assignmentId, requirements, labels }: { assignmentId: stri
       <span className="tiny muted">{t.explanationHelp} · {t.counter(explanation.length, EXPLANATION_MAX)}</span>
       {errors.explanation && <span className="error" role="alert">{errors.explanation}</span>}
     </label>}
-    {failure && <p className="error" role="alert">{isApiError(failure, "EXPLORE_ALREADY_SUBMITTED") ? t.already : failure instanceof Error && failure.message ? failure.message : t.saveFailed}</p>}
-    <button type="submit" className="primary" disabled={send.isPending}>{send.isPending ? t.submitting : t.submit}</button>
+    {failure && <p className="error" role="alert">{failure instanceof Error && failure.message ? failure.message : t.saveFailed}</p>}
+    <div className="button-row">
+      {onCancel && <button type="button" className="secondary" onClick={onCancel}>{t.cancelEdit}</button>}
+      <button type="submit" className="primary" disabled={send.isPending}>{send.isPending ? t.submitting : initial ? t.resubmit : t.submit}</button>
+    </div>
   </form>;
 }
