@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FlaskConical, BookOpen, ClipboardCheck, Edit3, Archive, Clock, Users, BarChart2, Plus } from "lucide-react";
+import { ExploreAssignModal } from "./explore/ExploreAssignModal";
+import { ExploreBoard } from "./explore/ExploreBoard";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
@@ -12,7 +14,9 @@ import { defineText } from "../../i18n";
 
 const text = defineText({
   vi: {
-    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận" },
+    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận", explore_lab: "Thực hành Explore" },
+    assignExplore: "Giao bài Explore",
+    exploreSubmissions: "Xem bài nộp",
     students: (n: number) => `${n} học sinh`,
     group: " (nhóm)",
     wholeClass: " (cả lớp)",
@@ -64,7 +68,9 @@ const text = defineText({
     selectedCount: (n: number) => `Đã chọn ${n} học sinh${n === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}`,
   },
   en: {
-    types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task" },
+    types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task", explore_lab: "Explore practical" },
+    assignExplore: "Assign an Explore lab",
+    exploreSubmissions: "View submissions",
     students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
     group: " (group)",
     wholeClass: " (whole class)",
@@ -129,6 +135,8 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const [archiving, setArchiving] = useState<TeacherAssignment | null>(null);
   const [tracking, setTracking] = useState<TeacherAssignment | null>(null);
   const [writtenTracking, setWrittenTracking] = useState<TeacherAssignment | null>(null);
+  const [exploreAssigning, setExploreAssigning] = useState(false);
+  const [exploreBoard, setExploreBoard] = useState<TeacherAssignment | null>(null);
   const [writtenView, setWrittenView] = useState<"similarity" | undefined>(undefined);
   const requestedSimilarity = searchParams.get("similarity");
   const [notice, setNotice] = useState<string | null>(null);
@@ -166,6 +174,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const getAssignmentIcon = (type: AssignableType) => {
     switch (type) {
       case "lab":
+      case "explore_lab":
         return FlaskConical;
       case "test":
       case "written":
@@ -216,6 +225,12 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
               <span>{t.trackSubmissions}</span>
             </button>
           )}
+          {a.contentType === "explore_lab" && (
+            <button type="button" className="secondary button-compact" onClick={() => setExploreBoard(a)}>
+              <BarChart2 size={14} aria-hidden="true" />
+              <span>{t.exploreSubmissions}</span>
+            </button>
+          )}
           {a.contentType === "written" && (
             <button type="button" className="secondary button-compact" onClick={() => setWrittenTracking(a)}>
               <BarChart2 size={14} aria-hidden="true" />
@@ -246,10 +261,16 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
           <span className="section-count-pill">{active.length}</span>
         </div>
         {!archived && (
-          <button type="button" className="primary button-compact" onClick={() => { setNotice(null); setAssigning(true); }}>
-            <Plus size={15} aria-hidden="true" />
-            <span>{t.assign}</span>
-          </button>
+          <div className="button-row">
+            <button type="button" className="secondary button-compact" onClick={() => { setNotice(null); setExploreAssigning(true); }}>
+              <FlaskConical size={15} aria-hidden="true" />
+              <span>{t.assignExplore}</span>
+            </button>
+            <button type="button" className="primary button-compact" onClick={() => { setNotice(null); setAssigning(true); }}>
+              <Plus size={15} aria-hidden="true" />
+              <span>{t.assign}</span>
+            </button>
+          </div>
         )}
       </div>
       {notice && <p className="notice" role="status">{notice}</p>}
@@ -269,6 +290,14 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
           </div>
         </details>
       )}
+      {exploreAssigning && (
+        <ExploreAssignModal
+          classroom={classroom}
+          onClose={() => setExploreAssigning(false)}
+          onAssigned={(message) => { setNotice(message); setExploreAssigning(false); }}
+        />
+      )}
+      {exploreBoard && <ExploreBoard classroom={classroom} assignment={exploreBoard} onClose={() => setExploreBoard(null)} />}
       {assigning && (
         <AssignModal
           classroom={classroom}
