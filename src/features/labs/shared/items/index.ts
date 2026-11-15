@@ -2,6 +2,15 @@
 import { beakerItem } from "./beaker";
 import type { SharedItemId } from "./catalog";
 import { digitalScaleItem } from "./digital-scale";
+import { graduatedCylinderItem } from "./graduated-cylinder";
 import type { LabItemMetadata } from "./item";
+import { stopwatchItem } from "./stopwatch";
+import { thermometerItem } from "./thermometer";
 
-export const SHARED_LAB_ITEMS = { beaker: beakerItem, "digital-scale": digitalScaleItem } as const satisfies Record<SharedItemId, LabItemMetadata>;
+export const SHARED_LAB_ITEMS = {
+  beaker: beakerItem,
+  "digital-scale": digitalScaleItem,
+  "graduated-cylinder": graduatedCylinderItem,
+  thermometer: thermometerItem,
+  stopwatch: stopwatchItem,
+} as const satisfies Record<SharedItemId, LabItemMetadata>;
