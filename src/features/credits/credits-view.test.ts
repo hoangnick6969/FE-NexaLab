@@ -70,7 +70,7 @@ test("only teacher and admin screens reference the credit modules; student, pare
   }
   // Teacher screens that show credits load them on demand, so the shared class chunk and the entry chunk stay free of them.
   const lazyLoaders = files.filter((f) => importsCredits(f, "dynamic")).map(rel).sort();
-  assert.deepEqual(lazyLoaders, ["app/App.tsx", "features/classes/TeacherAiPanel.tsx", "features/classes/WrittenAiSuggestion.tsx", "features/lab-challenge/LabChallengePanel.tsx"]);
+  assert.deepEqual(lazyLoaders, ["app/App.tsx", "features/ai-usage/TeacherAiUsageSettings.tsx", "features/classes/ExamAiPanel.tsx", "features/classes/TeacherAiPanel.tsx", "features/classes/WrittenAiSuggestion.tsx", "features/lab-challenge/LabChallengePanel.tsx"]);
   const studentFiles = files.filter((f) => /StudentClasses|[\\/]dashboard[\\/]|[\\/]progress[\\/]|[\\/]lessons[\\/]|[\\/]assignments[\\/]|[\\/]parents?[\\/]/.test(f));
   for (const file of studentFiles) assert.ok(!/features\/credits|\/me\/credits|confirmedCredits|ai-jobs\/estimate/.test(readFileSync(file, "utf8")), `${rel(file)} mentions credits`);
 });

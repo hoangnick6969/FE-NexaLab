@@ -516,3 +516,26 @@ export async function streamMaterial(url: string): Promise<StreamMaterial> {
   const access = await api<{ url: string }>(`/assets/versions/${encodeURIComponent(version)}/access`);
   return { src: access.url, revoke: () => undefined, signed: true };
 }
+
+/**
+ * Authenticated file download (TAI7-T3 gradebook CSV): fetches with the bearer token, refreshes once on 401, and saves
+ * the body under the server's UTF-8 file name (Content-Disposition filename*) or the fallback.
+ */
+export async function downloadFile(path: string, fallbackName: string, retry = true): Promise<void> {
+  const token = useAuth.getState().token;
+  const r = await fetch(base + path, { credentials: "include", headers: token ? { Authorization: "Bearer " + token } : {} });
+  if (r.status === 401 && retry && (await restore())) return downloadFile(path, fallbackName, false);
+  if (!r.ok) throw await readError(r);
+  const disposition = r.headers.get("Content-Disposition") ?? "";
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  const plain = /filename="([^"]+)"/i.exec(disposition)?.[1];
+  const name = encoded ? decodeURIComponent(encoded) : plain ?? fallbackName;
+  const url = URL.createObjectURL(await r.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

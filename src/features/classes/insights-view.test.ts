@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { insightMessages } from "./insights-copy.ts";
 import {
-  ackBody, ackErrorKind, ackLabel, evidencePath, insightCopy, isHandled, noteLength, noteTooLong, NOTE_MAX, partitionStudents, similarityAssignmentId, statusTone, withSimilarityTarget,
+  ackBody, ackErrorKind, ackLabel, evidencePath, evidenceText, insightBadge, insightCopy, isHandled, noteLength, noteTooLong, NOTE_MAX, partitionStudents, similarityAssignmentId, statusTone, withSimilarityTarget,
   type InsightItem, type StudentInsights,
 } from "./insights-view.ts";
 
@@ -170,8 +170,10 @@ test("the grade evidence kind has labels in both languages and no detail route",
 /* ---- vocabulary and isolation ------------------------------------------------------------------------------ */
 
 const FORBIDDEN = ["gian lận", "năng lực thật", "yếu kém", "xếp hạng", "nghi ngờ", "đạo văn", "sao chép", "copied", "cheat", "true ability", "real ability", "weak", "poor", "ranking", "rank ", "suspect", "suspicio", "plagiar", "sudden"];
-const RAW_CODES = ["INSUFFICIENT_EVIDENCE", "SCORE_CHANGE_UNUSUAL", "HIGH_HINT_DEPENDENCE", "OBJECTIVE_MASTERY_INCONSISTENT", "SUDDEN_UNAIDED_PASS", "SUBMISSION_SIMILARITY_HIGH", "MCQ_EXPLANATION_MISMATCH", "SIMULATION_EXPLANATION_MISMATCH"];
-const SAMPLE_VALUES = { latest: 90, mean: 60, delta: 30, standardDeviation: 5, threshold: 25, direction: "UP", scoredCount: 2, practicalCount: 4, highHintCount: 3, outcomeCode: "OUT-1", passingKind: "QUIZ", nonPassingKind: "PRACTICAL", assignmentTitle: "Bài tự luận 1", pairCount: 2, mcqScore: 90, explanationPercent: 20, verdict: "passed" };
+const RAW_CODES = ["INSUFFICIENT_EVIDENCE", "SCORE_CHANGE_UNUSUAL", "HIGH_HINT_DEPENDENCE", "OBJECTIVE_MASTERY_INCONSISTENT", "SUDDEN_UNAIDED_PASS", "SUBMISSION_SIMILARITY_HIGH", "MCQ_EXPLANATION_MISMATCH", "SIMULATION_EXPLANATION_MISMATCH", "ASSESSMENT_TREND", "READINESS_BEFORE_MIDTERM"];
+const SAMPLE_VALUES = { latest: 90, mean: 60, delta: 30, standardDeviation: 5, threshold: 25, direction: "UP", scoredCount: 2, practicalCount: 4, highHintCount: 3, outcomeCode: "OUT-1", passingKind: "QUIZ", nonPassingKind: "PRACTICAL", assignmentTitle: "Bài tự luận 1", pairCount: 2, mcqScore: 90, explanationPercent: 20, verdict: "passed",
+  // TAI7-T2 (insights@4)
+  family: "GRADED", latest10: 4, mean10: 8, delta10: -4, latestTitle: "Kiểm tra 15 phút số 4", midtermTitle: "Giữa kỳ I", midtermDueAt: "2026-11-20T00:00:00.000Z", daysLeft: 3, prepCount: 2, notDoneCount: 1, average10: 4.95 };
 const SAMPLE_THRESHOLDS = { minScoredItems: 3, baselineMin: 3, baselineMax: 10, sigmaMultiplier: 2, minDelta: 25, minPracticals: 3, highHintLevel: 3, shareNumerator: 2, shareDenominator: 3, minItems: 3, minPassing: 1, minNonPassing: 2, highContainmentPercent: 80, minSharedShingles: 8, answerHighMin: 80, answerLowMax: 40, explanationHighMin: 80, explanationLowMax: 40 };
 
 function strings(value: unknown, lang: "vi" | "en"): string[] {
@@ -222,4 +224,44 @@ test("only the teacher class screens import the insight modules, never student o
   for (const file of importers) assert.ok(allowed.has(file), `${path.relative(root, file)} must not import insight modules`);
   const studentFiles = files.filter((f) => /StudentClasses|[\\/]dashboard[\\/]|[\\/]progress[\\/]|[\\/]lessons[\\/]|[\\/]assignments[\\/]/.test(f));
   for (const file of studentFiles) assert.ok(!/insights-(view|copy)|ClassInsights|\/insights/.test(readFileSync(file, "utf8")), `${path.relative(root, file)} mentions insights`);
+});
+
+test("insights@4: the assessment trend reads on the 10-point scale with one decimal", () => {
+  const trend = insight("ASSESSMENT_TREND", {
+    ruleVersion: "insights@4",
+    values: { family: "GRADED", latest10: 4, mean10: 8, delta10: -4, direction: "DOWN", latestTitle: "Kiểm tra 15 phút số 4" },
+    thresholds: { baselineMin: 3, baselineMax: 5, sigmaMultiplier: 2, minDelta10: 2, minGradedSeries: 4 },
+  });
+  const copy = insightCopy(trend);
+  assert.equal(copy.title, insightMessages.vi.rules.ASSESSMENT_TREND.title);
+  assert.match(copy.summary, /4,0\/10/);
+  assert.match(copy.summary, /8\/10/);
+  assert.match(copy.summary, /giảm −4 điểm/);
+  assert.match(copy.summary, /không tính các lần làm lại/);
+  assert.match(copy.threshold, /thang 10/);
+  assert.equal(insightBadge(trend), "Kết quả kiểm tra giảm −4đ");
+});
+
+test("insights@4: midterm readiness shows days left, missing work and an average that never rounds up to the bound", () => {
+  const ready = insight("READINESS_BEFORE_MIDTERM", {
+    ruleVersion: "insights@4",
+    values: { midtermTitle: "Giữa kỳ I", midtermDueAt: "2026-11-20T00:00:00.000Z", daysLeft: 3, prepCount: 2, notDoneCount: 1, scoredCount: 1, average10: 4.95, reason: "NOT_DONE_AND_LOW" },
+    thresholds: { readinessWindowDays: 7, lowAverage10: 5 },
+  });
+  const copy = insightCopy(ready);
+  assert.match(copy.summary, /còn 3 ngày/);
+  assert.match(copy.summary, /chưa làm 1\/2 bài ôn tập/);
+  assert.match(copy.summary, /4,95\/10/);
+  assert.match(copy.threshold, /7 ngày/);
+  assert.equal(insightBadge(ready), "Giữa kỳ còn 3 ngày · cần ôn");
+  const noScores = insightCopy({ ...ready, values: { ...ready.values, average10: "", notDoneCount: 2 } });
+  assert.doesNotMatch(noScores.summary, /trung bình/);
+});
+
+test("insights@4 evidence shows the assignment, its type and a 10-point score; older evidence reads as before", () => {
+  assert.equal(evidenceText({ kind: "TEST", id: "s1", at: "2026-11-01T00:00:00.000Z", label: "KT 15 phút", assessmentType: "REGULAR_15M", score10: 6.7 }), "Bài kiểm tra được giao · KT 15 phút · Kiểm tra 15 phút · 6,7/10");
+  assert.equal(evidenceText({ kind: "TEST", id: "s2", at: "2026-11-01T00:00:00.000Z", label: "KT", score10: 8 }), "Bài kiểm tra được giao · KT · 8,0/10");
+  assert.equal(evidenceText({ kind: "ASSIGNMENT", id: "a1", at: "2026-11-01T00:00:00.000Z", label: "Ôn tập", assessmentType: "PRACTICE", status: "NOT_DONE" }), "Bài được giao · Ôn tập · Luyện tập · chưa làm");
+  assert.equal(evidenceText({ kind: "QUIZ", id: "q1", at: "2026-11-01T00:00:00.000Z" }), "Bài trắc nghiệm");
+  assert.equal(evidencePath("c", "s", { kind: "ASSIGNMENT", id: "a1", at: "2026-11-01T00:00:00.000Z" }), null);
 });

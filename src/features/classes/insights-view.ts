@@ -1,8 +1,9 @@
 import { insightText } from "./insights-copy.ts";
 
 /** Shapes returned by the TAI-04 teacher routes (BE implementation-contract.md). Teacher screens only. */
-export type InsightEvidenceKind = "QUIZ" | "TEST" | "PRACTICAL" | "WRITTEN" | "SIMILARITY_MATCH" | "WRITTEN_GRADE";
-export type InsightEvidenceRef = { kind: InsightEvidenceKind; id: string; at: string };
+export type InsightEvidenceKind = "QUIZ" | "TEST" | "PRACTICAL" | "WRITTEN" | "SIMILARITY_MATCH" | "WRITTEN_GRADE" | "ASSIGNMENT";
+/** insights@4 entries also carry the assignment title, its type, the 10-point score and (ASSIGNMENT) a status. */
+export type InsightEvidenceRef = { kind: InsightEvidenceKind; id: string; at: string; label?: string; assessmentType?: string; score10?: number | null; status?: string };
 export type InsightAckAction = "ACKNOWLEDGED" | "DISMISSED";
 export type InsightItem = {
   fingerprint: string;
@@ -75,7 +76,9 @@ export function evidencePath(classId: string, studentId: string, ref: InsightEvi
 /** What the card says about one insight, in the page language. Unknown rule codes fall back to the API message. */
 export function insightCopy(insight: Pick<InsightItem, "ruleCode" | "message" | "values" | "thresholds">) {
   const t = insightText();
-  const rule = (t.rules as Record<string, { title: string; summary: (...args: any[]) => string; threshold: (...args: any[]) => string } | undefined>)[insight.ruleCode];
+  // A score change between resubmissions of one assigned test reads as a retake, not as progress across work.
+  const key = insight.ruleCode === "SCORE_CHANGE_UNUSUAL" && insight.values?.context === "RETAKE_SAME_ASSIGNMENT" ? "SCORE_CHANGE_RETAKE" : insight.ruleCode;
+  const rule = (t.rules as Record<string, { title: string; summary: (...args: any[]) => string; threshold: (...args: any[]) => string } | undefined>)[key];
   if (!rule) {
     return {
       title: t.unknownTitle,
@@ -84,6 +87,19 @@ export function insightCopy(insight: Pick<InsightItem, "ruleCode" | "message" | 
     };
   }
   return { title: rule.title, summary: rule.summary(insight.values, t.evidenceKind), threshold: rule.threshold(insight.thresholds) };
+}
+
+/** One-line badge for a table row: the score change with its sign, or the insight title for every other rule. */
+export function insightBadge(insight: Pick<InsightItem, "ruleCode" | "message" | "values" | "thresholds">): string {
+  const t = insightText();
+  if (insight.ruleCode === "ASSESSMENT_TREND") return Number(insight.values.delta10) >= 0 ? t.badge.trendUp(insight.values.delta10) : t.badge.trendDown(insight.values.delta10);
+  if (insight.ruleCode === "READINESS_BEFORE_MIDTERM") return t.badge.readiness(insight.values.daysLeft);
+  if (insight.ruleCode === "SCORE_CHANGE_UNUSUAL") {
+    const delta = insight.values.delta;
+    if (insight.values.context === "RETAKE_SAME_ASSIGNMENT") return t.badge.retake(delta);
+    return Number(delta) >= 0 ? t.badge.up(delta) : t.badge.down(delta);
+  }
+  return insightCopy(insight).title;
 }
 
 /** The written assignment a similarity insight points to, or null for every other insight. */
@@ -114,4 +130,18 @@ export function ackErrorKind(error: unknown): "stale" | "archived" | "other" {
 export function ackBody(action: InsightAckAction, note: string) {
   const trimmed = note.trim();
   return { action, ...(trimmed ? { note: trimmed } : {}) };
+}
+
+/**
+ * TAI7-T2: the text of one evidence entry, without the date: kind, then for insights@4 the assignment title, its type,
+ * the 10-point score ("6,7/10") or the status ("chưa làm"). Older entries read exactly as before (kind only).
+ */
+export function evidenceText(item: InsightEvidenceRef): string {
+  const t = insightText();
+  const parts = [t.evidenceKind[item.kind] ?? item.kind];
+  if (item.label) parts.push(item.label);
+  if (item.assessmentType && t.assessmentType[item.assessmentType]) parts.push(t.assessmentType[item.assessmentType]!);
+  if (typeof item.score10 === "number") parts.push(t.score10(item.score10));
+  if (item.status && t.evidenceStatus[item.status]) parts.push(t.evidenceStatus[item.status]!);
+  return parts.join(" · ");
 }

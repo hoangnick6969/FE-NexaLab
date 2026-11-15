@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../lib/api";
 import { Plus, Trash2 } from "lucide-react";
 import { Field } from "../../components/ui";
 import { defineText } from "../../i18n";
@@ -17,6 +19,7 @@ const text = defineText({
     removeLastOption: "Bớt phương án cuối",
     correct: (n: number) => `Đáp án đúng câu ${n}`,
     optionN: (n: number) => `Phương án ${n}`,
+    noAnswer: "Chưa chọn đáp án",
     removeQuestion: (n: number) => `Xóa câu hỏi ${n}`,
     addQuestion: "Thêm câu hỏi",
     writtenPrompt: (n: number) => `Câu tự luận ${n}`,
@@ -54,6 +57,7 @@ const text = defineText({
     removeLastOption: "Remove the last option",
     correct: (n: number) => `Correct answer for question ${n}`,
     optionN: (n: number) => `Option ${n}`,
+    noAnswer: "No answer selected",
     removeQuestion: (n: number) => `Remove question ${n}`,
     addQuestion: "Add a question",
     writtenPrompt: (n: number) => `Written question ${n}`,
@@ -80,15 +84,25 @@ const text = defineText({
   },
 });
 
+type CognitiveLevel = "RECALL" | "UNDERSTAND" | "APPLY";
+type ExamMeta = { points?: number; cognitiveLevel?: CognitiveLevel };
+type ExamLab = ExamMeta & { id?: string; labId: string; releaseId: string; challengeId: string; prompt: string };
 export type WrittenCriterion = { code: string; description: string; maxPoints: number; anchors: Array<{ points: number; description: string }> };
-export type WrittenPrompt = { id?: string; prompt: string; maxChars: number; referenceAnswer?: string; commonPhrases?: string[]; criteria: WrittenCriterion[] };
-export type ResourceContent = { prompts?: WrittenPrompt[]; customParams?: Record<string, number>; source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; thumbnailUrl?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<{ id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
+export type WrittenPrompt = ExamMeta & { id?: string; prompt: string; maxChars: number; referenceAnswer?: string; commonPhrases?: string[]; criteria: WrittenCriterion[] };
+export type ResourceContent = { labs?: ExamLab[]; prompts?: WrittenPrompt[]; customParams?: Record<string, number>; source?: any; learningObjective?: string; instructions?: string; reportPrompts?: string[]; description?: string; url?: string; thumbnailUrl?: string; cards?: Array<{ id?: string; front: string; back: string }>; questions?: Array<ExamMeta & { id?: string; prompt: string; explanation?: string | null; options: Array<string | { id?: string; text: string }>; correctOption?: number }> };
 
 export const emptyCriterion = (): WrittenCriterion => ({ code: "", description: "", maxPoints: 2, anchors: [{ points: 0, description: "" }, { points: 2, description: "" }] });
 export const emptyWrittenPrompt = (): WrittenPrompt => ({ prompt: "", maxChars: 1000, referenceAnswer: "", commonPhrases: [], criteria: [emptyCriterion()] });
 
 /** Request body content; server-generated ids are never sent back (strict server schemas). */
-export function resourceInput(kind: ResourceKind, value: ResourceContent) {
+export function resourceInput(kind: ResourceKind, value: ResourceContent): ResourceContent {
+  if (kind === "EXAM") return {
+    questions: (resourceInput("TEST", value).questions ?? []).map((q, i) => ({ ...q, ...examMeta(value.questions![i]) })),
+    prompts: (resourceInput("WRITTEN_TASK", value).prompts ?? []).map((p, i) => ({
+      ...p, cognitiveLevel: value.prompts![i].cognitiveLevel ?? "APPLY", points: rubricPoints(value.prompts![i]),
+    })),
+    labs: (value.labs ?? []).map(({ labId, releaseId, challengeId, prompt, ...meta }) => ({ labId, releaseId, challengeId, prompt, ...examMeta(meta) })),
+  };
   if (kind === "WRITTEN_TASK")
     return {
       prompts: (value.prompts ?? []).map((p) => ({
@@ -105,14 +119,16 @@ export function resourceInput(kind: ResourceKind, value: ResourceContent) {
   return kind === "DECK" ? { cards: value.cards?.map(({ front, back }) => ({ front, back })) } : {
     ...(kind === "TEST" && value.thumbnailUrl?.trim() ? { thumbnailUrl: value.thumbnailUrl.trim() } : {}),
     questions: value.questions?.map((question) => ({ prompt: question.prompt, options: question.options.map((option) => typeof option === "string" ? option : option.text),
-      ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 } : {}) })),
+      ...(question.explanation ? { explanation: question.explanation } : {}), ...(kind === "TEST" ? { correctOption: question.correctOption ?? 0 }
+        : kind === "STUDY_QUIZ" && typeof question.correctOption === "number" ? { correctOption: question.correctOption } : {}) })),
   };
 }
 
-export function ResourceEditor({ kind, value, onChange, classId }: { kind: ResourceKind; value: ResourceContent; onChange: (value: ResourceContent) => void; classId?: string }) {
+export function ResourceEditor({ kind, value, onChange, classId, examSection = false }: { kind: ResourceKind; value: ResourceContent; onChange: (value: ResourceContent) => void; classId?: string; examSection?: boolean }) {
   const t = text();
   if (["LAB", "DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(kind)) return <RichResourceEditor kind={kind} value={value} onChange={onChange} classId={classId} />;
-  if (kind === "WRITTEN_TASK") return <WrittenTaskEditor value={value} onChange={onChange} />;
+  if (kind === "EXAM") return <ExamEditor value={value} onChange={onChange} classId={classId} />;
+  if (kind === "WRITTEN_TASK") return <WrittenTaskEditor value={value} onChange={onChange} examSection={examSection} />;
   if (kind === "DECK") {
     const cards = value.cards ?? [];
     return (
@@ -162,7 +178,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
             <button
               type="button"
               className="resource-delete-btn"
-              disabled={questions.length <= 1}
+              disabled={!examSection && questions.length <= 1}
               title={t.removeQuestion(index + 1)}
               onClick={() => onChange({ ...value, questions: questions.filter((_, i) => i !== index) })}
             >
@@ -170,6 +186,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
               <span>{t.removeQuestion(index + 1)}</span>
             </button>
           </div>
+          {examSection && <ExamItemFields item={question} update={(change) => update(index, change)} />}
           <Field label={t.prompt(index + 1)} required maxLength={500} value={question.prompt} onChange={(e) => update(index, { prompt: e.target.value })} />
           <div className="resource-options-grid">
             {question.options.map((option, optionIndex) => (
@@ -178,12 +195,14 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
           </div>
           <div className="button-row resource-subcard-actions">
             <button type="button" className="secondary" disabled={question.options.length >= 6} onClick={() => update(index, { options: [...question.options, ""] })}>{t.addOption}</button>
-            <button type="button" className="secondary" disabled={question.options.length <= 2} onClick={() => update(index, { options: question.options.slice(0, -1), ...(kind === "TEST" ? { correctOption: Math.min(question.correctOption ?? 0, question.options.length - 2) } : {}) })}>{t.removeLastOption}</button>
+            <button type="button" className="secondary" disabled={question.options.length <= 2} onClick={() => update(index, { options: question.options.slice(0, -1), ...(kind === "TEST" || typeof question.correctOption === "number" ? { correctOption: Math.min(question.correctOption ?? 0, question.options.length - 2) } : {}) })}>{t.removeLastOption}</button>
           </div>
-          {kind === "TEST" && (
+          {(kind === "TEST" || kind === "STUDY_QUIZ") && (
             <label className="field">
               <span>{t.correct(index + 1)}</span>
-              <select value={question.correctOption ?? 0} onChange={(e) => update(index, { correctOption: Number(e.target.value) })}>
+              {/* An older or CSV-imported practice quiz may have no answer yet; it is never silently set to option 1. */}
+              <select value={question.correctOption ?? (kind === "TEST" ? 0 : "")} onChange={(e) => update(index, { correctOption: e.target.value === "" ? undefined : Number(e.target.value) })}>
+                {kind === "STUDY_QUIZ" && <option value="">{t.noAnswer}</option>}
                 {question.options.map((_, optionIndex) => <option key={optionIndex} value={optionIndex}>{t.optionN(optionIndex + 1)}</option>)}
               </select>
             </label>
@@ -194,7 +213,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
         type="button"
         className="resource-add-item-btn"
         disabled={questions.length >= 100}
-        onClick={() => onChange({ ...value, questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" ? { correctOption: 0 } : {}) }] })}
+        onClick={() => onChange({ ...value, questions: [...questions, { prompt: "", options: ["", ""], ...(kind === "TEST" || kind === "STUDY_QUIZ" ? { correctOption: 0 } : {}) }] })}
       >
         <Plus size={15} aria-hidden="true" />
         <span>{t.addQuestion}</span>
@@ -204,7 +223,7 @@ export function ResourceEditor({ kind, value, onChange, classId }: { kind: Resou
 }
 
 /** TAI2-T1 rubric editor: prompts, criteria and anchors with a live maximum-points total. The server validates (RUBRIC_INVALID). */
-function WrittenTaskEditor({ value, onChange }: { value: ResourceContent; onChange: (value: ResourceContent) => void }) {
+function WrittenTaskEditor({ value, onChange, examSection }: { value: ResourceContent; onChange: (value: ResourceContent) => void; examSection: boolean }) {
   const t = text();
   const prompts = value.prompts ?? [];
   const setPrompt = (index: number, change: Partial<WrittenPrompt>) => onChange({ prompts: prompts.map((p, i) => (i === index ? { ...p, ...change } : p)) });
@@ -216,6 +235,7 @@ function WrittenTaskEditor({ value, onChange }: { value: ResourceContent; onChan
       {prompts.map((p, pi) => (
         <fieldset key={pi}>
           <legend>{t.writtenPrompt(pi + 1)}</legend>
+          {examSection && <ExamItemFields item={p} update={(change) => setPrompt(pi, change)} written />}
           <label className="field"><span>{t.writtenText(pi + 1)}</span><textarea required rows={3} maxLength={2000} value={p.prompt} onChange={(e) => setPrompt(pi, { prompt: e.target.value })} /></label>
           <Field label={t.maxChars} type="number" required min={100} max={5000} step={1} value={p.maxChars} onChange={(e) => setPrompt(pi, { maxChars: Number(e.target.value) })} />
           <label className="field"><span>{t.referenceAnswer}</span><textarea rows={2} maxLength={2000} value={p.referenceAnswer ?? ""} onChange={(e) => setPrompt(pi, { referenceAnswer: e.target.value })} /></label>
@@ -244,12 +264,93 @@ function WrittenTaskEditor({ value, onChange }: { value: ResourceContent; onChan
           ))}
           <div className="button-row">
             <button type="button" className="secondary" disabled={p.criteria.length >= 6} onClick={() => setPrompt(pi, { criteria: [...p.criteria, emptyCriterion()] })}>{t.addCriterion}</button>
-            <button type="button" className="danger-text" disabled={prompts.length <= 1} onClick={() => onChange({ prompts: prompts.filter((_, i) => i !== pi) })}>{t.removePrompt(pi + 1)}</button>
+            <button type="button" className="danger-text" disabled={!examSection && prompts.length <= 1} onClick={() => onChange({ prompts: prompts.filter((_, i) => i !== pi) })}>{t.removePrompt(pi + 1)}</button>
           </div>
         </fieldset>
       ))}
       <p className="tiny" role="status"><b>{t.totalPoints(total)}</b></p>
       <button type="button" className="secondary" disabled={prompts.length >= 5} onClick={() => onChange({ prompts: [...prompts, emptyWrittenPrompt()] })}>{t.addPrompt}</button>
+    </div>
+  );
+}
+
+const rubricPoints = (prompt: WrittenPrompt) => prompt.criteria.reduce((total, criterion) => total + criterion.maxPoints, 0);
+const examMeta = (item: ExamMeta) => ({ points: item.points ?? 1, cognitiveLevel: item.cognitiveLevel ?? "APPLY" as const });
+
+function ExamItemFields({ item, update, written }: { item: ExamMeta; update: (change: ExamMeta) => void; written?: boolean }) {
+  return (
+    <div className="form-grid-2col">
+      {!written && <Field label="Điểm tối đa của câu" type="number" required min={0.01} max={10} step={0.01} value={item.points ?? 1} onChange={(e) => update({ points: Number(e.target.value) })} />}
+      <label className="field">
+        <span>Mức độ nhận thức</span>
+        <select value={item.cognitiveLevel ?? "APPLY"} onChange={(e) => update({ cognitiveLevel: e.target.value as CognitiveLevel })}>
+          <option value="RECALL">Nhận biết</option>
+          <option value="UNDERSTAND">Thông hiểu</option>
+          <option value="APPLY">Vận dụng</option>
+        </select>
+      </label>
+    </div>
+  );
+}
+
+type LabOption = { id: string; title: string; release: { id: string }; challenges: Array<{ id: string; objective: string }> };
+
+function ExamEditor({ value, onChange, classId }: { value: ResourceContent; onChange: (value: ResourceContent) => void; classId?: string }) {
+  const available = useQuery<{ labs: LabOption[] }>({
+    queryKey: ["assignable", classId],
+    queryFn: () => api(`/classes/${classId}/assignable-content`),
+    enabled: !!classId,
+  });
+  const labs = value.labs ?? [];
+  const update = (index: number, change: Partial<ExamLab>) => onChange({ ...value, labs: labs.map((item, i) => i === index ? { ...item, ...change } : item) });
+  const total = (value.questions ?? []).reduce((sum, item) => sum + Math.round(examMeta(item).points * 100), 0)
+    + (value.prompts ?? []).reduce((sum, item) => sum + Math.round(rubricPoints(item) * 100), 0)
+    + labs.reduce((sum, item) => sum + Math.round(examMeta(item).points * 100), 0);
+  return (
+    <div className="resource-practice-items">
+      <p role="status"><b>{(total / 100).toLocaleString("vi-VN", { minimumFractionDigits: 1 })}/10 điểm</b> · Chọn ít nhất hai phần và phân bổ đúng 10 điểm.</p>
+      <fieldset><legend>Trắc nghiệm</legend>
+        <ResourceEditor kind="TEST" value={value} examSection onChange={({ questions }) => onChange({ ...value, questions })} />
+      </fieldset>
+      <fieldset><legend>Tự luận</legend>
+        <WrittenTaskEditor value={value} examSection onChange={({ prompts }) => onChange({ ...value, prompts })} />
+      </fieldset>
+      <fieldset><legend>Thử thách Phòng Lab</legend>
+        {labs.map((item, index) => {
+          const options = available.data?.labs ?? [];
+          const lab = options.find((entry) => entry.id === item.labId && entry.release.id === item.releaseId);
+          return (
+            <fieldset className="resource-subcard" key={index}>
+              <legend>Lab {index + 1}</legend>
+              <ExamItemFields item={item} update={(change) => update(index, change)} />
+              <label className="field">
+                <span>Phòng Lab</span>
+                <select required value={lab?.id ?? ""} onChange={(e) => {
+                  const next = options.find((entry) => entry.id === e.target.value);
+                  update(index, { labId: next?.id ?? "", releaseId: next?.release.id ?? "", challengeId: "" });
+                }}>
+                  <option value="">Chọn Lab đã phát hành</option>
+                  {options.map(({ id, title }) => <option key={id} value={id}>{title}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Thử thách</span>
+                <select required value={item.challengeId} onChange={(e) => {
+                  const challenge = lab?.challenges.find((entry) => entry.id === e.target.value);
+                  update(index, { challengeId: e.target.value, prompt: item.prompt || challenge?.objective || "" });
+                }}>
+                  <option value="">Chọn thử thách</option>
+                  {lab?.challenges.map(({ id, objective }) => <option key={id} value={id}>{objective || id}</option>)}
+                </select>
+              </label>
+              <Field label="Yêu cầu thực hành" required maxLength={2000} value={item.prompt} onChange={(e) => update(index, { prompt: e.target.value })} />
+              <button className="danger-text" type="button" onClick={() => onChange({ ...value, labs: labs.filter((_, i) => i !== index) })}>Xóa Lab {index + 1}</button>
+            </fieldset>
+          );
+        })}
+        {available.isError && <p role="alert">Không tải được danh sách Lab.</p>}
+        <button type="button" className="secondary" disabled={labs.length >= 10} onClick={() => onChange({ ...value, labs: [...labs, { labId: "", releaseId: "", challengeId: "", prompt: "" }] })}>Thêm câu Lab</button>
+      </fieldset>
     </div>
   );
 }

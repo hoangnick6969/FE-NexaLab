@@ -1,0 +1,88 @@
+/* TAI7-T5: "AI Gợi ý đề & biểu điểm" inside the EXAM creation form. */
+.exam-ai {
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+}
+.exam-ai-head h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+.exam-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px 12px;
+}
+.exam-ai-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.exam-ai fieldset {
+  margin: 10px 0;
+}
+.exam-ai-points {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--fill-neutral-90);
+  border-radius: 8px;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.exam-ai-problems {
+  margin: 6px 0;
+  padding-left: 18px;
+  color: var(--ink-red-52);
+  font-size: 13px;
+}
+.exam-ai-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+}
+.exam-ai-result {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--fill-neutral-90);
+}
+.exam-ai-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.exam-ai-matrix-table td,
+.exam-ai-matrix-table th {
+  padding: 4px 10px;
+}
+.exam-ai-warnings {
+  margin: 8px 0;
+  padding: 8px 10px 8px 12px;
+  list-style: none;
+  border: 1px solid var(--line-amber-92);
+  border-radius: 8px;
+  background: var(--fill-amber-95);
+  color: var(--ink-amber-54);
+  font-size: 13px;
+}
+.exam-ai-warnings li {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 2px 0;
+}
+.exam-ai .spin {
+  animation: exam-ai-spin 1s linear infinite;
+}
+@keyframes exam-ai-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exam-ai .spin { animation: none; }
+}
+@media (max-width: 640px) {
+  .exam-ai-grid-3 { grid-template-columns: 1fr; }
+}

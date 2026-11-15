@@ -8,6 +8,7 @@ import { Badge, Empty, ErrorBox, PageLoader } from "../../components/ui";
 import { PracticalPathwayStep } from "../labs/pathways/PracticalPathwayStep";
 import { AttributionNote } from "../lessons/library";
 import { AssignedExplore } from "./AssignedExplore";
+import { GradedAssessment } from "./GradedAssessment";
 import { AssignedTest } from "./AssignedTest";
 import { AssignedWritten } from "./AssignedWritten";
 import { QuizLearningStep } from "./QuizLearningStep";
@@ -110,6 +111,9 @@ export function AssignedLearning() {
   const teacherName = assignment.classroom.teacher?.fullName || (assignment.classroom.teacher?.username ? `@${assignment.classroom.teacher.username}` : t.teacher);
   const sourceLab = assignment.contentType === "lab" ? labInfo.find((lab) => lab.id === content.id) : undefined;
   if (assignment.contentType === "explore_lab") return <AssignedExplore assignment={assignment} />;
+  // TAI-07: graded 15-minute / midterm work runs in a timed session with hidden results until publication.
+  if ((assignment.contentType === "test" || assignment.contentType === "written" || assignment.contentType === "exam") && assignment.assessment?.graded)
+    return <GradedAssessment assignment={assignment} kind={assignment.contentType} />;
   if (assignment.contentType === "test") return <AssignedTest assignment={assignment} />;
   if (assignment.contentType === "written") return <AssignedWritten assignment={assignment} />;
   if (assignment.contentType === "lesson" && pathwayQuery.isLoading)

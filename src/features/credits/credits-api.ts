@@ -9,7 +9,9 @@ import { api } from "../../lib/api";
 export type CreditEstimateBody =
   | { purpose: "GENERATE_RESOURCE"; targetKind: "DECK" | "STUDY_QUIZ" | "TEST"; lessonId: string; itemCount: number; difficulty?: string; instruction?: string }
   | { purpose: "ASSESS_SUBMISSION"; submissionCount: number }
-  | { purpose: "DRAFT_LAB_CHALLENGE"; lessonId: string; proposalCount: number; instruction?: string };
+  | { purpose: "DRAFT_LAB_CHALLENGE"; lessonId: string; proposalCount: number; instruction?: string }
+  /** TAI7-T5: priced by its slots (questions + Lab), so the body carries the same sections as the create route. */
+  | { purpose: "GENERATE_ASSESSMENT"; lessonId: string; assessmentType: "REGULAR_15M" | "MIDTERM_45M"; matrix: Record<"RECALL" | "UNDERSTAND" | "APPLY", number>; sections: { mcqCount: number; writtenCount: number; lab: { labId: string; releaseId: string; challengeId: string } | null }; instruction?: string };
 
 /** `enabled: false` means the feature is off: no estimate is shown and no `confirmedCredits` is sent. */
 export type CreditEstimate = { enabled: boolean; credits: number; pricingVersion: number | null; available: number };

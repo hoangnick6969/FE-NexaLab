@@ -1,3 +1,6 @@
+import { Gradebook } from "./Gradebook";
+import { AssessmentBadge } from "./AssessmentControls";
+import { ASSESSMENT_DURATION, type AssessmentType } from "../assignments/assessment-timer";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -14,7 +17,7 @@ import { defineText } from "../../i18n";
 
 const text = defineText({
   vi: {
-    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận", explore_lab: "Thực hành Explore" },
+    types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận", explore_lab: "Thực hành Explore", exam: "Đề kiểm tra tổng hợp" },
     assignExplore: "Giao bài Explore",
     exploreSubmissions: "Xem bài nộp",
     students: (n: number) => `${n} học sinh`,
@@ -68,7 +71,7 @@ const text = defineText({
     selectedCount: (n: number) => `Đã chọn ${n} học sinh${n === 0 ? ". Hãy chọn ít nhất một học sinh." : "."}`,
   },
   en: {
-    types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task", explore_lab: "Explore practical" },
+    types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task", explore_lab: "Explore practical", exam: "Composite exam" },
     assignExplore: "Assign an Explore lab",
     exploreSubmissions: "View submissions",
     students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
@@ -137,6 +140,8 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const [writtenTracking, setWrittenTracking] = useState<TeacherAssignment | null>(null);
   const [exploreAssigning, setExploreAssigning] = useState(false);
   const [exploreBoard, setExploreBoard] = useState<TeacherAssignment | null>(null);
+  // TAI7-T3: class gradebook of a test or written assignment.
+  const [gradebookOf, setGradebookOf] = useState<TeacherAssignment | null>(null);
   const [writtenView, setWrittenView] = useState<"similarity" | undefined>(undefined);
   const requestedSimilarity = searchParams.get("similarity");
   const [notice, setNotice] = useState<string | null>(null);
@@ -151,7 +156,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   // Deep link from a similarity insight: open the written tracking modal of that assignment in its similarity view.
   useEffect(() => {
     if (!requestedSimilarity || !list.data) return;
-    const target = list.data.find((item) => item.id === requestedSimilarity && item.contentType === "written");
+    const target = list.data.find((item) => item.id === requestedSimilarity && (item.contentType === "written" || item.contentType === "exam"));
     if (target) {
       setWrittenView("similarity");
       setWrittenTracking(target);
@@ -177,6 +182,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       case "explore_lab":
         return FlaskConical;
       case "test":
+      case "exam":
       case "written":
         return ClipboardCheck;
       case "lesson":
@@ -199,6 +205,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
               <span className={`assignment-type-pill is-${a.contentType}`}>{contentTypeLabel[a.contentType]}</span>
               {a.overdue && a.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
               {a.testSummary?.extended && <Badge tone="gold">{t.extendedTimes(a.testSummary.revision - 1)}</Badge>}
+              <AssessmentBadge assessment={a.assessment} />
             </div>
             <div className="assignment-meta-row">
               <span className="assignment-meta-item">
@@ -231,7 +238,13 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
               <span>{t.exploreSubmissions}</span>
             </button>
           )}
-          {a.contentType === "written" && (
+          {(a.contentType === "test" || a.contentType === "written" || a.contentType === "exam") && (
+            <button type="button" className="primary button-compact" onClick={() => setGradebookOf(a)}>
+              <ClipboardCheck size={14} aria-hidden="true" />
+              <span>Bảng điểm</span>
+            </button>
+          )}
+          {(a.contentType === "written" || a.contentType === "exam") && (
             <button type="button" className="secondary button-compact" onClick={() => setWrittenTracking(a)}>
               <BarChart2 size={14} aria-hidden="true" />
               <span>{t.trackWritten}</span>
@@ -323,14 +336,14 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
                   path: `/classes/${classroom.id}/assignments/${editing.id}`,
                   method: "PUT",
                   // A test's deadline only moves through a class-wide deadline revision.
-                  body: editing.contentType === "test" ? { title } : { title, dueDate: due ? new Date(due).toISOString() : null },
+                  body: (editing.contentType === "test" || editing.contentType === "exam") ? { title } : { title, dueDate: due ? new Date(due).toISOString() : null },
                 },
                 { onSuccess: () => setEditing(null) },
               );
             }}
           >
             <Field label={t.taskName} name="title" required defaultValue={editing.title} />
-            {editing.contentType === "test" ? (
+            {(editing.contentType === "test" || editing.contentType === "exam") ? (
               <p className="tiny muted">{dueLabel(editing.dueDate)}. {t.testLocked}</p>
             ) : (
               <Field label={t.dueOptional} name="dueDate" type="datetime-local" defaultValue={editing.dueDate ? toLocalInput(editing.dueDate) : ""} />
@@ -343,6 +356,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
         </Modal>
       )}
       {tracking && <TestTracking classroom={classroom} assignment={tracking} onClose={() => setTracking(null)} />}
+      {gradebookOf && <Gradebook classroom={classroom} assignment={gradebookOf} onClose={() => setGradebookOf(null)} />}
       {writtenTracking && <WrittenTracking classroom={classroom} assignment={writtenTracking} initialView={writtenView} onClose={() => { setWrittenTracking(null); setWrittenView(undefined); }} />}
       {archiving && (
         <Confirm
@@ -369,8 +383,11 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   const [contentId, setContentId] = useState(initialLabId ?? "");
   const [labChallengeId, setLabChallengeId] = useState("");
   const [validation, setValidation] = useState("");
+  // TAI-07: PRACTICE keeps today's flow; a graded type adds a timer, one attempt and hidden results until publication.
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>("PRACTICE");
+  const [durationMinutes, setDurationMinutes] = useState<number>(15);
   const key = useRef(idempotencyKey());
-  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[]; classLabs?: any[]; writtenTasks?: any[] }>({
+  const content = useQuery<{ lessons: any[]; labs: any[]; tests?: any[]; classLabs?: any[]; writtenTasks?: any[]; exams?: any[] }>({
     queryKey: ["assignable", classroom.id],
     queryFn: () => api(`/classes/${classroom.id}/assignable-content`),
   });
@@ -380,13 +397,15 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   });
   const approved = roster.data?.filter((e) => e.status === "approved") ?? [];
   const act = useMutate<{ recipientCount: number; message: string }>();
-  const options = (contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : contentType === "written" ? content.data?.writtenTasks ?? [] : content.data?.tests ?? [])
+  const options = (contentType === "lesson" ? content.data?.lessons ?? [] : contentType === "lab" ? content.data?.labs ?? [] : contentType === "written" ? content.data?.writtenTasks ?? [] : contentType === "exam" ? content.data?.exams ?? [] : content.data?.tests ?? [])
     .filter((item: any) => contentType === "lesson" || item.grade == null || item.grade === classroom.grade);
   const selectedLab = content.data?.labs?.find((item: any) => item.id === contentId);
   useEffect(() => { if (initialLabId && selectedLab && !labChallengeId) setLabChallengeId(selectedLab.challenges[0]?.id ?? ""); }, [initialLabId, selectedLab, labChallengeId]);
   const selectedPrivateLab = contentType === "lab" ? content.data?.classLabs?.find((item) => `resource:${item.id}` === contentId) : undefined;
   const isTest = contentType === "test";
   const isWritten = contentType === "written";
+  const isExam = contentType === "exam";
+  const isAssessment = isTest || isWritten || isExam;
   return (
     <Modal title={t.assign} onClose={onClose}>
       <form
@@ -416,6 +435,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
                 ...(title ? { title } : {}),
                 dueDate: due ? new Date(due).toISOString() : null,
                 studentIds: scope === "SUBSET" ? studentIds : [],
+                ...((isAssessment) && assessmentType !== "PRACTICE" ? { assessmentType, durationMinutes } : {}),
               },
             },
             { onSuccess: (data) => onAssigned(data.message) },
@@ -440,6 +460,16 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
             <input type="radio" name="contentType" checked={isWritten} onChange={() => setContentType("written")} />
             {t.types.written}
           </label>
+          <label className="check">
+            <input type="radio" name="contentType" checked={isExam} onChange={() => {
+              setContentType("exam");
+              if (assessmentType === "PRACTICE") {
+                setAssessmentType("REGULAR_15M");
+                setDurationMinutes(ASSESSMENT_DURATION.REGULAR_15M.default);
+              }
+            }} />
+            {t.types.exam}
+          </label>
         </fieldset>
         <label className="field">
           <span>{t.published}</span>
@@ -453,7 +483,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
             {contentType === "lab" && content.data?.classLabs?.map((item) => <option key={item.id} value={`resource:${item.id}`}>{t.privateLabOption(item.title, item.version)}</option>)}
             {options.map((item: any) => (
               <option key={item.id} value={item.id}>
-                {isTest ? t.testOption(item.title, item.version, item.questionCount) : isWritten ? `${item.title} · v${item.version} · ${item.promptCount}` : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
+                {isTest ? t.testOption(item.title, item.version, item.questionCount) : isWritten ? `${item.title} · v${item.version} · ${item.promptCount}` : isExam ? `${item.title} · v${item.version}` : `${t.lessonOption(item.title, item.grade)}${contentType === "lab" ? ` · Foundational v${item.release.version}` : ""}`}
                 {item.synthetic ? t.sampleSuffix : ""}
                 {item.scope === "TEACHER_PRIVATE" ? t.privateSuffix : ""}
               </option>
@@ -479,8 +509,44 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
           </p>
         )}
         {isTest && <p className="tiny muted">{t.shareNote}</p>}
+        {(isAssessment) && (
+          <fieldset className="segmented">
+            <legend>Loại đánh giá</legend>
+            {!isExam && <label className="check">
+              <input type="radio" name="assessmentType" checked={assessmentType === "PRACTICE"} onChange={() => setAssessmentType("PRACTICE")} />
+              Luyện tập (nộp nhiều lần, xem kết quả ngay)
+            </label>}
+            <label className="check">
+              <input type="radio" name="assessmentType" checked={assessmentType === "REGULAR_15M"} onChange={() => { setAssessmentType("REGULAR_15M"); setDurationMinutes(ASSESSMENT_DURATION.REGULAR_15M.default); }} />
+              Kiểm tra thường xuyên 15 phút · hệ số 1
+            </label>
+            <label className="check">
+              <input type="radio" name="assessmentType" checked={assessmentType === "MIDTERM_45M"} onChange={() => { setAssessmentType("MIDTERM_45M"); setDurationMinutes(ASSESSMENT_DURATION.MIDTERM_45M.default); }} />
+              Kiểm tra giữa kỳ 45 phút · hệ số 2
+            </label>
+          </fieldset>
+        )}
+        {(isAssessment) && assessmentType !== "PRACTICE" && (
+          <>
+            <label className="field">
+              <span>Thời gian làm bài (phút)</span>
+              <input
+                type="number"
+                required
+                min={ASSESSMENT_DURATION[assessmentType].min}
+                max={ASSESSMENT_DURATION[assessmentType].max}
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(Number(event.target.value))}
+              />
+            </label>
+            <p className="tiny muted">
+              Mỗi học sinh làm 1 lần trong phiên có tính giờ; bài tự nộp khi hết giờ. Học sinh phải bắt đầu trước hạn nộp và phiên kết thúc chậm nhất vào hạn nộp.
+              Điểm (thang 10) chỉ hiện với học sinh và phụ huynh khi thầy/cô bấm "Công bố điểm".
+            </p>
+          </>
+        )}
         <Field label={t.taskNameOptional} name="title" maxLength={200} />
-        <Field label={isTest || isWritten ? t.dueRequired : t.dueNotRequired} name="dueDate" type="datetime-local" required={isTest || isWritten} />
+        <Field label={isAssessment ? t.dueRequired : t.dueNotRequired} name="dueDate" type="datetime-local" required={isAssessment} />
         <fieldset className="segmented">
           <legend>Giao cho</legend>
           <label className="check">

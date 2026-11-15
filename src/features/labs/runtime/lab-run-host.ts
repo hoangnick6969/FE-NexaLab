@@ -18,7 +18,7 @@ export type LabLaunch = {
   initialState: unknown;
   rendererKey: string | null;
   expiresAt: string | null;
-  context: "ASSIGNMENT" | "FOUNDATIONAL" | "CLASS_PRACTICE";
+  context: "ASSIGNMENT" | "FOUNDATIONAL" | "CLASS_PRACTICE" | "EXAM";
   classLabSnapshot?: { title: string; learningObjective: string; instructions: string; reportPrompts: string[] } | null;
   assignmentId: string | null;
   versionBinding: "ASSIGNMENT_PINNED" | "LEGACY_UNPINNED_LAUNCH" | "FOUNDATIONAL_LAUNCH";
@@ -118,6 +118,7 @@ type HostInput = {
   assignmentId?: string;
   releaseId?: string;
   resourceId?: string;
+  exam?: { assignmentId: string; sessionId: string; itemId: string };
   state: unknown;
   initialState: unknown;
   onStateChange: (state: any) => void;
@@ -133,15 +134,15 @@ export function useLabRunHost(input: HostInput) {
   const startedAt = useRef(Date.now());
   const idempotencyKey = useRef(crypto.randomUUID());
   const contextKey = useMemo(
-    () => `${input.userId}:${input.resourceId ? `resource:${input.resourceId}` : input.assignmentId ? `assignment:${input.assignmentId}` : "foundational"}:lab:${input.labId}:challenge:${input.challengeId ?? "missing"}`,
-    [input.resourceId, input.assignmentId, input.challengeId, input.labId, input.userId],
+    () => `${input.userId}:${input.exam ? `exam:${input.exam.sessionId}:${input.exam.itemId}` : input.resourceId ? `resource:${input.resourceId}` : input.assignmentId ? `assignment:${input.assignmentId}` : "foundational"}:lab:${input.labId}:challenge:${input.challengeId ?? "missing"}`,
+    [input.exam?.sessionId, input.exam?.itemId, input.resourceId, input.assignmentId, input.challengeId, input.labId, input.userId],
   );
   const draftKey = launch
     ? `${contextKey}:run:${launch.runId}:schema:${launch.stateSchemaVersion}`
     : null;
   // FL-07 evidence lives on the server; retain the launch identity across F5.
   const serverSessionKey = `nexalab:server-event-run:${contextKey}`;
-  const restoresServerEvents = input.labId === "thermal-energy";
+  const restoresServerEvents = input.labId === "thermal-energy" || (!!input.exam && ["mass-conservation", "lever-equilibrium"].includes(input.labId));
 
   const draftFor = (currentLaunch: LabLaunch, state: unknown): LabDraft => ({
     key: `${contextKey}:run:${currentLaunch.runId}:schema:${currentLaunch.stateSchemaVersion}`,
@@ -182,7 +183,7 @@ export function useLabRunHost(input: HostInput) {
       const cached = JSON.parse(sessionStorage.getItem(serverSessionKey) ?? "null");
       const renderer = cached?.launch ? resolveLabRenderer(cached.launch) : null;
       if (!renderer || cached.launch.labId !== input.labId || cached.launch.challengeId !== input.challengeId ||
-          cached.launch.assignmentId !== (input.assignmentId ?? null) || typeof cached.submissionKey !== "string" ||
+          cached.launch.assignmentId !== (input.exam?.assignmentId ?? input.assignmentId ?? null) || typeof cached.submissionKey !== "string" ||
           (cached.launch.expiresAt && new Date(cached.launch.expiresAt).getTime() <= Date.now())) return;
       setLaunch(cached.launch); setRendererKey(renderer.key); setAttempt(cached.attempt ?? null);
       idempotencyKey.current = cached.submissionKey;
@@ -204,6 +205,7 @@ export function useLabRunHost(input: HostInput) {
       const next = await api<LabLaunch>(`/labs/${encodeURIComponent(input.labId)}/runs`, "POST", {
         challengeId: input.challengeId,
         ...(input.releaseId ? { releaseId: input.releaseId } : {}),
+        ...(input.exam ? { exam: input.exam } : {}),
         ...(input.resourceId ? { resourceId: input.resourceId } : {}),
         ...(input.assignmentId ? { assignmentId: input.assignmentId } : {}),
       });

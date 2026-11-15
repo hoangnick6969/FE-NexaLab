@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,7 +16,7 @@ import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponse
 
 const text = defineText({
   vi: {
-    names: { DECK: "Thẻ học", STUDY_QUIZ: "Quiz luyện tập không điểm", TEST: "Bài kiểm tra chờ giao", WRITTEN_TASK: "Bài tự luận" },
+    names: { DECK: "Quiz", STUDY_QUIZ: "Quiz", TEST: "Bài kiểm tra chờ giao", WRITTEN_TASK: "Bài tự luận", EXAM: "Đề kiểm tra tổng hợp" },
     writtenTask: "Bài tự luận (chấm theo biểu điểm)",
     writtenStudentNote: "Bài tự luận do giáo viên chấm. Thầy cô sẽ mở phần nộp bài khi giao bài.",
     writtenMax: (n: number) => `tối đa ${n} ký tự`,
@@ -36,8 +36,8 @@ const text = defineText({
     createDirect: "Tạo nội dung trực tiếp",
     contentType: "Loại nội dung",
     purpose: "Mục đích sử dụng",
-    deck: "Thẻ học",
-    practiceQuiz: "Quiz luyện tập không điểm",
+    deck: "Quiz",
+    practiceQuiz: "Quiz",
     testUnassigned: "Bài kiểm tra (chưa được giao)",
     resourceName: "Tên tài nguyên",
     linkedLesson: "Bài học liên kết",
@@ -80,7 +80,7 @@ const text = defineText({
     csvTemplateTip: (kind: string) => `Tải file mẫu định dạng CSV chuẩn UTF-8 cho ${kind}`,
     requiredColumns: "Các cột bắt buộc trong CSV:",
     csvColumnsDeck: "front (Mặt trước), back (Mặt sau)",
-    csvColumnsQuiz: "prompt (Câu hỏi), optionA, optionB (bắt buộc), optionC, optionD, explanation (tuỳ chọn)",
+    csvColumnsQuiz: "prompt (Câu hỏi), optionA, optionB (bắt buộc), optionC, optionD, correctOption (A/B/C/D), explanation (tuỳ chọn). Bộ thẻ hai mặt cũ: front, back",
     csvColumnsTest: "prompt (Câu hỏi), optionA, optionB (bắt buộc), optionC, optionD, correctOption (A/B/C/D), explanation",
     previewReady: "Tệp hợp lệ · Đầy đủ điều kiện tạo tài nguyên",
     selectFileFirst: "Vui lòng chọn tệp CSV trước khi kiểm tra.",
@@ -98,7 +98,7 @@ const text = defineText({
     similarLibrary: " · thư viện bài học",
   },
   en: {
-    names: { DECK: "Study cards", STUDY_QUIZ: "Ungraded practice quiz", TEST: "Test waiting to be assigned", WRITTEN_TASK: "Written task" },
+    names: { DECK: "Quiz", STUDY_QUIZ: "Quiz", TEST: "Test waiting to be assigned", WRITTEN_TASK: "Written task", EXAM: "Composite exam" },
     writtenTask: "Written task (rubric graded)",
     writtenStudentNote: "Written tasks are graded by your teacher. Submission opens when the task is assigned.",
     writtenMax: (n: number) => `up to ${n} characters`,
@@ -118,8 +118,8 @@ const text = defineText({
     createDirect: "Create content directly",
     contentType: "Content type",
     purpose: "Purpose",
-    deck: "Study cards",
-    practiceQuiz: "Ungraded practice quiz",
+    deck: "Quiz",
+    practiceQuiz: "Quiz",
     testUnassigned: "Test (not assigned yet)",
     resourceName: "Resource name",
     linkedLesson: "Linked lesson",
@@ -162,7 +162,7 @@ const text = defineText({
     csvTemplateTip: (kind: string) => `Download standard UTF-8 CSV template for ${kind}`,
     requiredColumns: "Required columns in CSV:",
     csvColumnsDeck: "front (Front side), back (Back side)",
-    csvColumnsQuiz: "prompt (Question), optionA, optionB (required), optionC, optionD, explanation (optional)",
+    csvColumnsQuiz: "prompt (Question), optionA, optionB (required), optionC, optionD, correctOption (A/B/C/D), explanation (optional). Legacy two-sided cards: front, back",
     csvColumnsTest: "prompt (Question), optionA, optionB (required), optionC, optionD, correctOption (A/B/C/D), explanation",
     previewReady: "Valid file · Ready to import resource",
     selectFileFirst: "Please select a CSV file first.",
@@ -183,6 +183,8 @@ const text = defineText({
 const t = text();
 import { emptyWrittenPrompt, ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
 import { TeacherAiPanel } from "./TeacherAiPanel";
+// TAI7-T5: the AI exam drafter is teacher-only and loaded on demand, like the other Teacher AI panels.
+const ExamAiPanel = lazy(() => import("./ExamAiPanel"));
 import type { QuestionDuplicateWarning } from "./teacher-ai-api";
 import { richNames, richSamples, ResourcePreview, cleanFileName, type ResourceKind } from "./RichResourceEditor";
 
@@ -192,9 +194,10 @@ export type Resource = { id: string; classId: string; kind: Kind; title: string;
 const names: Record<Kind, string> = { ...t.names, ...richNames };
 const sample: Record<Kind, object> = {
   DECK: { cards: [{ front: "", back: "" }] },
-  STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""] }] },
+  STUDY_QUIZ: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
   TEST: { questions: [{ prompt: "", options: ["", ""], correctOption: 0 }] },
   WRITTEN_TASK: { prompts: [emptyWrittenPrompt()] },
+  EXAM: { questions: [], prompts: [], labs: [] },
   ...richSamples,
 };
 
@@ -213,6 +216,15 @@ function RubricErrors({ error }: { error: unknown }) {
   );
 }
 
+/** Quiz covers both question kinds: A-D questions (STUDY_QUIZ) and legacy two-sided cards (DECK). */
+export const isQuizKind = (kind: string) => kind === "DECK" || kind === "STUDY_QUIZ";
+
+/** "Quiz" imports A-D questions; a legacy front,back file is still accepted and stored as two-sided cards. */
+function csvImportKind(kind: CsvKind, csv: string): CsvKind {
+  const header = csv.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0].trim().toLowerCase();
+  return kind === "STUDY_QUIZ" && header === "front,back" ? "DECK" : kind;
+}
+
 function downloadSampleCsv(kind: CsvKind) {
   let content = "";
   let filename = "";
@@ -220,7 +232,7 @@ function downloadSampleCsv(kind: CsvKind) {
     content = "front,back\r\nKhái niệm 1,Giải thích khái niệm 1\r\nKhái niệm 2,Giải thích khái niệm 2\r\n";
     filename = "mau_the_hoc.csv";
   } else if (kind === "STUDY_QUIZ") {
-    content = "prompt,optionA,optionB,optionC,optionD,explanation\r\nCâu hỏi luyện tập 1?,Lựa chọn A,Lựa chọn B,Lựa chọn C,Lựa chọn D,Giải thích đáp án câu 1\r\n";
+    content = "prompt,optionA,optionB,optionC,optionD,correctOption,explanation\r\nCâu hỏi luyện tập 1?,Lựa chọn A,Lựa chọn B,Lựa chọn C,Lựa chọn D,A,Giải thích đáp án câu 1\r\n";
     filename = "mau_quiz_luyen_tap.csv";
   } else {
     content = "prompt,optionA,optionB,optionC,optionD,correctOption,explanation\r\nCâu hỏi kiểm tra 1?,Lựa chọn A,Lựa chọn B,Lựa chọn C,Lựa chọn D,A,Giải thích đáp án câu 1\r\n";
@@ -271,15 +283,15 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   const [focusedResourceId, setFocusedResourceId] = useState<string | null>(null);
   
   // Direct creation state
-  const [kind, setKind] = useState<Kind>(labOnly ? "LAB" : "DECK");
+  const [kind, setKind] = useState<Kind>(labOnly ? "LAB" : "STUDY_QUIZ");
   const [title, setTitle] = useState("");
   const [lessonId, setLessonId] = useState("");
-  const [source, setSource] = useState<ResourceContent>(sample[labOnly ? "LAB" : "DECK"]);
+  const [source, setSource] = useState<ResourceContent>(sample[labOnly ? "LAB" : "STUDY_QUIZ"]);
   const [error, setError] = useState<unknown>(null);
   const [createdWarnings, setCreatedWarnings] = useState<QuestionDuplicateWarning[]>([]);
 
   // Dedicated Import state
-  const [importKind, setImportKind] = useState<CsvKind>("DECK");
+  const [importKind, setImportKind] = useState<CsvKind>("STUDY_QUIZ");
   const [importTitle, setImportTitle] = useState("");
   const [importLessonId, setImportLessonId] = useState("");
   const [importFile, setImportFile] = useState<{ name: string; csv: string } | null>(null);
@@ -334,7 +346,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
       return;
     }
     try {
-      const preview = await api(`/classes/${classId}/resources/import/preview`, "POST", { kind: importKind, filename: importFile.name, csv: importFile.csv });
+      const preview = await api(`/classes/${classId}/resources/import/preview`, "POST", { kind: csvImportKind(importKind, importFile.csv), filename: importFile.name, csv: importFile.csv });
       setImportPreview(preview);
       if (preview.valid) {
         toast({
@@ -371,7 +383,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
     try {
       await action.mutateAsync({
         path: `/classes/${classId}/resources/import`,
-        body: { kind: importKind, title: importTitle.trim(), lessonId: importLessonId, filename: importFile.name, csv: importFile.csv },
+        body: { kind: csvImportKind(importKind, importFile.csv), title: importTitle.trim(), lessonId: importLessonId, filename: importFile.name, csv: importFile.csv },
         key: idempotencyKey(),
       });
       toast({
@@ -398,7 +410,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
     if (searchQuery.trim() && !r.title.toLowerCase().includes(searchQuery.trim().toLowerCase())) {
       return false;
     }
-    if (kindFilter !== "ALL" && r.kind !== kindFilter) {
+    if (kindFilter === "QUIZ" ? !isQuizKind(r.kind) : kindFilter !== "ALL" && r.kind !== kindFilter) {
       return false;
     }
     if (statusFilter !== "ALL" && r.status !== statusFilter) {
@@ -426,9 +438,9 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
               <Filter size={13} aria-hidden="true" />
               <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="Lọc theo loại">
                 <option value="ALL">{t.allKinds}</option>
+                <option value="EXAM">{t.names.EXAM}</option>
                 {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                <option value="DECK">{t.deck}</option>
-                <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
+                <option value="QUIZ">{t.practiceQuiz}</option>
                 <option value="TEST">{t.testUnassigned}</option>
               </select>
             </label>
@@ -514,10 +526,10 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                   <label className="field">
                     <span>{t.purpose}</span>
                     <select disabled={labOnly} value={kind} onChange={(e) => { const next = e.target.value as Kind; setKind(next); setSource(sample[next]); }}>
-                      <option value="DECK">{t.deck}</option>
                       <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
                       <option value="TEST">{t.testUnassigned}</option>
                       <option value="WRITTEN_TASK">{t.writtenTask}</option>
+                      <option value="EXAM">{t.names.EXAM}</option>
                       {Object.entries(richNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
@@ -534,6 +546,20 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                   </label>
                 </div>
                 <Field label={t.resourceName} value={title} onChange={(e: any) => setTitle(e.target.value)} required maxLength={160} />
+                {kind === "EXAM" && (
+                  <Suspense fallback={null}>
+                    <ExamAiPanel
+                      classId={classId}
+                      lessonId={lessonId}
+                      lessonTitle={lessons.data?.lessons.find((lesson) => lesson.id === lessonId)?.title ?? ""}
+                      hasContent={!!(source.questions?.length || source.prompts?.length || source.labs?.length)}
+                      onApply={(draft, suggestedTitle) => {
+                        setSource(draft as ResourceContent);
+                        setTitle((current) => (current.trim() ? current : suggestedTitle.slice(0, 160)));
+                      }}
+                    />
+                  </Suspense>
+                )}
                 <ResourceEditor kind={kind} value={source} onChange={setSource} classId={classId} />
                 {kind === "LAB" && source.source?.labId && source.source?.challengeId && (
                   <button type="button" className="secondary button-compact" onClick={() => navigate(`/labs/${encodeURIComponent(source.source!.labId)}?classId=${encodeURIComponent(classId)}&customize=1`, { state: { labDraft: { kind, title, lessonId, content: resourceInput(kind, source) } } })}>
@@ -583,7 +609,6 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                       setImportPreview(null);
                     }}
                   >
-                    <option value="DECK">{t.deck}</option>
                     <option value="STUDY_QUIZ">{t.practiceQuiz}</option>
                     <option value="TEST">{t.testUnassigned}</option>
                   </select>
@@ -771,6 +796,7 @@ function getResourceIcon(kind: Kind) {
     case "LINK": return ExternalLink;
     case "DECK": return Layers;
     case "STUDY_QUIZ": return HelpCircle;
+    case "EXAM":
     case "TEST": return FileCheck;
     default: return FileText;
   }
@@ -790,7 +816,8 @@ function TeacherResourceRow({ resource, classId, disabled, focused = false }: { 
   const [titleDraft, setTitleDraft] = useState(resource.title);
   const update = useMutation({ mutationFn: () => api(`/classes/${classId}/resources/${resource.id}`, "PUT", { kind: resource.kind, title: titleDraft, lessonId: resource.lessonId, content: resourceInput(resource.kind, contentDraft) }), onSuccess: () => invalidateResourceChoices(qc, classId) });
   const updateWarnings: QuestionDuplicateWarning[] = update.data?.duplicateWarnings ?? [];
-  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content.prompts?.length : resource.content.questions?.length;
+  // A TEST reaches students with `content: null` (answers stay on the server), so content is always read guarded.
+  const count = resource.kind === "DECK" ? resource.content?.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content?.prompts?.length : resource.content?.questions?.length;
   const Icon = getResourceIcon(resource.kind);
   return (
     <article ref={rowRef} id={`resource-${resource.id}`} className={`class-resource-row apple-resource-row${focused ? " focused" : ""}`}>
@@ -848,7 +875,7 @@ export function StudentClassResources({ classId }: { classId: string }) {
   const allItems = list.data ?? [];
   const docs = allItems.filter((r) => ["DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(r.kind));
   const labs = allItems.filter((r) => r.kind === "LAB");
-  const practice = allItems.filter((r) => ["DECK", "STUDY_QUIZ", "TEST", "WRITTEN_TASK"].includes(r.kind));
+  const practice = allItems.filter((r) => ["DECK", "STUDY_QUIZ", "TEST", "WRITTEN_TASK", "EXAM"].includes(r.kind));
 
   const displayItems = category === "DOCS" ? docs : category === "LABS" ? labs : category === "PRACTICE" ? practice : allItems;
 
@@ -898,7 +925,7 @@ export function StudentClassResources({ classId }: { classId: string }) {
             onClick={() => setCategory("PRACTICE")}
           >
             <Layers size={14} aria-hidden="true" />
-            <span>Thẻ học & Quiz</span>
+            <span>Quiz</span>
             <span className="cat-count">{practice.length}</span>
           </button>
         </div>
@@ -923,16 +950,16 @@ export function StudentClassResources({ classId }: { classId: string }) {
 function StudentResource({ resource, classId }: { resource: Resource; classId: string }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [answers, setAnswers] = useState<Record<string, number>>(resource.practice?.state?.answers ?? {});
-  const save = useMutation({ mutationFn: (state: Record<string, unknown>) => api(`/classes/${classId}/resources/${resource.id}/practice`, "PUT", { state }), onSuccess: () => invalidateResourceChoices(qc, classId) });
-  const count = resource.kind === "DECK" ? resource.content.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content.prompts?.length : resource.content.questions?.length;
+  // A TEST reaches students with `content: null` (answers stay on the server), so content is always read guarded.
+  const count = resource.kind === "DECK" ? resource.content?.cards?.length : resource.kind === "WRITTEN_TASK" ? resource.content?.prompts?.length : resource.content?.questions?.length;
   const isWritten = resource.kind === "WRITTEN_TASK";
 
-  const isDeck = resource.kind === "DECK";
+  // Quiz: two-sided cards (DECK) and A-D questions (STUDY_QUIZ) both open the Quiz study page (study + "Làm thử đề").
+  const isDeck = isQuizKind(resource.kind);
   const isLab = resource.kind === "LAB";
   const isDoc = ["DOCUMENT", "REPORT_TEMPLATE", "LINK"].includes(resource.kind);
-  const isQuiz = resource.kind === "STUDY_QUIZ";
-  const isTest = resource.kind === "TEST";
+  const isExam = resource.kind === "EXAM";
+  const isTest = resource.kind === "TEST" || isExam;
 
   const studyUrl = `/classes/${encodeURIComponent(classId)}/resources/${encodeURIComponent(resource.id)}/study`;
   const labEntry = isLab ? labInfo.find((entry) => entry.id === resource.content.source?.labId) : null;
@@ -1017,7 +1044,7 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
         {isDeck ? (
           <div className="resource-visual-emblem emblem-deck">
             <Layers size={20} />
-            <span className="emblem-sub-badge">{count ?? 0} thẻ</span>
+            <span className="emblem-sub-badge">{count ?? 0} câu</span>
           </div>
         ) : isLab ? (
           labEntry?.thumbnail ? (
@@ -1045,14 +1072,14 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
         <div className="resource-headline-row">
           <h4 className="resource-item-title">{resource.title}</h4>
           <span className="resource-kind-pill">
-            {isDeck ? "Thẻ học" : isLab ? "Lab mô phỏng" : isDoc ? (resource.kind === "LINK" ? "Liên kết" : "Tài liệu") : isTest ? "Bài kiểm tra" : isWritten ? t.names.WRITTEN_TASK : "Luyện tập"}
+            {isDeck ? "Quiz" : isLab ? "Lab mô phỏng" : isDoc ? (resource.kind === "LINK" ? "Liên kết" : "Tài liệu") : isExam ? t.names.EXAM : isTest ? "Bài kiểm tra" : isWritten ? t.names.WRITTEN_TASK : "Luyện tập"}
           </span>
         </div>
 
         <div className="resource-meta-line">
           {isDeck ? (
             <>
-              <span>{count ?? 0} thẻ hai mặt</span>
+              <span>{count ?? 0} câu</span>
               {starredCount > 0 && (
                 <span
                   className="meta-starred-tag"
@@ -1085,8 +1112,8 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
 
         <p className="resource-description-line">
           {isDeck
-            ? (resource.content.cards?.[0]?.front
-                ? `Khái niệm mở đầu: “${resource.content.cards[0].front}”`
+            ? ((resource.content.cards?.[0]?.front ?? resource.content.questions?.[0]?.prompt)
+                ? `Câu mở đầu: “${resource.content.cards?.[0]?.front ?? resource.content.questions[0].prompt}”`
                 : "Ôn tập từng khái niệm với phương pháp thẻ lật hai mặt ghi nhớ chủ động.")
             : isLab
             ? (resource.content.learningObjective || resource.content.instructions || "Thực hành tương tác trực quan với phòng thí nghiệm ảo.")
@@ -1097,22 +1124,6 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
             : "Luyện tập trả lời câu hỏi để củng cố kiến thức."}
         </p>
 
-        {isQuiz && (
-          <div className="resource-practice-inline" onClick={(e) => e.stopPropagation()}>
-            {resource.content.questions?.map((q: any) => (
-              <fieldset key={q.id}>
-                <legend>{q.prompt}</legend>
-                {q.options.map((option: any, index: number) => (
-                  <label className="check" key={option.id}>
-                    <input type="radio" name={`${resource.id}-${q.id}`} checked={answers[q.id] === index} onChange={() => { const next = { ...answers, [q.id]: index }; setAnswers(next); save.mutate({ answers: next }); }} />
-                    {option.text}
-                  </label>
-                ))}
-              </fieldset>
-            ))}
-            {save.isSuccess && <small className="text-success" role="status">Đã lưu bài làm</small>}
-          </div>
-        )}
       </div>
 
       <div className="resource-action-area">
