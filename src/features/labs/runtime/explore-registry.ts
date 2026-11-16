@@ -22,6 +22,8 @@ import type { ExploreRequirement } from "../class-explore/class-explore";
 export type KitItem = LabItemMetadata & {
   /** Key of the entry that draws this item in the bench's renderer registry; items the bench does not draw one by one have none. */
   rendererKey?: string;
+  /** Name of the kind of thing, without the instance details of one Lab ("Ống nghiệm", not "Ống nghiệm × 6"); the Kit catalogue uses it. */
+  kindLabelVi?: string;
   /** Set when the bench draws this item with an item of the shared library (`shared/items/`). */
   sharedItemId?: SharedItemId;
   safety?: { level: "none" | "caution" | "warning" | "danger"; tags: readonly string[]; noteSim?: string; noteReal?: string };

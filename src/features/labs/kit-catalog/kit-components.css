@@ -1,0 +1,19 @@
+.kit-components { margin-top: 32px; display: grid; gap: 16px; }
+.kit-components h2 { margin: 0; }
+.kit-group { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.kit-group > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.kit-group h3 { margin: 0; font-size: 18px; }
+.kit-group h4 { margin: 8px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+.kit-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.kit-card { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.kit-card-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: rgba(31, 111, 120, 0.1); color: var(--brand); }
+.kit-card-icon.is-caution { background: #fff1d6; color: #7a4d00; }
+.kit-card-icon.is-warning, .kit-card-icon.is-danger { background: #fde3e3; color: #9b1c1c; }
+.kit-card-body { display: grid; gap: 4px; min-width: 0; align-content: start; font-size: 14px; }
+.kit-card-purpose { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.kit-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.kit-card-tags:empty { display: none; }
+.kit-tag { font-size: 12px; font-weight: 650; padding: 2px 8px; border-radius: 999px; }
+.kit-tag.is-shared { background: rgba(31, 111, 120, 0.12); color: var(--brand); }
+.kit-card-used { font-size: 12px; color: var(--muted); }
+.kit-card-debug { font-size: 11px; color: var(--muted); word-break: break-all; }
