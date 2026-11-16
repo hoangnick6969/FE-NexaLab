@@ -314,8 +314,8 @@ test.describe("teacher reviews Class Explore submissions", () => {
       return route.fulfill({ json: { submission: { id: "sub-1", status, feedback } } });
     });
 
-    await page.goto("/classes/class-1?tab=work");
-    await expect(page.getByText("Thực hành Explore")).toBeVisible();
+    await page.goto("/class-labs");
+    await expect(page.getByText("Thí nghiệm tự do", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Xem bài nộp" }).click();
     const board = page.getByTestId("explore-board");
     await expect(board).toContainText("Số đo pH của Dung dịch HCl 0,1 M");

@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, useAuth } from "../../../lib/api";
 import { defineText } from "../../../i18n";
+import { Empty } from "../../../components/ui";
+import { LoadError } from "../../classes/class-ui";
 import { HAZARD_LEVEL_VI, HAZARD_TAG_VI } from "../shared/LabIntroOverlay";
 import { collectKitCatalogs, type CatalogEntry, type KitCatalog, type KitGroup } from "./kit-catalog";
 import "./kit-components.css";
@@ -17,7 +19,8 @@ const text = defineText({
     intro: "Những dụng cụ và hoá chất có trong các bài thí nghiệm tự do đã phát hành. Mở một bài để thao tác với chúng.",
     kits: { chemistry: "Kit Hóa học", physics: "Kit Vật lý", biology: "Kit Sinh học", "explore-support": "Kit Bổ trợ Explore" } as Record<KitGroup, string>,
     sections: { apparatus: "Dụng cụ", instruments: "Dụng cụ đo", materials: "Hoá chất và vật liệu" },
-    labsCount: (n: number) => `${n} bài`, usedIn: "Dùng ở", shared: "Dùng chung", sharedHint: "Cùng một hình dùng cho nhiều bàn thí nghiệm",
+    labsCount: (n: number) => `${n} bài`, usedIn: "Dùng ở", shared: "Dùng chung giữa các bàn", inKit: "Dùng chung trong Kit",
+    loading: "Đang tải danh mục dụng cụ…", empty: "Chưa có dụng cụ từ các bài Explore đã phát hành.",
     debug: "Gỡ lỗi", renderer: "renderer", sharedItem: "item chung", benches: "bàn", own: "riêng của bàn",
   },
   en: {
@@ -25,7 +28,8 @@ const text = defineText({
     intro: "The apparatus and reagents of the published free-exploration labs. Open a lab to use them.",
     kits: { chemistry: "Chemistry Kit", physics: "Physics Kit", biology: "Biology Kit", "explore-support": "Explore support Kit" } as Record<KitGroup, string>,
     sections: { apparatus: "Apparatus", instruments: "Instruments", materials: "Reagents and materials" },
-    labsCount: (n: number) => `${n} ${n === 1 ? "lab" : "labs"}`, usedIn: "Used in", shared: "Shared", sharedHint: "One picture shared by several benches",
+    labsCount: (n: number) => `${n} ${n === 1 ? "lab" : "labs"}`, usedIn: "Used in", shared: "Shared across benches", inKit: "Shared within this Kit",
+    loading: "Loading apparatus…", empty: "No apparatus from published Explore labs yet.",
     debug: "Debug", renderer: "renderer", sharedItem: "shared item", benches: "benches", own: "bench-owned",
   },
 });
@@ -42,6 +46,7 @@ export const iconFor = (entry: Pick<CatalogEntry, "key" | "category">): LucideIc
 function Card({ entry, debug }: { entry: CatalogEntry; debug: boolean }) {
   const t = text();
   const Icon = iconFor(entry);
+  const sharing = entry.sharedItemId ? t.shared : entry.category !== "material" && entry.usedIn.length > 1 ? t.inKit : null;
   const hazard = entry.safety && entry.safety.level !== "none"
     ? [HAZARD_LEVEL_VI[entry.safety.level], ...entry.safety.tags.map((tag) => HAZARD_TAG_VI[tag] ?? tag)].filter(Boolean).join(" · ") : "";
   return <li className="kit-card" data-testid="kit-card" data-key={entry.key}>
@@ -50,7 +55,7 @@ function Card({ entry, debug }: { entry: CatalogEntry; debug: boolean }) {
       <strong>{entry.label}</strong>
       {entry.purpose && <span className="kit-card-purpose">{entry.purpose}</span>}
       <span className="kit-card-tags">
-        {entry.sharedItemId && <span className="kit-tag is-shared" title={t.sharedHint}>{t.shared}</span>}
+        {sharing && <span className="kit-tag">{sharing}</span>}
         {hazard && <span className={`lab-intro-hazard is-${entry.safety!.level}`}>{hazard}</span>}
       </span>
       <span className="kit-card-used">{t.usedIn}: {entry.usedIn.map((lab, index) => <span key={lab.id}>{index > 0 && " · "}<Link to={`/labs/${encodeURIComponent(lab.id)}`} title={lab.title}>{lab.catalogId}</Link></span>)}</span>
@@ -74,17 +79,20 @@ function Kit({ catalog, debug }: { catalog: KitCatalog; debug: boolean }) {
   </section>;
 }
 
-export function KitComponents() {
+export function KitComponents({ standalone = false }: { standalone?: boolean }) {
   const t = text();
   const role = useAuth((s) => s.user?.role);
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: role === "STUDENT" || role === "TEACHER" || role === "ADMIN" });
   const catalogs = collectKitCatalogs(labs.data ?? []);
-  if (!catalogs.length) return null;
+  if (!catalogs.length && !standalone) return null;
   // Ids behind each entry: for admins, and for anyone who adds ?debug=1 to the address.
   const debug = role === "ADMIN" || new URLSearchParams(window.location.search).get("debug") === "1";
-  return <section className="kit-components" aria-labelledby="kit-components-title" data-testid="kit-components">
-    <h2 id="kit-components-title">{t.heading}</h2>
-    <p className="muted">{t.intro}</p>
+  return <section className="kit-components" aria-label={t.heading} data-testid="kit-components">
+    {!standalone && <h2>{t.heading}</h2>}
+    {standalone && <LoadError query={labs} what={t.heading} />}
+    {standalone && labs.isLoading && <p role="status" className="muted">{t.loading}</p>}
+    {standalone && labs.isSuccess && !catalogs.length && <Empty>{t.empty}</Empty>}
+    {catalogs.length > 0 && <p className="muted">{t.intro}</p>}
     {catalogs.map((catalog) => <Kit key={catalog.group} catalog={catalog} debug={debug} />)}
   </section>;
 }

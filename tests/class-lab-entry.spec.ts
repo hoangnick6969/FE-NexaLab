@@ -132,8 +132,20 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     await signIn(page);
     await mockClasses(page, [classroom], { "class-1": [guidedWork()] });
     await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
-    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [], classLabs: [], labs: [
-      { id: "circuit", title: "Mạch điện", grade: 8, release: { id: "rel-1", version: 1, digest: "d".repeat(64) }, challenges: [{ id: "ch-1", objective: "Thắp sáng bóng đèn" }] },
+    const subject = { id: "khtn", name: "KHTN" };
+    const lesson = { id: "lesson-circuit", title: "Mạch điện", grade: 8, subject };
+    let work = [guidedWork()];
+    await page.route("**/api/classes/class-1/resources", (route) => route.fulfill({ json: route.request().method() === "POST" ? { id: "guided-resource" } : [] }));
+    await page.route("**/api/classes/class-1/resources/guided-resource/publish", (route) => route.fulfill({ json: { id: "guided-resource" } }));
+    await page.route("**/api/classes/class-1/assignments", (route) => {
+      if (route.request().method() === "GET") return route.fulfill({ json: work });
+      const body = route.request().postDataJSON();
+      expect(body).toMatchObject({ contentType: "lab", contentId: "circuit", classLabResourceId: "guided-resource" });
+      work = [...work, guidedWork({ id: "g2", title: body.title })];
+      return route.fulfill({ json: { message: "Đã giao cho 3 học sinh." } });
+    });
+    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [lesson], classLabs: [], labs: [
+      { id: "circuit", title: "Mạch điện", grade: 8, subject, lessonIds: [lesson.id], release: { id: "rel-1", version: 1, digest: "d".repeat(64) }, challenges: [{ id: "ch-1", objective: "Thắp sáng bóng đèn" }] },
     ] } }));
     await page.goto("/class-labs");
     const row = page.locator(".teacher-class-lab-row", { hasText: "Mạch điện" });
@@ -152,10 +164,14 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     await dialog.getByLabel("Nội dung đã xuất bản").selectOption("circuit");
     await dialog.getByRole("button", { name: "Mở phòng thí nghiệm để giao bài" }).click();
     await expect(page).toHaveURL(/\/labs\/circuit\?classId=class-1&customize=1/);
+    await page.getByLabel("Tên đề bài", { exact: true }).fill("Mạch điện lớp 8A");
+    await page.getByLabel("Bài học liên kết").selectOption(lesson.id);
+    await page.getByRole("button", { name: "Lưu và giao bài cho lớp" }).click();
+    await expect(page).toHaveURL(/\/class-labs$/);
+    await expect(page.getByRole("region", { name: "8A" }).getByRole("heading", { name: "Mạch điện lớp 8A" })).toBeVisible();
 
     // "Tạo đề bài riêng" on a row opens the same form with that lab already chosen.
-    await page.goto("/class-labs");
-    const link = page.locator(".teacher-class-lab-row", { hasText: "Mạch điện" }).getByRole("link", { name: "Tạo đề bài riêng" });
+    const link = row.filter({ has: page.getByRole("heading", { name: "Mạch điện", exact: true }) }).getByRole("link", { name: "Tạo đề bài riêng" });
     await expect(link).toHaveAttribute("href", "/class-labs?classId=class-1&assign=guided&labId=circuit");
     await link.click();
     await expect(page.getByRole("dialog", { name: "Giao lab theo bước" }).getByLabel("Nội dung đã xuất bản")).toHaveValue("circuit");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, BarChart2, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart2, ChevronDown, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
 import { api } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -11,6 +11,7 @@ import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import "./teacher-operations.css";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { labInfo } from "../labs/lab-info";
+import { KitComponents } from "../labs/kit-catalog/KitComponents";
 import { resourceInput } from "./ResourceEditor";
 import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
 import { AssignLabChooser } from "./AssignLabChooser";
@@ -27,6 +28,7 @@ const text = defineText({
     manageClasses: "Quản lý lớp",
     active: "Đang giao",
     archived: "Đã lưu trữ",
+    kitCatalog: "Dụng cụ theo Kit",
     classCount: (count: number) => `${count} lớp`,
     grade: (grade: number) => `Khối ${grade}`,
     students: (count: number) => `${count} học sinh đã duyệt`,
@@ -56,6 +58,7 @@ const text = defineText({
     manageClasses: "Manage classes",
     active: "Assigned",
     archived: "Archived",
+    kitCatalog: "Apparatus by Kit",
     classCount: (count: number) => `${count} ${count === 1 ? "class" : "classes"}`,
     grade: (grade: number) => `Grade ${grade}`,
     students: (count: number) => `${count} approved ${count === 1 ? "student" : "students"}`,
@@ -90,6 +93,7 @@ export function ClassLabs() {
   const [exploreFor, setExploreFor] = useState<ClassSummary | null>(null);
   const [guidedFor, setGuidedFor] = useState<{ classroom: ClassSummary; labId?: string } | null>(null);
   const [board, setBoard] = useState<{ classroom: ClassSummary; assignment: TeacherAssignment } | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   // Keyed under "classes" so anything that changes a class's counters refreshes this page too.
   const classList = useQuery<ClassSummary[]>({
     queryKey: ["classes", "class-labs", view],
@@ -161,6 +165,11 @@ export function ClassLabs() {
         </div>
         {!classList.isLoading && !classList.isError && <span className="teacher-workspace-count">{t.classCount(relevant.length)}</span>}
       </div>
+
+      <details className="class-labs-kit" onToggle={(event) => setCatalogOpen(event.currentTarget.open)}>
+        <summary><FlaskConical size={18} aria-hidden="true" />{t.kitCatalog}<ChevronDown size={16} aria-hidden="true" /></summary>
+        {catalogOpen && <KitComponents standalone />}
+      </details>
 
       {notice && <p className="notice" role="status">{notice}</p>}
       <LoadError query={classList} what={t.loadClasses} />

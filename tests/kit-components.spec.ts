@@ -5,6 +5,7 @@ import { fl14aConfig } from "../src/features/labs/chemistry/wet-bench/labs/fl-14
 // The "Dụng cụ theo bộ Kit" section of /labs: what each Kit has, read from the published Explore benches.
 const student = { id: "student-1", username: "student.active", email: null, fullName: "An", role: "STUDENT", grade: 8, mustChangePassword: false };
 const admin = { id: "admin-1", username: null, email: "admin@nexalab.local", fullName: "Quản trị", role: "ADMIN", grade: null, mustChangePassword: false };
+const teacher = { ...admin, id: "teacher-1", email: "teacher@nexalab.local", fullName: "Giáo viên", role: "TEACHER" };
 const activity = { id: "pav-1", key: "k", version: 2, digest: "d" };
 const exploreRow = (id: string, title: string, config: unknown) => ({ id, title, mode: "explore", explore: { ok: true, kit: "k2-wet-bench@1", engine: "wet-bench@1.0.0", activity, config } });
 const rows = [exploreRow("acid-base-indicators", "Acid – base, chỉ thị và pH", fl13Config), exploreRow("metal-reactivity", "Kim loại tác dụng với acid và muối", fl14aConfig)];
@@ -40,9 +41,9 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   // Not used by any published Explore lab yet.
   await expect(card("electronic_scale")).toHaveCount(0);
 
-  // A picture shared by several benches is marked; a bench's own mesh is not.
-  await expect(card("beaker_100ml")).toContainText("Dùng chung");
-  await expect(card("test_tube")).not.toContainText("Dùng chung");
+  await expect(card("beaker_100ml")).toContainText("Dùng chung giữa các bàn");
+  await expect(card("dropper_pipette")).toContainText("Dùng chung trong Kit");
+  await expect(card("tongs")).not.toContainText("Dùng chung");
   // Reagents carry their hazard and the same list as the bench.
   await expect(card("HCl_0_1M")).toContainText("Dùng ở: FL-13 · FL-14a");
   await expect(card("HCl_0_1M")).toContainText("Ăn mòn");
@@ -53,6 +54,16 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   // The Labs listed under an item open that Lab.
   await card("tongs").getByRole("link", { name: "FL-14a" }).click();
   await expect(page).toHaveURL(/\/labs\/metal-reactivity$/);
+});
+
+test("a teacher can open the apparatus catalog from Class Lab", async ({ page }) => {
+  await open(page, teacher, rows);
+  await expect(page).toHaveURL(/\/class-labs$/);
+  await page.getByText("Dụng cụ theo Kit", { exact: true }).click();
+  const catalog = page.getByTestId("kit-components");
+  await expect(catalog.getByRole("heading", { name: "Kit Hóa học" })).toBeVisible();
+  await expect(catalog.getByText("Dùng chung giữa các bàn").first()).toBeVisible();
+  await expect(catalog.getByText("Dùng chung trong Kit").first()).toBeVisible();
 });
 
 test("?debug=1 shows the renderer and shared item behind each entry", async ({ page }) => {

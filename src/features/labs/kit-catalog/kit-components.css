@@ -1,10 +1,19 @@
-.kit-components { margin-top: 32px; display: grid; gap: 16px; }
+.kit-components { margin-top: 32px; display: grid; gap: 16px; min-width: 0; }
+.kit-components > p { margin: 0; }
+.class-labs-kit { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.class-labs-kit > summary { display: flex; align-items: center; gap: 10px; padding: 14px 18px; list-style: none; font-weight: 650; cursor: pointer; border-radius: inherit; }
+.class-labs-kit > summary::-webkit-details-marker { display: none; }
+.class-labs-kit > summary svg { color: var(--brand); flex: none; }
+.class-labs-kit > summary svg:last-child { margin-inline-start: auto; }
+.class-labs-kit[open] > summary svg:last-child { transform: rotate(180deg); }
+.class-labs-kit > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.class-labs-kit > .kit-components { margin: 0; padding: 16px clamp(12px, 3vw, 24px); border-top: 1px solid var(--line); }
 .kit-components h2 { margin: 0; }
 .kit-group { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .kit-group > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .kit-group h3 { margin: 0; font-size: 18px; }
 .kit-group h4 { margin: 8px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
-.kit-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.kit-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr)); gap: 10px; }
 .kit-card { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .kit-card-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: rgba(31, 111, 120, 0.1); color: var(--brand); }
 .kit-card-icon.is-caution { background: #fff1d6; color: #7a4d00; }
@@ -13,7 +22,6 @@
 .kit-card-purpose { color: var(--muted); font-size: 13px; line-height: 1.4; }
 .kit-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .kit-card-tags:empty { display: none; }
-.kit-tag { font-size: 12px; font-weight: 650; padding: 2px 8px; border-radius: 999px; }
-.kit-tag.is-shared { background: rgba(31, 111, 120, 0.12); color: var(--brand); }
+.kit-tag { font-size: 12px; font-weight: 650; padding: 2px 7px; border-radius: 5px; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
 .kit-card-used { font-size: 12px; color: var(--muted); }
 .kit-card-debug { font-size: 11px; color: var(--muted); word-break: break-all; }
