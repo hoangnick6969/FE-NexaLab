@@ -1,0 +1,27 @@
+/* k8-diorama Explore benches (FL-20 pond, FL-21 food web): framing of the reused Guided scenes inside the bench. */
+.diorama-2d { display: grid; gap: 14px; }
+.diorama-fw-board { width: min(100%, calc((100dvh - 300px) * 1.38)); margin: 0 auto; }
+.diorama-pond { width: min(100%, calc((100dvh - 470px) * 1.78), 760px); margin: 0 auto; padding: 8px; border: 1px solid var(--explore-card-line); border-radius: 16px; background: var(--eco-sky, #eef5f2); }
+.diorama-pond svg, .diorama-2d .eco-graph svg, .diorama-graph-card .eco-graph svg { display: block; width: 100%; height: auto; overflow: visible; }
+.diorama-2d .eco-graph { width: min(100%, 760px); margin: 0 auto; }
+.diorama-2d .eco-graph text, .diorama-graph-card .eco-graph text { fill: var(--text-base); font-size: 15px; }
+.diorama-2d .eco-axis text, .diorama-2d .eco-graph-y, .diorama-graph-card .eco-axis text, .diorama-graph-card .eco-graph-y { fill: var(--ink-neutral-53); }
+.diorama-pond .eco-thermo-label { fill: var(--text-base); font-size: 17px; font-weight: 700; }
+.diorama-pond .eco-question { display: none; }
+
+.diorama-relation { margin: 0; padding: 10px 12px; border-left: 3px solid var(--brand); border-radius: 8px; background: var(--explore-brand-soft); color: var(--text-base); font-size: 13px; font-weight: 600; line-height: 1.45; }
+.diorama-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 12px; font-weight: 650; color: var(--text-base); }
+.diorama-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.diorama-legend li::before { content: ""; width: 14px; height: 14px; border-radius: 5px; border: 3px solid; background: var(--surface); }
+.diorama-legend [data-tone="increase"]::before { border-color: var(--fw-increase, #2f7d4f); }
+.diorama-legend [data-tone="decrease"]::before { border-color: var(--fw-decrease, #c8402f); }
+.diorama-legend [data-tone="removed"]::before { border: 2px dashed var(--ink-neutral-53); }
+
+/* In 3D the meadow note and relation of the Guided layout are replaced by the overlay card. */
+.explore-bench-full .fw-meadow-note { display: none; }
+.diorama-graph-card .eco-graph figcaption { font-size: 12px; color: var(--ink-neutral-53); }
+
+/* A checkbox with a visible box and brand tick. */
+.explore-check { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 600; color: var(--text-base); cursor: pointer; }
+.lab-space .explore-check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--brand); cursor: pointer; }
+.lab-space .explore-check input:focus-visible { outline: 3px solid rgb(31 111 120 / 40%); outline-offset: 2px; }

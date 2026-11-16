@@ -5,7 +5,7 @@ export type { K3LabConfig, K3Material, K3Specimen, K3Instruments } from "./k3-co
 export { K3_UNITS_PER_MM, cylinderGraduations, cylinderHeightMm, cylinderLevelMm, displacedLevelRiseMm, formatReading, parseDecimal } from "./k3-geometry";
 export { K3_MOTION, dampedFlowStep, dampedSpringStep, usePrefersReducedMotion } from "./k3-motion";
 export { FluidBench3D, K3Slot, K3_SLOTS, K3_CAMERA_PRESETS, type K3CameraPreset } from "./FluidBench3D";
-export { DigitalBalance3D, BALANCE_PAN_TOP_MM } from "./apparatus/DigitalBalance3D";
+export { DigitalBalance3D, BALANCE_PAN_TOP_MM, BALANCE_PAN_Z_MM } from "./apparatus/DigitalBalance3D";
 export { GraduatedCylinder3D } from "./apparatus/GraduatedCylinder3D";
 export { Beaker3D } from "./apparatus/Beaker3D";
 export { OverflowCan3D } from "./apparatus/OverflowCan3D";
