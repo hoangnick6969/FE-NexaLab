@@ -84,7 +84,7 @@ function UnlabelledBottle() {
   </>;
 }
 
-const apparatus: Record<SafetyApparatusKind, () => ReactNode> = {
+export const safetyApparatus: Record<SafetyApparatusKind, () => ReactNode> = {
   safety_goggles: Goggles, protective_gloves: Gloves, lab_coat: LabCoat,
   beaker_100ml: () => <Beaker3D fill={0} liquid={CLEAR} />,
   test_tube: () => <group position={[0.24, 0.065, 0]} rotation-z={Math.PI / 2}><TestTube3D visual={emptyTube} look={CLEAR} flashAt={null} /></group>,
@@ -100,7 +100,7 @@ export default function SafetyBenchStage({ items, showLabels = true }: { items: 
           const row = Math.floor(index / columns);
           const rowWidth = Math.min(columns, items.length - row * columns);
           const reagent = safetyScenarioReagentById(item.id);
-          const Apparatus = item.rendererKey === "unlabelled-bottle" ? UnlabelledBottle : apparatus[item.rendererKey as SafetyApparatusKind];
+          const Apparatus = item.rendererKey === "unlabelled-bottle" ? UnlabelledBottle : safetyApparatus[item.rendererKey as SafetyApparatusKind];
           return <group key={item.id} position={[(index % columns - (rowWidth - 1) / 2) * 0.68, 0.025, row * 0.58 - 0.22]} scale={1.4}>
             {reagent ? <ReagentBottle3D look={reagentLook(reagent)} category={bottleCategory(reagent)} solid={reagent.composition.kind === "solid" || reagent.composition.kind === "powder"} /> : Apparatus && <Apparatus />}
             {showLabels && item.category === "material" && <Html center position={[0, reagent ? 0.6 : 0.28, 0]} style={{ pointerEvents: "none" }}>

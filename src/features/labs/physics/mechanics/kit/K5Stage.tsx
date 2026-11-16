@@ -11,6 +11,13 @@ export const K5_HOLES = [-250, -200, -150, -100, -50, 0, 50, 100, 150, 200, 250]
 const angle = (tilt: K5Tilt) => tilt === "TILT_LEFT" ? .18 : tilt === "TILT_RIGHT" ? -.18 : 0;
 const newtons = (mN: number) => `${(mN / 1000).toFixed(1).replace(".", ",")} N`;
 
+export function K5Hanger({ kind }: Pick<K5Attachment, "kind">) {
+  return <>
+    <mesh position={[0, -.21, 0]} castShadow><cylinderGeometry args={[.035, .035, .42, 8]} /><meshStandardMaterial color="#5b6869" metalness={.7} roughness={.3} /></mesh>
+    <mesh position={[0, -.49, 0]} castShadow><cylinderGeometry args={[.18, .18, .2, 24]} /><meshStandardMaterial color={kind === "GAUGE" ? "#dfae52" : "#6d8390"} metalness={.35} roughness={.45} /></mesh>
+  </>;
+}
+
 /** The SVG is a complete, legible alternate view of the same model output. */
 export function K5Stage2D({ attachments, tilt }: { attachments: readonly K5Attachment[]; tilt: K5Tilt }) {
   return <div className="k5-visual k5-visual-2d" role="img" aria-label={`Thanh đòn ${tilt === "LEVEL" ? "nằm ngang" : tilt === "TILT_LEFT" ? "nghiêng trái" : "nghiêng phải"}. ${attachments.length} dụng cụ đang gắn.`}>
@@ -48,8 +55,7 @@ function Apparatus({ attachments, tilt, reduced }: { attachments: readonly K5Att
       <mesh castShadow><boxGeometry args={[5.2, .18, .28]} /><meshStandardMaterial color="#ab7649" roughness={.5} /></mesh>
       {K5_HOLES.map(position => <group key={position} position={[position / 100, .105, .16]}><mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[.06, .013, 8, 16]} /><meshStandardMaterial color={position === 0 ? "#eab653" : "#243a42"} metalness={.55} roughness={.35} /></mesh><mesh position={[0, .09, 0]}><boxGeometry args={[.012, .09, .012]} /><meshStandardMaterial color="#f5ede0" /></mesh><Html position={[0, .3, .1]} center style={{ pointerEvents: "none" }}><span className={`k5-3d-mark${position === 0 ? " k5-3d-mark-origin" : ""}`}>{position === 0 ? "O · 0" : position > 0 ? `+${position}` : position}</span></Html></group>)}
       {attachments.map((item, index) => <group key={item.positionMillimetres} ref={node => { hangers.current[index] = node; }} position={[item.positionMillimetres / 100, -.07, .08]}>
-        <mesh position={[0, -.21, 0]} castShadow><cylinderGeometry args={[.035, .035, .42, 8]} /><meshStandardMaterial color="#5b6869" metalness={.7} roughness={.3} /></mesh>
-        <mesh position={[0, -.49, 0]} castShadow><cylinderGeometry args={[.18, .18, .2, 24]} /><meshStandardMaterial color={item.kind === "GAUGE" ? "#dfae52" : "#6d8390"} metalness={.35} roughness={.45} /></mesh>
+        <K5Hanger kind={item.kind} />
       </group>)}
     </group>
   </group>;

@@ -384,7 +384,7 @@ function GuidedLab() {
       await qc.invalidateQueries({ queryKey: ["class-assignments", classId] });
     }
     await qc.invalidateQueries({ queryKey: ["class-resources", classId] });
-    navigate(`/classes/${encodeURIComponent(classId)}?tab=${labDraft.assignment ? "work" : "resources"}`);
+    navigate(labDraft.assignment ? "/class-labs" : `/classes/${encodeURIComponent(classId)}?tab=resources`);
   });
   const result = attempt?.simulationResult;
   // A new result scrolls into view inside the question panel, so the learner sees the verdict at once. The result
@@ -408,7 +408,7 @@ function GuidedLab() {
   const pedagogy = labRun.launch?.classLabSnapshot ?? assignment.data?.classLabSnapshot ?? (classResource.data?.kind === "LAB" ? classResource.data.content : null);
   const responseClassId = classId ?? assignment.data?.classId ?? assignment.data?.classroom?.id;
   const responseResourceId = resourceId ?? pedagogy?.resourceId;
-  const exitTo = responseClassId && (responseResourceId || labDraft) ? `/classes/${encodeURIComponent(responseClassId)}?tab=${labDraft?.assignment ? "work" : "resources"}` : returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
+  const exitTo = responseClassId && (responseResourceId || labDraft) ? (labDraft?.assignment ? "/class-labs" : `/classes/${encodeURIComponent(responseClassId)}?tab=resources`) : returnToLesson ?? (assignmentId ? `/assignments/${encodeURIComponent(assignmentId)}` : "/labs");
   const showResponses = Boolean(user.role === "STUDENT" && responseClassId && responseResourceId && pedagogy?.reportPrompts?.length > 0);
   // Teacher content has one place in the Lab Space; each prompt is listed once (in the answer form when there is one).
   const classSection = user.role === "STUDENT" && pedagogy ? <>

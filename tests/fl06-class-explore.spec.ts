@@ -78,12 +78,19 @@ async function signIn(page: Page, user: typeof teacher | typeof student) {
   return forbidden;
 }
 
+/** The teacher's way in: the Class Lab page, "Giao lab" on the class, then the kind of lab work. */
+async function openExploreAssign(page: Page) {
+  await page.goto("/class-labs");
+  await page.getByRole("button", { name: "Giao lab", exact: true }).click();
+  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
+}
+
 test("teacher picks a load, weights and switches inside the FL-06 template, sees a load that cannot be levelled refused, previews and assigns", async ({ page }) => {
   await signIn(page, teacher);
   const writes: Array<{ path: string; body: any }> = [];
   await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
   await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
-  await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [{ id: "lesson-lever", title: "Đòn bẩy và moment lực", grade: 8, labId: "lever-equilibrium" }], labs: [], classLabs: [] } }));
+  await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [{ id: "lesson-lever", title: "Đòn bẩy và moment lực", grade: 8, subject: { id: "khtn", name: "KHTN" }, labId: "lever-equilibrium" }], labs: [], classLabs: [] } }));
   await page.route("**/api/classes/class-1/assignments", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [] });
     writes.push({ path: "assignments", body: route.request().postDataJSON() });
@@ -96,10 +103,12 @@ test("teacher picks a load, weights and switches inside the FL-06 template, sees
   });
   await page.route("**/api/classes/class-1/resources/res-1/publish", (route) => { writes.push({ path: "publish", body: null }); return route.fulfill({ json: { id: "res-1" } }); });
 
-  await page.goto("/classes/class-1?tab=work");
-  await page.getByRole("button", { name: "Giao bài Explore" }).click();
+  await openExploreAssign(page);
   const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
   await expect(dialog.getByText("Làm thanh đòn cân bằng")).toBeVisible();
+  const weights = dialog.getByRole("group", { name: "Bộ quả nặng cho học sinh" });
+  await expect(weights.locator("img")).toHaveCount(2);
+  await expect(weights).toContainText("0,5 N · 1,0 N · 2,0 N");
   const assign = dialog.getByRole("button", { name: "Lưu và giao bài" });
 
   // 0.5 N at 250 mm cannot be levelled with 1 N weights alone: the sim refuses it, the same check the server runs.
