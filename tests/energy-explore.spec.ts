@@ -158,6 +158,13 @@ test("a pendulum-only config lists two items and has no tabs, readings show numb
   await panel.getByRole("group", { name: "Động cơ" }).getByRole("button", { name: "Động cơ nhanh" }).click();
   await panel.getByRole("button", { name: "Kéo vật" }).click();
   await expect(panel.getByTestId("energy-power-compare")).toHaveAttribute("data-compare", "second");
+  // An owner-reviewed config opens without the technical-assumption notice.
+  const reviewed = { ...config, labId: "energy-reviewed", review: { status: "reviewed", notes: "Owner duyệt" } };
+  await page.route("**/api/labs", (route) => route.fulfill({ json: [row("energy-reviewed", reviewed)] }));
+  await page.goto("/labs/energy-reviewed");
+  await expect(page.getByRole("dialog").getByText("Con lắc đơn", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/giả định kỹ thuật/)).toHaveCount(0);
+  await page.route("**/api/labs", (route) => route.fulfill({ json: [row("energy-broken", broken)] }));
   await page.goto("/labs/energy-broken");
   await expect(page.getByTestId("explore-error")).toContainText("EXPLORE_CONFIG_INVALID");
 });
