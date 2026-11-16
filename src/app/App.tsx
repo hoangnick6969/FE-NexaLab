@@ -5,8 +5,6 @@ import { api, useAuth, restore } from "../lib/api";
 import { PageLoader } from "../components/ui";
 import { Login } from "../features/auth/Login";
 import { EmailVerification } from "../features/auth/EmailVerification";
-import { Dashboard } from "../features/dashboard/Dashboard";
-import { LabLibrary } from "../features/labs/LabLibrary";
 import { queryClient } from "./query-client";
 import { Avatar } from "../components/Avatar";
 import { PROFILE_KEY, useProfile, type Profile } from "../lib/profile";
@@ -89,6 +87,9 @@ const SettingsPage = lazy(() =>
 );
 
 const AdminPage = lazy(() => import("../features/admin/Admin"));
+// Perf review 2026-11-16 item 1: the role dashboards and the Lab library are route chunks, not part of the entry.
+const Dashboard = lazy(() => import("../features/dashboard/Dashboard").then((m) => ({ default: m.Dashboard })));
+const LabLibrary = lazy(() => import("../features/labs/LabLibrary").then((m) => ({ default: m.LabLibrary })));
 
 // TAI-05 teacher AI credits: loaded on demand for teachers only, so the entry, student and parent bundles never carry it.
 const TeacherCredits = lazy(() => import("../features/credits/TeacherCredits"));
