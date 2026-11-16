@@ -7,7 +7,7 @@ import * as THREE from "three";
 import type { OpticsApparatusKind } from "@nexalab/sim/optics";
 import { LabSceneContext } from "../../../shared/LabSpace";
 import { PhysicsStage, type BenchViewPreset } from "../../shared/PhysicsStage";
-import { rayGeometry, type RayView } from "./refraction-log";
+import { prismGeometry, rayGeometry, type PrismView, type RayView } from "./refraction-log";
 
 const MM = 0.004;
 const BENCH_TOP = 0.02;
@@ -17,7 +17,8 @@ const BLOCK_H = 30;
 /** Beams run just above the disk, through the middle of the block's height. */
 const BEAM_Y = DISK_H + BLOCK_H / 2;
 
-export type RefractionStageState = { ray: RayView; reduced: boolean };
+/** Station 1/2 draw `ray`; station 3 draws `prism` (its path only once `revealed`). */
+export type RefractionStageState = { station: "into-block" | "out-of-block" | "prism"; ray: RayView | null; prism: PrismView | null; revealed: boolean; reduced: boolean };
 type Renderer = ComponentType<{ state: RefractionStageState }>;
 
 const insets: BenchViewPreset["insets"] = (size, narrow) => ({ right: narrow ? 8 : Math.min(size.width * .31, 420), bottom: narrow ? Math.min(size.height * .48, 420) : 12, top: narrow ? 96 : 130 });
@@ -71,6 +72,7 @@ function DiskItem() {
 }
 
 function BlockItem({ state }: { state: RefractionStageState }) {
+  if (state.station === "prism" || !state.ray) return null;
   const water = state.ray.mediumId === "water";
   // Half cylinder on +z (towards the viewer): theta from -90° to 90° around the y axis.
   return <mesh name="half_cylinder" position={[0, DISK_H + BLOCK_H / 2 + 0.5, 0]}>
@@ -80,19 +82,21 @@ function BlockItem({ state }: { state: RefractionStageState }) {
 }
 
 /** A beam from a to b at the beam height, as a thin glowing box. */
-function Beam({ a, b, intensity, name }: { a: { x: number; y: number }; b: { x: number; y: number }; intensity: number; name: string }) {
+function Beam({ a, b, intensity, name, colour = "#ff2a2a", thin = false }: { a: { x: number; y: number }; b: { x: number; y: number }; intensity: number; name: string; colour?: string; thin?: boolean }) {
   const dx = b.x - a.x;
   const dz = b.y - a.y;
   const length = Math.hypot(dx, dz);
   if (length < 0.5) return null;
   return <mesh name={name} position={[(a.x + b.x) / 2, BEAM_Y, (a.y + b.y) / 2]} rotation={[0, -Math.atan2(dz, dx), 0]}>
-    <boxGeometry args={[length, 2.2, 2.2]} />
-    <meshBasicMaterial color="#ff2a2a" transparent opacity={Math.max(0.12, Math.min(1, intensity))} toneMapped={false} />
+    <boxGeometry args={[length, thin ? 1.4 : 2.2, thin ? 1.4 : 2.2]} />
+    <meshBasicMaterial color={colour} transparent opacity={Math.max(0.12, Math.min(1, intensity))} toneMapped={false} />
   </mesh>;
 }
 
 function LightItem({ state }: { state: RefractionStageState }) {
+  if (state.station === "prism") return <PrismLight state={state} />;
   const { ray } = state;
+  if (!ray) return null;
   const g = rayGeometry(ray, 0, 0, R);
   const centre = { x: 0, y: 0 };
   const transmitted = ray.refractionDeg === null ? 0 : 1 - ray.reflectance;
@@ -105,6 +109,56 @@ function LightItem({ state }: { state: RefractionStageState }) {
       <boxGeometry args={[60, 22, 22]} /><meshStandardMaterial color="#2f3a40" metalness={0.4} roughness={0.4} />
     </mesh>
   </group>;
+}
+
+const PRISM_SIDE = 170;
+const SCREEN_X = 205;
+const SPECTRUM_COLOUR: Record<string, string> = { red: "#ff2a2a", orange: "#ff8a1e", yellow: "#ffe11e", green: "#2ee05a", blue: "#2f7bff", indigo: "#5a3dff", violet: "#b04bff" };
+const prismPath = (view: PrismView) => {
+  const indices = view.light === "white" && view.spectrum.length ? view.spectrum.map((colour) => colour.indexMilli) : [view.indexMilli];
+  return prismGeometry(view.apexDeg, view.incidenceDeg, indices, 0, 0, PRISM_SIDE, SCREEN_X);
+};
+
+function PrismLight({ state }: { state: RefractionStageState }) {
+  const view = state.prism;
+  if (!view) return null;
+  const g = prismPath(view);
+  const start = { x: g.entry.x - g.incident.x * 140, y: g.entry.y - g.incident.y * 140 };
+  const white = view.light === "white";
+  return <group name="light_source">
+    <Beam name="incident" a={start} b={g.entry} intensity={1} colour={white ? "#ffffff" : undefined} />
+    {state.revealed && g.rays.map((ray, k) => {
+      const colour = white ? SPECTRUM_COLOUR[view.spectrum[k]?.id ?? ""] ?? "#ffffff" : undefined;
+      return <group key={ray.indexMilli}>
+        {ray.exit && <Beam name="inside" a={ray.entry} b={ray.exit} intensity={white ? 0.6 : 1} colour={colour} thin />}
+        {ray.exit && ray.out && <Beam name="exit" a={ray.exit} b={g.toScreen(ray.exit, ray.out)} intensity={1} colour={colour} thin={white} />}
+      </group>;
+    })}
+    <mesh position={[start.x * 1.06, BEAM_Y, start.y * 1.06]} rotation={[0, -Math.atan2(g.entry.y - start.y, g.entry.x - start.x), 0]} castShadow>
+      <boxGeometry args={[60, 22, 22]} /><meshStandardMaterial color="#2f3a40" metalness={0.4} roughness={0.4} />
+    </mesh>
+  </group>;
+}
+
+function PrismItem({ state }: { state: RefractionStageState }) {
+  const view = state.prism;
+  const shape = useMemo(() => {
+    if (!view) return null;
+    const g = prismPath(view);
+    // Shape y = -screen y, so after rotating -90° about x the triangle lies flat with screen y towards the viewer (+z).
+    const triangle = new THREE.Shape([new THREE.Vector2(g.apex.x, -g.apex.y), new THREE.Vector2(g.left.x, -g.left.y), new THREE.Vector2(g.right.x, -g.right.y)]);
+    return triangle;
+  }, [view?.apexDeg]); // the triangle depends on the apex angle only
+  if (state.station !== "prism" || !shape) return null;
+  return <mesh name="prism" position={[0, DISK_H + 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+    <extrudeGeometry args={[shape, { depth: BLOCK_H, bevelEnabled: false }]} />
+    <meshPhysicalMaterial color="#cfe9ef" transparent opacity={0.35} roughness={0.05} transmission={0.6} thickness={20} side={THREE.DoubleSide} depthWrite={false} />
+  </mesh>;
+}
+
+function ScreenItem({ state }: { state: RefractionStageState }) {
+  if (state.station !== "prism") return null;
+  return <mesh name="screen" position={[SCREEN_X + 3, 50, 0]}><boxGeometry args={[6, 100, 240]} /><meshStandardMaterial color="#f4f4ef" roughness={0.9} /></mesh>;
 }
 
 /** Dark booth around the disk (back and two sides), so the beams read well as in a real optics bench. */
@@ -130,6 +184,8 @@ export const APPARATUS_RENDERERS: Record<OpticsApparatusKind, Renderer> = {
   light_source: LightItem,
   measurement_table: PanelOnly,
   speed_card: PanelOnly,
+  prism: PrismItem,
+  screen: ScreenItem,
 };
 
 export function RefractionStage3D({ apparatus, state, active = true, children }: {

@@ -31,7 +31,18 @@ const config = {
   pedagogy: { observationPrompts: [{ id: "law", kind: "free_text", textVi: "Khi tăng góc tới, góc khúc xạ thay đổi thế nào?" }] },
   review: { status: "draft" },
 };
-const row = (id: string, value: unknown) => ({ id, title: "Khúc xạ ánh sáng", mode: "explore", explore: { ok: true, kit: "k6-optics-bench@1", engine: "refraction@1.0.0", activity, config: value } });
+// Config v2 (engine 1.1.0): the published v1 above plus the prism station (spec §13).
+const v2 = {
+  ...config, configVersion: 2, engine: "refraction@1.1.0", stations: ["into-block", "out-of-block", "prism"],
+  prism: { apexDeg: 60, mediumId: "glass", minIncidenceDeg: 35, maxIncidenceDeg: 80, whiteLight: true, spectrum: [
+    { id: "red", labelVi: "Đỏ", indexMilli: 1513 }, { id: "orange", labelVi: "Cam", indexMilli: 1517 }, { id: "yellow", labelVi: "Vàng", indexMilli: 1519 },
+    { id: "green", labelVi: "Lục", indexMilli: 1523 }, { id: "blue", labelVi: "Lam", indexMilli: 1528 }, { id: "indigo", labelVi: "Chàm", indexMilli: 1532 }, { id: "violet", labelVi: "Tím", indexMilli: 1538 },
+  ] },
+  enabledApparatus: [...config.enabledApparatus, { id: "prism", kind: "prism", slot: "disk", labelVi: "Lăng kính" }, { id: "screen", kind: "screen", slot: "bench", labelVi: "Màn hứng" }],
+  measurements: ["protractor", "critical_angle", "deviation"],
+};
+// The row declares the engine of its config, as the server does (FE refuses a mismatch with EXPLORE_IDENTITY_MISMATCH).
+const row = (id: string, value: { engine: string }) => ({ id, title: "Khúc xạ ánh sáng", mode: "explore", explore: { ok: true, kit: "k6-optics-bench@1", engine: value.engine, activity, config: value } });
 
 async function signIn(page: Page, rows: unknown[]) {
   const user = { id: "u-1", username: "student.active", email: null, fullName: "Nguyễn An", role: "STUDENT", grade: 9, mustChangePassword: false };
@@ -159,6 +170,55 @@ test("a station-1 config with sines lists four items and no tabs, a reviewed con
   await expect(panel.getByTestId("optics-table").locator('tr[data-row="30"] td[data-ratio]')).toHaveText("1,50");
   await page.goto("/labs/optics-broken");
   await expect(page.getByTestId("explore-error")).toContainText("EXPLORE_CONFIG_INVALID");
+});
+
+test("config v2: the prism hides the path until a prediction, then shows two refractions, D and the spectrum; v1 configs keep two stations", async ({ page }) => {
+  const requests = await signIn(page, [row("light-refraction", v2), row("optics-v1", { ...config, labId: "optics-v1" }), row("optics-v1-prism", { ...v2, labId: "optics-v1-prism", engine: "refraction@1.0.0" })]);
+  await page.goto("/labs/light-refraction");
+  await enter(page);
+  const panel = panelOf(page);
+  await expect(panel.getByTestId("optics-kit-items").locator("li")).toHaveCount(7);
+  await panel.getByRole("tab", { name: /Trạm 3/ }).click();
+  await expect(page.getByTestId("optics-explore")).toHaveAttribute("data-station", "prism");
+  const diagram = page.getByTestId("optics-2d").getByRole("img");
+  await expect(diagram).toHaveAttribute("data-revealed", "false");
+  await expect(panel.getByTestId("optics-prism-readings")).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: "Hiện đường truyền" })).toBeDisabled();
+  // P-01 at 40°.
+  await panel.getByRole("slider", { name: "Góc tới lăng kính" }).fill("40");
+  await panel.getByRole("group", { name: "Dự đoán tia ló" }).getByRole("button", { name: "Lệch về phía đỉnh" }).click();
+  await panel.getByRole("button", { name: "Hiện đường truyền" }).click();
+  await expect(diagram).toHaveAttribute("data-revealed", "true");
+  const readings = panel.getByTestId("optics-prism-readings");
+  await expect(readings.locator('[data-reading="r1"] td')).toHaveText("25,4°");
+  await expect(readings.locator('[data-reading="r2"] td')).toHaveText("34,6°");
+  await expect(readings.locator('[data-reading="i2"] td')).toHaveText("58,5°");
+  await expect(readings.locator('[data-reading="deviation"] td')).toHaveText("38,5°");
+  await expect(panel.getByTestId("optics-prediction")).toHaveAttribute("data-match", "false");
+  await expect(panel.getByTestId("optics-prediction")).toContainText("chưa khớp: tia ló lệch về phía đáy");
+  // P-02: the symmetric path near 48.6° gives the smallest deviation, 37.2°.
+  await panel.getByRole("slider", { name: "Góc tới lăng kính" }).fill("49");
+  await expect(readings.locator('[data-reading="deviation"] td')).toHaveText("37,2°");
+  // P-06: white light splits red to violet; laser numbers are not shown for colours (Q-11).
+  await panel.getByRole("group", { name: "Nguồn sáng" }).getByRole("button", { name: "Ánh sáng trắng" }).click();
+  await expect(diagram).toHaveAttribute("data-light", "white");
+  await expect(panel.getByTestId("optics-prism-readings")).toHaveCount(0);
+  await expect(panel.getByTestId("optics-spectrum")).toHaveText("Trên màn từ trên xuống: đỏ, cam, vàng, lục, lam, chàm, tím.");
+  await expect(page.getByTestId("optics-spectrum-inset").locator("rect[data-colour]")).toHaveCount(7);
+  await page.getByRole("button", { name: /Nhật ký \(\d+\)/ }).click();
+  const log = page.getByTestId("optics-log");
+  await expect(log).toContainText("Dự đoán tia ló: lệch về phía đỉnh; hiện đường truyền");
+  await expect(log).toContainText("Dự đoán của em chưa khớp với mô hình");
+  await expect(log).toContainText("Tia ló lệch về phía đáy lăng kính, góc lệch D = 38,5°");
+  await expect(log).toContainText("tím lệch nhiều nhất, đỏ lệch ít nhất");
+
+  // The published v1 config (engine 1.0.0) still opens with its two stations; a prism on 1.0.0 is refused.
+  await page.goto("/labs/optics-v1");
+  await enter(page);
+  await expect(panelOf(page).getByRole("tab")).toHaveCount(2);
+  await page.goto("/labs/optics-v1-prism");
+  await expect(page.getByTestId("explore-error")).toContainText("EXPLORE_CONFIG_INVALID");
+  expect(requests).toEqual([]);
 });
 
 test("3D shows the same state as 2D, and reduced motion keeps the bench usable", async ({ page }) => {
