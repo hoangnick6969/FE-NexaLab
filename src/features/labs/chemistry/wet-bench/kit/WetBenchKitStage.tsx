@@ -16,7 +16,7 @@ import { Collider, Droplet, DropperUpright, PhMeter3D, prefersReducedMotion, Rea
 import { BENCH_TOP_Y, shelfPosition, slotById } from "./bench-layout";
 import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, scaleDisplayMicrograms, validTargets, type BenchAction, type BenchUiState, type Held, type Target } from "./bench-reducer";
 import { bottleCategory, LITMUS_HEX, reagentLook, vesselLook, visualFill } from "./liquid-look";
-import { formatGrams, formatPh } from "./observation-log";
+import { formatClock, formatGrams, formatPh } from "./observation-log";
 
 const VIEW: BenchViewPreset = {
   wide: { position: [0.15, 2.05, 3.05], target: [0.15, 0.2, 0.05] },
@@ -34,6 +34,8 @@ export const shortReagent = (id: string) => (reagentById(id)?.labelVi ?? id).rep
 export const bottleTag = (id: string) => {
   const composition = reagentById(id)?.composition;
   if (composition?.kind === "solution") return composition.solute ? SPECIES[composition.solute].formulaDisplay : "H₂O";
+  if (composition?.kind === "solid" && composition.shape === "powder") return `${SPECIES[composition.species].formulaDisplay} bột`;
+  if (composition?.kind === "solid" && composition.shape === "chips") return `${SPECIES[composition.species].formulaDisplay} viên`;
   if (composition?.kind === "solid" || composition?.kind === "powder") return SPECIES[composition.species].formulaDisplay;
   if (composition?.kind === "indicator") return "Phenol.";
   return id;
@@ -274,7 +276,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
       } else if (reagent.dispenser === "spatula") {
         const rest = restOf("spatula");
         if (rest) hidden.add(rest.id);
-        const powderColor = reagent.composition.kind === "powder" ? (reagent.bottleColor) : null;
+        const powderColor = reagent.composition.kind === "powder" || (reagent.composition.kind === "solid" && reagent.composition.shape === "powder") ? reagent.bottleColor : null;
         carriedNode = <FollowGroup home={rest?.home ?? [at.x, BENCH_TOP_Y + 0.35, at.z]} active getTarget={spatulaTarget} scale={1.5}>
           <SpatulaHolding powder={powderColor} />
           <Html position={[0, 0.3, 0]} center style={{ pointerEvents: "none" }}><span className="k2-drag-tag">{shortReagent(reagent.id)} · {(state.powderMilligrams / 1000).toFixed(3).replace(".", ",")} g</span></Html>
@@ -384,7 +386,7 @@ function BenchScene({ state, dispatch, hovered, onHover }: { state: BenchUiState
     if (item.kind === "digital_ph_meter" && (state.current.probeIn || penHeld)) continue;
     const renderer = FIXTURE_RENDERERS[item.kind];
     items.push(<group key={id} position={home} {...(held ? { onPointerDown: begin({ held, label }, onClick) } : { onPointerDown: (event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); } })} {...hover(id)}>
-      <renderer.Body scaleReading={scaleText} />
+      <renderer.Body scaleReading={scaleText} clockReading={formatClock(bench.clock?.seconds ?? 0)} clockRunning={Boolean(bench.clock?.running)} />
       {held && isHeld(held) && <TargetRing radius={0.12} tone="held" />}
       {showTooltip(id) && <Tooltip y={renderer.tooltipY} title={label} detail={def.purposeVi} />}
     </group>);
