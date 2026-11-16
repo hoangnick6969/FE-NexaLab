@@ -57,6 +57,7 @@ export type ClassDerivation =
  */
 export type ClassTemplateFormProps = {
   config: any; template: any; labels: Record<string, string>;
+  thumbnailFor?: (key: string) => string | undefined;
   onChange: (value: { selection: Record<string, unknown> | null; summary: string }) => void;
 };
 export type ExploreBenchEntry = {

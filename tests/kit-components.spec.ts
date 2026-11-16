@@ -1,10 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fl13Config } from "../src/features/labs/chemistry/wet-bench/labs/fl-13.config";
 import { fl14aConfig } from "../src/features/labs/chemistry/wet-bench/labs/fl-14a.config";
+import { fl16Config } from "../src/features/labs/biology/anatomy/labs/fl-16.config";
+import { fl20Config } from "../src/features/labs/biology/ecology/labs/fl-20.config";
+import { fl26Config } from "../src/features/labs/biology/genetics/labs/fl-26.config";
+import { fl27Config } from "../src/features/labs/biology/molecular/labs/fl-27.config";
 
 // The "Dụng cụ theo bộ Kit" section of /labs: what each Kit has, read from the published Explore benches.
 const student = { id: "student-1", username: "student.active", email: null, fullName: "An", role: "STUDENT", grade: 8, mustChangePassword: false };
 const admin = { id: "admin-1", username: null, email: "admin@nexalab.local", fullName: "Quản trị", role: "ADMIN", grade: null, mustChangePassword: false };
+const teacher = { ...admin, id: "teacher-1", email: "teacher@nexalab.local", fullName: "Giáo viên", role: "TEACHER" };
 const activity = { id: "pav-1", key: "k", version: 2, digest: "d" };
 const exploreRow = (id: string, title: string, config: unknown) => ({ id, title, mode: "explore", explore: { ok: true, kit: "k2-wet-bench@1", engine: "wet-bench@1.0.0", activity, config } });
 const rows = [exploreRow("acid-base-indicators", "Acid – base, chỉ thị và pH", fl13Config), exploreRow("metal-reactivity", "Kim loại tác dụng với acid và muối", fl14aConfig)];
@@ -40,19 +45,43 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   // Not used by any published Explore lab yet.
   await expect(card("electronic_scale")).toHaveCount(0);
 
-  // A picture shared by several benches is marked; a bench's own mesh is not.
-  await expect(card("beaker_100ml")).toContainText("Dùng chung");
-  await expect(card("test_tube")).not.toContainText("Dùng chung");
+  await expect(card("beaker_100ml")).toContainText("Dùng chung giữa các bàn");
+  await expect(card("dropper_pipette")).toContainText("Dùng chung trong Kit");
+  await expect(card("tongs")).not.toContainText("Dùng chung");
   // Reagents carry their hazard and the same list as the bench.
   await expect(card("HCl_0_1M")).toContainText("Dùng ở: FL-13 · FL-14a");
   await expect(card("HCl_0_1M")).toContainText("Ăn mòn");
-  // Every card has a picture, and a student never sees the ids behind it.
-  await expect(kit.locator('[data-testid="kit-card"] svg')).toHaveCount(await kit.getByTestId("kit-card").count());
+  // Apparatus assets are lazy images. Reagents retain their icon and do not open a 3D viewport.
+  const tube = card("test_tube").locator("img");
+  await expect(tube).toHaveAttribute("loading", "lazy");
+  await expect.poll(() => tube.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(512);
+  await expect(card("HCl_0_1M").locator("svg")).toHaveCount(1);
+  await expect(kit.locator("canvas")).toHaveCount(0);
   await expect(kit.getByTestId("kit-debug")).toHaveCount(0);
 
   // The Labs listed under an item open that Lab.
   await card("tongs").getByRole("link", { name: "FL-14a" }).click();
   await expect(page).toHaveURL(/\/labs\/metal-reactivity$/);
+});
+
+test("a teacher can open the apparatus catalog from Class Lab", async ({ page }) => {
+  const biology = [fl16Config, fl20Config, fl26Config, fl27Config].map((config) => ({
+    id: config.labId, title: config.title, mode: "explore",
+    explore: { ok: true, kit: config.kit, engine: config.engine, activity, config },
+  }));
+  await open(page, teacher, [...rows, ...biology]);
+  await expect(page).toHaveURL(/\/class-labs$/);
+  await page.getByText("Dụng cụ theo Kit", { exact: true }).click();
+  const catalog = page.getByTestId("kit-components");
+  await expect(catalog.getByRole("heading", { name: "Kit Hóa học" })).toBeVisible();
+  await expect(catalog.getByText("Dùng chung giữa các bàn").first()).toBeVisible();
+  await expect(catalog.getByText("Dùng chung trong Kit").first()).toBeVisible();
+  const bioKit = catalog.getByRole("region", { name: "Kit Sinh học" });
+  await expect(bioKit.locator(".kit-card img")).toHaveCount(3);
+  const eye = catalog.getByRole("region", { name: "Kit Bổ trợ Explore" }).locator('[data-key="eye-model"] img');
+  await expect(eye).toHaveCount(1);
+  await expect(bioKit.locator('[data-key="punnett-board"] svg')).toHaveCount(1);
+  await expect(bioKit.locator("canvas")).toHaveCount(0);
 });
 
 test("?debug=1 shows the renderer and shared item behind each entry", async ({ page }) => {

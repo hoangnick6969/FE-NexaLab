@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart2, ChevronDown, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
 import { api } from "../../lib/api";
 import { Badge, CardSkeleton, Empty, ErrorBox } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -10,8 +11,15 @@ import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import "./teacher-operations.css";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { labInfo } from "../labs/lab-info";
+import { KitComponents } from "../labs/kit-catalog/KitComponents";
 import { resourceInput } from "./ResourceEditor";
 import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
+import { AssignLabChooser } from "./AssignLabChooser";
+import { AssignmentRowActions } from "./AssignmentManage";
+import { AssignModal } from "./Assignments";
+import { ExploreAssignModal } from "./explore/ExploreAssignModal";
+import { ExploreBoard } from "./explore/ExploreBoard";
+import { showsInView, type ClassLabsView } from "./class-labs-view";
 
 const text = defineText({
   vi: {
@@ -20,13 +28,16 @@ const text = defineText({
     manageClasses: "Quản lý lớp",
     active: "Đang giao",
     archived: "Đã lưu trữ",
+    kitCatalog: "Dụng cụ theo Kit",
     classCount: (count: number) => `${count} lớp`,
     grade: (grade: number) => `Khối ${grade}`,
     students: (count: number) => `${count} học sinh đã duyệt`,
     assign: "Giao lab",
     privateActivities: "Đề bài Lab đã lưu: xem trước và sửa bản nháp",
     none: "Chưa có bài lab nào được giao.",
-    noneHelp: "Bấm Giao lab, chọn Lab nguồn rồi thiết kế đề bài ngay trong phòng thí nghiệm.",
+    noneHelp: "Bấm Giao lab, chọn kiểu bài rồi thiết kế đề ngay trong phòng thí nghiệm.",
+    exploreKind: "Thí nghiệm tự do",
+    submissions: "Xem bài nộp",
     noClasses: "Chưa có lớp phù hợp.",
     noActiveClasses: "Tạo lớp trước khi giao bài thực hành.",
     noArchived: "Chưa có bài lab lưu trữ.",
@@ -47,13 +58,16 @@ const text = defineText({
     manageClasses: "Manage classes",
     active: "Assigned",
     archived: "Archived",
+    kitCatalog: "Apparatus by Kit",
     classCount: (count: number) => `${count} ${count === 1 ? "class" : "classes"}`,
     grade: (grade: number) => `Grade ${grade}`,
     students: (count: number) => `${count} approved ${count === 1 ? "student" : "students"}`,
     assign: "Assign a lab",
     privateActivities: "Private class labs: create, preview and revise",
     none: "No labs have been assigned yet.",
-    noneHelp: "Choose a released foundational lab from a class's assignment area. Assigned work is limited to its recipient list.",
+    noneHelp: "Press Assign a lab, choose the kind of work and design it in the lab. Assigned work is limited to its recipient list.",
+    exploreKind: "Free experiment",
+    submissions: "View submissions",
     noClasses: "No matching classes.",
     noActiveClasses: "Create a class before assigning practical work.",
     noArchived: "No archived lab work yet.",
@@ -74,8 +88,15 @@ export function ClassLabs() {
   const t = text();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get("view") === "archived" ? "archived" : "active";
+  const [notice, setNotice] = useState<string | null>(null);
+  const [chooserFor, setChooserFor] = useState<ClassSummary | null>(null);
+  const [exploreFor, setExploreFor] = useState<ClassSummary | null>(null);
+  const [guidedFor, setGuidedFor] = useState<{ classroom: ClassSummary; labId?: string } | null>(null);
+  const [board, setBoard] = useState<{ classroom: ClassSummary; assignment: TeacherAssignment } | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  // Keyed under "classes" so anything that changes a class's counters refreshes this page too.
   const classList = useQuery<ClassSummary[]>({
-    queryKey: ["class-labs", "classes", view],
+    queryKey: ["classes", "class-labs", view],
     queryFn: async () => {
       const active = await api<ClassSummary[]>("/classes?status=ACTIVE");
       if (view === "active") return active;
@@ -83,26 +104,40 @@ export function ClassLabs() {
       return [...active, ...archived];
     },
   });
+  // Same key and request as the class's Assign tab, so work assigned or changed in one place shows in the other at once.
   const classAssignments = useQueries({
     queries: (classList.data ?? []).map((classroom) => ({
-      queryKey: ["class-labs", classroom.id, view],
+      queryKey: ["class-assignments", classroom.id],
       queryFn: () => api<TeacherAssignment[]>(`/classes/${encodeURIComponent(classroom.id)}/assignments`),
     })),
   });
-  const relevantClasses = (classList.data ?? []).filter((classroom) =>
-    view === "archived" || classroom.status === "ACTIVE",
-  );
-  const hasVisibleLab = relevantClasses.some((classroom, index) => classAssignments[index]?.data?.some((assignment) =>
-    assignment.contentType === "lab" && (view === "active"
-      ? classroom.status === "ACTIVE" && assignment.status === "ACTIVE"
-      : classroom.status === "ARCHIVED" || assignment.status === "ARCHIVED"),
-  ));
+  const entries = (classList.data ?? []).map((classroom, index) => ({ classroom, query: classAssignments[index] }));
+  const relevant = entries.filter(({ classroom }) => view === "archived" || classroom.status === "ACTIVE");
+  const hasVisibleLab = relevant.some(({ classroom, query }) => query?.data?.some((assignment) => showsInView(view, classroom, assignment)));
   const allAssignmentsLoaded = classAssignments.every((query) => !query.isLoading && !query.isError);
-  const visibleClasses = relevantClasses.filter((classroom, index) => view === "active"
-    || classAssignments[index]?.isLoading
-    || classAssignments[index]?.isError
-    || classAssignments[index]?.data?.some((assignment) => assignment.contentType === "lab" && (classroom.status === "ARCHIVED" || assignment.status === "ARCHIVED")),
+  const visible = relevant.filter(({ classroom, query }) => view === "active"
+    || query?.isLoading
+    || query?.isError
+    || query?.data?.some((assignment) => showsInView(view, classroom, assignment)),
   );
+
+  // Deep link: /class-labs?classId=...&assign=explore opens the Explore flow, assign=guided[&labId=...] the Guided flow, anything else the chooser.
+  const requestedClassId = searchParams.get("classId");
+  const requestedAssign = searchParams.get("assign");
+  useEffect(() => {
+    if (!requestedClassId || !requestedAssign || !classList.data) return;
+    const target = classList.data.find((classroom) => classroom.id === requestedClassId && classroom.status === "ACTIVE");
+    if (target) {
+      if (requestedAssign === "explore") setExploreFor(target);
+      else if (requestedAssign === "guided") setGuidedFor({ classroom: target, labId: searchParams.get("labId") ?? undefined });
+      else setChooserFor(target);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("classId");
+    next.delete("assign");
+    next.delete("labId");
+    setSearchParams(next, { replace: true });
+  }, [requestedClassId, requestedAssign, classList.data]);
 
   const selectView = (nextView: "active" | "archived") => {
     const next = new URLSearchParams(searchParams);
@@ -128,9 +163,15 @@ export function ClassLabs() {
             {t.archived}
           </button>
         </div>
-        {!classList.isLoading && !classList.isError && <span className="teacher-workspace-count">{t.classCount(relevantClasses.length)}</span>}
+        {!classList.isLoading && !classList.isError && <span className="teacher-workspace-count">{t.classCount(relevant.length)}</span>}
       </div>
 
+      <details className="class-labs-kit" onToggle={(event) => setCatalogOpen(event.currentTarget.open)}>
+        <summary><FlaskConical size={18} aria-hidden="true" />{t.kitCatalog}<ChevronDown size={16} aria-hidden="true" /></summary>
+        {catalogOpen && <KitComponents standalone />}
+      </details>
+
+      {notice && <p className="notice" role="status">{notice}</p>}
       <LoadError query={classList} what={t.loadClasses} />
       {classList.isLoading && <div className="teacher-class-labs-loading"><CardSkeleton count={2} /></div>}
       {classList.data?.length === 0 && (
@@ -140,18 +181,11 @@ export function ClassLabs() {
         <Link className="primary teacher-inline-action" to="/classes">{t.createClass}</Link>
       )}
 
-      {visibleClasses.map((classroom) => {
-        const index = classList.data?.findIndex((item) => item.id === classroom.id) ?? -1;
-        const assignmentsQuery = classAssignments[index];
-        const labs = (assignmentsQuery?.data ?? []).filter((assignment) =>
-          assignment.contentType === "lab" && (view === "active"
-            ? classroom.status === "ACTIVE" && assignment.status === "ACTIVE"
-            : classroom.status === "ARCHIVED" || assignment.status === "ARCHIVED"),
-        );
+      {visible.map(({ classroom, query: assignmentsQuery }) => {
+        const labs = (assignmentsQuery?.data ?? []).filter((assignment) => showsInView(view, classroom, assignment));
         const classQuery = new URLSearchParams({ tab: "work" });
         if (classroom.status === "ARCHIVED") classQuery.set("status", "ARCHIVED");
         const classHref = `/classes/${encodeURIComponent(classroom.id)}?${classQuery.toString()}`;
-        const assignHref = `/classes/${encodeURIComponent(classroom.id)}?tab=work&assign=lab`;
 
         return (
           <section className="teacher-class-labs-group" key={classroom.id} aria-labelledby={`class-labs-${classroom.id}`}>
@@ -161,9 +195,9 @@ export function ClassLabs() {
                 <p>{t.grade(classroom.grade)} · {t.students(classroom.members.approved)}</p>
               </div>
               {classroom.status === "ACTIVE" && view === "active" && (
-                <Link className="secondary teacher-class-labs-link" to={assignHref}>
+                <button type="button" className="secondary teacher-class-labs-link" onClick={() => { setNotice(null); setChooserFor(classroom); }}>
                   {t.assign}<ArrowRight size={16} aria-hidden="true" />
-                </Link>
+                </button>
               )}
             </header>
             {view === "active" && <details><summary>{t.privateActivities}</summary><TeacherClassResources classId={classroom.id} disabled={classroom.status !== "ACTIVE"} labOnly /></details>}
@@ -179,33 +213,7 @@ export function ClassLabs() {
             {labs.length > 0 && (
               <div className="teacher-class-labs-list">
                 {labs.map((assignment) => (
-                  <article className="teacher-class-lab-row" key={assignment.id}>
-                    <div className="teacher-class-lab-icon" aria-hidden="true">{labInfo.find((lab) => lab.id === assignment.contentId)?.thumbnail ? <img src={labInfo.find((lab) => lab.id === assignment.contentId)!.thumbnail} alt="" /> : <FlaskConical size={18} />}</div>
-                    <div className="teacher-class-lab-main">
-                      <h3>{assignment.title}</h3>
-                      <p>{t.recipients(assignment.recipientCount)} · {assignment.audience === "CLASS" ? t.wholeClass : t.subset}</p>
-                    </div>
-                    <div className="teacher-class-lab-due">
-                      <span>{t.due}</span>
-                      <b>{dueLabel(assignment.dueDate) || t.noDue}</b>
-                      {view === "active" && assignment.overdue && assignment.status === "ACTIVE" && <Badge tone="outline">{t.overdue}</Badge>}
-                    </div>
-                    <div className="teacher-class-lab-actions">
-                      <Link className="secondary button-compact" to={`/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`}>
-                        <Eye size={13} aria-hidden="true" />
-                        <span>{assignment.classLabSnapshot ? "Xem Lab Space" : "Xem Lab nguồn"}</span>
-                      </Link>
-                      {assignment.classLabSnapshot && view === "active" && <EditAssignedLab classId={classroom.id} assignment={assignment} />}
-                      {!assignment.classLabSnapshot && view === "active" && (
-                        <Link className="secondary button-compact" to={`/classes/${encodeURIComponent(classroom.id)}?tab=work&assign=lab&labId=${encodeURIComponent(assignment.contentId)}`}>
-                          <Sparkles size={13} aria-hidden="true" />
-                          <span>Tạo đề bài riêng</span>
-                        </Link>
-                      )}
-                      <Link className="teacher-class-lab-open" to={classHref} aria-label={t.openAssignment(assignment.title)}><ArrowRight size={18} aria-hidden="true" /></Link>
-                    </div>
-                    {assignment.classLabSnapshot && view === "active" && <TeacherClassLabAdditionalResponses classId={classroom.id} resourceId={assignment.classLabSnapshot.resourceId} assignmentId={assignment.id} />}
-                  </article>
+                  <LabWorkRow key={assignment.id} classroom={classroom} assignment={assignment} view={view} classHref={classHref} onBoard={() => setBoard({ classroom, assignment })} />
                 ))}
               </div>
             )}
@@ -213,10 +221,60 @@ export function ClassLabs() {
         );
       })}
 
-      {view === "archived" && relevantClasses.length > 0 && !hasVisibleLab && allAssignmentsLoaded && (
+      {view === "archived" && relevant.length > 0 && !hasVisibleLab && allAssignmentsLoaded && (
         <Empty>{t.noArchived}</Empty>
       )}
+
+      {chooserFor && <AssignLabChooser classroom={chooserFor} onClose={() => setChooserFor(null)} onExplore={() => { setExploreFor(chooserFor); setChooserFor(null); }} onGuided={() => { setGuidedFor({ classroom: chooserFor }); setChooserFor(null); }} />}
+      {guidedFor && <AssignModal labOnly classroom={guidedFor.classroom} initialContentType="lab" initialLabId={guidedFor.labId} onClose={() => setGuidedFor(null)} onAssigned={(message) => { setNotice(message); setGuidedFor(null); }} />}
+      {exploreFor && <ExploreAssignModal classroom={exploreFor} onClose={() => setExploreFor(null)} onAssigned={(message) => { setNotice(message); setExploreFor(null); }} />}
+      {board && <ExploreBoard classroom={board.classroom} assignment={board.assignment} onClose={() => setBoard(null)} />}
     </div>
+  );
+}
+
+/** One lab assigned to a class: a Guided lab (with its class draft) or an Explore lab, with what the teacher can do next. */
+function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { classroom: ClassSummary; assignment: TeacherAssignment; view: ClassLabsView; classHref: string; onBoard: () => void }) {
+  const t = text();
+  const explore = assignment.contentType === "explore_lab";
+  const thumbnail = labInfo.find((lab) => lab.id === assignment.contentId)?.thumbnail;
+  const manageable = view === "active" && classroom.status === "ACTIVE" && assignment.status === "ACTIVE";
+  return (
+    <article className="teacher-class-lab-row">
+      <div className="teacher-class-lab-icon" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" /> : <FlaskConical size={18} />}</div>
+      <div className="teacher-class-lab-main">
+        <h3>{assignment.title}{explore && <span className="assignment-type-pill is-explore_lab">{t.exploreKind}</span>}</h3>
+        <p>{t.recipients(assignment.recipientCount)} · {assignment.audience === "CLASS" ? t.wholeClass : t.subset}</p>
+      </div>
+      <div className="teacher-class-lab-due">
+        <span>{t.due}</span>
+        <b>{dueLabel(assignment.dueDate) || t.noDue}</b>
+        {manageable && assignment.overdue && <Badge tone="outline">{t.overdue}</Badge>}
+      </div>
+      <div className="teacher-class-lab-actions">
+        {explore ? (
+          <button type="button" className="secondary button-compact" onClick={onBoard}>
+            <BarChart2 size={13} aria-hidden="true" />
+            <span>{t.submissions}</span>
+          </button>
+        ) : (
+          <Link className="secondary button-compact" to={`/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`}>
+            <Eye size={13} aria-hidden="true" />
+            <span>{assignment.classLabSnapshot ? "Xem Lab Space" : "Xem Lab nguồn"}</span>
+          </Link>
+        )}
+        {!explore && assignment.classLabSnapshot && view === "active" && <EditAssignedLab classId={classroom.id} assignment={assignment} />}
+        {!explore && !assignment.classLabSnapshot && view === "active" && (
+          <Link className="secondary button-compact" to={`/class-labs?classId=${encodeURIComponent(classroom.id)}&assign=guided&labId=${encodeURIComponent(assignment.contentId)}`}>
+            <Sparkles size={13} aria-hidden="true" />
+            <span>Tạo đề bài riêng</span>
+          </Link>
+        )}
+        {manageable && <AssignmentRowActions classroom={classroom} assignment={assignment} />}
+        <Link className="teacher-class-lab-open" to={classHref} aria-label={t.openAssignment(assignment.title)}><ArrowRight size={18} aria-hidden="true" /></Link>
+      </div>
+      {!explore && assignment.classLabSnapshot && view === "active" && <TeacherClassLabAdditionalResponses classId={classroom.id} resourceId={assignment.classLabSnapshot.resourceId} assignmentId={assignment.id} />}
+    </article>
   );
 }
 

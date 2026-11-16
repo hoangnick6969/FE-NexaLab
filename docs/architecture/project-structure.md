@@ -31,9 +31,9 @@ src/
 | `lessons` | `Lessons` (student hub and teacher library), `lesson-catalog.ts` (hub merge/filter), `LessonDetail` (student lesson page: reading, video, cards, basic exercise tabs), `VideoLearningStep`, `StudyCardsStep`, `LessonEditorFields`, `library.tsx` (library filters, coverage, review and attribution widgets) |
 | `assignments` | `/assignments` routes: `StudentAssignments`, `AssignedLearning` (assignment pathway), `QuizLearningStep`, `AssignedTest` (I3 scored test) |
 | `ebook` | `EbookReader` (textbook reader and annotations) |
-| `labs` | `Lab`/`LabLibrary` routes; `shared` fullscreen UI; `runtime` run host; `physics/<kit>` environments and models; `chemistry/<kit>`; `biology/<resource-or-kit>`; `pathways` lesson/assignment integration; discovery metadata |
+| `labs` | `Lab`/`LabLibrary` routes; `shared` fullscreen UI; `runtime` run host; `physics/<kit>` environments and models; `chemistry/<kit>`; `biology/<resource-or-kit>`; `pathways` lesson/assignment integration; discovery metadata; `kit-catalog` appears on `/labs` for students and in the standalone Class Lab panel for teachers. The catalog marks shared renderer items across benches and other apparatus used by multiple labs within a Kit. |
 | `progress` | `ProgressPage` (student/parent), `StudentProgress`, `AssignmentProgress`, `ActivityList`, `EvidenceSheet`, `progress-format.ts` |
-| `classes` | `Classes` (role switch), `TeacherClasses`, `ClassDetail`, `Roster`, `Assignments` (assign/edit), `TestAssignments` (I3 late queue, reject, deadline revision, tracking), `ClassSpaceResources`, `PracticeAnalytics`, `StudentClasses`, `class-ui.tsx` (dialogs, mutation and load-error helpers), `class-types.ts` |
+| `classes` | `Classes` (role switch), `TeacherClasses`, `ClassDetail`, `Roster`, `Assignments` (assign/edit lessons, tests and other work), `ClassLabs` (the Class Lab page: the one place to assign and manage lab work, Guided or Explore; `AssignLabChooser` asks which kind, `explore/` has the Explore assign flow and the submissions board, `class-labs-view.ts` is the list filter), `AssignmentManage` (edit due date and archive, shared by Assign tab and Class Lab), `TestAssignments` (I3 late queue, reject, deadline revision, tracking), `ClassSpaceResources`, `PracticeAnalytics`, `StudentClasses`, `class-ui.tsx` (dialogs, mutation and load-error helpers), `class-types.ts` |
 | `admin` | `Admin` (tab shell) and one file per tab: `Overview`, `Users`, `Taxonomy`, `Content`, `Simulations`, `Assets`, `AuditExplorer`; `admin-ui.tsx` (labels, status, dialogs, paging) |
 | `landing`, `saved`, `settings` | Public landing page, saved experiments, account settings |
 
@@ -49,6 +49,14 @@ Conventions:
 - Pages are lazy-loaded from `app/App.tsx`, so each feature builds into its own chunk.
 - Labs use subfolders where implementations share a discipline kit/environment. Cross-discipline presentation stays in `features/labs/shared/`; route hosts stay at the feature root; lesson assignment integration stays in `pathways/`. Create a kit folder with its first implementation rather than committing empty placeholders. The provisional 20-slot mapping and current FE status are indexed in `features/labs/README.md` and governed by the BE lab catalog.
 - Playwright scenarios stay in `tests/`; shared live-test helpers are in `tests/fixtures/live.ts`.
+
+### Kit apparatus thumbnails
+
+The catalog loads static WebP images from `src/features/labs/assets/thumbnails/kit/<group>/<rendererKey>.webp` and uses an icon when a renderer has no image or the image fails. Reagents keep their catalog icons. Run `npm run capture:lab-thumbnails -- --kit` to regenerate the 512 × 512 previews (30 KiB max each), or pass a single ID such as `kit/chemistry/test_tube`. The development harness uses the K2 renderer registries, safety apparatus meshes and individual physics meshes in `kit-thumbnail-scenes.tsx`. It blocks API requests. The command with no arguments still captures full lab thumbnails.
+
+The Explore assignment form uses the same image lookup for FL‑13 reagent options (`reagent-<id>`) and FL‑06 weight sets (`weights-<forces-in-mN>`). The harness captures the bottle and hanger meshes used on those benches. Option labels retain the reagent name and any concentration, or the force values in N.
+
+Kit Sinh học previews use the FL‑26 pea plant, FL‑27 DNA double helix and FL‑20 pond thermometer. The FL‑16 eye section appears under Kit Bổ trợ Explore. These asset keys match the apparatus IDs from the Explore configs. Boards without standalone meshes keep their catalog icons.
 
 ### Known follow-ups
 
