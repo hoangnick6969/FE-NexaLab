@@ -21,7 +21,55 @@
 .explore-bench-full .fw-meadow-note { display: none; }
 .diorama-graph-card .eco-graph figcaption { font-size: 12px; color: var(--ink-neutral-53); }
 
-/* A checkbox with a visible box and brand tick. */
-.explore-check { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 600; color: var(--text-base); cursor: pointer; }
-.lab-space .explore-check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--brand); cursor: pointer; }
-.lab-space .explore-check input:focus-visible { outline: 3px solid rgb(31 111 120 / 40%); outline-offset: 2px; }
+
+/* FL-21 Explore: the student's own chain and its energy pyramid. */
+.fw-chain-list { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; counter-reset: fw; }
+.fw-chain-list li { counter-increment: fw; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1.5px solid var(--explore-card-line); border-radius: 999px; font-size: 13px; font-weight: 650; background: var(--surface); }
+.fw-chain-list li::before { content: counter(fw); display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; }
+.fw-chain-list li + li::after { content: none; }
+.fw-chain-list li[data-broken] { border-color: #b42318; color: #b42318; }
+.fw-chain-list li.explore-field-hint { border: 0; padding: 0; }
+.fw-chain-list li.explore-field-hint::before { content: none; }
+.fw-all-chains { font-size: 13px; }
+.fw-all-chains summary { cursor: pointer; font-weight: 650; min-height: 32px; }
+.fw-all-chains ul { margin: 6px 0 0; padding-left: 18px; }
+.fw-energy { display: grid; gap: 6px; margin: 0; }
+.fw-energy ol { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fw-energy li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.fw-energy li > .explore-mono { flex: none; white-space: nowrap; }
+.fw-energy-bar { display: inline-block; padding: 4px 8px; border-radius: 6px; background: linear-gradient(90deg, #cfe9d9, #a7d7b8); color: #17402a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fw-energy figcaption { font-size: 11px; color: var(--ink-neutral-53); }
+
+/* FL-20 Explore: fish import comparison on one temperature axis. */
+.eco-range-bars { margin: 0; display: grid; gap: 6px; }
+.eco-range-bars svg { display: block; width: min(100%, 760px); height: auto; margin: 0 auto; }
+.eco-range-tick line { stroke: #d5dfdb; stroke-width: 1; }
+.eco-range-tick text, .eco-range-name { font: 600 12px system-ui, sans-serif; fill: var(--text-base, #24323a); }
+.eco-range-site-band { fill: rgb(56 140 200 / 12%); }
+.eco-range-row rect { fill: #9fb7c6; }
+.eco-range-row[data-tone="site"] rect { fill: #3b82c4; }
+.eco-range-row[data-tone="ok"] rect { fill: #2f7d4f; }
+.eco-range-row[data-tone="bad"] rect { fill: #c8402f; }
+.eco-range-now { stroke: #b42318; stroke-width: 2.5; stroke-dasharray: 5 4; }
+.eco-range-bars figcaption { font-size: 12px; color: var(--ink-neutral-53); }
+
+/* FL-20 direct manipulation: thermometer grip (2D), drag the axis cursor, amber limit guesses on the graph. */
+.eco-thermo-grip { fill: transparent; cursor: ns-resize; touch-action: none; }
+.eco-thermo-grip:hover, .eco-thermo-grip:focus-visible { fill: rgb(31 95 139 / 10%); outline: none; }
+.eco-pond .eco-thermo-tube, .eco-pond .eco-thermo-mercury, .eco-pond .eco-thermo-bulb, .eco-pond .eco-thermo-label { pointer-events: none; }
+.eco-axis-grip { fill: transparent; cursor: ew-resize; touch-action: none; }
+.eco-axis-grip:focus-visible { fill: rgb(31 95 139 / 8%); outline: none; }
+.eco-guess-band { fill: rgb(217 119 6 / 10%); pointer-events: none; }
+.eco-guess line { stroke: #d97706; stroke-width: 2.5; stroke-dasharray: 6 4; pointer-events: none; }
+.eco-guess circle { fill: #d97706; stroke: #fff; stroke-width: 2; pointer-events: none; }
+.eco-graph .eco-guess text { font-size: 12px; font-weight: 700; fill: #b45309; pointer-events: none; }
+.eco-guess-grip { fill: transparent; cursor: ew-resize; touch-action: none; }
+.eco-guess-grip:hover, .eco-guess-grip:focus-visible { fill: rgb(217 119 6 / 14%); outline: none; }
+
+/* FL-21 direct manipulation: rubber-band arrow while dragging from one species to another. */
+.fw-link-drag { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 10000; pointer-events: none; overflow: visible; }
+.fw-link-drag line { stroke: #1f6f78; stroke-width: 3.5; stroke-dasharray: 8 6; stroke-linecap: round; }
+.fw-link-drag marker path { fill: #1f6f78; }
+body.fw-linking, body.fw-linking * { cursor: crosshair !important; user-select: none; }
+.explore-bench .fw-node { touch-action: none; }
+.explore-bench .fw-node[data-link-target="true"] { outline: 3px solid #1f6f78; outline-offset: 3px; }

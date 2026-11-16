@@ -9,3 +9,33 @@
 .molecular-codons li[data-mutated="true"] { border-color: #b91c1c; background: #fdecec; }
 .molecular-codons li[data-mutated="true"] .explore-mono, .molecular-codons li[data-mutated="true"] small { color: #8f1414; }
 .molecular-overlay { width: min(620px, calc(100% - var(--explore-aside-w) - 72px)); }
+
+/* FL-27 free mutation editor: the coding strand as 18 pickable bases, codons shaded in alternate bands. */
+.molecular-editor { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.molecular-editor legend { margin-bottom: 8px; padding: 0; font-size: 13px; font-weight: 650; color: var(--text-base); }
+.molecular-editor-strand { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.lab-space .molecular-base { display: grid; justify-items: center; gap: 0; min-height: 44px; padding: 4px 0; border: 1.5px solid var(--explore-card-line); border-radius: 8px; background: var(--surface); color: var(--text-base); cursor: pointer; font: 800 15px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lab-space .molecular-base[data-codon="1"] { background: #f1f6f4; }
+.lab-space .molecular-base small { font: 600 10px/1 system-ui, sans-serif; color: var(--ink-neutral-53, #6b7280); }
+.lab-space .molecular-base:hover:not(:disabled) { border-color: var(--brand); }
+.lab-space .molecular-base[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand); }
+.lab-space .molecular-base[data-mutated] { border-color: #b91c1c; background: #fdecec; color: #8f1414; }
+.lab-space .molecular-base:disabled { opacity: .5; cursor: not-allowed; }
+.lab-space .molecular-base:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* FL-27 direct manipulation: floating base tray over the scene, 2D strand targets, carried base chip. */
+.molecular-tray { position: absolute; top: 96px; left: 50%; z-index: 7; display: flex; align-items: center; gap: 8px; padding: 8px 12px; transform: translateX(calc(-50% - var(--explore-aside-w, 380px) / 2));
+  border: 1px solid var(--explore-card-line); border-radius: 14px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--explore-card-shadow); backdrop-filter: blur(12px); font-size: 12px; font-weight: 650; }
+.molecular-2d .molecular-tray { position: static; transform: none; justify-self: center; }
+.lab-space .molecular-tray-base { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--explore-card-line); background: var(--surface); font: 800 17px ui-monospace, SFMono-Regular, Menlo, monospace; cursor: grab; touch-action: none; }
+.lab-space .molecular-tray-base[data-base="A"] { color: #b45309; }
+.lab-space .molecular-tray-base[data-base="T"] { color: #b91c1c; }
+.lab-space .molecular-tray-base[data-base="G"] { color: #15803d; }
+.lab-space .molecular-tray-base[data-base="C"] { color: #1d4ed8; }
+.lab-space .molecular-tray-base[aria-pressed="true"] { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand); }
+.molecular-tray small { color: var(--ink-neutral-53); font-weight: 600; }
+.k7-2d-target { fill: transparent; stroke: transparent; stroke-width: 2.5; cursor: pointer; }
+.k7-2d-target:hover, .k7-2d-target:focus-visible { stroke: #f59e0b; fill: rgb(245 158 11 / 12%); outline: none; }
+.k7-2d-target[data-selected] { stroke: #f59e0b; }
+.explore-carry-chip { position: fixed; left: 0; top: 0; z-index: 10000; display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 10px; background: #fff; border: 3px solid var(--brand, #1f6f78);
+  font: 800 16px ui-monospace, SFMono-Regular, Menlo, monospace; pointer-events: none; box-shadow: 0 4px 12px rgb(0 0 0 / 25%); }

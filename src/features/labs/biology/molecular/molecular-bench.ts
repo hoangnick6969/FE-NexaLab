@@ -11,7 +11,7 @@ export const molecularBench: ExploreBenchEntry = {
     return result.success ? { ok: true, config: result.data } : { ok: false };
   },
   loadPage: () => import("./MolecularExplorePage"),
-  listKitItems: (config) => kitItemsFrom(config, { dna_strand: "Mạch DNA mô phỏng: đọc codon và chọn biến thể gene." }),
+  listKitItems: (config) => kitItemsFrom(config, { dna_strand: "Mạch DNA mô phỏng: đọc codon, chọn biến thể mẫu hoặc tự thay một base để tạo đột biến điểm." }),
 };
 
 /** Journal line for FL-27: the variant, the base change and the amino-acid effect from the gene model. */

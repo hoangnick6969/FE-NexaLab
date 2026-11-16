@@ -11,7 +11,7 @@ export const anatomyBench: ExploreBenchEntry = {
     return result.success ? { ok: true, config: result.data } : { ok: false };
   },
   loadPage: () => import("./AnatomyExplorePage"),
-  listKitItems: (config) => kitItemsFrom(config, { eye_model: "Mô hình mắt: xem độ tụ cần có khi nhìn vật ở gần hoặc ở xa." }),
+  listKitItems: (config) => kitItemsFrom(config, { eye_model: "Mô hình mắt studio: cắt dọc, bóc lớp, gắn thẻ tên và chiếu tia để xem độ tụ cần có khi nhìn gần hoặc xa." }),
 };
 
 /** Journal line for FL-16: the scenario and the lens power the eye model needs for it. */

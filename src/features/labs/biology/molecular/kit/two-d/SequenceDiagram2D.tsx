@@ -24,6 +24,18 @@ export type DiagramPairing = { upper: string; lower: string; from: number; to: n
 export type DiagramBox = { from: number; to: number; rowTop: number; rowBottom: number; label: string; tone: "enzyme" | "ribosome" };
 export type DiagramBracket = { track: string; from: number; to: number; label: string };
 export type DiagramChain = { slot: number; row: number; residues: readonly AminoAcid[] };
+/**
+ * Optional direct manipulation (Explore): the bases of `track` become targets. `onPick` runs on click or Enter;
+ * `onDrop` on a pointer release over a base (a base carried from a tray). `pickable` limits which slots respond.
+ */
+export type DiagramSlotTargets = {
+  track: string;
+  pickable: (index: number) => boolean;
+  onPick: (index: number) => void;
+  onDrop?: (index: number) => void;
+  selected?: number | null;
+  label: (index: number) => string;
+};
 
 /**
  * Read-only 2D view of a molecular scene (catalog Dual-View "Đọc"): strands
@@ -31,7 +43,7 @@ export type DiagramChain = { slot: number; row: number; residues: readonly Amino
  * 3 for G–C), enzyme or ribosome footprints, codon brackets and a residue
  * chain. Drawn from the same state as the 3D scene; the learner never draws.
  */
-export function SequenceDiagram2D({ title, slots, rows, tracks, pairings = [], boxes = [], brackets = [], chains = [] }: {
+export function SequenceDiagram2D({ title, slots, rows, tracks, pairings = [], boxes = [], brackets = [], chains = [], targets }: {
   title: string;
   slots: number;
   rows: number;
@@ -40,6 +52,7 @@ export function SequenceDiagram2D({ title, slots, rows, tracks, pairings = [], b
   boxes?: readonly DiagramBox[];
   brackets?: readonly DiagramBracket[];
   chains?: readonly DiagramChain[];
+  targets?: DiagramSlotTargets;
 }) {
   const width = PAD * 2 + slots * SLOT;
   const height = PAD + rows * ROW + 24;
@@ -89,12 +102,17 @@ export function SequenceDiagram2D({ title, slots, rows, tracks, pairings = [], b
           const cx = x(start + index), cy = y(track.row);
           const marked = track.marks?.includes(index);
           const active = track.active === index;
+          const target = targets?.track === track.id && targets.pickable(index) ? targets : null;
           return <g key={index}>
             {base
               ? <><rect x={cx - 11} y={cy - 11} width={22} height={22} rx={6} fill={BASE_COLORS[base]} stroke={STRAND_TINTS[track.tint].sugar} strokeWidth={2} />
                 <text x={cx} y={cy + 5} textAnchor="middle" className="k7-2d-letter" fill={BASE_INK[base]}>{base}</text></>
               : active ? <rect x={cx - 11} y={cy - 11} width={22} height={22} rx={6} className="k7-2d-slot" /> : null}
             {(marked || active) && <rect x={cx - 15} y={cy - 15} width={30} height={30} rx={9} className={active ? "k7-2d-active" : "k7-2d-mark"} />}
+            {target && <rect className="k7-2d-target" data-selected={target.selected === index || undefined} x={cx - 13} y={cy - 13} width={26} height={26} rx={7}
+              role="button" tabIndex={0} aria-label={target.label(index)} data-testid={`k7-slot-${track.id}-${index}`}
+              onPointerUp={() => target.onDrop?.(index)} onClick={() => target.onPick(index)}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); target.onPick(index); } }} />}
           </g>;
         })}
       </g>;

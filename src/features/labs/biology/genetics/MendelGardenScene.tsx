@@ -3,7 +3,8 @@
  * offspring, one plant per Punnett cell. Flower colour stands for the phenotype (illustrative trait: purple is
  * dominant, white recessive). Every value drawn here also appears in the DOM (Punnett board and readout).
  */
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { potTag, type GardenHandlers } from "./garden-interaction";
 
 export const isDominant = (genotype: string) => genotype[0] === genotype[0].toUpperCase();
 export const phenotypeVi = (genotype: string) => (isDominant(genotype) ? "hoa tím (trội)" : "hoa trắng (lặn)");
@@ -25,8 +26,14 @@ function PeaPlant({ x, y, genotype, scale = 1, hidden = false }: { x: number; y:
   </g>;
 }
 
-function Gamete({ x, y, allele }: { x: number; y: number; allele: string }) {
-  return <g transform={`translate(${x} ${y})`} className="mendel-gamete" data-allele={isDominant(allele) ? "dominant" : "recessive"}>
+function Gamete({ x, y, allele, parent, handlers }: { x: number; y: number; allele: string; parent?: 0 | 1; handlers?: GardenHandlers }) {
+  const draggable = parent !== undefined && handlers?.onGameteDown;
+  const carried = draggable && handlers?.carrying?.parent === parent && handlers.carrying.allele === allele;
+  return <g transform={`translate(${x} ${y})`} className={"mendel-gamete" + (draggable ? " is-draggable" : "")} data-allele={isDominant(allele) ? "dominant" : "recessive"}
+    data-carried={carried || undefined} data-testid={draggable ? `gamete-2d-${parent}-${allele}` : undefined}
+    role={draggable ? "button" : undefined} tabIndex={draggable ? 0 : undefined}
+    aria-label={draggable ? `Giao tử ${allele} của ${parent === 0 ? "bố" : "mẹ"}: nhấn giữ rồi thả vào một cây F1` : undefined}
+    onPointerDown={draggable ? (event) => handlers!.onGameteDown!(parent!, allele, event) : undefined}>
     <circle r="17" />
     <text y="6" textAnchor="middle">{allele}</text>
   </g>;
@@ -35,14 +42,29 @@ function Gamete({ x, y, allele }: { x: number; y: number; allele: string }) {
 const Label = ({ x, y, children, anchor = "middle", className = "mendel-label" }: { x: number; y: number; children: ReactNode; anchor?: "start" | "middle" | "end"; className?: string }) =>
   <text className={className} x={x} y={y} textAnchor={anchor}>{children}</text>;
 
-export function MendelGardenScene({ parents, gametes, punnett, revealed }: {
+export function MendelGardenScene({ parents, gametes, punnett, revealed, handlers = {} }: {
   parents: [string, string];
   gametes: [string[], string[]];
   punnett: string[][];
   /** Keys `row:col` of the Punnett cells already revealed; the matching F1 plant shows its flower. */
   revealed: ReadonlySet<string>;
+  /** Explore direct manipulation (see `garden-interaction.ts`). */
+  handlers?: GardenHandlers;
 }) {
-  const offspring = punnett.flatMap((row, r) => row.map((genotype, c) => ({ key: `${r}:${c}`, genotype })));
+  const offspring = punnett.flatMap((row, r) => row.map((genotype, c) => ({ key: `${r}:${c}`, genotype, r, c })));
+  const dropped = useRef(false);
+  const parentButton = (index: 0 | 1) => handlers.onParent ? {
+    className: "mendel-hit", role: "button", tabIndex: 0, "data-testid": `parent-2d-${index}`,
+    "aria-label": `${index === 0 ? "Bố" : "Mẹ"} ${parents[index]}: bấm để đổi kiểu gen`,
+    onClick: () => handlers.onParent!(index),
+    onKeyDown: (event: { key: string; preventDefault: () => void }) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handlers.onParent!(index); } },
+  } : {};
+  const potButton = (key: string, label: string) => handlers.onPot ? {
+    className: "mendel-hit", role: "button", tabIndex: 0, "data-testid": `pot-2d-${key}`, "aria-label": label,
+    onPointerUp: () => { if (handlers.carrying) { dropped.current = true; window.setTimeout(() => { dropped.current = false; }, 0); handlers.onPotUp?.(key); } },
+    onClick: () => { if (dropped.current) { dropped.current = false; return; } handlers.onPot!(key); },
+    onKeyDown: (event: { key: string; preventDefault: () => void }) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handlers.onPot!(key); } },
+  } : {};
   const label = `Vườn thực nghiệm: P ${parents[0]} × ${parents[1]}; giao tử bố ${gametes[0].join(", ")}, giao tử mẹ ${gametes[1].join(", ")}; F1 đã lật ${revealed.size}/${offspring.length} cây.`;
   return <figure className="mendel-garden" data-testid="mendel-garden">
     <svg viewBox="0 0 680 470" role="img" aria-label={label}>
@@ -51,8 +73,8 @@ export function MendelGardenScene({ parents, gametes, punnett, revealed }: {
 
       <Label x={24} y={36} anchor="start" className="mendel-row-label">P</Label>
       <Label x={24} y={56} anchor="start" className="mendel-row-hint">Bố mẹ</Label>
-      <PeaPlant x={210} y={160} genotype={parents[0]} />
-      <PeaPlant x={470} y={160} genotype={parents[1]} />
+      <g {...parentButton(0)}><rect className="mendel-hit-area" x={160} y={30} width={100} height={182} rx={12} /><PeaPlant x={210} y={160} genotype={parents[0]} /></g>
+      <g {...parentButton(1)}><rect className="mendel-hit-area" x={420} y={30} width={100} height={182} rx={12} /><PeaPlant x={470} y={160} genotype={parents[1]} /></g>
       <Label x={340} y={110} className="mendel-cross">×</Label>
       <Label x={210} y={228} className="mendel-genotype">{parents[0]}</Label>
       <Label x={470} y={228} className="mendel-genotype">{parents[1]}</Label>
@@ -63,21 +85,24 @@ export function MendelGardenScene({ parents, gametes, punnett, revealed }: {
       <Label x={24} y={312} anchor="start" className="mendel-row-hint">Giao tử</Label>
       {gametes[0].map((allele, index) => <g key={`f${index}`}>
         <line className="mendel-link" x1={210} y1={252} x2={180 + index * 60} y2={280} />
-        <Gamete x={180 + index * 60} y={298} allele={allele} />
+        <Gamete x={180 + index * 60} y={298} allele={allele} parent={0} handlers={handlers} />
       </g>)}
       {gametes[1].map((allele, index) => <g key={`m${index}`}>
         <line className="mendel-link" x1={470} y1={252} x2={440 + index * 60} y2={280} />
-        <Gamete x={440 + index * 60} y={298} allele={allele} />
+        <Gamete x={440 + index * 60} y={298} allele={allele} parent={1} handlers={handlers} />
       </g>)}
 
       <Label x={24} y={360} anchor="start" className="mendel-row-label">F1</Label>
       <Label x={24} y={380} anchor="start" className="mendel-row-hint">Đời con</Label>
-      {offspring.map(({ key, genotype }, index) => {
+      {offspring.map(({ key, genotype, r, c }, index) => {
         const shown = revealed.has(key);
         const x = 190 + index * 100;
-        return <g key={key}>
+        const tag = potTag(shown, genotype, handlers.drops?.[key], [gametes[0][r], gametes[1][c]]);
+        return <g key={key} {...potButton(key, shown ? `Cây F1 ô ${r + 1}-${c + 1}: ${genotype}` : `Chậu F1 ô ${r + 1}-${c + 1}: bấm để mở, hoặc thả giao tử vào`)}
+          data-drop={handlers.carrying && !shown ? "ready" : undefined}>
+          {handlers.onPot && <rect className="mendel-hit-area" x={x - 42} y={340} width={84} height={126} rx={12} />}
           <PeaPlant x={x} y={432} genotype={shown ? genotype : null} scale={0.62} hidden={!shown} />
-          <Label x={x} y={458} className="mendel-genotype-small">{shown ? genotype : "?"}</Label>
+          <Label x={x} y={458} className="mendel-genotype-small">{tag}</Label>
         </g>;
       })}
     </svg>

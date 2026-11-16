@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { formatDeciC } from "./eco-evidence";
+import { nudgeKey, svgDrag } from "../../../shared/explore/svg-drag";
 
 /** hidden: before the prediction is checked; persists / gone: from the model observation. */
 export type FishState = "hidden" | "persists" | "gone";
@@ -10,7 +12,10 @@ const FISH: Array<{ x: number; y: number; flip?: boolean; delay: string }> = [
 ];
 
 /** A cross-section of a pond with cá rô phi and a thermometer; drawn procedurally, illustration only. */
-export function PondScene({ valueDeciC, fish, label }: { valueDeciC: number; fish: FishState; label: string }) {
+export function PondScene({ valueDeciC, fish, label, onValueChange }: { valueDeciC: number; fish: FishState; label: string; onValueChange?: (deciC: number) => void }) {
+  const thermo = useRef<SVGGElement>(null);
+  // Explore only: drag the mercury column (tube 10–250 in the thermometer frame = 50–0 °C), steps of 1 °C.
+  const drag = onValueChange ? svgDrag((point) => onValueChange(Math.min(500, Math.max(0, Math.round(((250 - point.y) / 240) * 50) * 10))), () => thermo.current) : null;
   const warmth = Math.round((valueDeciC / 500) * 100);
   return <svg className="eco-pond" viewBox="0 0 640 360" role="img" aria-label={label} data-fish={fish}>
     <rect className="eco-sky" x="0" y="0" width="640" height="120" />
@@ -28,7 +33,10 @@ export function PondScene({ valueDeciC, fish, label }: { valueDeciC: number; fis
       </g>
     </g>)}
     {fish === "hidden" && <text className="eco-question" x="420" y="185" textAnchor="middle">?</text>}
-    <g transform="translate(596 40)">
+    <g transform="translate(596 40)" ref={thermo}>
+      {drag && <rect className="eco-thermo-grip" x="-26" y="-6" width="52" height="290" rx="14" role="slider" tabIndex={0} aria-label="Kéo nhiệt kế để đổi nhiệt độ nước"
+        aria-valuemin={0} aria-valuemax={50} aria-valuenow={valueDeciC / 10} aria-valuetext={`${formatDeciC(valueDeciC)} °C`} data-testid="pond-thermo-drag"
+        onKeyDown={(event) => nudgeKey(event, valueDeciC, 10, 0, 500, onValueChange!)} {...drag} />}
       <rect className="eco-thermo-tube" x="-9" y="0" width="18" height="250" rx="9" />
       <rect className="eco-thermo-mercury" x="-4" y="10" width="8" height="240" rx="4" style={{ transform: `scaleY(${Math.max(0.02, valueDeciC / 500)})` }} />
       <circle className="eco-thermo-bulb" cx="0" cy="262" r="16" />

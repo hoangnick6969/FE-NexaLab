@@ -5,7 +5,7 @@ export const fl21Config = {
   schema: "fl21-food-web-config@1",
   labId: "fl-21-explore",
   catalogId: "FL-21",
-  configVersion: 1,
+  configVersion: 2,
   kit: "k8-diorama",
   engine: "food-web@1.0.0",
   title: "Lưới thức ăn và cân bằng",
@@ -17,6 +17,7 @@ export const fl21Config = {
   enabledApparatus: [{ id: "web-board", kind: "food_web_board", slot: "board_1", labelVi: "Sơ đồ lưới thức ăn" }],
   measurements: ["effects"],
   pedagogy: { observationPrompts: [{ id: "remove", kind: "free_text", textVi: "Bỏ rắn. Loài nào tăng, loài nào giảm? Vì sao?" }] },
-  review: { status: "draft" },
+  // Owner decision 2026-11-16: drop the "Bản nháp · chờ duyệt" label on /labs. Not a subject reviewer sign-off.
+  review: { status: "reviewed" },
   spec: { model: "food-web@1.0.0", allowedRemovals: ["ran", "tho", "ech"] },
 } satisfies DioramaExploreConfig;

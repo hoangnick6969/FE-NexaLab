@@ -1,0 +1,10 @@
+/* Guided / Explore switch of a two-mode Lab (interim D-5): same segmented look as the 3D/2D toggle. */
+.lab-mode-switch { display: inline-flex; flex: none; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--fill-neutral-96, rgb(0 0 0 / 4%)); }
+.lab-mode-switch a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 8px; color: var(--muted); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.lab-mode-switch a:hover { color: var(--ink, inherit); }
+.lab-mode-switch a[aria-current="page"] { background: var(--brand-green); color: var(--on-accent, #fff); }
+.lab-mode-switch a:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .lab-mode-switch a { padding: 0 8px; }
+  .lab-mode-switch svg { display: none; }
+}

@@ -83,8 +83,9 @@ const RAY_COLORS = ["#2563eb", "#d97706", "#2563eb"];
 const CLOSE_VIEW: [number, number, number] = [1.3, 1.0, -9.2];
 const ROOM_VIEW: [number, number, number] = [3.2, 3.6, -18];
 
-export function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean }) {
-  const fan = useMemo(() => paraxialFan({ axialMm, objectDistanceM, providedPowerD }), [axialMm, objectDistanceM, providedPowerD]);
+/** `drawObjectMm`: where the object is drawn in front of the eye (display only, not to scale; default 25 mm). */
+export function OpticsRays({ axialMm, objectDistanceM, providedPowerD, inFocus, drawObjectMm = 25 }: { axialMm: number; objectDistanceM: number | null; providedPowerD: number; inFocus: boolean; drawObjectMm?: number }) {
+  const fan = useMemo(() => paraxialFan({ axialMm, objectDistanceM, providedPowerD, drawObjectMm }), [axialMm, objectDistanceM, providedPowerD, drawObjectMm]);
   // Off the retina, mark where the rays really meet: the gap is under 1 mm on a 23 mm eye and hard to see otherwise.
   const focus = inFocus ? null : paraxialFocus({ objectDistanceM, providedPowerD });
   const chief = fan[1];
