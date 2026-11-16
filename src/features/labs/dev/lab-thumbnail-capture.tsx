@@ -224,7 +224,9 @@ function Scene() {
 
 function CapturePage() {
   return <main className={kitScene ? "capture-scene capture-kit" : "capture-scene"} data-lab-id={labId ?? ""}>
-    {kitScene ? <KitThumbnailScene>{kitScene}</KitThumbnailScene> : <Scene />}
+    {kitScene
+      ? <KitThumbnailScene cameraPosition={labId === "kit/explore-support/eye-model" ? [0.85, 0.6, -6.2] : undefined}>{kitScene}</KitThumbnailScene>
+      : <Scene />}
   </main>;
 }
 

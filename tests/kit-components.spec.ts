@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fl13Config } from "../src/features/labs/chemistry/wet-bench/labs/fl-13.config";
 import { fl14aConfig } from "../src/features/labs/chemistry/wet-bench/labs/fl-14a.config";
+import { fl16Config } from "../src/features/labs/biology/anatomy/labs/fl-16.config";
+import { fl20Config } from "../src/features/labs/biology/ecology/labs/fl-20.config";
+import { fl26Config } from "../src/features/labs/biology/genetics/labs/fl-26.config";
+import { fl27Config } from "../src/features/labs/biology/molecular/labs/fl-27.config";
 
 // The "Dụng cụ theo bộ Kit" section of /labs: what each Kit has, read from the published Explore benches.
 const student = { id: "student-1", username: "student.active", email: null, fullName: "An", role: "STUDENT", grade: 8, mustChangePassword: false };
@@ -61,13 +65,23 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
 });
 
 test("a teacher can open the apparatus catalog from Class Lab", async ({ page }) => {
-  await open(page, teacher, rows);
+  const biology = [fl16Config, fl20Config, fl26Config, fl27Config].map((config) => ({
+    id: config.labId, title: config.title, mode: "explore",
+    explore: { ok: true, kit: config.kit, engine: config.engine, activity, config },
+  }));
+  await open(page, teacher, [...rows, ...biology]);
   await expect(page).toHaveURL(/\/class-labs$/);
   await page.getByText("Dụng cụ theo Kit", { exact: true }).click();
   const catalog = page.getByTestId("kit-components");
   await expect(catalog.getByRole("heading", { name: "Kit Hóa học" })).toBeVisible();
   await expect(catalog.getByText("Dùng chung giữa các bàn").first()).toBeVisible();
   await expect(catalog.getByText("Dùng chung trong Kit").first()).toBeVisible();
+  const bioKit = catalog.getByRole("region", { name: "Kit Sinh học" });
+  await expect(bioKit.locator(".kit-card img")).toHaveCount(3);
+  const eye = catalog.getByRole("region", { name: "Kit Bổ trợ Explore" }).locator('[data-key="eye-model"] img');
+  await expect(eye).toHaveCount(1);
+  await expect(bioKit.locator('[data-key="punnett-board"] svg')).toHaveCount(1);
+  await expect(bioKit.locator("canvas")).toHaveCount(0);
 });
 
 test("?debug=1 shows the renderer and shared item behind each entry", async ({ page }) => {

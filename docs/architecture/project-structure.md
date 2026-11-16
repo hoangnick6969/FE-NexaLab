@@ -56,6 +56,8 @@ The catalog loads static WebP images from `src/features/labs/assets/thumbnails/k
 
 The Explore assignment form uses the same image lookup for FL‑13 reagent options (`reagent-<id>`) and FL‑06 weight sets (`weights-<forces-in-mN>`). The harness captures the bottle and hanger meshes used on those benches. Option labels retain the reagent name and any concentration, or the force values in N.
 
+Kit Sinh học previews use the FL‑26 pea plant, FL‑27 DNA double helix and FL‑20 pond thermometer. The FL‑16 eye section appears under Kit Bổ trợ Explore. These asset keys match the apparatus IDs from the Explore configs. Boards without standalone meshes keep their catalog icons.
+
 ### Known follow-ups
 
 - `features/lessons/Lessons.tsx` (≈600 lines) is one component with a teacher and a student branch; split it into a student hub and

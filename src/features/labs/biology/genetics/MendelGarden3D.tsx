@@ -42,7 +42,7 @@ type Pointer = {
   hint?: string;
 };
 
-function PeaPlant3D({ position, genotype, scale = 1, pointer, glow = false }: { position: [number, number, number]; genotype: string | null; scale?: number; pointer?: Pointer; glow?: boolean }) {
+export function PeaPlant3D({ position, genotype, scale = 1, pointer, glow = false }: { position: [number, number, number]; genotype: string | null; scale?: number; pointer?: Pointer; glow?: boolean }) {
   const tone = !genotype ? "unknown" : isDominant(genotype) ? "dominant" : "recessive";
   const handlers = pointer ? {
     onClick: pointer.onClick,

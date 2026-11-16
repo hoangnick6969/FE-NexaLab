@@ -80,8 +80,8 @@ export function Thermometer3D({ valueDeciC, label, animate, position, onDrag }: 
       <boxGeometry args={[0.12, 0.022, 0.01]} />
       <meshStandardMaterial color={ECO_COLORS.tick} />
     </mesh>)}
-    <Html position={[0, LENGTH + 0.6, 0]} center zIndexRange={[5, 0]}>
+    {label && <Html position={[0, LENGTH + 0.6, 0]} center zIndexRange={[5, 0]}>
       <span className="eco-thermo-chip">{label}</span>
-    </Html>
+    </Html>}
   </group>;
 }
