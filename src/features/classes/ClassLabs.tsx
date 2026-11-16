@@ -241,7 +241,7 @@ function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { class
   const manageable = view === "active" && classroom.status === "ACTIVE" && assignment.status === "ACTIVE";
   return (
     <article className="teacher-class-lab-row">
-      <div className="teacher-class-lab-icon" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" /> : <FlaskConical size={18} />}</div>
+      <div className="teacher-class-lab-icon" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" decoding="async" /> : <FlaskConical size={18} />}</div>
       <div className="teacher-class-lab-main">
         <h3>{assignment.title}{explore && <span className="assignment-type-pill is-explore_lab">{t.exploreKind}</span>}</h3>
         <p>{t.recipients(assignment.recipientCount)} · {assignment.audience === "CLASS" ? t.wholeClass : t.subset}</p>

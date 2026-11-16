@@ -1048,7 +1048,7 @@ function StudentResource({ resource, classId }: { resource: Resource; classId: s
           </div>
         ) : isLab ? (
           labEntry?.thumbnail ? (
-            <img className="resource-visual-thumb" src={labEntry.thumbnail} alt="" />
+            <img className="resource-visual-thumb" src={labEntry.thumbnail} alt="" loading="lazy" decoding="async" />
           ) : (
             <div className="resource-visual-emblem emblem-lab">
               <FlaskConical size={20} />

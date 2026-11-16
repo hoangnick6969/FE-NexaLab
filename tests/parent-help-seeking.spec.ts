@@ -27,6 +27,8 @@ test("SAI-05: parent sees help-seeking counts per Lab and no hint content", asyn
   await expect(panel).toContainText("không hiển thị nội dung gợi ý");
   expect(asked).toEqual(["GET"]);
   await page.setViewportSize({ width: 360, height: 760 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  // The phone layout applies a few frames after the resize; with the self-hosted fonts loaded the wide table shows
+  // for those frames, so wait for the settled layout instead of sampling the first one.
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: "test-results/parent-help-seeking-phone.png", fullPage: true });
 });

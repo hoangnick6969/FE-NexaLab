@@ -197,7 +197,6 @@ export function StudentDashboard({
     queryKey: ["student-open-curriculum"],
     queryFn: () => api("/open-curriculum"),
     enabled: !assignment && progress.some((item: any) => item.status === "in_progress"),
-    staleTime: 60_000,
   });
   const resume = selectOpenResume(progress, openCurriculum.data?.subjects ?? []);
   const resumeLesson = useQuery<{ steps: Array<Omit<StudentLearningStep, "state"> & { state: string }> }>({
