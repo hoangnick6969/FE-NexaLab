@@ -14,11 +14,13 @@ const labels: Record<string, string> = {
   alcohol_lamp: "Alcohol lamp",
   CuSO4_0_1M: "0.1 M CuSO₄ solution",
   H2SO4_0_05M: "Dilute H₂SO₄ solution (0.05 M)",
+  CuSO4_0_1M_CO0102: "0.1 M CuSO₄ solution (Scharlab CO0102)",
+  H2SO4_0_05M_6793: "Dilute H₂SO₄ solution (0.05 M, Carl Roth 6793)",
 };
 
 const tags: Record<Locale, Record<string, string>> = {
-  vi: { corrosive: "Ăn mòn", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy" },
-  en: { corrosive: "Corrosive", irritant: "Irritant", toxic_if_swallowed: "Toxic if swallowed", flammable: "Flammable" },
+  vi: { corrosive: "Ăn mòn", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy", aquatic_long_lasting: "Có hại lâu dài đối với sinh vật thủy sinh", corrosive_to_metals: "Có thể ăn mòn kim loại" },
+  en: { corrosive: "Corrosive", irritant: "Irritant", toxic_if_swallowed: "Toxic if swallowed", flammable: "Flammable", aquatic_long_lasting: "Harmful to aquatic life with long lasting effects", corrosive_to_metals: "May be corrosive to metals" },
 };
 
 const levels = {

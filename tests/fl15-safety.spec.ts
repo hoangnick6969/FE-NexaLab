@@ -46,12 +46,13 @@ for (const username of ["student.active", "student.outsider"]) {
     await card.locator('a[href="/labs/lab-safety"]').click();
     await expect(page).toHaveURL(/\/labs\/lab-safety$/);
     const bench = page.getByTestId("safety-bench");
-    await expect(bench).toContainText("Bản nháp đang chờ duyệt an toàn");
+    await expect(bench).not.toContainText("Bản nháp đang chờ duyệt an toàn");
     const kitToggle = bench.getByRole("button", { name: /Dụng cụ và thành phần/ });
     await kitToggle.click();
     const kitPanel = page.getByRole("complementary", { name: "Dụng cụ và thành phần" });
     await expect(kitPanel.getByRole("listitem")).toHaveCount(9);
-    await expect(kitPanel).toContainText("Độc khi nuốt");
+    await expect(kitPanel).toContainText("Có hại lâu dài đối với sinh vật thủy sinh");
+    await expect(kitPanel).toContainText("Có thể ăn mòn kim loại");
     await kitPanel.getByRole("button", { name: "Thu gọn" }).click();
     await expect(kitPanel).toBeHidden();
     await expect(bench.getByTestId("safety-scene-2d")).toContainText("Chai mất nhãn");
@@ -77,7 +78,7 @@ for (const username of ["student.active", "student.outsider"]) {
     }
     await bench.getByRole("button", { name: "Đọc nhãn và chú ý cảnh báo" }).click();
     await expect(bench.getByRole("heading", { name: "Đã hoàn thành tình huống" })).toBeVisible();
-    await expect(bench.getByTestId("safety-feedback")).toContainText("Độc khi nuốt");
+    await expect(bench.getByTestId("safety-feedback")).toContainText("Có hại lâu dài đối với sinh vật thủy sinh");
 
     await bench.locator("summary").click();
     const entries = bench.getByTestId("safety-notebook").getByRole("listitem");
@@ -93,7 +94,7 @@ for (const username of ["student.active", "student.outsider"]) {
   });
 }
 
-test("an admin can review the English draft through the local preview", async ({ page }) => {
+test("an admin can review the English release through the local preview", async ({ page }) => {
   test.skip(!localRun || !adminPassword, "Run against the isolated FL-15 server with an admin fixture password.");
   await page.addInitScript(() => localStorage.setItem("nexalab.locale", "en"));
   await page.route("**/api/me/profile", async route => {
@@ -110,7 +111,7 @@ test("an admin can review the English draft through the local preview", async ({
   await page.goto("/dev/lab-kits/safety-review");
   const bench = page.getByTestId("safety-bench");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(bench).toContainText("Draft awaiting safety review");
+  await expect(bench).not.toContainText("Draft awaiting safety review");
   await bench.getByRole("button", { name: "Heat a test tube" }).click();
   await bench.getByRole("button", { name: "Use a holder and point the opening away from people" }).click();
   await expect(bench.getByTestId("safety-feedback")).toContainText("reduces their risk of being splashed");

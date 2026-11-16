@@ -1,5 +1,6 @@
 import { Html } from "@react-three/drei";
-import { reagentById, type VesselVisualState } from "@nexalab/sim/wet-bench";
+import { safetyScenarioReagentById } from "@nexalab/sim/safety-scenario";
+import type { VesselVisualState } from "@nexalab/sim/wet-bench";
 import type { SafetyApparatusKind } from "@nexalab/sim/safety-scenario";
 import type { ReactNode } from "react";
 import { defineText } from "../../../../i18n";
@@ -98,7 +99,7 @@ export default function SafetyBenchStage({ items, showLabels = true }: { items: 
         {items.map((item, index) => {
           const row = Math.floor(index / columns);
           const rowWidth = Math.min(columns, items.length - row * columns);
-          const reagent = reagentById(item.id);
+          const reagent = safetyScenarioReagentById(item.id);
           const Apparatus = item.rendererKey === "unlabelled-bottle" ? UnlabelledBottle : apparatus[item.rendererKey as SafetyApparatusKind];
           return <group key={item.id} position={[(index % columns - (rowWidth - 1) / 2) * 0.68, 0.025, row * 0.58 - 0.22]} scale={1.4}>
             {reagent ? <ReagentBottle3D look={reagentLook(reagent)} category={bottleCategory(reagent)} solid={reagent.composition.kind === "solid" || reagent.composition.kind === "powder"} /> : Apparatus && <Apparatus />}
