@@ -1,7 +1,7 @@
-import { HelpCircle, FlaskConical, ChevronRight } from "lucide-react";
+import { HelpCircle, FlaskConical } from "lucide-react";
 import { type ActivityItem } from "../../lib/api";
-import { Badge, verdictLabel } from "../../components/ui";
-import { type SheetView, stepNames, time, verdictTone } from "./progress-format";
+import { verdictLabel } from "../../components/ui";
+import { type SheetView, stepNames, time } from "./progress-format";
 import { defineText } from "../../i18n";
 
 const text = defineText({
@@ -12,7 +12,7 @@ const text = defineText({
     quiz: "Quiz",
     practice: "Thực hành",
     lab: "Phòng lab",
-    legacy: " · Bản ghi cũ, có thể thiếu liên kết bài học",
+    legacy: ". Bản ghi cũ, có thể thiếu liên kết bài học",
     passed: "Đạt",
     notPassed: "Chưa đạt",
     unknown: "Không rõ",
@@ -25,7 +25,7 @@ const text = defineText({
     quiz: "Quiz",
     practice: "Practice",
     lab: "Lab",
-    legacy: " · Older record, the lesson link may be missing",
+    legacy: ". Older record, the lesson link may be missing",
     passed: "Passed",
     notPassed: "Not passed",
     unknown: "Unknown",
@@ -71,38 +71,31 @@ export function ActivityGroups({
 }
 
 function ActivityRow({ item, onOpen }: { item: ActivityItem; onOpen: (view: SheetView, event: React.MouseEvent<HTMLElement>) => void }) {
+  const quiz = item.kind === "QUIZ";
+  const result = quiz
+    ? { label: item.passed ? t.passed : t.notPassed, tone: item.passed ? "is-passed" : "is-failed" }
+    : { label: item.verdict ? verdictLabel(item.verdict) : t.unknown, tone: item.verdict === "passed" ? "is-passed" : item.verdict === "partial" ? "is-partial" : "is-failed" };
   return (
     <li className="activity-row">
-      <Badge tone="outline">
-        <span className="activity-kind-badge">
-          {item.kind === "QUIZ" ? (
-            <HelpCircle size={13} className="activity-kind-icon" aria-hidden="true" />
-          ) : (
-            <FlaskConical size={13} className="activity-kind-icon" aria-hidden="true" />
-          )}
-          <span>{item.kind === "QUIZ" ? t.quiz : t.practice}</span>
-        </span>
-      </Badge>
+      <span className="activity-kind">
+        {quiz ? <HelpCircle size={15} aria-hidden="true" /> : <FlaskConical size={15} aria-hidden="true" />}
+        {quiz ? t.quiz : t.practice}
+      </span>
       <div className="activity-title">
         <b>{item.title}</b>
-        <span className="tiny muted">
+        <span>
           {item.stepType ? stepNames[item.stepType] : item.labTitle ?? t.lab}
           {item.legacy && t.legacy}
         </span>
       </div>
-      {item.kind === "QUIZ" ? (
-        <Badge tone={item.passed ? "passed" : "practice"}>{item.passed ? t.passed : t.notPassed}</Badge>
-      ) : (
-        <Badge tone={verdictTone(item.verdict)}>{item.verdict ? verdictLabel(item.verdict) : t.unknown}</Badge>
-      )}
-      <time dateTime={item.occurredAt} className="tiny muted">{time(item.occurredAt)}</time>
+      <span className={`activity-result ${result.tone}`}>{result.label}</span>
+      <time dateTime={item.occurredAt}>{time(item.occurredAt)}</time>
       <button
         type="button"
-        className="link-button activity-details-btn"
-        onClick={(event) => onOpen(item.kind === "QUIZ" ? { kind: "quiz", id: item.id } : { kind: "practical", id: item.id }, event)}
+        className="pg-link"
+        onClick={(event) => onOpen(quiz ? { kind: "quiz", id: item.id } : { kind: "practical", id: item.id }, event)}
       >
-        <span>{t.details}</span>
-        <ChevronRight size={13} aria-hidden="true" />
+        {t.details}
       </button>
     </li>
   );

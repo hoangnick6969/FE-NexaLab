@@ -12,7 +12,6 @@ import { HelpSeekingPanel } from "./HelpSeekingPanel";
 
 const text = defineText({
   vi: {
-    eyebrow: "TỪNG BƯỚC TIẾN BỘ",
     parentTitle: "Đồng hành cùng con",
     title: "Tiến độ học tập",
     description: "Mỗi lần thử đều là một bước tiến trong hành trình hiểu biết.",
@@ -63,7 +62,6 @@ const text = defineText({
     chooseStudent: "Chọn học sinh để xem tiến độ.",
   },
   en: {
-    eyebrow: "STEP BY STEP",
     parentTitle: "Supporting your child",
     title: "Learning progress",
     description: "Every attempt is a step forward in understanding.",
@@ -184,7 +182,6 @@ export function ProgressPage() {
   return (
     <>
       <PageHeading
-        eyebrow={t.eyebrow}
         title={
           user.role === "PARENT" ? t.parentTitle : t.title
         }
