@@ -5,5 +5,7 @@ import { ENERGY_DRAFT_NOTICE } from "../EnergyExploreLabPage";
 import { EnergyExploreBench } from "../EnergyExploreBench";
 
 export default function EnergyExplorePreview() {
-  return <EnergyExploreBench config={config} storageKey={observationLogKey(config.labId, config.configVersion)} exitTo="/labs" draftNotice={ENERGY_DRAFT_NOTICE} />;
+  // Same rule as the `/labs/:id` page: the technical-assumption notice only while the config is a draft.
+  return <EnergyExploreBench config={config} storageKey={observationLogKey(config.labId, config.configVersion)} exitTo="/labs"
+    draftNotice={config.review.status !== "reviewed" ? ENERGY_DRAFT_NOTICE : undefined} />;
 }
