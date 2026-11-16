@@ -11,7 +11,7 @@ import { rememberLabsSearch } from "./labs-return";
 import { defineText } from "../../i18n";
 import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { labCurriculumLabel } from "./lab-curriculum-label";
-import { KitComponents } from "./kit-catalog/KitComponents";
+import { KitRail } from "./kit-catalog/KitRail";
 
 const text = defineText({
   vi: {
@@ -436,8 +436,8 @@ export function LabLibrary() {
         title={t.title}
         description={t.description}
       />
+      <KitRail />
       <LabCards showFilters showDisclaimer />
-      <KitComponents />
     </>
   );
 }
