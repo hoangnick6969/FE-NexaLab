@@ -11,6 +11,8 @@ export type ExploreRow = {
   id: string;
   title: string;
   mode: "guided" | "explore";
+  /** D-5: every mode of the Lab; `["guided", "explore"]` for a Guided Lab with Explore attached on the same Lab ID. */
+  modes?: Array<"guided" | "explore">;
   explore?: { ok: true; kit: string; engine: string; activity: ExploreActivity; config: unknown } | { ok: false; code: ExploreResolveError };
 };
 

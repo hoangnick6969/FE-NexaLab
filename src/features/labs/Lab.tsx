@@ -200,22 +200,31 @@ export default function Lab() {
   return <LibraryLabWithModes />;
 }
 
+/** D-5 (lab-two-mode-d5-spec.md §2.4): the mode a two-mode Lab opens in. Guided by default; `?mode=explore` opens Explore. */
+export const twoModeCurrent = (modes: ReadonlyArray<"guided" | "explore"> | undefined, query: string | null): "guided" | "explore" | null =>
+  modes?.includes("guided") && modes.includes("explore") ? (query === "explore" ? "explore" : "guided") : null;
+
 /**
- * Interim D-5: a Lab with both modes offers a Guided / Explore switch in the Lab Space header, but only when the other
- * mode is also available to this user (published row, or the DEV fixture for a bundled Explore bench).
+ * Lab with both modes: a Guided / Explore switch in the Lab Space header. D-5: both modes on one Lab ID (`modes` of the row,
+ * `?mode=`). Interim pairs (`exploreOf`, two Lab IDs) keep working until Dev 2 republishes them, only when both are available.
  */
 function LibraryLabWithModes() {
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
+  const row = labs.data?.find((item) => item.id === id);
+  const current = twoModeCurrent(row?.modes, searchParams.get("mode"));
   const pair = labModePair(id);
-  const available = (labId: string) => Boolean(devExploreRow(labId) || labs.data?.some((row) => row.id === labId));
-  const mode: LabModeValue | null = pair && available(pair.guidedId) && available(pair.exploreId)
-    ? { ...pair, current: id === pair.exploreId ? "explore" : "guided" }
-    : null;
-  return <LabModeContext.Provider value={mode}><LibraryLab key={id} /></LabModeContext.Provider>;
+  const available = (labId: string) => Boolean(devExploreRow(labId) || labs.data?.some((item) => item.id === labId));
+  const mode: LabModeValue | null = current
+    ? { guidedHref: `/labs/${id}`, exploreHref: `/labs/${id}?mode=explore`, current }
+    : pair && available(pair.guidedId) && available(pair.exploreId)
+      ? { guidedHref: `/labs/${pair.guidedId}`, exploreHref: `/labs/${pair.exploreId}`, current: id === pair.exploreId ? "explore" : "guided" }
+      : null;
+  return <LabModeContext.Provider value={mode}><LibraryLab key={`${id}:${current ?? ""}`} explore={current === "explore"} /></LabModeContext.Provider>;
 }
 
-function LibraryLab() {
+function LibraryLab({ explore = false }: { explore?: boolean }) {
   const { id = "" } = useParams();
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
   // DEV only: a bundled Sinh học bench opens without a server row (see dev-explore-fixtures.ts).
@@ -227,7 +236,8 @@ function LibraryLab() {
   </section></LabSpace>;
   const row = devRow ?? labs.data?.find((item) => item.id === id);
   // No row: GuidedLab keeps its existing "chưa được phát hành" screen.
-  if (!row || row.mode !== "explore") return <GuidedLab key="guided" />;
+  // Explore-only rows open Explore; a two-mode row opens Explore only when the switch or `?mode=explore` asks for it.
+  if (!row || (row.mode !== "explore" && !(explore && row.modes?.includes("explore")))) return <GuidedLab key="guided" />;
   const resolved = resolveExploreConfig(row);
   if (!resolved.ok) return <LabSpace title={row.title || "Phòng thí nghiệm"} exitTo="/labs"><section className="panel" role="alert" data-testid="explore-error">
     <h1>Không mở được bàn thí nghiệm</h1>
