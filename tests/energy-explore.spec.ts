@@ -135,17 +135,29 @@ test("FL-24 Explore opens through the registry, shows the pendulum energy and ho
   expect(requests).toEqual([]);
 });
 
-test("a pendulum-only config lists two items and has no tabs, readings show numbers, and an invalid config stops the bench", async ({ page }) => {
+test("a pendulum-only config lists two items and has no tabs, readings show numbers and feed the motor comparison, and an invalid config stops the bench", async ({ page }) => {
   const pendulumOnly = { ...config, stations: ["pendulum"], hoist: undefined, display: { energyReadings: true },
     enabledApparatus: config.enabledApparatus.filter((item) => ["pendulum", "energy_bars"].includes(item.kind)) };
+  const hoistOnly = { ...config, labId: "energy-hoist", stations: ["hoist"], pendulum: undefined, display: { energyReadings: true },
+    enabledApparatus: config.enabledApparatus.filter((item) => ["hoist", "spring_gauge", "ruler", "stopwatch"].includes(item.kind)) };
   const broken = { ...config, labId: "energy-broken", modes: { explore: true, guided: true } };
-  await signIn(page, [row("mechanical-energy", pendulumOnly), row("energy-broken", broken)]);
+  await signIn(page, [row("mechanical-energy", pendulumOnly), row("energy-hoist", hoistOnly), row("energy-broken", broken)]);
   await page.goto("/labs/mechanical-energy");
   await enter(page);
   const panel = panelOf(page);
   await expect(panel.getByTestId("energy-kit-items").locator("li")).toHaveCount(2);
   await expect(panel.getByRole("tab")).toHaveCount(0);
   await expect(bar(page, "potential")).toContainText("0,6 J");
+
+  // With readings on, the result shows right after the pull (no "Kiểm tra") and both pulls feed the comparison.
+  await page.goto("/labs/energy-hoist");
+  await enter(page);
+  await expect(panel.getByRole("button", { name: "Kiểm tra" })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Kéo vật" }).click();
+  await expect(panel.getByTestId("energy-hoist-result")).toHaveText("A = 5 J · P = 1,25 W");
+  await panel.getByRole("group", { name: "Động cơ" }).getByRole("button", { name: "Động cơ nhanh" }).click();
+  await panel.getByRole("button", { name: "Kéo vật" }).click();
+  await expect(panel.getByTestId("energy-power-compare")).toHaveAttribute("data-compare", "second");
   await page.goto("/labs/energy-broken");
   await expect(page.getByTestId("explore-error")).toContainText("EXPLORE_CONFIG_INVALID");
 });

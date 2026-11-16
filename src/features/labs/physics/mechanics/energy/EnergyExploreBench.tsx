@@ -156,6 +156,8 @@ export function EnergyExploreBench({ config, storageKey, activityId, exitTo, onE
     if (!lift) return;
     setLifted(true);
     setChecked(false);
+    // With the readings on there is no "Kiểm tra" step, so each pull counts for the two-motor comparison right away.
+    if (readings) setCheckedLifts({ ...checkedLifts, [lift.motorId]: lift });
     setLog(appendEnergyEntry(logRef.current, { at: Date.now(), station: "hoist", actionVi: describeLiftAction(lift), phenomenaVi: describeLift(lift, readings), lift }));
   };
   const check = () => {
