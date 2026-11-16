@@ -21,8 +21,10 @@ export function journalExportPayload(meta: { labId: string; activityId: string; 
   return buildObservationLogExport(meta, entries);
 }
 
-export function ExploreJournal({ labId, activityId, kit, engine, summary, canSave }: {
+export function ExploreJournal({ labId, activityId, kit, engine, summary, canSave, saveHint }: {
   labId: string; activityId: string; kit: string; engine: string;
+  /** Shown while saving is not possible yet (what the student still has to do on the bench). */
+  saveHint?: string;
   /** What the bench shows right now, written as the journal line on save. */
   summary: string;
   canSave: boolean;
@@ -51,14 +53,22 @@ export function ExploreJournal({ labId, activityId, kit, engine, summary, canSav
   }
 
   return (
-    <section className="panel" data-testid="explore-journal">
-      <h2>Nhật ký</h2>
-      <label>Ghi chú quan sát<textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} /></label>
-      <button type="button" onClick={save} disabled={!canSave}>Lưu trạng thái này vào nhật ký</button>{" "}
-      <button type="button" className="secondary" onClick={exportJournal} disabled={!entries.length}>Xuất nhật ký (JSON)</button>
-      <ol>
-        {entries.map((entry) => <li key={entry.at}><b>{entry.summary}</b>{entry.note ? ` — ${entry.note}` : ""}</li>)}
-      </ol>
+    <section className="explore-card explore-journal" data-testid="explore-journal" aria-labelledby="explore-journal-title">
+      <h2 id="explore-journal-title">Nhật ký thí nghiệm</h2>
+      <p className="explore-journal-summary" data-testid="explore-journal-current">{summary || "Hãy thao tác trên bàn để có trạng thái cần ghi."}</p>
+      <label className="explore-field">Ghi chú quan sát
+        <textarea className="explore-textarea" value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Em thấy gì? Vì sao?" />
+      </label>
+      <div className="explore-journal-actions">
+        <button type="button" className="explore-btn explore-btn-primary" onClick={save} disabled={!canSave}>Lưu trạng thái này vào nhật ký</button>
+        <button type="button" className="explore-btn explore-btn-secondary" onClick={exportJournal} disabled={!entries.length}>Xuất nhật ký (JSON)</button>
+      </div>
+      {!canSave && saveHint && <p className="explore-journal-empty" data-testid="explore-journal-hint">{saveHint}</p>}
+      {entries.length
+        ? <ol className="explore-journal-list">
+            {[...entries].reverse().map((entry) => <li key={entry.at}><time dateTime={entry.at}>{new Date(entry.at).toLocaleString("vi-VN")}</time><b>{entry.summary}</b>{entry.note ? ` — ${entry.note}` : ""}</li>)}
+          </ol>
+        : <p className="explore-journal-empty">Chưa có dòng nào. Mỗi lần lưu ghi lại trạng thái đang xem và ghi chú của em.</p>}
     </section>
   );
 }
