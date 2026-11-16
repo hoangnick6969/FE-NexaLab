@@ -28,9 +28,11 @@ const text = defineText({
     acidBase: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Acid – base, chỉ thị và pH", description: "Tự pha dung dịch, nhúng quỳ tím, nhỏ phenolphthalein và đo pH; quan sát màu đổi khi trung hoà." },
     metalReactivity: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Kim loại với acid và dung dịch muối", description: "Thả kẽm, sắt, đồng vào acid loãng và dung dịch CuSO₄ để so sánh mức độ hoạt động của kim loại." },
     reactionRate: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Tốc độ phản ứng", description: "Cho đá vôi (viên hoặc bột) vào acid HCl, bấm giờ và đo khí thu được để so sánh tốc độ phản ứng theo nồng độ và dạng chất rắn." },
+    labSafety: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "An toàn phòng thí nghiệm", description: "Đọc nhãn hóa chất, chọn đồ bảo hộ và khám phá cách xử lý ba tình huống trong phòng thí nghiệm." },
     solutionConcentration: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Dung dịch và nồng độ", description: "Tự tính khối lượng chất tan, cân, hòa tan và thêm nước đến vạch để pha dung dịch NaCl 0,10 M và CuSO₄ 5 %; rồi kiểm tra nồng độ thực." },
   },
   en: {
+    labSafety: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Laboratory safety", description: "Read chemical labels, choose protective equipment and explore three lab safety scenarios." },
     buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
     eye: { subject: "BIOLOGY", tag: "3D MODEL", title: "The world through your eyes", description: "Look inside the eye and follow the path of light." },
@@ -108,9 +110,11 @@ const catalogEntries = [
   { id: "metal-reactivity", ...t.metalReactivity, className: "chemistry", number: "13", grade: 8 },
   { id: "solution-concentration", ...t.solutionConcentration, className: "chemistry", number: "14", grade: 8 },
   { id: "reaction-rate", ...t.reactionRate, className: "chemistry", number: "15", grade: 8 },
+  { id: "lab-safety", ...t.labSafety, className: "chemistry", number: "16", grade: 8, localizedCopy: true },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({
   ...entry,
+  localizedCopy: "localizedCopy" in entry && entry.localizedCopy,
   thumbnail: thumbnailFor(entry.id) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
 }));

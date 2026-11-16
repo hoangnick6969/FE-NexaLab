@@ -29,6 +29,7 @@ import { WetBenchKitStage } from "../chemistry/wet-bench/kit/WetBenchKitStage";
 import { benchReducer, initialBenchState, type BenchAction, type BenchUiState } from "../chemistry/wet-bench/kit/bench-reducer";
 import { fl11Config, fl12Config, fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import { SafetyBenchArt } from "../chemistry/safety/SafetyBenchArt";
 
 /** K2 explore benches: a mid-session state built from the same reducer actions a student would perform. */
 function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unknown>>, view: BenchViewPreset = k2ThumbnailView) {
@@ -146,6 +147,7 @@ const scenes: Record<string, () => ReactNode> = {
   "metal-reactivity": metalReactivityThumbnail,
   "solution-concentration": solutionConcentrationThumbnail,
   "reaction-rate": reactionRateThumbnail,
+  "lab-safety": () => <SafetyBenchArt />,
   "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,

@@ -115,11 +115,11 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
   const cards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
     const visual = labInfo.find((item) => item.id === lab.id);
     const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
-    return visual ? [{ ...visual, grade: "grade" in visual ? visual.grade : undefined, title: lab.title, description: lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
+    return visual ? [{ ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab.title, description: visual.localizedCopy ? visual.description : lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
   }) : labInfo.map((visual) => {
     const lab = labs.data?.find((item) => item.id === visual.id);
     const label = labCurriculumLabel(lab, visual.subject, t.grades);
-    return { ...visual, grade: "grade" in visual ? visual.grade : undefined, title: lab?.title ?? visual.title, description: lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
+    return { ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab?.title ?? visual.title, description: visual.localizedCopy ? visual.description : lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
   });
 
   const gradeCounts = useMemo(() => {

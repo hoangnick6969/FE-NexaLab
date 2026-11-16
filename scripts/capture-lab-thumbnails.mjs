@@ -93,7 +93,7 @@ try {
     await page.goto(`${baseUrl}?lab=${encodeURIComponent(labId)}`, { waitUntil: "networkidle" });
     const stage = page.locator(`[data-lab-id="${labId}"]`);
     await stage.waitFor({ state: "visible" });
-    await stage.locator("canvas").first().waitFor({ state: "visible" });
+    await stage.locator("canvas, [data-thumbnail-ready]").first().waitFor({ state: "visible" });
     await page.waitForTimeout(1400);
     const png = await stage.screenshot({ type: "png", animations: "disabled" });
     const webp = await encodeWebp(page, png);
