@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus, ArrowUpRight, BookOpen, Save } from "lucide-react";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, idempotencyKey, isApiError, mutate, useAuth, uploadFile } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
-import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton } from "../../components/ui";
+import { Badge, Empty, ErrorBox, Field, Modal, useAction, CardSkeleton, InlineLoader } from "../../components/ui";
 import { buildStudentLessonCatalog, filterStudentLessonCatalog, type StudentLessonCard } from "./lesson-catalog";
 // TAI-06: the AI lab-challenge panel is teacher-only code, loaded on demand so the student lesson hub never carries it.
 const LabChallengeEntry = lazy(() => import("../lab-challenge/LabChallengePanel"));
 import { CoverageTable, LibraryFiltersBar, PreviewModal, ReleaseReviews, TaxonomyFields, libraryQuery, type LibraryFilters } from "./library";
-import { ReviewChecklist, RichEditor } from "./LessonEditorFields";
+import { ReviewChecklist } from "./LessonEditorFields";
+// Teachers and admins get the editor chunk preloaded on this page, so it is ready before they open the edit form.
+let richEditorChunk: Promise<{ default: typeof import("./RichEditor").RichEditor }> | undefined;
+const loadRichEditor = () => (richEditorChunk ??= import("./RichEditor").then((m) => ({ default: m.RichEditor })));
+const RichEditor = lazy(loadRichEditor);
 import { StudentLessonsHub } from "./StudentLessonsHub";
 import { SubjectCover } from "../../components/SubjectGradeChapterBrowser";
 import { defineText, formatDate } from "../../i18n";
@@ -230,6 +234,7 @@ export function Lessons() {
 function LessonsLibrary({ user }: { user: any }) {
   const t = text();
   const manage = ["TEACHER", "ADMIN"].includes(user.role);
+  useEffect(() => { if (manage) void loadRichEditor(); }, [manage]);
   const q = useQuery({
     queryKey: [manage ? "lessons" : "open-curriculum"],
     queryFn: async () => {
@@ -564,10 +569,12 @@ function LessonsLibrary({ user }: { user: any }) {
             </div>
             <label className="field">
               <span>{t.theory}</span>
-              <RichEditor
-                value={edit.content}
-                onChange={(v) => setEdit((s: any) => ({ ...s, content: v }))}
-              />
+              <Suspense fallback={<InlineLoader />}>
+                <RichEditor
+                  value={edit.content}
+                  onChange={(v) => setEdit((s: any) => ({ ...s, content: v }))}
+                />
+              </Suspense>
             </label>
             <h3>{t.materials}</h3>
             <label className="field">

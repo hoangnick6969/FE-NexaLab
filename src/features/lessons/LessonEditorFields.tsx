@@ -1,5 +1,3 @@
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import { Field } from "../../components/ui";
 import { defineText } from "../../i18n";
 
@@ -7,11 +5,6 @@ const text = defineText({
   vi: {
     original: "Tự biên soạn",
     schoolOwned: "Tài liệu thuộc nhà trường",
-    h2: "Tiêu đề cấp 2",
-    h3: "Tiêu đề cấp 3",
-    list: "Danh sách",
-    insertSymbol: (s: string) => `Chèn ký hiệu ${s}`,
-    insert: (s: string) => `Chèn ${s}`,
     selfReview: "Phiếu tự kiểm duyệt (bắt buộc để xuất bản)",
     sources: "Nguồn căn cứ cho các nội dung khoa học",
     licence: "Giấy phép sử dụng",
@@ -23,11 +16,6 @@ const text = defineText({
   en: {
     original: "Written myself",
     schoolOwned: "School-owned material",
-    h2: "Heading level 2",
-    h3: "Heading level 3",
-    list: "List",
-    insertSymbol: (s: string) => `Insert symbol ${s}`,
-    insert: (s: string) => `Insert ${s}`,
     selfReview: "Self-review checklist (required to publish)",
     sources: "Sources for the scientific content",
     licence: "Licence",
@@ -46,51 +34,6 @@ export const licenseOptions: Array<[string, string]> = [
   ["CC_BY_SA", "CC BY-SA"],
   ["SCHOOL_OWNED", t.schoolOwned],
 ];
-
-export function RichEditor({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: value,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-  });
-  return (
-    <div className="rich-editor">
-      <div className="editor-toolbar">
-        <button type="button" aria-label={t.h2} aria-pressed={Boolean(editor?.isActive("heading", { level: 2 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-        <button type="button" aria-label={t.h3} aria-pressed={Boolean(editor?.isActive("heading", { level: 3 }))} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-        >
-          <b>B</b>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-        >
-          <i>I</i>
-        </button>
-        <button
-          type="button"
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-        >
-          {t.list}
-        </button>
-        <span className="editor-toolbar-divider" aria-hidden="true" />
-        {["₂", "₃", "⁺", "⁻", "→", "Δ", "°", "±", "×", "μ"].map((symbol) => (
-          <button type="button" key={symbol} aria-label={t.insertSymbol(symbol)} title={t.insert(symbol)} onClick={() => editor?.chain().focus().insertContent(symbol).run()}>{symbol}</button>
-        ))}
-      </div>
-      <EditorContent editor={editor} />
-    </div>
-  );
-}
 
 /** D1 self-review checklist required to publish teacher-private content. */
 export function ReviewChecklist({ value, onChange }: { value: any; onChange: (value: any) => void }) {
