@@ -187,7 +187,7 @@ export function ResourcePreview({ kind, content, resourceId, classId, student = 
       <section className="resource-preview compact-resource-preview compact-lab-resource-preview">
         <div className="compact-lab-main">
           {lab?.thumbnail ? (
-            <img className="compact-lab-thumb" src={lab.thumbnail} alt={lab.title} />
+            <img className="compact-lab-thumb" src={lab.thumbnail} alt={lab.title} loading="lazy" decoding="async" />
           ) : (
             <div className="compact-lab-thumb compact-lab-thumb-fallback">
               <FlaskConical size={20} aria-hidden="true" />

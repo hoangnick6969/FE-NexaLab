@@ -1,6 +1,6 @@
 # MediaPipe assets
 
-`wasm/` is copied from the installed `@mediapipe/tasks-vision` npm package. `hand_landmarker.task` is the Google MediaPipe Hand Landmarker float16 model, version 1, downloaded from:
+`wasm/` is copied from the installed `@mediapipe/tasks-vision` npm package: the SIMD and no-SIMD variants only. `FilesetResolver.forVisionTasks("/vision/wasm")` is called without `useModule`, so the `_module` variant (12 MB) is never requested and is not shipped (perf review 2026-11-16 item 5). Vercel serves `/vision/*` with a 7-day `Cache-Control`. `hand_landmarker.task` is the Google MediaPipe Hand Landmarker float16 model, version 1, downloaded from:
 
 https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 

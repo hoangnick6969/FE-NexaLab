@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    build: { chunkSizeWarningLimit: 1400 },
+    // Perf review 2026-11-16 item 2: rehype-katex pins katex ^0.16 and was bundling a second copy (~250 kB) next to the app's
+    // katex 0.19; one copy also matches the katex 0.19 CSS the lesson page loads. rehype-katex only calls renderToString.
+    resolve: { dedupe: ["katex"] },
+    build: { chunkSizeWarningLimit: 500 },
   };
 });

@@ -270,7 +270,7 @@ function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { class
   const labHref = `/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`;
   return (
     <article className="teacher-class-lab-row">
-      <div className="tcl-thumb" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" /> : <FlaskConical size={22} />}</div>
+      <div className="tcl-thumb" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" decoding="async" /> : <FlaskConical size={22} />}</div>
       <div className="tcl-main">
         <h3>{assignment.title}</h3>
         <p className="tcl-meta">

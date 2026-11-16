@@ -135,7 +135,7 @@ export function AssignedLearning() {
         description={`${assignment.classroom.name} · ${assignment.dueDate ? commonText().due(formatDate(assignment.dueDate)) : commonText().noDueDate}`}
       />
       <section className="panel lesson-content">
-        {sourceLab?.thumbnail && <img className="assigned-lab-thumbnail" src={sourceLab.thumbnail} alt={sourceLab.title} />}
+        {sourceLab?.thumbnail && <img className="assigned-lab-thumbnail" src={sourceLab.thumbnail} alt={sourceLab.title} loading="lazy" decoding="async" />}
         {assignment.contentType === "lab" && <div className="assigned-lab-meta">
           <span><GraduationCap size={15} aria-hidden="true" />{t.teacher}: {teacherName}</span>
           {assignment.createdAt && <span><Clock3 size={15} aria-hidden="true" />{t.assignedAt(formatDateTime(assignment.createdAt))}</span>}

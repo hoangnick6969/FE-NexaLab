@@ -162,7 +162,7 @@ function EbookCover({ book }: { book: Book }) {
     }).catch(() => undefined);
     return () => { active = false; revoke(); };
   }, [book.coverAssetVersionId]);
-  if (src) return <img className="ebook-library-cover-image" src={src} alt="" onError={() => setSrc(null)} />;
+  if (src) return <img className="ebook-library-cover-image" src={src} alt="" loading="lazy" decoding="async" onError={() => setSrc(null)} />;
   return <div className="ebook-library-cover" aria-hidden="true"><span>{book.grade ? t.grade(book.grade) : t.subject}</span><BookOpen size={34} strokeWidth={1.5} /><b>{book.subjectName}</b></div>;
 }
 

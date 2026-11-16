@@ -10,6 +10,7 @@ export function Avatar({ name, url, className = "avatar" }: { name: string; url?
       className={`${className} avatar-image`}
       src={url!}
       alt=""
+      decoding="async"
       onError={() => setFailedUrl(url!)}
     />
   ) : (

@@ -385,7 +385,6 @@ export function StudentProgress() {
     queryKey: ["student-open-curriculum"],
     queryFn: () => api<Parameters<typeof flattenReleasedCurriculum>[0]>("/open-curriculum"),
     enabled: Boolean(foundational.data?.courses?.length),
-    staleTime: 60_000,
   });
   const activity = useInfiniteQuery<ActivityPage>({
     queryKey: ["me-activity"],

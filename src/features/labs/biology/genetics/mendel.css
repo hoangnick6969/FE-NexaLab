@@ -3,7 +3,7 @@
 .mendel-garden svg { width: 100%; height: auto; max-height: 52vh; }
 .mendel-sky { fill: #eef5ea; }
 .mendel-soil { fill: #b99a72; }
-.mendel-row-label { font: 800 22px "Manrope", sans-serif; fill: var(--brand-ink, #1f6f78); }
+.mendel-row-label { font: 800 22px "Manrope Variable", "Manrope", sans-serif; fill: var(--brand-ink, #1f6f78); }
 .mendel-row-hint { font: 600 12px sans-serif; fill: #5b6973; }
 .mendel-label { font: 600 13px sans-serif; fill: #233c34; }
 .mendel-cross { font: 700 34px sans-serif; fill: #5b6973; }
@@ -51,7 +51,7 @@
 .lab-space .mendel-cell { display: grid; place-items: center; align-content: center; gap: 4px; width: 100%; min-height: 104px; padding: 10px 6px; border-radius: 12px; border: 2px dashed var(--brand); background: linear-gradient(160deg, #f4f9f9, #e4efef); color: var(--text-base); font: inherit; cursor: pointer; box-shadow: 0 2px 0 rgb(31 111 120 / 25%); transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease; }
 .lab-space .mendel-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgb(31 111 120 / 22%); background: linear-gradient(160deg, #eaf4f4, #d5e7e8); }
 .lab-space .mendel-cell:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(31 111 120 / 45%); }
-.mendel-cell-q { font: 800 30px/1 "Manrope", sans-serif; color: var(--brand-ink, #1f6f78); }
+.mendel-cell-q { font: 800 30px/1 "Manrope Variable", "Manrope", sans-serif; color: var(--brand-ink, #1f6f78); }
 .mendel-cell small { font-size: 11px; font-weight: 650; color: #3e4c45; }
 .lab-space .mendel-cell[data-revealed="true"] { border-style: solid; cursor: default; transform: none; box-shadow: none; animation: mendel-flip 260ms ease-out; }
 .lab-space .mendel-cell[data-tone="dominant"] { background: #f3ecfa; border-color: #4c2a76; }
