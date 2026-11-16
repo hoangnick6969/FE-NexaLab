@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BookOpen, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
-import { CardSkeleton, ErrorBox } from "../../components/ui";
+import { ErrorBox } from "../../components/ui";
+import { BookCardsSkeleton } from "../../components/skeletons";
+import { commonText } from "../../i18n/common";
 import { api, inlineMaterial, useAuth } from "../../lib/api";
 import { httpsUrl } from "../../lib/urls";
 import { defineText } from "../../i18n";
@@ -195,7 +197,7 @@ export function EbookLibraryPage() {
         {grades.map((item) => <button key={item} type="button" className={grade === item ? "active" : ""} aria-pressed={grade === item} onClick={() => setGrade(item)}>{t.grade(item)}</button>)}
       </div>
     </section>
-    {query.isLoading ? <div className="ebook-library-grid"><CardSkeleton count={2} /></div> : query.error ? <><ErrorBox error={query.error} /><button className="secondary" type="button" onClick={() => void query.refetch()}>{t.loadFailed}</button></> : filtered.length ? (
+    {query.isLoading ? <BookCardsSkeleton label={commonText().loading} /> : query.error ? <><ErrorBox error={query.error} /><button className="secondary" type="button" onClick={() => void query.refetch()}>{t.loadFailed}</button></> : filtered.length ? (
       <section className="ebook-library-grid" aria-label={t.title}>
         {filtered.map((book) => <article key={`${book.subjectId}:${book.id}`} className="ebook-library-card">
           <EbookCover book={book} />

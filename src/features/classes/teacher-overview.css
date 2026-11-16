@@ -1,0 +1,125 @@
+/* Hallmark · checked: 2026-11-16 · theme: custom (NexaLab identity, see identity.css) · scope: app · genre: modern-minimal */
+/* critique: ink, one pink that means the person is needed, readings set in Lexend; no icon tiles, no tinted chips */
+/* built: the project · redesign: teacher overview and Class Lab · v2.0.0 */
+
+/*
+ * Teacher overview and Class Lab.
+ *   --tone is the one colour a tile or chip speaks in: join (amber), late (red), lab and classes (brand teal).
+ *   Cards are 16px, controls inside them 10px; nothing sits in a card inside a card. Hover changes the edge, never the size.
+ */
+
+.tov-section { display: grid; gap: var(--teacher-space-md); min-width: 0; }
+.tov-section h2, .tcl-head h2 { margin: 0; font-size: 20px; line-height: 1.25; color: var(--teacher-ink); text-wrap: balance; }
+.tov-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--teacher-space-md); }
+.tov-section-head span { font-size: 14px; color: var(--teacher-muted); }
+
+.tov-lede { margin: 0; max-width: 62ch; font-size: 17px; line-height: 1.55; color: var(--teacher-ink); }
+.tov-lede b { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.tov-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 16px; border-radius: 10px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+
+/* What is waiting: a question, the reading that answers it, and the classes it sits in. No icon, no tint: the pink is for the person. */
+.tov-tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: var(--teacher-space-md); }
+.tov-task {
+  position: relative; display: grid; gap: 14px; align-content: space-between; padding: 20px;
+  border: 1px solid var(--teacher-rule); border-radius: 16px; background: var(--teacher-surface);
+  transition: border-color 140ms ease;
+}
+.tov-task:hover { border-color: var(--nx-ink); }
+.tov-task:has(.tov-task-main:focus-visible) { outline: 2px solid var(--teacher-focus); outline-offset: 2px; }
+.tov-task-main { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--teacher-ink); text-decoration: none; }
+.tov-task-main::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.tov-task-main:focus-visible { outline: none; }
+.tov-task-count .nx-value { font-size: 44px; }
+.tov-task-count .nx-unit { font-size: 14px; }
+.tov-task.is-waiting .nx-value { color: var(--nx-signal); }
+.tov-task.is-clear .nx-value { color: var(--teacher-muted); }
+.tov-task-note { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--teacher-muted); }
+.tov-chips { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; }
+.tov-chip { position: relative; z-index: 1; font-size: 13.5px; color: var(--teacher-ink); text-decoration: none; }
+.tov-chip b { margin-inline-start: 4px; font-variant-numeric: tabular-nums; }
+.tov-chip:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tov-chip:focus-visible { outline: 2px solid var(--teacher-focus); outline-offset: 2px; border-radius: 4px; }
+
+/* Classes */
+.tov-classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: var(--teacher-space-md); }
+.tov-class { display: grid; gap: 16px; align-content: start; min-width: 0; padding: 20px; border: 1px solid var(--teacher-rule); border-radius: 16px; background: var(--teacher-surface); transition: border-color 140ms ease; }
+.tov-class:hover { border-color: var(--nx-ink); }
+.tov-class-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.tov-class-head > div { min-width: 0; }
+.tov-class-head h3 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; overflow-wrap: anywhere; color: var(--teacher-ink); }
+.tov-class-head p { margin: 4px 0 0; font-size: 13.5px; color: var(--teacher-muted); }
+.tov-flag { flex: none; font-size: 13.5px; font-weight: 600; color: var(--nx-signal); text-decoration: none; text-underline-offset: 3px; }
+.tov-flag:hover { text-decoration: underline; }
+.tov-flag:focus-visible { outline: 2px solid var(--teacher-focus); outline-offset: 2px; border-radius: 4px; }
+.tov-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; border-block: 1px solid var(--teacher-rule); }
+.tov-stats > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 6px; padding: 14px 0 14px 12px; border-inline-start: 1px solid var(--teacher-rule); }
+.tov-stats > div:first-child { padding-inline-start: 0; border-inline-start: 0; }
+.tov-stats dt { font-size: 12.5px; white-space: nowrap; color: var(--teacher-muted); }
+.tov-stats dd { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--teacher-ink); }
+.tov-class-alert { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--nx-signal); }
+.tov-class-alert.is-muted { color: var(--teacher-muted); font-weight: 400; }
+.tov-class-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Class Lab: one group per class, one row per lab */
+.tcl-group { display: grid; gap: 14px; min-width: 0; padding-top: var(--teacher-space-lg); border-top: 1px solid var(--teacher-rule); }
+.tcl-head { display: flex; align-items: center; justify-content: space-between; gap: var(--teacher-space-md); }
+.tcl-head h2 { font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.tcl-head p { display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 4px 0 0; font-size: 14px; color: var(--teacher-muted); }
+.tcl-assign { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.tcl-saved > summary { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; list-style: none; font-size: 13.5px; font-weight: 600; color: var(--brand); cursor: pointer; border-radius: 6px; }
+.tcl-saved > summary::-webkit-details-marker { display: none; }
+.tcl-saved > summary svg { transition: transform 140ms ease; }
+.tcl-saved[open] > summary svg { transform: rotate(180deg); }
+.tcl-saved > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tcl-saved > summary:focus-visible { outline: 2px solid var(--teacher-focus); outline-offset: 2px; }
+.tcl-empty { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 18px; border: 1px dashed var(--teacher-rule); border-radius: 16px; color: var(--teacher-muted); }
+.tcl-empty > svg { color: var(--teacher-muted); }
+.tcl-empty b { font-weight: 650; color: var(--teacher-ink); }
+.tcl-empty p { max-width: 62ch; margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.tcl-list { display: grid; gap: 12px; }
+
+.teacher-class-lab-row {
+  display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 14px 16px; min-width: 0; padding: 16px;
+  border: 1px solid var(--teacher-rule); border-radius: 16px; background: var(--teacher-surface); transition: border-color 140ms ease;
+}
+.teacher-class-lab-row:hover { border-color: var(--nx-ink); }
+.tcl-thumb { display: grid; place-items: center; width: 72px; height: 54px; overflow: hidden; border-radius: 10px; background: var(--fill-neutral-96); color: var(--teacher-muted); }
+.tcl-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.tcl-main { min-width: 0; }
+.tcl-main h3 { margin: 0; font-size: 16px; line-height: 1.35; overflow-wrap: break-word; color: var(--teacher-ink); }
+.tcl-meta { display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 4px 0 0; font-size: 13.5px; color: var(--teacher-muted); }
+.tcl-meta .tcl-kind { font-weight: 600; color: var(--teacher-ink); }
+.tcl-due { display: grid; gap: 2px; justify-items: end; text-align: end; }
+.tcl-due-when { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--teacher-ink); }
+.tcl-due-date { font-size: 12.5px; color: var(--teacher-muted); font-variant-numeric: tabular-nums; }
+.tcl-due.is-late .tcl-due-when { color: var(--nx-signal); }
+.tcl-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--teacher-rule); }
+.teacher-class-lab-row > :not(.tcl-thumb, .tcl-main, .tcl-due, .tcl-actions) { grid-column: 1 / -1; }
+
+/* Row actions: one lead action, the rest quiet, archive never red until you point at it. */
+.tcl-actions .button-compact { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.tcl-actions > .secondary:first-child { border-color: var(--nx-ink); color: var(--nx-ink); }
+.tcl-actions .danger-text { margin-inline-start: auto; min-width: 0; border: 0; background: transparent; color: var(--teacher-muted); font-weight: 500; }
+.tcl-actions .danger-text:hover { color: var(--nx-signal); text-decoration: underline; text-underline-offset: 3px; }
+.tcl-open { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--teacher-muted); }
+.tcl-open:hover { background: var(--fill-neutral-96); color: var(--brand); }
+.tcl-actions > .tcl-open { margin-inline-start: auto; }
+.tcl-actions .danger-text ~ .tcl-open { margin-inline-start: 0; }
+
+.tov-skeleton-name, .tcl-skeleton-name { display: grid; gap: 8px; flex: 1; }
+.tov-skeleton { display: grid; gap: var(--teacher-space-xl); }
+.tov-section > .sk-bar { align-self: start; }
+
+@media (max-width: 640px) {
+  .tov-task-count .nx-value { font-size: 36px; }
+  .teacher-class-lab-row { grid-template-columns: 56px minmax(0, 1fr); }
+  .tcl-thumb { width: 56px; height: 44px; }
+  .tcl-due { grid-column: 1 / -1; grid-template-columns: auto 1fr; justify-items: start; align-items: baseline; gap: 10px; text-align: start; }
+  .tcl-head { align-items: flex-start; }
+  .tcl-head > div { min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tov-task, .tov-class, .tov-chip, .teacher-class-lab-row, .tcl-saved > summary svg { transition: none; }
+}

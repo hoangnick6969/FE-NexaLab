@@ -3,7 +3,9 @@ import { Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
-import { Badge, Empty, ErrorBox, useAction, verdictLabel, CardSkeleton } from "../../components/ui";
+import { Badge, Empty, ErrorBox, useAction, verdictLabel } from "../../components/ui";
+import { NoteCardsSkeleton } from "../../components/skeletons";
+import { commonText } from "../../i18n/common";
 import { defineText, formatDateTime } from "../../i18n";
 
 const text = defineText({
@@ -34,8 +36,8 @@ export function Saved() {
         description={t.description}
       />
       <ErrorBox error={q.error || del.error} />
+      {q.isLoading && <NoteCardsSkeleton label={commonText().loading} />}
       <div className="lesson-grid">
-        {q.isLoading && <CardSkeleton count={3} />}
         {q.data?.map((s: any) => (
           <article className="panel" key={s.id}>
             <Badge>{s.labId}</Badge>

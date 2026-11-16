@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, BarChart2, ChevronDown, FlaskConical, Eye, Edit3, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart2, ChevronDown, Edit3, Eye, FlaskConical, Plus, Sparkles } from "lucide-react";
 import { api } from "../../lib/api";
-import { Badge, CardSkeleton, Empty, ErrorBox } from "../../components/ui";
+import { Empty, ErrorBox } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
-import { defineText } from "../../i18n";
-import { dueLabel, LoadError } from "./class-ui";
+import { ClassLabsSkeleton, LabRowSkeleton } from "./TeacherSkeletons";
+import { defineText, formatDate } from "../../i18n";
+import { LoadError } from "./class-ui";
 import { type ClassSummary, type TeacherAssignment } from "./class-types";
 import "./teacher-operations.css";
+import "./teacher-overview.css";
 import { TeacherClassResources } from "./ClassSpaceResources";
 import { labInfo } from "../labs/lab-info";
 import { KitComponents } from "../labs/kit-catalog/KitComponents";
@@ -37,6 +39,12 @@ const text = defineText({
     none: "Chưa có bài lab nào được giao.",
     noneHelp: "Bấm Giao lab, chọn kiểu bài rồi thiết kế đề ngay trong phòng thí nghiệm.",
     exploreKind: "Thí nghiệm tự do",
+    guidedKind: "Lab có hướng dẫn",
+    daysLeft: (n: number) => (n <= 0 ? "Hết hạn hôm nay" : n === 1 ? "Còn 1 ngày" : `Còn ${n} ngày`),
+    dueOn: (date: string) => `Hạn ${date}`,
+    viewLabSpace: "Xem Lab Space",
+    viewSource: "Xem Lab nguồn",
+    ownTask: "Tạo đề bài riêng",
     submissions: "Xem bài nộp",
     noClasses: "Chưa có lớp phù hợp.",
     noActiveClasses: "Tạo lớp trước khi giao bài thực hành.",
@@ -44,7 +52,6 @@ const text = defineText({
     createClass: "Tạo lớp",
     loadClasses: "các lớp",
     loadAssignments: "bài lab đã giao",
-    due: "Hạn nộp",
     recipients: (count: number) => `${count} học sinh`,
     openAssignment: (title: string) => `Mở lớp để xem bài ${title}`,
     wholeClass: "Cả lớp",
@@ -67,6 +74,12 @@ const text = defineText({
     none: "No labs have been assigned yet.",
     noneHelp: "Press Assign a lab, choose the kind of work and design it in the lab. Assigned work is limited to its recipient list.",
     exploreKind: "Free experiment",
+    guidedKind: "Guided lab",
+    daysLeft: (n: number) => (n <= 0 ? "Due today" : n === 1 ? "1 day left" : `${n} days left`),
+    dueOn: (date: string) => `Due ${date}`,
+    viewLabSpace: "View Lab Space",
+    viewSource: "View source lab",
+    ownTask: "Create your own task",
     submissions: "View submissions",
     noClasses: "No matching classes.",
     noActiveClasses: "Create a class before assigning practical work.",
@@ -74,7 +87,6 @@ const text = defineText({
     createClass: "Create a class",
     loadClasses: "classes",
     loadAssignments: "assigned labs",
-    due: "Due",
     recipients: (count: number) => `${count} students`,
     openAssignment: (title: string) => `Open class work: ${title}`,
     wholeClass: "Whole class",
@@ -173,7 +185,7 @@ export function ClassLabs() {
 
       {notice && <p className="notice" role="status">{notice}</p>}
       <LoadError query={classList} what={t.loadClasses} />
-      {classList.isLoading && <div className="teacher-class-labs-loading"><CardSkeleton count={2} /></div>}
+      {classList.isLoading && <ClassLabsSkeleton label={t.loadClasses} />}
       {classList.data?.length === 0 && (
         <Empty>{view === "active" ? t.noActiveClasses : t.noClasses}</Empty>
       )}
@@ -188,30 +200,38 @@ export function ClassLabs() {
         const classHref = `/classes/${encodeURIComponent(classroom.id)}?${classQuery.toString()}`;
 
         return (
-          <section className="teacher-class-labs-group" key={classroom.id} aria-labelledby={`class-labs-${classroom.id}`}>
-            <header className="teacher-class-labs-header">
+          <section className="tcl-group" key={classroom.id} aria-labelledby={`class-labs-${classroom.id}`}>
+            <header className="tcl-head">
               <div>
                 <h2 id={`class-labs-${classroom.id}`}>{classroom.name}</h2>
-                <p>{t.grade(classroom.grade)} · {t.students(classroom.members.approved)}</p>
+                <p>
+                  <span>{t.grade(classroom.grade)}</span>
+                  <span>{t.students(classroom.members.approved)}</span>
+                </p>
               </div>
               {classroom.status === "ACTIVE" && view === "active" && (
-                <button type="button" className="secondary teacher-class-labs-link" onClick={() => { setNotice(null); setChooserFor(classroom); }}>
-                  {t.assign}<ArrowRight size={16} aria-hidden="true" />
+                <button type="button" className="primary tov-btn tcl-assign" onClick={() => { setNotice(null); setChooserFor(classroom); }}>
+                  <Plus size={16} aria-hidden="true" />{t.assign}
                 </button>
               )}
             </header>
-            {view === "active" && <details><summary>{t.privateActivities}</summary><TeacherClassResources classId={classroom.id} disabled={classroom.status !== "ACTIVE"} labOnly /></details>}
+            {view === "active" && (
+              <details className="tcl-saved">
+                <summary>{t.privateActivities}<ChevronDown size={15} aria-hidden="true" /></summary>
+                <TeacherClassResources classId={classroom.id} disabled={classroom.status !== "ACTIVE"} labOnly />
+              </details>
+            )}
 
-            {assignmentsQuery?.isLoading && <div className="teacher-class-labs-loading"><CardSkeleton count={1} /></div>}
+            {assignmentsQuery?.isLoading && <div className="tcl-list"><LabRowSkeleton /></div>}
             {assignmentsQuery?.isError && <LoadError query={assignmentsQuery} what={t.loadAssignments} />}
             {assignmentsQuery?.data && labs.length === 0 && (
-              <div className="teacher-class-labs-empty">
-                <FlaskConical size={20} aria-hidden="true" />
+              <div className="tcl-empty">
+                <FlaskConical size={22} aria-hidden="true" />
                 <div><b>{t.none}</b><p>{t.noneHelp}</p></div>
               </div>
             )}
             {labs.length > 0 && (
-              <div className="teacher-class-labs-list">
+              <div className="tcl-list">
                 {labs.map((assignment) => (
                   <LabWorkRow key={assignment.id} classroom={classroom} assignment={assignment} view={view} classHref={classHref} onBoard={() => setBoard({ classroom, assignment })} />
                 ))}
@@ -233,45 +253,63 @@ export function ClassLabs() {
   );
 }
 
+/** Days from today to a due date, counted in calendar days so "due this evening" is 0 and tomorrow is 1. */
+function daysUntil(due: string) {
+  const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  return Math.round((startOfDay(new Date(due)) - startOfDay(new Date())) / 86400000);
+}
+
 /** One lab assigned to a class: a Guided lab (with its class draft) or an Explore lab, with what the teacher can do next. */
 function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { classroom: ClassSummary; assignment: TeacherAssignment; view: ClassLabsView; classHref: string; onBoard: () => void }) {
   const t = text();
   const explore = assignment.contentType === "explore_lab";
   const thumbnail = labInfo.find((lab) => lab.id === assignment.contentId)?.thumbnail;
   const manageable = view === "active" && classroom.status === "ACTIVE" && assignment.status === "ACTIVE";
+  const days = assignment.dueDate ? daysUntil(assignment.dueDate) : null;
+  const late = manageable && assignment.overdue;
+  const labHref = `/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`;
   return (
     <article className="teacher-class-lab-row">
-      <div className="teacher-class-lab-icon" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" decoding="async" /> : <FlaskConical size={18} />}</div>
-      <div className="teacher-class-lab-main">
-        <h3>{assignment.title}{explore && <span className="assignment-type-pill is-explore_lab">{t.exploreKind}</span>}</h3>
-        <p>{t.recipients(assignment.recipientCount)} · {assignment.audience === "CLASS" ? t.wholeClass : t.subset}</p>
+      <div className="tcl-thumb" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" decoding="async" /> : <FlaskConical size={22} />}</div>
+      <div className="tcl-main">
+        <h3>{assignment.title}</h3>
+        <p className="tcl-meta">
+          <span className="tcl-kind">{explore ? t.exploreKind : t.guidedKind}</span>
+          <span>{t.recipients(assignment.recipientCount)}</span>
+          <span>{assignment.audience === "CLASS" ? t.wholeClass : t.subset}</span>
+        </p>
       </div>
-      <div className="teacher-class-lab-due">
-        <span>{t.due}</span>
-        <b>{dueLabel(assignment.dueDate) || t.noDue}</b>
-        {manageable && assignment.overdue && <Badge tone="outline">{t.overdue}</Badge>}
+      <div className={`tcl-due${late ? " is-late" : ""}`}>
+        {assignment.dueDate ? (
+          <>
+            <span className="tcl-due-when">{late ? t.overdue : t.daysLeft(days ?? 0)}</span>
+            <span className="tcl-due-date">{t.dueOn(formatDate(assignment.dueDate))}</span>
+          </>
+        ) : (
+          <span className="tcl-due-when">{t.noDue}</span>
+        )}
       </div>
-      <div className="teacher-class-lab-actions">
+      <div className="tcl-actions">
         {explore ? (
           <button type="button" className="secondary button-compact" onClick={onBoard}>
-            <BarChart2 size={13} aria-hidden="true" />
+            <BarChart2 size={14} aria-hidden="true" />
             <span>{t.submissions}</span>
           </button>
         ) : (
-          <Link className="secondary button-compact" to={`/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`}>
-            <Eye size={13} aria-hidden="true" />
-            <span>{assignment.classLabSnapshot ? "Xem Lab Space" : "Xem Lab nguồn"}</span>
+          <Link className="secondary button-compact" to={labHref}>
+            <Eye size={14} aria-hidden="true" />
+            <span>{assignment.classLabSnapshot ? t.viewLabSpace : t.viewSource}</span>
           </Link>
         )}
         {!explore && assignment.classLabSnapshot && view === "active" && <EditAssignedLab classId={classroom.id} assignment={assignment} />}
         {!explore && !assignment.classLabSnapshot && view === "active" && (
           <Link className="secondary button-compact" to={`/class-labs?classId=${encodeURIComponent(classroom.id)}&assign=guided&labId=${encodeURIComponent(assignment.contentId)}`}>
-            <Sparkles size={13} aria-hidden="true" />
-            <span>Tạo đề bài riêng</span>
+            <Sparkles size={14} aria-hidden="true" />
+            <span>{t.ownTask}</span>
           </Link>
         )}
         {manageable && <AssignmentRowActions classroom={classroom} assignment={assignment} />}
-        <Link className="teacher-class-lab-open" to={classHref} aria-label={t.openAssignment(assignment.title)}><ArrowRight size={18} aria-hidden="true" /></Link>
+        <Link className="tcl-open" to={classHref} aria-label={t.openAssignment(assignment.title)}><ArrowRight size={18} aria-hidden="true" /></Link>
       </div>
       {!explore && assignment.classLabSnapshot && view === "active" && <TeacherClassLabAdditionalResponses classId={classroom.id} resourceId={assignment.classLabSnapshot.resourceId} assignmentId={assignment.id} />}
     </article>

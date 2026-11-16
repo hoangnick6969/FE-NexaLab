@@ -4,20 +4,12 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   FlaskConical,
-  ListChecks,
   CheckCircle2,
-  Clock,
   Play,
   ArrowRight,
   FileText,
-  GraduationCap,
-  LayoutGrid,
-  Filter,
   Search,
   X,
-  ChevronRight,
-  Sparkles,
-  Layers,
 } from "lucide-react";
 import { api, type ActivityPage, type MyProgressResponse } from "../../lib/api";
 import { Badge, Empty, ErrorBox } from "../../components/ui";
@@ -29,6 +21,8 @@ import { defineText } from "../../i18n";
 import { progressTab, withAttempt, withProgressTab, withoutAttempt, type ProgressTab } from "./progress-route";
 import { SubjectCover } from "../../components/SubjectGradeChapterBrowser";
 import { flattenReleasedCurriculum } from "../lessons/lesson-catalog";
+import { AssignmentsSkeleton, CoursesSkeleton, HistorySkeleton, SummarySkeleton } from "./ProgressSkeletons";
+import "./progress.css";
 
 const text = defineText({
   vi: {
@@ -36,12 +30,14 @@ const text = defineText({
     loading: "Đang tải tiến độ…",
     assignmentsDone: "Bài tập đã hoàn thành",
     stepsLeft: "Bước bắt buộc còn lại",
-    practicals: (passed: number) => `Lượt thực hành · ${passed} lượt đạt`,
-    computed: (when: string) => `Đồng bộ trực tiếp · Cập nhật ${when}`,
-    overviewEyebrow: "TỔNG QUAN TIẾN ĐỘ HỌC TẬP",
+    practicals: "Lượt thực hành",
+    computed: (when: string) => `Cập nhật lúc ${when}`,
     activeWorkDetail: (done: number, total: number) => `Hoàn thành ${done}/${total} nhiệm vụ`,
     stepsRemainingDetail: "Cần hoàn thành để đạt chuẩn",
-    practicalsDetail: (passed: number, total: number) => `Tỉ lệ đạt: ${total > 0 ? Math.round((passed / total) * 100) : 0}%`,
+    practicalsDetail: (passed: number, total: number) => `${passed} lượt đạt, tỉ lệ đạt ${total > 0 ? Math.round((passed / total) * 100) : 0}%`,
+    noAssignedNote: "Chưa có bài tập được giao",
+    clearSearch: "Xóa tìm kiếm",
+    viewsLabel: "Phân loại tiến độ",
     assignments: "Bài tập",
     noAssigned: "Em chưa có bài được giao nào.",
     assignedUnavailable: "Chưa tải được tiến độ bài được giao. Em có thể thử tải lại phía trên.",
@@ -72,9 +68,6 @@ const text = defineText({
     video: "Bài giảng",
     exercise: "Luyện tập",
     lab: "Thực hành",
-    assignedEyebrow: "NHIỆM VỤ ĐƯỢC GIAO",
-    curriculumEyebrow: "CHƯƠNG TRÌNH CHUẨN",
-    historyEyebrow: "NHẬT KÝ HỌC TẬP",
     tabAll: "Tất cả",
     tabCourses: "Môn học",
     tabAssignments: "Nhiệm vụ được giao",
@@ -108,12 +101,14 @@ const text = defineText({
     loading: "Loading progress…",
     assignmentsDone: "Assignments completed",
     stepsLeft: "Required steps left",
-    practicals: (passed: number) => `Practice attempts · ${passed} passed`,
-    computed: (when: string) => `Live sync · Updated ${when}`,
-    overviewEyebrow: "LEARNING PROGRESS OVERVIEW",
+    practicals: "Practice attempts",
+    computed: (when: string) => `Updated ${when}`,
     activeWorkDetail: (done: number, total: number) => `Completed ${done}/${total} tasks`,
     stepsRemainingDetail: "Required for milestone completion",
-    practicalsDetail: (passed: number, total: number) => `Pass rate: ${total > 0 ? Math.round((passed / total) * 100) : 0}%`,
+    practicalsDetail: (passed: number, total: number) => `${passed} passed, pass rate ${total > 0 ? Math.round((passed / total) * 100) : 0}%`,
+    noAssignedNote: "No assigned work yet",
+    clearSearch: "Clear search",
+    viewsLabel: "Progress views",
     assignments: "Assignments",
     noAssigned: "You have no assigned work yet.",
     assignedUnavailable: "Assigned progress is unavailable. Use the reload button above to try again.",
@@ -144,9 +139,6 @@ const text = defineText({
     video: "Video",
     exercise: "Exercise",
     lab: "Lab",
-    assignedEyebrow: "ASSIGNED WORK",
-    curriculumEyebrow: "OFFICIAL CURRICULUM",
-    historyEyebrow: "LEARNING LOG",
     tabAll: "All",
     tabCourses: "Courses",
     tabAssignments: "Assigned Work",
@@ -185,13 +177,15 @@ function CourseProgressCard({ course, onSelect }: { course: any; onSelect: (c: a
   const lessonsCount = course.stats?.lessonsCount ?? course.lessons?.length ?? 0;
   const videosCount = course.stats?.videosCount ?? course.lessons?.reduce((acc: number, l: any) => acc + (l.evidence?.filter((e: any) => e.kind === "video").length || 0), 0) ?? 0;
   const labsCount = course.stats?.labsCount ?? course.lessons?.filter((l: any) => Boolean(l.requiredLabId)).length ?? 0;
+  const known = course.summary?.percent != null;
+  const state = !known ? t.progressUnavailable : isCompleted ? t.stateDone : percent > 0 ? t.stateDoing : t.stateTodo;
 
   return (
     <article
-      className="progress-course-card"
+      className="pg-course"
       tabIndex={0}
       role="button"
-      aria-label={`${course.subject.name}, ${t.gradePill(course.grade)}, ${course.summary?.percent == null ? t.progressUnavailable : `${percent}% ${t.stateDone}`}`}
+      aria-label={`${course.subject.name}, ${t.gradePill(course.grade)}, ${known ? `${percent}% ${t.stateDone}` : t.progressUnavailable}`}
       onClick={() => onSelect(course)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -200,31 +194,26 @@ function CourseProgressCard({ course, onSelect }: { course: any; onSelect: (c: a
         }
       }}
     >
-      <div className="progress-course-cover">
+      <div className="pg-course-cover">
         <SubjectCover subjectId={subjectId} subjectName={course.subject.name} versionId={course.coverAssetVersionId} />
-        <span className="progress-course-grade-pill">{t.gradePill(course.grade)}</span>
       </div>
-      <div className="progress-course-body">
-        <h3 className="progress-course-heading">{course.subject.name}</h3>
-
-        <div className="progress-course-stats">
-          <span><BookOpen size={13} aria-hidden="true" /> {t.lessonsCount(lessonsCount)}</span>
-          {videosCount > 0 && <span><Play size={13} aria-hidden="true" /> {t.videosCount(videosCount)}</span>}
-          {labsCount > 0 && <span><FlaskConical size={13} aria-hidden="true" /> {t.labsCount(labsCount)}</span>}
+      <div className="pg-course-body">
+        <div className="pg-course-title">
+          <h3>{course.subject.name}</h3>
+          <span className="pg-course-grade">{t.gradePill(course.grade)}</span>
         </div>
-
-        {course.summary?.percent != null && <progress className="progress-course-track" value={percent} max={100} aria-label={t.overallProgress} />}
-        <div className="progress-course-footer">
-          <div className="progress-course-percent">
-            <strong>{course.summary?.percent == null ? "—" : `${percent}%`}</strong>
-            <span className={`progress-course-status ${isCompleted ? "is-completed" : percent > 0 ? "is-in-progress" : "is-todo"}`}>
-              {course.summary?.percent == null ? t.progressUnavailable : isCompleted ? t.stateDone : percent > 0 ? t.stateDoing : t.stateTodo}
-            </span>
-          </div>
-          <span className="progress-course-action">
-            <span>{t.courseDetails}</span>
-            <ChevronRight size={14} aria-hidden="true" />
+        <ul className="pg-course-counts">
+          <li><BookOpen size={13} aria-hidden="true" />{t.lessonsCount(lessonsCount)}</li>
+          {videosCount > 0 && <li><Play size={13} aria-hidden="true" />{t.videosCount(videosCount)}</li>}
+          {labsCount > 0 && <li><FlaskConical size={13} aria-hidden="true" />{t.labsCount(labsCount)}</li>}
+        </ul>
+        {known && <progress className="pg-bar" value={percent} max={100} aria-label={t.overallProgress} />}
+        <div className="pg-course-foot">
+          <span>
+            <strong className="pg-course-percent">{known ? `${percent}%` : "—"}</strong>
+            <span className={`pg-course-state ${isCompleted ? "is-done" : percent > 0 ? "is-doing" : ""}`}>{state}</span>
           </span>
+          <span className="pg-course-open">{t.courseDetails}</span>
         </div>
       </div>
     </article>
@@ -495,6 +484,15 @@ export function StudentProgress() {
       return 0;
     });
 
+  const gradeChoices: Array<[number | "all", string]> = [["all", t.filterAllGrades], [8, t.gradePill(8)], [9, t.gradePill(9)]];
+  const tabs: Array<{ id: ProgressTab; label: string; count?: number }> = [
+    { id: "all", label: t.tabAll },
+    { id: "courses", label: t.tabCourses, count: foundational.isSuccess ? activeCourses.length : undefined },
+    { id: "assignments", label: t.tabAssignments, count: progress.isSuccess ? assignments.length : undefined },
+    { id: "history", label: t.tabHistory, count: activity.isSuccess ? items.length : undefined },
+  ];
+  const showSection = (id: ProgressTab) => activeTab === "all" || activeTab === id;
+
   return (
     <div className="my-progress">
       <ErrorBox error={progress.error} />
@@ -503,319 +501,186 @@ export function StudentProgress() {
           {t.reload}
         </button>
       )}
+
       {progress.isPending ? (
-        <Empty>{t.loading}</Empty>
+        <SummarySkeleton label={t.loading} />
       ) : summary ? (
-        <>
-                {/* Learning Progress Summary Ribbon */}
-                <div className="progress-metric-ribbon">
-                  <div className="progress-ribbon-header">
-                    <span className="progress-ribbon-eyebrow">{t.overviewEyebrow}</span>
-                    <div className="progress-ribbon-sync">
-                      <Clock size={13} aria-hidden="true" />
-                      <span>{t.computed(time(summary.updatedAt))}</span>
-                    </div>
-                  </div>
-
-                <div className="stats progress-stats progress-ribbon-grid">
-                  <button
-                    type="button"
-                    className="stat progress-stat-card ribbon-metric-cell"
-                    onClick={() => {
-                      setActiveTab("assignments");
-                      scrollTo("progress-completion");
-                    }}
-                  >
-                    <div className="ribbon-metric-label-row">
-                      <span className="ribbon-metric-title">{t.assignmentsDone}</span>
-                      <BookOpen size={14} className="ribbon-metric-icon" aria-hidden="true" />
-                    </div>
-                    <div className="ribbon-metric-number">
-                      <strong>{summary.activeAssignments ? `${summary.completedAssignments}/${summary.activeAssignments}` : "—"}</strong>
-                    </div>
-                    <p className="ribbon-metric-desc">
-                      {summary.activeAssignments ? t.activeWorkDetail(summary.completedAssignments, summary.activeAssignments) : "Chưa có bài tập giao"}
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="stat progress-stat-card ribbon-metric-cell"
-                    onClick={() => {
-                      setActiveTab("assignments");
-                      scrollTo("progress-completion");
-                    }}
-                  >
-                    <div className="ribbon-metric-label-row">
-                      <span className="ribbon-metric-title">{t.stepsLeft}</span>
-                      <ListChecks size={14} className="ribbon-metric-icon" aria-hidden="true" />
-                    </div>
-                    <div className="ribbon-metric-number">
-                      <strong>{summary.activeAssignments ? summary.remainingRequiredSteps : "—"}</strong>
-                    </div>
-                    <p className="ribbon-metric-desc">
-                      {t.stepsRemainingDetail}
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="stat progress-stat-card ribbon-metric-cell"
-                    onClick={() => {
-                      setActiveTab("history");
-                      scrollTo("progress-history");
-                    }}
-                  >
-                    <div className="ribbon-metric-label-row">
-                      <span className="ribbon-metric-title">{t.practicals(summary.passedPracticals)}</span>
-                      <FlaskConical size={14} className="ribbon-metric-icon" aria-hidden="true" />
-                    </div>
-                    <div className="ribbon-metric-number">
-                      <strong>{summary.practicalAttempts}</strong>
-                    </div>
-                    <p className="ribbon-metric-desc">
-                      {t.practicalsDetail(summary.passedPracticals, summary.practicalAttempts)}
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-        </>
+        <section className="pg-summary" aria-label={t.overallProgress}>
+          <div className="pg-stats">
+            <button type="button" className="pg-stat" onClick={() => { setActiveTab("assignments"); scrollTo("progress-completion"); }}>
+              <span className="pg-stat-label">{t.assignmentsDone}</span>
+              <strong className="pg-stat-value">
+                {summary.activeAssignments ? <>{summary.completedAssignments}<span className="pg-stat-of">/{summary.activeAssignments}</span></> : "—"}
+              </strong>
+              <span className="pg-stat-note">{summary.activeAssignments ? t.activeWorkDetail(summary.completedAssignments, summary.activeAssignments) : t.noAssignedNote}</span>
+            </button>
+            <button type="button" className="pg-stat" onClick={() => { setActiveTab("assignments"); scrollTo("progress-completion"); }}>
+              <span className="pg-stat-label">{t.stepsLeft}</span>
+              <strong className="pg-stat-value">{summary.activeAssignments ? summary.remainingRequiredSteps : "—"}</strong>
+              <span className="pg-stat-note">{t.stepsRemainingDetail}</span>
+            </button>
+            <button type="button" className="pg-stat" onClick={() => { setActiveTab("history"); scrollTo("progress-history"); }}>
+              <span className="pg-stat-label">{t.practicals}</span>
+              <strong className="pg-stat-value">{summary.practicalAttempts}</strong>
+              <span className="pg-stat-note">{t.practicalsDetail(summary.passedPracticals, summary.practicalAttempts)}</span>
+            </button>
+          </div>
+          <p className="pg-updated">{t.computed(time(summary.updatedAt))}</p>
+        </section>
       ) : null}
 
-              {/* URL-backed progress views. */}
-              <nav className="progress-tabs-nav" aria-label="Phân loại tiến độ">
-                <button
-                  type="button"
-                  aria-pressed={activeTab === "all"}
-                  className={`progress-tab-btn ${activeTab === "all" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("all")}
-                >
-                  <LayoutGrid size={14} aria-hidden="true" />
-                  <span>{t.tabAll}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={activeTab === "courses"}
-                  className={`progress-tab-btn ${activeTab === "courses" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("courses")}
-                >
-                  <GraduationCap size={14} aria-hidden="true" />
-                  <span>{t.tabCourses}</span>
-                  <span className="progress-tab-badge tab-count">{activeCourses.length}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={activeTab === "assignments"}
-                  className={`progress-tab-btn ${activeTab === "assignments" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("assignments")}
-                >
-                  <BookOpen size={14} aria-hidden="true" />
-                  <span>{t.tabAssignments}</span>
-                  <span className="progress-tab-badge tab-count">{assignments.length}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={activeTab === "history"}
-                  className={`progress-tab-btn ${activeTab === "history" ? "is-active" : ""}`}
-                  onClick={() => setActiveTab("history")}
-                >
-                  <Clock size={14} aria-hidden="true" />
-                  <span>{t.tabHistory}</span>
-                  <span className="progress-tab-badge tab-count">{items.length}</span>
-                </button>
-              </nav>
+      {/* URL-backed progress views. */}
+      <nav className="pg-tabs" aria-label={t.viewsLabel}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            aria-pressed={activeTab === tab.id}
+            className={`pg-tab${activeTab === tab.id ? " is-active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+            {tab.count !== undefined && <span className="pg-tab-count">{tab.count}</span>}
+          </button>
+        ))}
+      </nav>
 
-              {/* Official curriculum only; assigned progress is shown separately. */}
-              {(activeTab === "all" || activeTab === "courses") && (
-                <section className="panel progress-section foundational-curriculum-section" aria-labelledby="foundational-progress-title">
-                  <div className="progress-section-header">
-                    <span className="eyebrow">{t.curriculumEyebrow}</span>
-                    <h2 id="foundational-progress-title">{t.foundational}</h2>
-                    <p className="muted">{t.foundationalIntro}</p>
-                  </div>
-
-                  {/* Filter, Search & Sort Bar */}
-                  {activeCourses.length > 0 && <div className="progress-filter-bar">
-                    <div className="progress-filter-group">
-                      <span className="filter-label tiny muted">{t.filterGrade}:</span>
-                      <button
-                        type="button"
-                        className={`filter-pill ${gradeFilter === "all" ? "is-active" : ""}`}
-                        onClick={() => setGradeFilter("all")}
-                      >
-                        {t.filterAllGrades}
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-pill ${gradeFilter === 8 ? "is-active" : ""}`}
-                        onClick={() => setGradeFilter(8)}
-                      >
-                        {t.gradePill(8)}
-                      </button>
-                      <button
-                        type="button"
-                        className={`filter-pill ${gradeFilter === 9 ? "is-active" : ""}`}
-                        onClick={() => setGradeFilter(9)}
-                      >
-                        {t.gradePill(9)}
-                      </button>
-                    </div>
-
-                    <div className="progress-filter-group">
-                      <select
-                        className="progress-filter-select"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
-                        aria-label={t.filterStatus}
-                      >
-                        <option value="all">{t.filterAllStatus}</option>
-                        <option value="in_progress">{t.statusDoing}</option>
-                        <option value="completed">{t.statusDone}</option>
-                      </select>
-
-                      <select
-                        className="progress-filter-select"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        aria-label={t.sortLabel}
-                      >
-                        <option value="progress_desc">{t.sortProgressDesc}</option>
-                        <option value="progress_asc">{t.sortProgressAsc}</option>
-                        <option value="title">{t.sortTitle}</option>
-                      </select>
-
-                      <div className="progress-search-box">
-                        <Search size={14} className="muted" aria-hidden="true" />
-                        <input
-                          type="text"
-                          className="progress-search-input"
-                          placeholder={t.searchPlaceholder}
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        {searchQuery && (
-                          <button
-                            type="button"
-                            className="icon-button"
-                            onClick={() => setSearchQuery("")}
-                            aria-label="Xóa tìm kiếm"
-                            style={{ minHeight: "22px", width: "22px", padding: 0 }}
-                          >
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>}
-
-                  <ErrorBox error={foundational.error} />
-                  {foundational.isPending ? (
-                    <Empty>{t.loadingCurriculum}</Empty>
-                  ) : foundational.isError ? (
-                    <button type="button" className="secondary" onClick={() => foundational.refetch()}>{t.retry}</button>
-                  ) : !activeCourses.length ? (
-                    <Empty>{foundational.data?.courseVersionConfigured === false ? t.noCurriculum : t.curriculumEmpty}</Empty>
-                  ) : filteredCourses.length ? (
-                    <div className="progress-courses-grid">
-                      {filteredCourses.map((course: any) => (
-                        <CourseProgressCard
-                          key={course.id}
-                          course={course}
-                          onSelect={(c) => setSelectedCourse(c)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty>
-                      <p>{t.noFilteredCourses}</p>
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => {
-                          setGradeFilter("all");
-                          setStatusFilter("all");
-                          setSearchQuery("");
-                        }}
-                      >
-                        {t.resetFilter}
-                      </button>
-                    </Empty>
+      {/* Official curriculum only; assigned progress is shown separately. */}
+      {showSection("courses") && (
+        <section className="pg-section" aria-labelledby="foundational-progress-title">
+          <header className="pg-section-head">
+            <h2 id="foundational-progress-title">{t.foundational}</h2>
+            <p className="muted">{t.foundationalIntro}</p>
+          </header>
+          {activeCourses.length > 0 && (
+            <div className="pg-filters">
+              <div className="pg-filters-group" role="group" aria-label={t.filterGrade}>
+                {gradeChoices.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`pg-chip${gradeFilter === value ? " is-active" : ""}`}
+                    aria-pressed={gradeFilter === value}
+                    onClick={() => setGradeFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="pg-filters-group">
+                <select className="pg-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} aria-label={t.filterStatus}>
+                  <option value="all">{t.filterAllStatus}</option>
+                  <option value="in_progress">{t.statusDoing}</option>
+                  <option value="completed">{t.statusDone}</option>
+                </select>
+                <select className="pg-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label={t.sortLabel}>
+                  <option value="progress_desc">{t.sortProgressDesc}</option>
+                  <option value="progress_asc">{t.sortProgressAsc}</option>
+                  <option value="title">{t.sortTitle}</option>
+                </select>
+                <div className="pg-search">
+                  <Search size={14} aria-hidden="true" />
+                  <input type="text" placeholder={t.searchPlaceholder} aria-label={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                  {searchQuery && (
+                    <button type="button" className="pg-search-clear" onClick={() => setSearchQuery("")} aria-label={t.clearSearch}>
+                      <X size={12} aria-hidden="true" />
+                    </button>
                   )}
-                </section>
-              )}
-
-              {/* Section 2: Nhiệm vụ được giao (Assignments) */}
-              {(activeTab === "all" || activeTab === "assignments") && (
-                <section id="progress-completion" className="progress-section" aria-labelledby="progress-completion-title">
-                  <div className="progress-section-header">
-                    <span className="eyebrow">{t.assignedEyebrow}</span>
-                    <h2 id="progress-completion-title">{t.assignments}</h2>
-                  </div>
-                  {progress.isPending ? (
-                    <Empty>{t.loading}</Empty>
-                  ) : progress.isError ? (
-                    <p role="status">{t.assignedUnavailable}</p>
-                  ) : assignments.length === 0 ? (
-                    <Empty>
-                      {t.noAssigned} <Link to="/">{t.home} →</Link>
-                    </Empty>
-                  ) : (
-                    assignments.map((assignment) => (
-                      <AssignmentProgress key={assignment.assignmentId} assignment={assignment} onOpen={open} />
-                    ))
-                  )}
-                </section>
-              )}
-
-            {/* Section 3: Nhật ký học tập (Attempt History) */}
-            {(activeTab === "all" || activeTab === "history") && (
-              <section id="progress-history" className="panel progress-section" aria-labelledby="progress-history-title">
-                <div className="progress-section-header">
-                  <span className="eyebrow">{t.historyEyebrow}</span>
-                  <h2 id="progress-history-title" tabIndex={-1}>{t.history}</h2>
                 </div>
-                {activity.isPending ? (
-                  <Empty>{t.loadingHistory}</Empty>
-                ) : activity.isError && !items.length ? (
-                  <>
-                    <ErrorBox error={activity.error} />
-                    <button className="secondary" type="button" onClick={() => activity.refetch()}>{t.retry}</button>
-                  </>
-                ) : items.length === 0 ? (
-                  <Empty>{t.noAttempts}</Empty>
-                ) : (
-                  <>
-                    <ActivityGroups items={items} onOpen={open} />
-                    {activity.isFetchNextPageError && (
-                      <>
-                        <ErrorBox error={activity.error} />
-                        <button className="secondary" type="button" onClick={() => activity.fetchNextPage()}>{t.retryNext}</button>
-                      </>
-                    )}
-                    {activity.hasNextPage && !activity.isFetchNextPageError && (
-                      <button className="secondary load-more" type="button" disabled={activity.isFetchingNextPage} onClick={() => activity.fetchNextPage()}>
-                        {activity.isFetchingNextPage ? t.loadingShort : t.older}
-                      </button>
-                    )}
-                  </>
-                )}
-              </section>
-            )}
+              </div>
+            </div>
+          )}
+          <ErrorBox error={foundational.error} />
+          {foundational.isPending ? (
+            <CoursesSkeleton label={t.loadingCurriculum} />
+          ) : foundational.isError ? (
+            <button type="button" className="secondary pg-more" onClick={() => foundational.refetch()}>{t.retry}</button>
+          ) : !activeCourses.length ? (
+            <Empty>{foundational.data?.courseVersionConfigured === false ? t.noCurriculum : t.curriculumEmpty}</Empty>
+          ) : filteredCourses.length ? (
+            <div className="pg-courses">
+              {filteredCourses.map((course: any) => (
+                <CourseProgressCard key={course.id} course={course} onSelect={(c) => setSelectedCourse(c)} />
+              ))}
+            </div>
+          ) : (
+            <Empty>
+              <p>{t.noFilteredCourses}</p>
+              <button type="button" className="secondary" onClick={() => { setGradeFilter("all"); setStatusFilter("all"); setSearchQuery(""); }}>
+                {t.resetFilter}
+              </button>
+            </Empty>
+          )}
+        </section>
+      )}
 
-            {/* Course Detail Modal (Drilldown) */}
-            {selectedCourse && (
-              <CourseDetailModal
-                course={selectedCourse}
-                onClose={() => setSelectedCourse(null)}
-              />
-            )}
+      {/* Assigned work, separate from the curriculum. */}
+      {showSection("assignments") && (
+        <section id="progress-completion" className="pg-section" aria-labelledby="progress-completion-title">
+          <header className="pg-section-head">
+            <h2 id="progress-completion-title">{t.assignments}</h2>
+          </header>
+          {progress.isPending ? (
+            <AssignmentsSkeleton label={t.loading} />
+          ) : progress.isError ? (
+            <p className="pg-note" role="status">{t.assignedUnavailable}</p>
+          ) : assignments.length === 0 ? (
+            <Empty>
+              {t.noAssigned} <Link to="/">{t.home}</Link>
+            </Empty>
+          ) : (
+            <div className="pg-work">
+              {assignments.map((assignment) => (
+                <AssignmentProgress key={assignment.assignmentId} assignment={assignment} onOpen={open} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-            {sheet.length > 0 && (
-              <EvidenceSheet onClose={close} onBack={sheet.length > 1 ? back : undefined}>
-                <SheetContent view={sheet.at(-1)!} push={push} />
-              </EvidenceSheet>
-            )}
-          </div>
-          );
+      {/* Attempt history */}
+      {showSection("history") && (
+        <section id="progress-history" className="pg-section" aria-labelledby="progress-history-title">
+          <header className="pg-section-head">
+            <h2 id="progress-history-title" tabIndex={-1}>{t.history}</h2>
+          </header>
+          {activity.isPending ? (
+            <HistorySkeleton label={t.loadingHistory} />
+          ) : activity.isError && !items.length ? (
+            <>
+              <ErrorBox error={activity.error} />
+              <button className="secondary pg-more" type="button" onClick={() => activity.refetch()}>{t.retry}</button>
+            </>
+          ) : items.length === 0 ? (
+            <Empty>{t.noAttempts}</Empty>
+          ) : (
+            <>
+              <div className="pg-history">
+                <ActivityGroups items={items} onOpen={open} />
+              </div>
+              {activity.isFetchNextPageError && (
+                <>
+                  <ErrorBox error={activity.error} />
+                  <button className="secondary pg-more" type="button" onClick={() => activity.fetchNextPage()}>{t.retryNext}</button>
+                </>
+              )}
+              {activity.hasNextPage && !activity.isFetchNextPageError && (
+                <button className="secondary pg-more" type="button" disabled={activity.isFetchingNextPage} onClick={() => activity.fetchNextPage()}>
+                  {activity.isFetchingNextPage ? t.loadingShort : t.older}
+                </button>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Course Detail Modal (Drilldown) */}
+      {selectedCourse && <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />}
+      {sheet.length > 0 && (
+        <EvidenceSheet onClose={close} onBack={sheet.length > 1 ? back : undefined}>
+          <SheetContent view={sheet.at(-1)!} push={push} />
+        </EvidenceSheet>
+      )}
+    </div>
+  );
 }

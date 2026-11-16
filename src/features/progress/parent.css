@@ -1,0 +1,125 @@
+/* Hallmark · checked: 2026-11-16 · theme: custom (NexaLab identity, see src/identity.css) · scope: app · genre: modern-minimal */
+/* critique: a parent asks "is my child fine and what do I have to do"; ink for the answer, the one pink only for what needs them, no badges, no boxes in boxes */
+/* built: the project · redesign: parent home and linked-child progress · v2.0.0 */
+
+/*
+ * Parent screens. Sections are headings on the page; the only cards are a child and a lab, because those are things.
+ * State is a word: "Quá hạn", "Chưa xác minh". Readings are Lexend values with their unit beneath.
+ */
+
+.pp-page { display: grid; gap: 28px; min-width: 0; }
+.pp-page > * { min-width: 0; }
+.pp-section { display: grid; gap: 14px; min-width: 0; }
+.pp-section > h2, .pp-section-head h2 { margin: 0; font-size: 20px; line-height: 1.25; color: var(--nx-ink); text-wrap: balance; }
+.pp-section-head p { margin: 4px 0 0; font-size: 14px; max-width: 64ch; color: var(--muted); }
+.pp-signal-head { color: var(--nx-signal) !important; }
+.pp-lede { margin: 0; max-width: 62ch; font-size: 17px; line-height: 1.55; color: var(--nx-ink); }
+.pp-note { margin: 0; max-width: 70ch; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.pp-btn { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 38px; padding: 0 16px; border-radius: 10px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+
+/* Home: a card per child */
+.pp-children { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.pp-child { display: grid; gap: 16px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color 140ms ease; }
+.pp-child:hover { border-color: var(--nx-ink); }
+.pp-child header h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; color: var(--nx-ink); }
+.pp-child header p { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); }
+.pp-readings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; border-block: 1px solid var(--line); }
+.pp-readings > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 6px; padding: 14px 0 14px 12px; border-inline-start: 1px solid var(--line); }
+.pp-readings > div:first-child { padding-inline-start: 0; border-inline-start: 0; }
+.pp-readings dt { font-size: 12.5px; line-height: 1.3; color: var(--muted); }
+.pp-readings dd { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--nx-ink); }
+.pp-readings .is-signal dd { color: var(--nx-signal); }
+
+/* Checks the parent has to finish */
+.pp-checks { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.pp-checks li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+.pp-checks .is-ok span { color: var(--nx-ink); }
+.pp-checks .is-todo span { color: var(--nx-signal); font-weight: 600; }
+.pp-text-btn { margin: 0; padding: 0; min-height: 0; min-width: 0; border: 0; background: none; box-shadow: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--brand); cursor: pointer; text-underline-offset: 3px; }
+.pp-text-btn:hover { text-decoration: underline; background: none; transform: none; box-shadow: none; }
+.pp-text-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+.pp-text-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Linked children: pick one; unlinking is a quiet text action beside the name */
+.pp-picker { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 0; padding: 0; list-style: none; }
+.pp-picker li { display: inline-flex; align-items: center; gap: 4px; padding-inline-end: 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); transition: border-color 140ms ease; }
+.pp-picker li.is-active { border-color: var(--nx-ink); }
+.pp-pick { margin: 0; min-height: 40px; padding: 0 6px 0 16px; border: 0; background: transparent; box-shadow: none; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--nx-ink); cursor: pointer; border-radius: 999px; }
+.pp-pick:hover { background: transparent; transform: none; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
+.pp-pick:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.pp-picker .pp-text-btn { color: var(--muted); font-weight: 500; font-size: 13px; }
+.pp-picker .pp-text-btn:hover { color: var(--nx-signal); }
+.pp-link-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; max-width: 520px; }
+.pp-link-form > * { min-width: 0; }
+.pp-link-form label { flex: 1 1 220px; }
+
+/* Overdue notices */
+.pp-rows { display: grid; border-top: 1px solid var(--line); }
+.pp-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.pp-row > div { min-width: 0; display: grid; gap: 2px; }
+.pp-row b { font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.pp-row small { font-size: 13px; color: var(--muted); }
+.pp-row > .pp-row-end { display: inline-flex; align-items: center; gap: 16px; flex: none; }
+.pp-row-state { font-size: 13.5px; font-weight: 600; color: var(--nx-signal); }
+
+/* Hints asked, per lab: the total, then five readings */
+.pp-hints { display: grid; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.pp-hint-lab { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.pp-hint-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.pp-hint-head b { font-size: 15.5px; font-weight: 650; overflow-wrap: anywhere; }
+.pp-hint-total { font-family: var(--font-display); font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--nx-ink); }
+.pp-levels { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px 16px; }
+.pp-levels > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; }
+.pp-levels dt { font-size: 12.5px; line-height: 1.3; color: var(--muted); }
+.pp-levels dd { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--nx-ink); }
+.pp-hint-last { font-size: 13px; color: var(--muted); }
+
+/* A lab: one card each */
+.pp-labs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.pp-lab { display: grid; gap: 12px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); transition: border-color 140ms ease; }
+.pp-lab:hover { border-color: var(--nx-ink); }
+.pp-lab h3 { margin: 0; font-size: 16px; font-weight: 650; line-height: 1.3; }
+.pp-lab-state { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.pp-lab-state.is-done { color: var(--nx-ink); }
+.pp-lab-state.is-doing { color: var(--brand); }
+.pp-lab .progress-track { height: 6px; margin: 0; border-radius: 999px; background: var(--fill-neutral-92); overflow: hidden; }
+.pp-lab .progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+.pp-lab-score { margin: 0; }
+.pp-lab-score .nx-value { font-size: 30px; }
+.pp-lab small { font-size: 13px; color: var(--muted); }
+
+/* History */
+.pp-table-wrap { overflow-x: auto; }
+.pp-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pp-table th { padding: 8px 12px 8px 0; text-align: start; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); border-bottom: 1px solid var(--line); }
+.pp-table td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.pp-table td:last-child, .pp-table th:last-child { padding-inline-end: 0; text-align: end; }
+.pp-result { font-weight: 600; color: var(--muted); }
+.pp-result.is-passed { color: var(--nx-ink); }
+.pp-result.is-partial { color: var(--brand); }
+.pp-result.is-failed { color: var(--nx-signal); }
+
+.pp-skeleton-stack { display: grid; gap: 20px; }
+.pp-skeleton .pp-child.sk-card header, .pp-skeleton .pp-child > div:first-child { display: grid; gap: 8px; }
+.pp-skeleton .pp-readings > div { gap: 8px; }
+.pp-row.sk-card { background: transparent; border-inline: 0; border-top: 0; border-radius: 0; }
+
+@media (max-width: 640px) {
+  .pp-page { gap: 22px; }
+  .pp-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .pp-table thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  .pp-table, .pp-table tbody { display: block; }
+  .pp-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .pp-table td { display: block; padding: 0; border: 0; }
+  .pp-table td:first-child { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+  .pp-table td:nth-child(2) { grid-column: 1; }
+  .pp-table td:nth-child(3) { grid-column: 2; grid-row: 2; text-align: end; }
+  .pp-table td:nth-child(4) { grid-column: 1; text-align: start; font-size: 13px; color: var(--muted); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-child, .pp-lab, .pp-picker li { transition: none; }
+}
+
+.pp-sub { margin: 0 0 6px; font-size: 15px; font-weight: 650; }
+.pp-plain { margin: 0 0 6px; padding-inline-start: 18px; font-size: 14.5px; }

@@ -14,6 +14,12 @@ const activity = { id: "pav-1", key: "k", version: 2, digest: "d" };
 const exploreRow = (id: string, title: string, config: unknown) => ({ id, title, mode: "explore", explore: { ok: true, kit: "k2-wet-bench@1", engine: "wet-bench@1.0.0", activity, config } });
 const rows = [exploreRow("acid-base-indicators", "Acid – base, chỉ thị và pH", fl13Config), exploreRow("metal-reactivity", "Kim loại tác dụng với acid và muối", fl14aConfig)];
 
+// The Kits sit in a rail at the top of /labs; a click (or hover, or Enter) opens one Kit's list.
+async function openKit(page: Page, name: string) {
+  await page.getByRole("button", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("region", { name })).toBeVisible();
+}
+
 async function open(page: Page, user: typeof student | typeof admin, labs: unknown[], path = "/labs") {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/auth/refresh", (route) => route.fulfill({ json: { user, accessToken: "mock" } }));
@@ -27,10 +33,15 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   await open(page, student, rows);
   const section = page.getByTestId("kit-components");
   await expect(section.getByRole("heading", { name: "Dụng cụ theo bộ Kit" })).toBeVisible();
+  // At the top of the page, above the Lab cards, and closed until a Kit is chosen.
+  const railTop = await section.evaluate((node) => node.getBoundingClientRect().top);
+  const firstCardTop = await page.locator(".lab-library-item").first().evaluate((node) => node.getBoundingClientRect().top);
+  expect(railTop).toBeLessThan(firstCardTop);
+  await expect(section.getByTestId("kit-group")).toHaveCount(0);
+  await expect(section.getByRole("button", { name: /Kit Hóa học/ })).toContainText("19 dụng cụ");
+  await openKit(page, "Kit Hóa học");
   const kit = section.getByTestId("kit-group");
   await expect(kit).toHaveCount(1);
-  await expect(kit.getByRole("heading", { name: "Kit Hóa học" })).toBeVisible();
-  await expect(kit).toContainText("2 bài");
   await expect(kit.getByRole("heading", { name: /^Dụng cụ đo/ })).toBeVisible();
 
   // One card per kind, named after the kind, not after one Lab's instance ("Ống nghiệm", not "Ống nghiệm × 6").
@@ -82,6 +93,7 @@ test("Physics previews cover pressure and lens models and keep each screen on a 
       ["screen", "screen"], ["loupe", "magnifier"], ["grid", "grid"],
     ], "thin-lens"),
   ]);
+  await openKit(page, "Kit Vật lý");
   const physics = page.getByRole("region", { name: "Kit Vật lý" });
   await expect(physics.locator(".kit-card")).toHaveCount(14);
   await expect(physics.locator(".kit-card img")).toHaveCount(11);
@@ -120,6 +132,7 @@ test("a teacher can open the apparatus catalog from Class Lab", async ({ page })
 
 test("?debug=1 shows the renderer and shared item behind each entry", async ({ page }) => {
   await open(page, student, rows, "/labs?debug=1");
+  await openKit(page, "Kit Hóa học");
   const kit = page.getByTestId("kit-group");
   await expect(kit.locator('[data-key="beaker_100ml"] [data-testid="kit-debug"]')).toContainText("renderer: beaker_100ml · item chung: beaker");
   await expect(kit.locator('[data-key="test_tube"] [data-testid="kit-debug"]')).toContainText("renderer: test_tube · riêng của bàn");
@@ -128,6 +141,7 @@ test("?debug=1 shows the renderer and shared item behind each entry", async ({ p
 
 test("an admin sees the ids without asking", async ({ page }) => {
   await open(page, admin, rows);
+  await openKit(page, "Kit Hóa học");
   await expect(page.getByTestId("kit-debug").first()).toBeVisible();
 });
 
@@ -135,4 +149,30 @@ test("nothing is shown while no Explore lab is published", async ({ page }) => {
   await open(page, student, [{ id: "circuit", title: "Mạch điện", mode: "guided" }]);
   await expect(page.getByRole("heading", { name: "Phòng thí nghiệm" }).first()).toBeVisible();
   await expect(page.getByTestId("kit-components")).toHaveCount(0);
+});
+
+test("the Kit rail opens on hover and keyboard, and closes on Escape or a click outside", async ({ page }) => {
+  await open(page, student, rows);
+  const button = page.getByRole("button", { name: /Kit Hóa học/ });
+  const panel = page.getByRole("region", { name: "Kit Hóa học" });
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  // Hover previews, and leaving closes it again.
+  await button.hover();
+  await expect(panel).toBeVisible();
+  await expect(button).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("heading", { name: "Phòng thí nghiệm" }).first().hover();
+  await expect(panel).toBeHidden();
+  // Keyboard: Enter opens, Escape closes and keeps focus on the button.
+  await button.focus();
+  await page.keyboard.press("Enter");
+  await expect(panel).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(button).toBeFocused();
+  // Click pins it open (the pointer can leave); a click elsewhere closes it.
+  await button.click();
+  await page.getByRole("heading", { name: "Phòng thí nghiệm" }).first().hover();
+  await expect(panel).toBeVisible();
+  await page.getByRole("heading", { name: "Phòng thí nghiệm" }).first().click();
+  await expect(panel).toBeHidden();
 });
