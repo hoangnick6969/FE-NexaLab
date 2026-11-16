@@ -332,7 +332,7 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
                 <span className="lab-subject">{l.subject}</span>
                 <span className="art-number">{l.number}</span>
                 <div className="art-symbol">
-                  {l.id === "circuit" ? <Zap size={34} strokeWidth={1.75} /> : l.id === "eye" ? <Eye size={34} strokeWidth={1.75} /> : l.id === "em-induction" ? <Magnet size={34} strokeWidth={1.75} /> : l.id === "density" || l.id === "mass-conservation" ? <Scale size={34} strokeWidth={1.75} /> : l.id === "gene-protein" ? <Dna size={34} strokeWidth={1.75} /> : l.id === "ecology-tolerance" ? <Fish size={34} strokeWidth={1.75} /> : l.id === "food-web" ? <Network size={34} strokeWidth={1.75} /> : <FlaskConical size={34} strokeWidth={1.75} />}
+                  {l.artId === "circuit" ? <Zap size={34} strokeWidth={1.75} /> : l.artId === "eye" || l.artId === "eye-optics" ? <Eye size={34} strokeWidth={1.75} /> : l.artId === "em-induction" ? <Magnet size={34} strokeWidth={1.75} /> : l.artId === "density" || l.artId === "mass-conservation" ? <Scale size={34} strokeWidth={1.75} /> : l.artId === "gene-protein" ? <Dna size={34} strokeWidth={1.75} /> : l.artId === "ecology-tolerance" ? <Fish size={34} strokeWidth={1.75} /> : l.artId === "food-web" ? <Network size={34} strokeWidth={1.75} /> : <FlaskConical size={34} strokeWidth={1.75} />}
                 </div>
                 <span className="art-caption">NEXALAB / EXPERIMENT {l.number}</span>
               </div>

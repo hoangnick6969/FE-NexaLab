@@ -7,7 +7,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, idempotencyKey, isApiError, mutate } from "../../../lib/api";
 import { Field, Modal } from "../../../components/ui";
 import { defineText, formatDateTime } from "../../../i18n";
-import { exploreBench, type ClassDerivation } from "../../labs/runtime/explore-registry";
+import { classItemLabels, exploreBench, type ClassDerivation } from "../../labs/runtime/explore-registry";
+import { measureText, type ExploreRequirement } from "../../labs/class-explore/class-explore";
 import type { ClassSummary } from "../class-types";
 import { LoadError } from "../class-ui";
 
@@ -15,12 +16,11 @@ const text = defineText({
   vi: {
     title: "Giao bài Explore", lab: "Phòng thí nghiệm", chooseLab: "Chọn Lab Explore",
     none: "Chưa có Lab Explore nào có mẫu cho lớp. Mẫu xuất hiện khi NexaLab phát hành phiên bản mới của Lab.",
-    template: "Mẫu", pickCount: (picked: number, count: number) => `Chọn đúng ${count} (đã chọn ${picked})`,
-    prompt: "Câu hỏi cho học sinh", promptNeeds: (names: string) => `Chỉ dùng khi chọn đúng ${names}`,
+    template: "Mẫu",
     lesson: "Bài học liên quan", chooseLesson: "Chọn bài học", noLesson: "Chưa có bài học cùng khối để gắn bài này.",
     instructions: "Lời dặn cho học sinh (không bắt buộc)", taskName: "Tên bài giao", due: "Hạn nộp (không bắt buộc)",
     audience: (n: number) => `Giao cho cả lớp`, previewHeading: "Học sinh sẽ nhận", requirements: "Yêu cầu nộp",
-    measure: (name: string) => `Số đo pH của ${name}`, explain: "Một lời giải thích", items: "Dụng cụ và hoá chất trên bàn", question: "Câu hỏi",
+    explain: "Một lời giải thích", items: "Dụng cụ và hoá chất trên bàn", question: "Câu hỏi",
     openBench: "Mở bàn xem trước", previewNote: "Xem trước: đây là bàn học sinh sẽ mở. Số em đo ở đây không được lưu.",
     cancel: "Hủy", assign: "Lưu và giao bài", assigning: "Đang giao…",
     selectionInvalid: "Lựa chọn chưa hợp lệ", failed: "Chưa giao được bài.", retryKept: "Bài nháp đã lưu; bấm giao lại sẽ dùng tiếp, không tạo bản mới.",
@@ -29,12 +29,11 @@ const text = defineText({
   en: {
     title: "Assign an Explore lab", lab: "Lab", chooseLab: "Choose an Explore lab",
     none: "No Explore lab has a class template yet. Templates appear when NexaLab publishes a new version of the Lab.",
-    template: "Template", pickCount: (picked: number, count: number) => `Pick exactly ${count} (${picked} picked)`,
-    prompt: "Question for students", promptNeeds: (names: string) => `Only when exactly ${names} are picked`,
+    template: "Template",
     lesson: "Related lesson", chooseLesson: "Choose a lesson", noLesson: "There is no lesson of this grade to attach this to.",
     instructions: "Note for students (optional)", taskName: "Assignment name", due: "Due (optional)",
     audience: () => "Assign to the whole class", previewHeading: "Students will get", requirements: "What they hand in",
-    measure: (name: string) => `pH of ${name}`, explain: "One explanation", items: "Apparatus and reagents on the bench", question: "Question",
+    explain: "One explanation", items: "Apparatus and reagents on the bench", question: "Question",
     openBench: "Open the bench preview", previewNote: "Preview: this is the bench students open. Readings taken here are not saved.",
     cancel: "Cancel", assign: "Save and assign", assigning: "Assigning…",
     selectionInvalid: "This selection is not valid", failed: "Could not assign.", retryKept: "The draft was saved; assigning again reuses it and creates no new one.",
@@ -43,14 +42,14 @@ const text = defineText({
 });
 
 type LabRow = { id: string; title: string; mode: string; explore?: { ok: true; kit: string; config: any } | { ok: false } };
-type Template = { id: string; titleVi: string; reagentGroups: Array<{ id: string; labelVi: string; options: string[]; count: number }>; promptChoices: Array<{ promptId: string; onlyWithReagents?: string[] }> };
+type Template = { id: string; titleVi: string };
 
 export function ExploreAssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void }) {
   const t = text();
   const labs = useQuery<LabRow[]>({ queryKey: ["labs"], queryFn: () => api("/labs") });
   const content = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; labId?: string | null }> }>({ queryKey: ["assignable", classroom.id], queryFn: () => api(`/classes/${classroom.id}/assignable-content`) });
   const candidates = (labs.data ?? []).filter((row): row is LabRow & { explore: { ok: true; kit: string; config: any } } =>
-    row.mode === "explore" && row.explore?.ok === true && Boolean(row.explore.config?.classTemplates?.length) && Boolean(exploreBench(row.explore.kit)?.deriveClass));
+    row.mode === "explore" && row.explore?.ok === true && Boolean(row.explore.config?.classTemplates?.length) && Boolean(exploreBench(row.explore.kit)?.deriveClass) && Boolean(exploreBench(row.explore.kit)?.ClassTemplateForm));
 
   const [labId, setLabId] = useState("");
   const lab = candidates.find((row) => row.id === labId) ?? candidates[0];
@@ -73,29 +72,26 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
   const templates: Template[] = config.classTemplates;
   const [templateId, setTemplateId] = useState(templates[0].id);
   const template = templates.find((item) => item.id === templateId) ?? templates[0];
-  const [picks, setPicks] = useState<Record<string, string[]>>({});
-  const [promptId, setPromptId] = useState("");
+  const [choice, setChoice] = useState<{ selection: Record<string, unknown> | null; summary: string }>({ selection: null, summary: "" });
   const [instructions, setInstructions] = useState("");
   const [lessonId, setLessonId] = useState("");
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const materialLabels = useMemo(() => Object.fromEntries(bench.listKitItems(config).filter((item) => item.category === "material").map((item) => [item.id, item.labelVi])) as Record<string, string>, [bench, config]);
+  const labels = useMemo(() => classItemLabels(config), [config]);
+  const words = measureText();
   const promptText = (id: string) => config.pedagogy?.observationPrompts?.find((prompt: any) => prompt.id === id)?.textVi ?? id;
-  const chosen = new Set(Object.values(picks).flat());
-  const available = (choice: Template["promptChoices"][number]) => (choice.onlyWithReagents ?? []).every((id) => chosen.has(id));
-  const complete = template.reagentGroups.every((group) => (picks[group.id]?.length ?? 0) === group.count);
-  const effectivePrompt = template.promptChoices.find((choice) => choice.promptId === promptId && available(choice)) ? promptId : "";
-  const selection = { templateId: template.id, reagents: Object.fromEntries(template.reagentGroups.map((group) => [group.id, picks[group.id] ?? []])), promptId: effectivePrompt };
-  const derived: ClassDerivation | null = useMemo(() => (complete && effectivePrompt && bench.deriveClass ? bench.deriveClass(config, selection) : null), [bench, config, complete, effectivePrompt, JSON.stringify(selection)]);
+  const selection = choice.selection;
+  const derived: ClassDerivation | null = useMemo(() => (selection && bench.deriveClass ? bench.deriveClass(config, selection) : null), [bench, config, JSON.stringify(selection)]);
+  const asked = (item: ExploreRequirement) => (item.kind === "measure" ? words[item.measurement].asked(labels[item.itemId] ?? item.itemId) : t.explain);
+  const TemplateForm = bench.ClassTemplateForm!;
 
   const matchingLessons = lessons.filter((lesson) => lesson.grade === classroom.grade);
   const defaultLesson = (matchingLessons.find((lesson) => lesson.labId === lab.id) ?? matchingLessons[0])?.id ?? "";
   const lesson = lessonId || defaultLesson;
-  const sampleNames = template.reagentGroups.flatMap((group) => picks[group.id] ?? []).map((id) => materialLabels[id] ?? id);
   const stamp = useRef(formatDateTime(new Date())).current;
-  const name = title.trim() || `${lab.title}: ${sampleNames.join(" và ") || template.titleVi} · ${stamp}`;
+  const name = title.trim() || `${lab.title}: ${choice.summary || template.titleVi} · ${stamp}`;
 
   const ClassPage = useMemo(() => (bench.loadClassPage ? lazy(bench.loadClassPage) : null), [bench]);
   const resourceKey = useRef(idempotencyKey());
@@ -121,10 +117,6 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
     onSuccess: (data) => onAssigned(data.message),
   });
 
-  const toggle = (groupId: string, id: string, count: number) => setPicks((current) => {
-    const now = current[groupId] ?? [];
-    return { ...current, [groupId]: now.includes(id) ? now.filter((item) => item !== id) : now.length < count ? [...now, id] : now };
-  });
   const failure = run.error;
   const canAssign = Boolean(derived?.ok) && Boolean(lesson) && !run.isPending;
 
@@ -134,32 +126,11 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
     </label>}
     {templates.length > 1
       ? <label className="field"><span>{t.template}</span>
-        <select value={template.id} onChange={(event) => { setTemplateId(event.target.value); setPicks({}); setPromptId(""); }}>{templates.map((item) => <option key={item.id} value={item.id}>{item.titleVi}</option>)}</select>
+        <select value={template.id} onChange={(event) => { setTemplateId(event.target.value); setChoice({ selection: null, summary: "" }); }}>{templates.map((item) => <option key={item.id} value={item.id}>{item.titleVi}</option>)}</select>
       </label>
       : <p><strong>{lab.title}</strong> · {template.titleVi}</p>}
 
-    {template.reagentGroups.map((group) => <fieldset className="segmented" key={group.id} aria-label={group.labelVi}>
-      <legend>{group.labelVi} <span className="tiny muted">{t.pickCount(picks[group.id]?.length ?? 0, group.count)}</span></legend>
-      {group.options.map((id) => {
-        const on = (picks[group.id] ?? []).includes(id);
-        const full = (picks[group.id]?.length ?? 0) >= group.count;
-        return <label className="check" key={id}>
-          <input type="checkbox" checked={on} disabled={!on && full} onChange={() => toggle(group.id, id, group.count)} />
-          {materialLabels[id] ?? id}
-        </label>;
-      })}
-    </fieldset>)}
-
-    <fieldset className="segmented" aria-label={t.prompt}>
-      <legend>{t.prompt}</legend>
-      {template.promptChoices.map((choice) => {
-        const ok = available(choice);
-        return <label className="check" key={choice.promptId}>
-          <input type="radio" name="explore-prompt" checked={effectivePrompt === choice.promptId} disabled={!ok} onChange={() => setPromptId(choice.promptId)} />
-          <span>{promptText(choice.promptId)}{!ok && choice.onlyWithReagents && <em className="tiny muted"> ({t.promptNeeds(choice.onlyWithReagents.map((id) => materialLabels[id] ?? id).join(" · "))})</em>}</span>
-        </label>;
-      })}
-    </fieldset>
+    <TemplateForm key={template.id} config={config} template={template} labels={labels} onChange={setChoice} />
 
     <label className="field"><span>{t.instructions}</span><textarea rows={3} maxLength={10000} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
     <label className="field"><span>{t.lesson}</span>
@@ -178,14 +149,14 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
       <h3>{t.previewHeading}</h3>
       <h4>{t.question}</h4><p>{promptText(derived.promptId)}</p>
       <h4>{t.requirements}</h4>
-      <ul>{derived.requirements.map((item, index) => <li key={index}>{item.kind === "measure" ? t.measure(materialLabels[item.itemId] ?? item.itemId) : t.explain}</li>)}</ul>
+      <ul>{derived.requirements.map((item, index) => <li key={index}>{asked(item)}</li>)}</ul>
       <h4>{t.items}</h4>
       <p className="tiny" data-testid="explore-preview-items">{bench.listKitItems(derived.config).map((item) => item.labelVi).join(" · ")}</p>
       {ClassPage && <button type="button" className="secondary" onClick={() => setPreviewOpen(true)}>{t.openBench}</button>}
     </section>}
     {previewOpen && derived?.ok && ClassPage && <Suspense fallback={<p role="status">{t.loading}</p>}>
       <ClassPage title={lab.title} config={derived.config} storageKey={`preview:${classroom.id}:${lab.id}:${template.id}`} onExit={() => setPreviewOpen(false)}
-        classSection={<section className="class-lab-instructions"><p>{t.previewNote}</p>{derived.requirements.map((item, index) => <p key={index} className="tiny">{item.kind === "measure" ? t.measure(materialLabels[item.itemId] ?? item.itemId) : t.explain}</p>)}</section>} />
+        classSection={<section className="class-lab-instructions"><p>{t.previewNote}</p>{derived.requirements.map((item, index) => <p key={index} className="tiny">{asked(item)}</p>)}</section>} />
     </Suspense>}
 
     {failure && <div className="error" role="alert">

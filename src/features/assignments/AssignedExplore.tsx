@@ -1,18 +1,19 @@
 import { Link } from "react-router-dom";
 import { defineText, formatDateTime } from "../../i18n";
-import { formatTenthsPh, type ExploreAssignmentView } from "../labs/class-explore/class-explore";
+import { answerValue, formatMeasure, measureText, unitOf, type ExploreAssignmentView } from "../labs/class-explore/class-explore";
+import { classItemLabels } from "../labs/runtime/explore-registry";
 
 const text = defineText({
   vi: {
     eyebrow: "BÀI THỰC HÀNH CỦA LỚP", due: "Hạn nộp", noDue: "Không có hạn nộp", note: "Lời dặn của giáo viên",
-    asks: "Em cần làm", measure: "Đo pH của hai mẫu và ghi số đo", explain: "Viết lời giải thích",
+    asks: "Em cần làm", explain: "Viết lời giải thích",
     status: { none: "Chưa nộp", SUBMITTED: "Đã nộp, chờ giáo viên nhận xét", REVIEWED: "Giáo viên đã nhận xét" }, late: "Nộp trễ",
     open: "Mở bàn thí nghiệm", openAgain: "Xem lại bàn thí nghiệm", feedback: "Nhận xét của giáo viên", values: "Số đo em đã nộp",
     noScore: "Bài này không chấm điểm và không tính vào tiến độ.",
   },
   en: {
     eyebrow: "CLASS PRACTICAL", due: "Due", noDue: "No due date", note: "Teacher's note",
-    asks: "What to do", measure: "Measure the pH of two samples and write the readings", explain: "Write an explanation",
+    asks: "What to do", explain: "Write an explanation",
     status: { none: "Not submitted", SUBMITTED: "Submitted, waiting for your teacher", REVIEWED: "Your teacher has commented" }, late: "Late",
     open: "Open the bench", openAgain: "Look at the bench again", feedback: "Teacher's comment", values: "Your submitted values",
     noScore: "This work is not graded and does not count towards progress.",
@@ -23,7 +24,9 @@ const text = defineText({
 export function AssignedExplore({ assignment }: { assignment: ExploreAssignmentView & { content?: { title?: string } } }) {
   const t = text();
   const { snapshot, submission } = assignment.explore;
-  const measures = snapshot.requirements.filter((item) => item.kind === "measure").length;
+  const labels = classItemLabels(snapshot.effectiveConfig);
+  const words = measureText();
+  const measures = snapshot.requirements.flatMap((item) => (item.kind === "measure" ? [item] : []));
   const explains = snapshot.requirements.some((item) => item.kind === "explain");
   const status = (submission ? t.status[submission.status] : t.status.none) + (submission?.late ? ` · ${t.late}` : "");
   return <div className="student-assigned-learning">
@@ -34,13 +37,13 @@ export function AssignedExplore({ assignment }: { assignment: ExploreAssignmentV
       {snapshot.instructions && <><h2>{t.note}</h2><p>{snapshot.instructions}</p></>}
       <h2>{t.asks}</h2>
       <ul>
-        {measures > 0 && <li>{t.measure}</li>}
+        {measures.map((item) => <li key={item.itemId}>{words[item.measurement].asked(labels[item.itemId] ?? item.itemId)}</li>)}
         {explains && <li>{t.explain}</li>}
       </ul>
       <p role="status" data-testid="explore-status"><strong>{status}</strong></p>
       {submission && <>
         <h2>{t.values}</h2>
-        <ul>{submission.answers.measures.map((item) => <li key={item.itemId}>{item.itemId}: <b>{formatTenthsPh(item.tenthsPh)}</b></li>)}</ul>
+        <ul>{submission.answers.measures.map((item) => <li key={item.itemId}>{labels[item.itemId] ?? item.itemId}: <b>{formatMeasure(unitOf(snapshot.requirements, item.itemId), answerValue(item))}</b></li>)}</ul>
         {submission.feedback && <><h2>{t.feedback}</h2><p data-testid="explore-feedback">{submission.feedback}</p></>}
       </>}
       <p className="tiny muted">{t.noScore}</p>

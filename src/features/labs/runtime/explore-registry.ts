@@ -4,16 +4,24 @@
  */
 import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
-import { validateLeverLabConfig } from "@nexalab/sim/mechanics";
-import { SAFETY_SCENARIO_KIT, validateSafetyScenarioConfig } from "@nexalab/sim/safety-scenario";
-import { deriveWetBenchEffectiveConfig, validateChemistryLabConfig, type ClassSelection } from "@nexalab/sim/wet-bench";
+import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim/mechanics";
+import { validateFluidLabConfig } from "@nexalab/sim/fluid";
+import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
+import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
+import { SAFETY_SCENARIO_KIT, validateSafetyScenarioConfig } from "@nexalab/sim/safety-scenario";
 import { listSafetyKitItems } from "../chemistry/safety/kit-items";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
+import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
+import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
 import { fixtureBench } from "./fixture-bench";
+import { mendelBench } from "../biology/genetics/mendel-bench";
+import { dioramaBench } from "../biology/ecology/diorama-bench";
+import { molecularBench } from "../biology/molecular/molecular-bench";
+import { anatomyBench } from "../biology/anatomy/anatomy-bench";
 import type { ExploreRequirement } from "../class-explore/class-explore";
 
 /** One thing on a bench as students and teachers see it (C2.1 fields; `safety` only for materials). */
@@ -35,6 +43,14 @@ export type ClassExplorePageProps = { title: string; config: any; storageKey: st
 export type ClassDerivation =
   | { ok: true; config: any; requirements: ExploreRequirement[]; templateId: string; promptId: string }
   | { ok: false; errors: string[] };
+/**
+ * The teacher's choices inside one template. Reports `selection` (ids and values only, `null` until complete) and a short
+ * `summary` used in the default assignment name.
+ */
+export type ClassTemplateFormProps = {
+  config: any; template: any; labels: Record<string, string>;
+  onChange: (value: { selection: Record<string, unknown> | null; summary: string }) => void;
+};
 export type ExploreBenchEntry = {
   kit: string;
   /** The subject Kit this bench belongs to (§2.1). */
@@ -44,11 +60,19 @@ export type ExploreBenchEntry = {
   /** Items exactly as configured; the intro panel and the teacher picker read this. */
   listKitItems: (config: any) => KitItem[];
   /** Class Explore (P0 C3): benches without these have no templates yet. */
-  deriveClass?: (config: any, selection: ClassSelection) => ClassDerivation;
+  deriveClass?: (config: any, selection: unknown) => ClassDerivation;
   loadClassPage?: () => Promise<{ default: ComponentType<ClassExplorePageProps> }>;
+  /** The form a teacher picks with inside one of the bench's templates. */
+  ClassTemplateForm?: ComponentType<ClassTemplateFormProps>;
+  /** Names of requirement items (`itemId` → label). Defaults to the materials of `listKitItems`. */
+  classItemLabels?: (config: any) => Record<string, string>;
 };
 
 const benches: ExploreBenchEntry[] = [
+  mendelBench,
+  dioramaBench,
+  molecularBench,
+  anatomyBench,
   {
     kit: "k2-wet-bench@1",
     group: "chemistry",
@@ -63,6 +87,9 @@ const benches: ExploreBenchEntry[] = [
       return checked.ok ? deriveWetBenchEffectiveConfig(checked.config, selection) : { ok: false, errors: checked.errors };
     },
     loadClassPage: () => import("../chemistry/wet-bench/kit/ClassExplorePage"),
+    ClassTemplateForm: WetBenchClassTemplateForm,
+    // Requirement items are reagents; their names do not depend on the config, so a board without one still reads them.
+    classItemLabels: () => Object.fromEntries(Object.values(REAGENTS).map((reagent) => [reagent.id, reagent.labelVi])),
   },
   {
     kit: "k5-lever-bench@1",
@@ -73,6 +100,24 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/mechanics/explore/LeverExploreLabPage"),
     listKitItems: listLeverKitItems,
+    deriveClass: (config, selection) => {
+      const checked = validateLeverLabConfig(config);
+      return checked.ok ? deriveLeverEffectiveConfig(checked.config, selection) : { ok: false, errors: checked.errors };
+    },
+    loadClassPage: () => import("../physics/mechanics/explore/LeverClassExplorePage"),
+    ClassTemplateForm: LeverClassTemplateForm,
+    classItemLabels: () => ({ "moment-left": "bên trái", "moment-right": "bên phải" }),
+  },
+  {
+    // FL-04 liquid pressure (D1-3.2). No Class Explore templates yet (spec fl-04-liquid-pressure-explore-spec.md §8).
+    kit: "k3-fluid-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateFluidLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/fluid/pressure/PressureExploreLabPage"),
+    listKitItems: listFluidKitItems,
   },
   {
     kit: SAFETY_SCENARIO_KIT,
@@ -88,3 +133,11 @@ if (import.meta.env?.DEV) benches.push(fixtureBench);
 const registry = new Map(benches.map((entry) => [entry.kit, entry]));
 
 export const exploreBench = (kit: string) => registry.get(kit);
+
+/** Labels for the items a Class Explore requirement names, from the bench of `config.kit`. */
+export function classItemLabels(config: any): Record<string, string> {
+  const bench = registry.get(config?.kit ?? "");
+  if (!bench) return {};
+  if (bench.classItemLabels) return bench.classItemLabels(config);
+  return Object.fromEntries(bench.listKitItems(config).filter((item) => item.category === "material").map((item) => [item.id, item.labelVi]));
+}
