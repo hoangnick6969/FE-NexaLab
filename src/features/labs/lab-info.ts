@@ -27,6 +27,7 @@ const text = defineText({
     foodWeb: { subject: "SINH HỌC", tag: "MÔ PHỎNG", title: "Lưới thức ăn", description: "Dựng chuỗi thức ăn, tính năng lượng qua các bậc và xem điều gì xảy ra khi một loài biến mất." },
     acidBase: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Acid – base, chỉ thị và pH", description: "Tự pha dung dịch, nhúng quỳ tím, nhỏ phenolphthalein và đo pH; quan sát màu đổi khi trung hoà." },
     metalReactivity: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Kim loại với acid và dung dịch muối", description: "Thả kẽm, sắt, đồng vào acid loãng và dung dịch CuSO₄ để so sánh mức độ hoạt động của kim loại." },
+    reactionRate: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Tốc độ phản ứng", description: "Cho đá vôi (viên hoặc bột) vào acid HCl, bấm giờ và đo khí thu được để so sánh tốc độ phản ứng theo nồng độ và dạng chất rắn." },
     solutionConcentration: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Dung dịch và nồng độ", description: "Tự tính khối lượng chất tan, cân, hòa tan và thêm nước đến vạch để pha dung dịch NaCl 0,10 M và CuSO₄ 5 %; rồi kiểm tra nồng độ thực." },
   },
   en: {
@@ -45,6 +46,7 @@ const text = defineText({
     foodWeb: { subject: "BIOLOGY", tag: "SIMULATION", title: "Food webs", description: "Build a food chain, follow energy through the levels and see what happens when a species disappears." },
     acidBase: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Acids, bases, indicators and pH", description: "Mix solutions, dip litmus paper, add phenolphthalein and measure pH; watch the colour change on neutralization." },
     metalReactivity: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Metals with acid and salt solutions", description: "Drop zinc, iron and copper into dilute acid and CuSO₄ solution to compare how reactive the metals are." },
+    reactionRate: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Reaction rate", description: "Drop limestone (chips or powder) into hydrochloric acid, time it and measure the gas collected to compare rates by concentration and by form of the solid." },
     solutionConcentration: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Solutions and concentration", description: "Work out the mass of solute, weigh, dissolve and fill to the mark to prepare 0.10 M NaCl and 5 % CuSO₄, then check the real concentration." },
   },
 });
@@ -105,6 +107,7 @@ const catalogEntries = [
   { id: "acid-base-indicators", ...t.acidBase, className: "chemistry", number: "12", grade: 8 },
   { id: "metal-reactivity", ...t.metalReactivity, className: "chemistry", number: "13", grade: 8 },
   { id: "solution-concentration", ...t.solutionConcentration, className: "chemistry", number: "14", grade: 8 },
+  { id: "reaction-rate", ...t.reactionRate, className: "chemistry", number: "15", grade: 8 },
 ];
 
 export const labInfo = catalogEntries.map((entry) => ({

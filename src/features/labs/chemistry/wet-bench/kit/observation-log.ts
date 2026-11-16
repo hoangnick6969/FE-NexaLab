@@ -10,9 +10,9 @@ export type ObservationLogEntry = {
   actionVi: string;
   phenomenaVi: string[];
   equations: string[];
-  readings: { ph?: string; litmus?: string; scale?: string; volume?: string };
+  readings: { ph?: string; litmus?: string; scale?: string; volume?: string; time?: string };
   reactions: string[];
-  measurement?: "ph_meter" | "litmus_paper" | "scale";
+  measurement?: "ph_meter" | "litmus_paper" | "scale" | "time";
   outOfScope?: boolean;
   /** Set on "add" lines so repeated identical additions to one vessel collapse into one line. */
   merge?: { key: string; microliters: number; label: string };
@@ -36,7 +36,12 @@ export const formatMilligrams = (milligrams: number) => `${comma(String(+(millig
 export const formatPercent = (tenths: number) => `${comma((tenths / 10).toFixed(1))} %`;
 export const formatMolar = (millimolar: number) => `${comma((millimolar / 1000).toFixed(3))} M`;
 
-export const PIECE_NAME: Record<string, string> = { granule: "hạt", chips: "viên", nail: "chiếc đinh", foil: "lá" };
+/** Stopwatch text: minutes and seconds of simulated time. */
+export const formatClock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+/** Gas volume from tenths of a millilitre. */
+export const formatGasMl = (tenths: number) => `${comma((tenths / 10).toFixed(1))} mL`;
+
+export const PIECE_NAME: Record<string, string> = { granule: "hạt", chips: "viên", nail: "chiếc đinh", foil: "lá", powder: "muỗng bột" };
 
 const BAND_VI = { colourless: "không màu", light_pink: "hồng nhạt", deep_pink: "hồng đậm", unknown: "chưa xác định" } as const;
 
