@@ -3,6 +3,7 @@ import DOMPurify from "dompurify";
 import { api, streamMaterial, type StudentLearningStep, type StudentPathway } from "../../lib/api";
 import { defineText } from "../../i18n";
 import { useActionToast } from "../../components/ActionToasts";
+import { YouTubePlayer, isWebPageLink, youtubeVideoId, type PlaybackSample } from "./youtube-player";
 
 const text = defineText({
   vi: {
@@ -11,6 +12,7 @@ const text = defineText({
     region: "Nội dung video",
     preparing: "Đang chuẩn bị video…",
     unsupported: "Trình duyệt không hỗ trợ phát video.",
+    openSourcePage: "Mở bài giảng ở trang nguồn",
     failedWithAlt: "Video hiện không phát được. Bạn vẫn có thể học bằng nội dung thay thế đã xuất bản.",
     failedNoAlt: "Video hiện không phát được. Hãy tải lại trang hoặc báo cho giáo viên.",
     hideTranscript: "Ẩn bản chép lời",
@@ -34,6 +36,7 @@ const text = defineText({
     region: "Video content",
     preparing: "Preparing the video…",
     unsupported: "This browser cannot play the video.",
+    openSourcePage: "Open the lesson video on its source page",
     failedWithAlt: "The video cannot play right now. You can still learn from the published alternative.",
     failedNoAlt: "The video cannot play right now. Reload the page or tell your teacher.",
     hideTranscript: "Hide transcript",
@@ -84,9 +87,14 @@ export function VideoLearningStep({
   const signedRef = useRef(false);
   const refreshesRef = useRef(0);
   const resumeRef = useRef<{ at: number; play: boolean } | null>(null);
+  // Lesson packs link most videos to YouTube or to a publisher page: neither can play in a <video> element, so YouTube
+  // uses the official embedded player and a web page gets a link to its source.
+  const youtubeId = youtubeVideoId(step.resource?.url);
+  const pageLink = !youtubeId && isWebPageLink(step.resource?.url) ? step.resource!.url! : null;
+  const fileSource = Boolean(step.resource?.url) && !youtubeId && !pageLink;
   const [source, setSource] = useState<string | null>(null);
-  const [sourceLoading, setSourceLoading] = useState(Boolean(step.resource?.url));
-  const [mediaUnavailable, setMediaUnavailable] = useState(!step.resource?.url);
+  const [sourceLoading, setSourceLoading] = useState(fileSource);
+  const [mediaUnavailable, setMediaUnavailable] = useState(!step.resource?.url || Boolean(pageLink));
   const [showTranscript, setShowTranscript] = useState(false);
   const [showEquivalent, setShowEquivalent] = useState(!step.resource?.url);
   const [localPosition, setLocalPosition] = useState<number>(step.lastPosition ?? 0);
@@ -99,10 +107,10 @@ export function VideoLearningStep({
   }, [step.lastPosition]);
 
   useEffect(() => {
-    if (!step.resource?.url) {
+    if (!step.resource?.url || youtubeId || pageLink) {
       setSource(null);
       setSourceLoading(false);
-      setMediaUnavailable(true);
+      setMediaUnavailable(!youtubeId);
       return;
     }
     let active = true;
@@ -174,7 +182,7 @@ export function VideoLearningStep({
     }
   };
 
-  const observe = (element: HTMLVideoElement, flush = false, ended = false) => {
+  const observe = (element: PlaybackSample, flush = false, ended = false) => {
     if (!Number.isFinite(element.currentTime) || !Number.isFinite(element.duration) || element.duration < 0)
       return;
     const durationSeconds = Math.min(86400, Math.max(0, Math.floor(element.duration)));
@@ -229,6 +237,18 @@ export function VideoLearningStep({
   return (
     <section className="video-learning" aria-label={t.region}>
       {sourceLoading && <p className="video-placeholder">{t.preparing}</p>}
+      {youtubeId && (
+        <YouTubePlayer
+          videoId={youtubeId}
+          title={step.resource?.title ?? t.region}
+          startSeconds={step.lastPosition ?? 0}
+          onSample={(sample, flush, ended) => observe(sample, flush, ended)}
+          onError={() => setMediaUnavailable(true)}
+        />
+      )}
+      {pageLink && (
+        <p className="video-source-link"><a className="secondary" href={pageLink} target="_blank" rel="noopener noreferrer">{t.openSourcePage}</a></p>
+      )}
       {source && (
         <video
           ref={videoRef}
