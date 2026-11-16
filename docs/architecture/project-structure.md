@@ -33,7 +33,7 @@ src/
 | `ebook` | `EbookReader` (textbook reader and annotations) |
 | `labs` | `Lab`/`LabLibrary` routes; `shared` fullscreen UI; `runtime` run host; `physics/<kit>` environments and models; `chemistry/<kit>`; `biology/<resource-or-kit>`; `pathways` lesson/assignment integration; discovery metadata |
 | `progress` | `ProgressPage` (student/parent), `StudentProgress`, `AssignmentProgress`, `ActivityList`, `EvidenceSheet`, `progress-format.ts` |
-| `classes` | `Classes` (role switch), `TeacherClasses`, `ClassDetail`, `Roster`, `Assignments` (assign/edit), `TestAssignments` (I3 late queue, reject, deadline revision, tracking), `ClassSpaceResources`, `PracticeAnalytics`, `StudentClasses`, `class-ui.tsx` (dialogs, mutation and load-error helpers), `class-types.ts` |
+| `classes` | `Classes` (role switch), `TeacherClasses`, `ClassDetail`, `Roster`, `Assignments` (assign/edit lessons, tests and other work), `ClassLabs` (the Class Lab page: the one place to assign and manage lab work, Guided or Explore; `AssignLabChooser` asks which kind, `explore/` has the Explore assign flow and the submissions board, `class-labs-view.ts` is the list filter), `AssignmentManage` (edit due date and archive, shared by Assign tab and Class Lab), `TestAssignments` (I3 late queue, reject, deadline revision, tracking), `ClassSpaceResources`, `PracticeAnalytics`, `StudentClasses`, `class-ui.tsx` (dialogs, mutation and load-error helpers), `class-types.ts` |
 | `admin` | `Admin` (tab shell) and one file per tab: `Overview`, `Users`, `Taxonomy`, `Content`, `Simulations`, `Assets`, `AuditExplorer`; `admin-ui.tsx` (labels, status, dialogs, paging) |
 | `landing`, `saved`, `settings` | Public landing page, saved experiments, account settings |
 

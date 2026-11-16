@@ -3,14 +3,14 @@ import { AssessmentBadge } from "./AssessmentControls";
 import { ASSESSMENT_DURATION, type AssessmentType } from "../assignments/assessment-timer";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { FlaskConical, BookOpen, ClipboardCheck, Edit3, Archive, Clock, Users, BarChart2, Plus } from "lucide-react";
-import { ExploreAssignModal } from "./explore/ExploreAssignModal";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { FlaskConical, BookOpen, ClipboardCheck, Archive, Clock, Users, BarChart2, Plus } from "lucide-react";
+import { AssignmentRowActions } from "./AssignmentManage";
 import { ExploreBoard } from "./explore/ExploreBoard";
 import { api, idempotencyKey } from "../../lib/api";
 import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
 import { type AssignableType, type ClassSummary, type Enrollment, type TeacherAssignment } from "./class-types";
-import { Confirm, LoadError, dueLabel, toLocalInput, useMutate } from "./class-ui";
+import { LoadError, dueLabel, useMutate } from "./class-ui";
 import { TestTracking } from "./TestAssignments";
 import { WrittenTracking } from "./WrittenGrading";
 import { defineText } from "../../i18n";
@@ -18,7 +18,7 @@ import { defineText } from "../../i18n";
 const text = defineText({
   vi: {
     types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận", explore_lab: "Thực hành Explore", exam: "Đề kiểm tra tổng hợp" },
-    assignExplore: "Giao bài Explore",
+    assignInClassLab: "Giao lab ở Class Lab",
     exploreSubmissions: "Xem bài nộp",
     students: (n: number) => `${n} học sinh`,
     group: " (nhóm)",
@@ -28,20 +28,11 @@ const text = defineText({
     overdue: "Quá hạn",
     trackSubmissions: "Theo dõi bài nộp",
     trackWritten: "Theo dõi và chấm bài",
-    edit: "Sửa",
-    archive: "Lưu trữ",
     assigned: "Bài đã giao",
     assign: "Giao bài",
     assignedList: "danh sách bài đã giao",
     noneActive: "Chưa có bài đang giao.",
     archivedCount: (n: number) => `Bài đã lưu trữ (${n})`,
-    editAssigned: "Sửa bài đã giao",
-    taskName: "Tên nhiệm vụ",
-    testLocked: "Hạn nộp và danh sách học sinh của bài kiểm tra được chốt khi giao.",
-    dueOptional: "Hạn nộp (có thể để trống)",
-    saveChanges: "Lưu thay đổi",
-    archiveAction: "lưu trữ bài",
-    archiveDetail: "Bài rời khỏi danh sách của học sinh. Kết quả học tập đã có vẫn còn trong lịch sử.",
     contentType: "Loại nội dung",
     lesson: "Bài học",
     labPractice: "Bài thực hành (lab)",
@@ -72,7 +63,7 @@ const text = defineText({
   },
   en: {
     types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task", explore_lab: "Explore practical", exam: "Composite exam" },
-    assignExplore: "Assign an Explore lab",
+    assignInClassLab: "Assign a lab in Class Lab",
     exploreSubmissions: "View submissions",
     students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
     group: " (group)",
@@ -82,20 +73,11 @@ const text = defineText({
     overdue: "Overdue",
     trackSubmissions: "Track submissions",
     trackWritten: "Track and grade",
-    edit: "Edit",
-    archive: "Archive",
     assigned: "Assigned work",
     assign: "Assign",
     assignedList: "the assigned work list",
     noneActive: "Nothing is assigned right now.",
     archivedCount: (n: number) => `Archived work (${n})`,
-    editAssigned: "Edit assigned work",
-    taskName: "Task name",
-    testLocked: "A test's due date and students are fixed when it is assigned.",
-    dueOptional: "Due date (optional)",
-    saveChanges: "Save changes",
-    archiveAction: "archive",
-    archiveDetail: "It leaves the students' list. Existing results stay in the history.",
     contentType: "Content type",
     lesson: "Lesson",
     labPractice: "Practice (lab)",
@@ -134,11 +116,8 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedLabAssignment = searchParams.get("assign") === "lab" && !archived;
   const [assigning, setAssigning] = useState(false);
-  const [editing, setEditing] = useState<TeacherAssignment | null>(null);
-  const [archiving, setArchiving] = useState<TeacherAssignment | null>(null);
   const [tracking, setTracking] = useState<TeacherAssignment | null>(null);
   const [writtenTracking, setWrittenTracking] = useState<TeacherAssignment | null>(null);
-  const [exploreAssigning, setExploreAssigning] = useState(false);
   const [exploreBoard, setExploreBoard] = useState<TeacherAssignment | null>(null);
   // TAI7-T3: class gradebook of a test or written assignment.
   const [gradebookOf, setGradebookOf] = useState<TeacherAssignment | null>(null);
@@ -149,7 +128,6 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
     queryKey: ["class-assignments", classroom.id],
     queryFn: () => api(`/classes/${classroom.id}/assignments`),
   });
-  const act = useMutate();
   useEffect(() => {
     if (requestedLabAssignment) setAssigning(true);
   }, [requestedLabAssignment]);
@@ -252,14 +230,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
           )}
           {a.status === "ACTIVE" && !archived && (
             <div className="button-row">
-              <button type="button" className="secondary button-compact" onClick={() => { act.reset(); setEditing(a); }}>
-                <Edit3 size={14} aria-hidden="true" />
-                <span>{t.edit}</span>
-              </button>
-              <button type="button" className="danger-text button-compact" onClick={() => { act.reset(); setArchiving(a); }}>
-                <Archive size={14} aria-hidden="true" />
-                <span>{t.archive}</span>
-              </button>
+              <AssignmentRowActions classroom={classroom} assignment={a} />
             </div>
           )}
         </div>
@@ -275,10 +246,10 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
         </div>
         {!archived && (
           <div className="button-row">
-            <button type="button" className="secondary button-compact" onClick={() => { setNotice(null); setExploreAssigning(true); }}>
+            <Link className="secondary button-compact" to={`/class-labs?classId=${encodeURIComponent(classroom.id)}&assign=choose`}>
               <FlaskConical size={15} aria-hidden="true" />
-              <span>{t.assignExplore}</span>
-            </button>
+              <span>{t.assignInClassLab}</span>
+            </Link>
             <button type="button" className="primary button-compact" onClick={() => { setNotice(null); setAssigning(true); }}>
               <Plus size={15} aria-hidden="true" />
               <span>{t.assign}</span>
@@ -303,13 +274,6 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
           </div>
         </details>
       )}
-      {exploreAssigning && (
-        <ExploreAssignModal
-          classroom={classroom}
-          onClose={() => setExploreAssigning(false)}
-          onAssigned={(message) => { setNotice(message); setExploreAssigning(false); }}
-        />
-      )}
       {exploreBoard && <ExploreBoard classroom={classroom} assignment={exploreBoard} onClose={() => setExploreBoard(null)} />}
       {assigning && (
         <AssignModal
@@ -323,54 +287,9 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
           }}
         />
       )}
-      {editing && (
-        <Modal title={t.editAssigned} onClose={() => setEditing(null)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = new FormData(e.currentTarget);
-              const due = String(form.get("dueDate") ?? "");
-              const title = String(form.get("title"));
-              act.mutate(
-                {
-                  path: `/classes/${classroom.id}/assignments/${editing.id}`,
-                  method: "PUT",
-                  // A test's deadline only moves through a class-wide deadline revision.
-                  body: (editing.contentType === "test" || editing.contentType === "exam") ? { title } : { title, dueDate: due ? new Date(due).toISOString() : null },
-                },
-                { onSuccess: () => setEditing(null) },
-              );
-            }}
-          >
-            <Field label={t.taskName} name="title" required defaultValue={editing.title} />
-            {(editing.contentType === "test" || editing.contentType === "exam") ? (
-              <p className="tiny muted">{dueLabel(editing.dueDate)}. {t.testLocked}</p>
-            ) : (
-              <Field label={t.dueOptional} name="dueDate" type="datetime-local" defaultValue={editing.dueDate ? toLocalInput(editing.dueDate) : ""} />
-            )}
-            <ErrorBox error={act.error} />
-            <button className="primary wide" disabled={act.isPending}>
-              {t.saveChanges}
-            </button>
-          </form>
-        </Modal>
-      )}
       {tracking && <TestTracking classroom={classroom} assignment={tracking} onClose={() => setTracking(null)} />}
       {gradebookOf && <Gradebook classroom={classroom} assignment={gradebookOf} onClose={() => setGradebookOf(null)} />}
       {writtenTracking && <WrittenTracking classroom={classroom} assignment={writtenTracking} initialView={writtenView} onClose={() => { setWrittenTracking(null); setWrittenView(undefined); }} />}
-      {archiving && (
-        <Confirm
-          action={t.archiveAction}
-          item={archiving.title}
-          detail={t.archiveDetail}
-          pending={act.isPending}
-          error={act.error}
-          onClose={() => setArchiving(null)}
-          onConfirm={() =>
-            act.mutate({ path: `/classes/${classroom.id}/assignments/${archiving.id}/archive`, body: { confirm: true } }, { onSuccess: () => setArchiving(null) })
-          }
-        />
-      )}
     </section>
   );
 }

@@ -2461,3 +2461,126 @@ body {
 .ai-criterion { margin: 4px 0 6px; padding-left: 8px; border-left: 3px solid var(--line, rgba(0, 0, 0, 0.14)); }
 .evidence-mark { background: rgba(80, 140, 255, 0.25); color: inherit; border-radius: 3px; padding: 0 1px; }
 .written-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Class Lab: the Explore kind pill beside a lab's name, the kind-of-lab chooser and the Explore lab cards. */
+.assignment-type-pill.is-explore_lab {
+  background: color-mix(in srgb, #10b981 12%, var(--surface));
+  color: color-mix(in srgb, #047857 65%, var(--text-base));
+}
+
+.teacher-class-lab-main h3 .assignment-type-pill {
+  margin-left: var(--teacher-space-xs);
+  vertical-align: middle;
+}
+
+.assign-lab-options {
+  display: grid;
+  gap: var(--teacher-space-sm);
+}
+
+.assign-lab-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--teacher-space-md);
+  padding: var(--teacher-space-md);
+  border: 1px solid var(--teacher-rule);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--teacher-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.assign-lab-option:hover {
+  border-color: var(--teacher-accent);
+}
+
+.assign-lab-option:focus-visible {
+  outline: 2px solid var(--teacher-focus);
+  outline-offset: 2px;
+}
+
+.assign-lab-option > span {
+  display: grid;
+  gap: var(--teacher-space-xs);
+  min-width: 0;
+}
+
+.assign-lab-option > span > span {
+  color: var(--teacher-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.explore-lab-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--teacher-space-sm);
+  margin: 0 0 var(--teacher-space-md);
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.explore-lab-picker > legend {
+  margin-bottom: var(--teacher-space-xs);
+  padding: 0;
+  font-weight: 600;
+}
+
+.explore-lab-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--teacher-space-xs);
+  min-width: 0;
+  padding: var(--teacher-space-xs);
+  border: 1px solid var(--teacher-rule);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.explore-lab-card.is-selected {
+  border-color: var(--teacher-accent);
+  box-shadow: 0 0 0 1px var(--teacher-accent);
+}
+
+.explore-lab-card:has(input:focus-visible) {
+  outline: 2px solid var(--teacher-focus);
+  outline-offset: 2px;
+}
+
+.explore-lab-card input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+}
+
+.explore-lab-card-art {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--green) 10%, var(--surface));
+  color: var(--green);
+}
+
+.explore-lab-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.explore-lab-card-title {
+  padding: 2px 4px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}

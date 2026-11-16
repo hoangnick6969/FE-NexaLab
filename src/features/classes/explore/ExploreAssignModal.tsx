@@ -3,14 +3,17 @@
  * a question), preview the bench exactly as a student gets it, then save and assign. The same derive function runs on the server.
  */
 import { Suspense, lazy, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FlaskConical } from "lucide-react";
 import { api, idempotencyKey, isApiError, mutate } from "../../../lib/api";
 import { Field, Modal } from "../../../components/ui";
 import { defineText, formatDateTime } from "../../../i18n";
+import { labInfo } from "../../labs/lab-info";
 import { classItemLabels, exploreBench, type ClassDerivation } from "../../labs/runtime/explore-registry";
 import { measureText, type ExploreRequirement } from "../../labs/class-explore/class-explore";
 import type { ClassSummary } from "../class-types";
 import { LoadError } from "../class-ui";
+import "../teacher-operations.css";
 
 const text = defineText({
   vi: {
@@ -98,6 +101,7 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
   const publishKey = useRef(idempotencyKey());
   const assignKey = useRef(idempotencyKey());
   const saved = useRef<{ resourceId?: string; published?: boolean }>({});
+  const queryClient = useQueryClient();
   const run = useMutation({
     mutationFn: async () => {
       if (!saved.current.resourceId) {
@@ -114,16 +118,21 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
         audience: "CLASS", studentIds: [], dueDate: due ? new Date(due).toISOString() : null,
       }, assignKey.current);
     },
-    onSuccess: (data) => onAssigned(data.message),
+    onSuccess: async (data) => {
+      // The new work must show in the lists the teacher sees next: this class's assignments and the class counters.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["class-assignments", classroom.id] }),
+        queryClient.invalidateQueries({ queryKey: ["classes"] }),
+      ]);
+      onAssigned(data.message);
+    },
   });
 
   const failure = run.error;
   const canAssign = Boolean(derived?.ok) && Boolean(lesson) && !run.isPending;
 
   return <form onSubmit={(event) => { event.preventDefault(); if (canAssign) run.mutate(); }} data-testid="explore-assign-form">
-    {labs.length > 1 && <label className="field"><span>{t.lab}</span>
-      <select value={lab.id} onChange={(event) => onLab(event.target.value)}>{labs.map((row) => <option key={row.id} value={row.id}>{row.title}</option>)}</select>
-    </label>}
+    {labs.length > 1 && <LabPicker labs={labs} value={lab.id} onChange={onLab} />}
     {templates.length > 1
       ? <label className="field"><span>{t.template}</span>
         <select value={template.id} onChange={(event) => { setTemplateId(event.target.value); setChoice({ selection: null, summary: "" }); }}>{templates.map((item) => <option key={item.id} value={item.id}>{item.titleVi}</option>)}</select>
@@ -168,5 +177,26 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
       <button type="submit" className="primary" disabled={!canAssign}>{run.isPending ? t.assigning : t.assign}</button>
     </div>
   </form>;
+}
+
+/** One card per Explore lab that has a class template; the name is always shown, the picture only when the lab has one. */
+function LabPicker({ labs, value, onChange }: { labs: LabRow[]; value: string; onChange: (id: string) => void }) {
+  const t = text();
+  return <fieldset className="explore-lab-picker" data-testid="explore-lab-picker">
+    <legend>{t.chooseLab}</legend>
+    {labs.map((row) => <label key={row.id} className={`explore-lab-card${row.id === value ? " is-selected" : ""}`}>
+      <input type="radio" name="explore-lab" value={row.id} checked={row.id === value} onChange={() => onChange(row.id)} />
+      <LabThumb labId={row.id} />
+      <span className="explore-lab-card-title">{row.title}</span>
+    </label>)}
+  </fieldset>;
+}
+
+function LabThumb({ labId }: { labId: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = labInfo.find((item) => item.id === labId)?.thumbnail;
+  return <span className="explore-lab-card-art" aria-hidden="true">
+    {src && !failed ? <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <FlaskConical size={22} />}
+  </span>;
 }
 

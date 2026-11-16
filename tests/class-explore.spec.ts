@@ -20,6 +20,13 @@ async function signIn(page: Page, user: typeof teacher | typeof student) {
   return forbidden;
 }
 
+/** The teacher's way in: the Class Lab page, "Giao lab" on the class, then the kind of lab work. */
+async function openExploreAssign(page: Page) {
+  await page.goto("/class-labs");
+  await page.getByRole("button", { name: "Giao lab", exact: true }).click();
+  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
+}
+
 test.describe("teacher assigns a Class Explore lab", () => {
   test("picks two samples and a question inside the template, previews the bench, saves and assigns", async ({ page }) => {
     await signIn(page, teacher);
@@ -27,7 +34,7 @@ test.describe("teacher assigns a Class Explore lab", () => {
     await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
     await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
     await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { classGrade: 8, lessons: [
-      { id: "lesson-9", title: "Bài khác", grade: 8, labId: null }, { id: "lesson-ph", title: "Acid, base và thang pH", grade: 8, labId: "acid-base-indicators" }], labs: [], classLabs: [] } }));
+      { id: "lesson-9", title: "Bài khác", grade: 8, subject: { id: "khtn", name: "KHTN" }, labId: null }, { id: "lesson-ph", title: "Acid, base và thang pH", grade: 8, subject: { id: "khtn", name: "KHTN" }, labId: "acid-base-indicators" }], labs: [], classLabs: [] } }));
     await page.route("**/api/classes/class-1/assignments", (route) => {
       if (route.request().method() === "GET") return route.fulfill({ json: [] });
       writes.push({ path: "assignments", body: route.request().postDataJSON(), key: route.request().headers()["idempotency-key"] });
@@ -40,8 +47,7 @@ test.describe("teacher assigns a Class Explore lab", () => {
     });
     await page.route("**/api/classes/class-1/resources/res-1/publish", (route) => { writes.push({ path: "publish", body: route.request().postDataJSON(), key: route.request().headers()["idempotency-key"] }); return route.fulfill({ json: { id: "res-1", status: "PUBLISHED" } }); });
 
-    await page.goto("/classes/class-1?tab=work");
-    await page.getByRole("button", { name: "Giao bài Explore" }).click();
+    await openExploreAssign(page);
     const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
     await expect(dialog).toBeVisible();
     const assign = dialog.getByRole("button", { name: "Lưu và giao bài" });
@@ -98,7 +104,7 @@ test.describe("teacher assigns a Class Explore lab", () => {
     let resources = 0, publishes = 0, assigns = 0;
     await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
     await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
-    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [{ id: "lesson-ph", title: "Acid", grade: 8, labId: "acid-base-indicators" }], labs: [], classLabs: [] } }));
+    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [{ id: "lesson-ph", title: "Acid", grade: 8, subject: { id: "khtn", name: "KHTN" }, labId: "acid-base-indicators" }], labs: [], classLabs: [] } }));
     await page.route("**/api/classes/class-1/assignments", (route) => {
       if (route.request().method() === "GET") return route.fulfill({ json: [] });
       assigns++;
@@ -106,8 +112,7 @@ test.describe("teacher assigns a Class Explore lab", () => {
     });
     await page.route("**/api/classes/class-1/resources", (route) => { if (route.request().method() !== "POST") return route.fulfill({ json: [] }); resources++; return route.fulfill({ json: { id: "res-1" } }); });
     await page.route("**/api/classes/class-1/resources/res-1/publish", (route) => { publishes++; return route.fulfill({ json: { id: "res-1" } }); });
-    await page.goto("/classes/class-1?tab=work");
-    await page.getByRole("button", { name: "Giao bài Explore" }).click();
+    await openExploreAssign(page);
     const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
     await dialog.getByRole("checkbox", { name: /HCl 0,1 M/ }).check();
     await dialog.getByRole("checkbox", { name: /NaOH 0,1 M/ }).check();
@@ -125,8 +130,8 @@ test.describe("teacher assigns a Class Explore lab", () => {
     await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
     await page.route("**/api/labs", (route) => route.fulfill({ json: [labWithoutTemplates] }));
     await page.route("**/api/classes/class-1/assignments", (route) => route.fulfill({ json: [] }));
-    await page.goto("/classes/class-1?tab=work");
-    await page.getByRole("button", { name: "Giao bài Explore" }).click();
+    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [], labs: [], classLabs: [] } }));
+    await openExploreAssign(page);
     await expect(page.getByTestId("explore-none")).toContainText("Chưa có Lab Explore nào có mẫu cho lớp");
   });
 });

@@ -367,7 +367,7 @@ function GuidedLab() {
       await qc.invalidateQueries({ queryKey: ["class-assignments", classId] });
     }
     await qc.invalidateQueries({ queryKey: ["class-resources", classId] });
-    navigate(`/classes/${encodeURIComponent(classId)}?tab=${labDraft.assignment ? "work" : "resources"}`);
+    navigate(labDraft.assignment ? "/class-labs" : `/classes/${encodeURIComponent(classId)}?tab=resources`);
   });
   const result = attempt?.simulationResult;
   // A new result scrolls into view inside the question panel, so the learner sees the verdict at once. The result
