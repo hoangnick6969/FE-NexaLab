@@ -151,6 +151,7 @@ export function ThermalExploreBench({ config, storageKey, activityId, exitTo, on
     URL.revokeObjectURL(url);
   };
 
+  const openClock = station === "conduction" ? conductionClock : station === "convection" ? convectionClock : radiationClock;
   const status = station === "conduction"
     ? heated ? `Đã đốt đầu A · ${conductionClock.seconds} s · ${rodViews.map((rod) => `${materialVi(rod.material)} ${rod.pins.filter((pin) => pin.dropped).length} đinh rơi`).join(", ")}` : "Chưa đốt đầu A"
     : station === "convection"
@@ -167,10 +168,13 @@ export function ThermalExploreBench({ config, storageKey, activityId, exitTo, on
     <div className="fl08-explore" data-testid="thermal-explore" data-kit={config.kit} data-station={station}>
       <div className="fl08-scene">
         {mode === "3d"
-          ? <ThermalStage3D station={station} reduced={reduced}
-            conduction={conductionSettings ? { rods: rodViews, lengthMm: conductionSettings.rodLengthMm, heated } : undefined}
-            convection={config.convection ? { tubes: tubeViews, dye: config.convection.dye } : undefined}
-            radiation={config.radiation ? { lampOn: radiationNow.lampOn, screen: radiationNow.screen, surface: radiationNow.surface, tenthsC, seconds: radiationClock.seconds, running: radiationClock.running } : undefined} />
+          ? <ThermalStage3D apparatus={config.enabledApparatus} state={{
+            station, reduced,
+            conduction: conductionSettings ? { rods: rodViews, lengthMm: conductionSettings.rodLengthMm, heated } : undefined,
+            convection: config.convection ? { tubes: tubeViews, dye: config.convection.dye } : undefined,
+            radiation: config.radiation ? { lampOn: radiationNow.lampOn, screen: radiationNow.screen, surface: radiationNow.surface, tenthsC } : undefined,
+            clock: { seconds: openClock.seconds, running: openClock.running },
+          }} />
           : <div className="fl08-2d" data-testid="thermal-2d">
             {station === "conduction" && conductionSettings && <Conduction2D rods={rodViews} lengthMm={conductionSettings.rodLengthMm} heated={heated} />}
             {station === "convection" && <Convection2D tubes={tubeViews} />}

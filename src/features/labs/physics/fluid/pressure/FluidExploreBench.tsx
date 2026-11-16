@@ -138,7 +138,7 @@ export function FluidExploreBench({ config, storageKey, activityId, exitTo, onEx
     <div className="fl04-explore" data-testid="fluid-explore" data-kit={config.kit} data-station={station}>
       <div className="fl04-scene">
         {mode === "3d"
-          ? <PressureStage3D station={station} depthSettings={config.depthProbe} pistonSettings={config.pistons} levels={levels} probe={probeReading} pistons={pistonReading} reduced={reduced} />
+          ? <PressureStage3D station={station} apparatus={config.enabledApparatus} state={{ depth: config.depthProbe, pistons: config.pistons, levels, probe: probeReading, reading: pistonReading, reduced }} />
           : <div className="fl04-2d" data-testid="fluid-2d">
             {station === "depth-probe" && probeSettings && probeReading && <DepthProbe2D settings={probeSettings} probe={probeReading} levels={levels} />}
             {station === "pistons" && config.pistons && pistonReading && <Pistons2D settings={config.pistons} pistons={pistonReading} />}
