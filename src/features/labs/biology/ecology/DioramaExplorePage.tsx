@@ -5,7 +5,7 @@
  * no-WebGL fallback. Every value drawn comes from the released models through `explore-kits`. Explore only.
  *
  * What the Explore mode adds over the Guided Labs (stories K8-FL20 / K8-FL21 of the Explore backlog), unscored:
- * - FL-21: remove any allowed species directly or through a human activity of the model's cause table; build any
+ * - FL-21: remove any species the model can remove (all but the decomposers) directly or through a human activity of the model's cause table; build any
  *   chain on the board (checked pair by pair by `food-web@1.0.0`) and see the energy at each level of that chain.
  * - FL-20: record your own temperature readings in a data table and bracket the limits before revealing them; compare
  *   which of the illustrative fish A, B, C can live at an import site (`import-comparison` of `ecology-tolerance`).
@@ -62,6 +62,8 @@ const CAUSE_LABEL: Record<keyof typeof FOOD_WEB_CAUSES, string> = {
   "pha-rung": "Phá rừng", "san-bat": "Săn bắt rắn", "khai-thac": "Khai thác quá mức (bắt thỏ)", "o-nhiem": "Ô nhiễm nguồn nước (ếch chết)", "trong-rung": "Trồng rừng", "bao-ton": "Lập khu bảo tồn",
 };
 const MAX_CHAIN = 6;
+/** Species the food-web model can remove: everything but the decomposers (the model rejects those). */
+const REMOVABLE = (Object.keys(FOOD_WEB_SPECIES) as SpeciesId[]).filter((id) => FOOD_WEB_SPECIES[id].role !== "DECOMPOSER");
 const kj = (value: number) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} kJ`;
 
 /** Energy at each level of a valid chain: the producer captures the model's 10 000 kJ, each step keeps 1/10 (illustrative). */
@@ -86,7 +88,10 @@ function EnergyPyramid({ chain }: { chain: readonly SpeciesId[] }) {
 }
 
 function FoodWebBench({ labId, title, config, activityId }: { labId: string; title: string; config: Extract<DioramaExploreConfig, { catalogId: "FL-21" }>; activityId: string }) {
-  const allowed = config.spec.allowedRemovals as SpeciesId[];
+  // Explore is unscored, so the student may remove every species `food-web@1.0.0` accepts (all but the decomposers),
+  // not only the pinned `spec.allowedRemovals` (rắn, thỏ, ếch: the cases a teacher would grade). Effects stay first-order.
+  const allowed = REMOVABLE;
+  const [decomposerNote, setDecomposerNote] = useState(false);
   const [station, setStation] = useState<FwStationId>("remove");
   const [removed, setRemoved] = useState<SpeciesId | null>(null);
   const [cause, setCause] = useState<keyof typeof FOOD_WEB_CAUSES | null>(null);
@@ -109,8 +114,13 @@ function FoodWebBench({ labId, title, config, activityId }: { labId: string; tit
   });
   const allChains = useMemo(() => foodWebChains(), []);
 
-  const pickRemove = (id: SpeciesId) => { setCause(null); setRemoved((current) => (current === id ? null : id)); };
-  const pickCause = (id: keyof typeof FOOD_WEB_CAUSES) => { setCause(id); setRemoved(FOOD_WEB_CAUSES[id].removes as SpeciesId | null); };
+  const pickRemove = (id: SpeciesId) => {
+    setCause(null);
+    if (ROLES[id] === "DECOMPOSER") { setDecomposerNote(true); setRemoved(null); return; }
+    setDecomposerNote(false);
+    setRemoved((current) => (current === id ? null : id));
+  };
+  const pickCause = (id: keyof typeof FOOD_WEB_CAUSES) => { setDecomposerNote(false); setCause(id); setRemoved(FOOD_WEB_CAUSES[id].removes as SpeciesId | null); };
   const pickChain = (id: SpeciesId) => setChain((current) => (current.includes(id) || current.length >= MAX_CHAIN ? current : [...current, id]));
   // Direct manipulation: drag from species A to species B on the board draws "A → B" (food → eater). It extends the
   // chain when A is its last link, rewires it after A when A is already in it, and starts a new chain otherwise.
@@ -125,7 +135,7 @@ function FoodWebBench({ labId, title, config, activityId }: { labId: string; tit
     names: SPECIES_LABEL, roleNames: ROLE_NAMES, effectNames: EFFECT_NAMES, removedLabel: "đã bỏ khỏi lưới",
     removed: removing ? removed : null, effects, roles: ROLES,
     chain: removing ? [] : chain, brokenAt: removing ? null : checked?.brokenAt ?? null,
-    pickable: (id: SpeciesId) => (removing ? allowed.includes(id) : !chain.includes(id) && chain.length < MAX_CHAIN),
+    pickable: (id: SpeciesId) => (removing ? true : !chain.includes(id) && chain.length < MAX_CHAIN),
     onPick: removing ? pickRemove : pickChain,
     focus: boardFocus(inspected, []), onInspect: setInspected,
     label: removing
@@ -134,7 +144,7 @@ function FoodWebBench({ labId, title, config, activityId }: { labId: string; tit
     illustrative: "Sơ đồ minh hoạ: mũi tên đi từ thức ăn tới loài ăn nó. Nấm, vi khuẩn phân giải xác của mọi loài.",
   };
   const relationText_ = inspected ? relationText(inspected)
-    : removing ? (removed ? `Đã bỏ ${label(removed)}: viền xanh là loài tăng, viền đỏ là loài giảm. Bấm lại loài đó để thả về lưới.` : cause ? `${CAUSE_LABEL[cause]} không làm mất loài nào trong lưới.` : `Bấm thẳng vào ${allowed.map(label).join(", ")} trên sa bàn để bỏ loài đó khỏi lưới.`)
+    : removing ? (removed ? `Đã bỏ ${label(removed)}: viền xanh là loài tăng, viền đỏ là loài giảm. Bấm lại loài đó để thả về lưới.` : cause ? `${CAUSE_LABEL[cause]} không làm mất loài nào trong lưới.` : "Bấm thẳng vào bất kỳ loài nào trên sa bàn để bỏ loài đó khỏi lưới.")
       : chain.length ? `Chuỗi của em: ${chain.map(label).join(" → ")}. Kéo từ một loài sang loài ăn nó để nối thêm mũi tên.` : "Bấm loài đầu tiên (nên là sinh vật sản xuất), rồi lần lượt loài ăn nó; hoặc kéo mũi tên từ loài này sang loài ăn nó ngay trên sa bàn.";
   const relation = <p className="diorama-relation" aria-live="polite" data-testid="fw-explore-relation">{relationText_}</p>;
   const legend = removing
@@ -170,7 +180,7 @@ function FoodWebBench({ labId, title, config, activityId }: { labId: string; tit
       <legend>Hoặc chọn một hoạt động của con người</legend>
       {causes.map((id) => <button type="button" key={id} className="explore-chip" aria-pressed={cause === id} onClick={() => pickCause(id)}>{CAUSE_LABEL[id]}</button>)}
     </fieldset>
-    <button type="button" className="explore-btn explore-btn-secondary" disabled={!removed && !cause} onClick={() => { setRemoved(null); setCause(null); }}>Khôi phục lưới đầy đủ</button>
+    <button type="button" className="explore-btn explore-btn-secondary" disabled={!removed && !cause} onClick={() => { setRemoved(null); setCause(null); setDecomposerNote(false); }}>Khôi phục lưới đầy đủ</button>
   </>;
   const chainControls = <>
     <ol className="fw-chain-list" aria-label="Chuỗi của em" data-testid="fw-chain">
@@ -192,7 +202,9 @@ function FoodWebBench({ labId, title, config, activityId }: { labId: string; tit
 
   let readout: ReactNode;
   if (removing) {
-    readout = result?.setup === "remove"
+    readout = decomposerNote
+      ? <p className="explore-status" data-tone="warn" data-testid="fw-decomposer-note">Không bỏ được Nấm, vi khuẩn trong mô hình này. Đây là sinh vật phân giải: chúng phân giải xác và chất thải của mọi loài thành chất vô cơ, không ăn và không bị loài nào trong lưới ăn. Mô hình chỉ tính ảnh hưởng trực tiếp qua quan hệ ăn – bị ăn, nên bỏ nhóm phân giải không có kết quả để tính.</p>
+      : result?.setup === "remove"
       ? <>
           <span className="explore-status" data-tone="info">{cause ? `${CAUSE_LABEL[cause]}: ` : ""}Đã bỏ {label(removed!)}</span>
           <ul data-testid="food-web-effects">

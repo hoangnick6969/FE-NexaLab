@@ -35,7 +35,8 @@ async function open(page: Page, labId: string) {
   await page.getByRole("dialog").getByRole("button", { name: "Vào bàn thí nghiệm" }).click();
   const aside = page.getByRole("complementary", { name: /^Bảng điều khiển/ });
   await expect(aside).toBeVisible();
-  await expect(page.getByTestId("explore-draft-badge")).toHaveText("Bản nháp · chờ duyệt");
+  // Owner 2026-11-16: the five configs are `review.status: "reviewed"`, so no draft badge.
+  await expect(page.getByTestId("explore-draft-badge")).toHaveCount(0);
   return { aside, requests, journal: page.getByTestId("explore-journal") };
 }
 
@@ -315,5 +316,33 @@ test("direct manipulation · FL-27: click a base on the strand, drag a base from
   await expect(aside.getByTestId("mutation-effect")).toContainText("Vị trí 6: C → T");
   await expect(aside.getByTestId("mutation-effect")).toContainText("im lặng");
   await expect(aside.getByTestId("mutation-trials").locator("tbody tr")).toHaveCount(1);
+  expect(requests).toEqual([]);
+});
+
+test("/labs keeps its filters in the URL and after '← Quay về' from a Lab", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.goto("/labs");
+  await page.getByRole("group", { name: "Môn:" }).getByRole("button", { name: "Sinh học" }).click();
+  await expect(page).toHaveURL(/\/labs\?subject=biology$/);
+  await page.locator("#lab-fl-26-explore .lab-card").click();
+  await page.getByRole("dialog").getByRole("button", { name: "Vào bàn thí nghiệm" }).click();
+  await page.getByRole("link", { name: "← Quay về" }).click();
+  await expect(page).toHaveURL(/\/labs\?subject=biology$/);
+  await expect(page.getByRole("group", { name: "Môn:" }).getByRole("button", { name: "Sinh học" })).toHaveClass(/is-active/);
+  await expect(page.locator("#lab-fl-26-explore")).toBeVisible();
+});
+
+test("FL-21 Explore: any species but the decomposers can be removed on the board", async ({ page }) => {
+  const { aside, requests } = await open(page, "fl-21-explore");
+  await page.getByRole("button", { name: "2D" }).click();
+  await page.locator(".fw-node[data-species='co']").click();
+  await expect(aside.getByTestId("food-web-effects")).toContainText("Châu chấu");
+  await page.locator(".fw-node[data-species='dai-bang']").click();
+  await expect(aside.getByTestId("food-web-effects")).toContainText("Rắn");
+  await page.locator(".fw-node[data-species='nam-vi-khuan']").click();
+  await expect(aside.getByTestId("fw-decomposer-note")).toContainText("sinh vật phân giải");
+  await aside.getByRole("button", { name: "Phá rừng" }).click();
+  await expect(aside.getByTestId("food-web-effects")).toContainText("Sâu");
   expect(requests).toEqual([]);
 });

@@ -5,7 +5,7 @@ export const fl20Config = {
   schema: "fl20-tolerance-config@1",
   labId: "fl-20-explore",
   catalogId: "FL-20",
-  configVersion: 1,
+  configVersion: 2,
   kit: "k8-diorama",
   engine: "ecology-tolerance@1.0.0",
   title: "Giới hạn sinh thái: nhiệt độ",
@@ -17,6 +17,7 @@ export const fl20Config = {
   enabledApparatus: [{ id: "thermometer", kind: "thermometer", slot: "tool_1", labelVi: "Nhiệt kế mô phỏng" }],
   measurements: ["zone"],
   pedagogy: { observationPrompts: [{ id: "zone", kind: "note", textVi: "Tăng nhiệt độ dần. Khi nào loài không còn sống được?" }] },
-  review: { status: "draft" },
+  // Owner decision 2026-11-16: drop the "Bản nháp · chờ duyệt" label on /labs. Not a subject reviewer sign-off.
+  review: { status: "reviewed" },
   spec: { model: "ecology-tolerance@1.0.0", allowedSpecies: ["ca-ro-phi"], factor: "TEMPERATURE" },
 } satisfies DioramaExploreConfig;

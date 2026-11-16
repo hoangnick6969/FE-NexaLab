@@ -6,7 +6,7 @@ export const fl26Config: Fl26MendelConfig = {
   schema: "fl26-mendel-config@1",
   labId: "fl-26-explore",
   catalogId: "FL-26",
-  configVersion: 1,
+  configVersion: 2,
   kit: "k8-garden",
   engine: "mendel-cross@1.0.0",
   title: "Lai Mendel một tính trạng",
@@ -37,7 +37,8 @@ export const fl26Config: Fl26MendelConfig = {
       { id: "ratio", kind: "free_text", textVi: "Với Aa × Aa, tỉ lệ kiểu hình trội : lặn là bao nhiêu? So với tỉ lệ kiểu gen thì sao?" },
     ],
   },
-  review: { status: "draft" },
+  // Owner decision 2026-11-16: drop the "Bản nháp · chờ duyệt" label on /labs. Not a subject reviewer sign-off.
+  review: { status: "reviewed" },
   spec: {
     model: "mendel-cross@1.0.0",
     cross: "monohybrid",
