@@ -19,20 +19,20 @@
 ## Seeded test accounts (password set by SEED_PASSWORD / SEED_FIXTURE_PASSWORD in BE-NexaLab/.env)
 
 > [!IMPORTANT]
-> All passwords below are the values from `.env` at the time of seeding. Default dev values are shown.
-> If the DB was re-seeded with different passwords, update this table accordingly.
+> Passwords are never written in the repo. Use `SEED_PASSWORD` / `SEED_FIXTURE_PASSWORD` from your local `.env` (ask the owner for the dev values).
+> Never seed fixed passwords (especially admin) on a shared database.
 
-| Role | Tài khoản đăng nhập | Mật khẩu mặc định | Ghi chú |
+| Role | Tài khoản đăng nhập | Mật khẩu | Ghi chú |
 |---|---|---|---|
-| Admin | admin@nexalab.local | Fall2026&Spring2027 | `SEED_PASSWORD` |
-| Teacher | teacher@nexalab.local | Fall2026&Spring2027 | `SEED_PASSWORD` |
-| Teacher owner | teacher.owner@nexalab.local | Fall2026&Spring2027 | `SEED_FIXTURE_PASSWORD`; owns `class-pilot-a` |
-| Teacher outsider | teacher.outsider@nexalab.local | Fall2026&Spring2027 | `SEED_FIXTURE_PASSWORD`; owns `class-pilot-b` |
-| Parent | parent@nexalab.local | Fall2026&Spring2027 | `SEED_PASSWORD`; linked to `nguyenan.8a` |
-| Student | nguyenan.8a | Fall2026&Spring2027 | `SEED_PASSWORD`; enrolled `demo-class` |
-| Student temporary | student.temp | Fall2026&Spring2027 | `SEED_FIXTURE_PASSWORD`; `mustChangePassword=true` |
-| Student active | student.active | Fall2026&Spring2027 | `SEED_FIXTURE_PASSWORD`; enrolled `class-pilot-a` |
-| Student outsider | student.outsider | Fall2026&Spring2027 | `SEED_FIXTURE_PASSWORD`; enrolled `class-pilot-b` only |
+| Admin | admin@nexalab.local | xem `.env` | `SEED_PASSWORD` |
+| Teacher | teacher@nexalab.local | xem `.env` | `SEED_PASSWORD` |
+| Teacher owner | teacher.owner@nexalab.local | xem `.env` | `SEED_FIXTURE_PASSWORD`; owns `class-pilot-a` |
+| Teacher outsider | teacher.outsider@nexalab.local | xem `.env` | `SEED_FIXTURE_PASSWORD`; owns `class-pilot-b` |
+| Parent | parent@nexalab.local | xem `.env` | `SEED_PASSWORD`; linked to `nguyenan.8a` |
+| Student | nguyenan.8a | xem `.env` | `SEED_PASSWORD`; enrolled `demo-class` |
+| Student temporary | student.temp | xem `.env` | `SEED_FIXTURE_PASSWORD`; `mustChangePassword=true` |
+| Student active | student.active | xem `.env` | `SEED_FIXTURE_PASSWORD`; enrolled `class-pilot-a` |
+| Student outsider | student.outsider | xem `.env` | `SEED_FIXTURE_PASSWORD`; enrolled `class-pilot-b` only |
 
 Seeded fixtures: `class-pilot-a`, `class-pilot-b`, `demo-class`, `lesson-circuit`, `lesson-eye`, `lesson-chemistry`, `pilot-a-lesson-assignment`.
 

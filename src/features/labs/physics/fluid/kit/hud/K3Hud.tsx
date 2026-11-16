@@ -54,7 +54,7 @@ export function K3Hud({ title, stations, current, onSelect, step, instruction, q
     {readout && <div className="k3-readout" role="status" aria-label={t.readout}>{readout}</div>}
     {telemetry && <div className="k3-telemetry" aria-live="polite">{telemetry}</div>}
     {(formula || formulaLatex) && <div className="k3-formula" aria-label="Formula preview">
-      {formulaLatex && <span className="k3-formula-math" dangerouslySetInnerHTML={{ __html: katex.renderToString(formulaLatex, { throwOnError: false, displayMode: false, strict: "ignore" }) }} />}
+      {formulaLatex && <span className="k3-formula-math" dangerouslySetInnerHTML={{ __html: katex.renderToString(formulaLatex, { throwOnError: false, displayMode: false, strict: "ignore", trust: false }) }} />}
       {formula}
     </div>}
     {actions && <div className="k3-actions">{actions}</div>}

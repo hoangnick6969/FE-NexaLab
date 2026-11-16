@@ -152,7 +152,9 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
   });
 
   // One card per FL slot: the Explore mode of a Lab that also has Guided folds into the Guided card (interim D-5).
-  const cards = foldModeCards(allCards);
+  // D-5: a Guided Lab with Explore on the same Lab ID shows one card whose Explore chip opens `?mode=explore`.
+  const twoMode = new Set((labs.data ?? []).filter((lab: any) => lab.modes?.includes("guided") && lab.modes?.includes("explore")).map((lab: any) => lab.id as string));
+  const cards = foldModeCards(allCards).map((card) => !card.exploreCard && twoMode.has(card.id) ? { ...card, exploreCard: { ...card, id: `${card.id}?mode=explore` } } : card);
 
   const gradeCounts = useMemo(() => {
     let g8 = 0;
