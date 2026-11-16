@@ -4,24 +4,24 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { reagentById } from "@nexalab/sim/wet-bench";
 import { api, idempotencyKey, isApiError } from "../../../lib/api";
 import { Modal } from "../../../components/ui";
 import { defineText, formatDateTime } from "../../../i18n";
-import { formatTenthsPh, type ExploreRequirement, type ExploreSubmission } from "../../labs/class-explore/class-explore";
+import { answerValue, formatMeasure, measureText, unitOf, type ExploreRequirement, type ExploreSubmission } from "../../labs/class-explore/class-explore";
+import { classItemLabels } from "../../labs/runtime/explore-registry";
 import type { ClassSummary, TeacherAssignment } from "../class-types";
 import { LoadError } from "../class-ui";
 
 const text = defineText({
   vi: {
-    title: (name: string) => `Bài nộp: ${name}`, asked: "Yêu cầu", measure: (name: string) => `Số đo pH của ${name}`, explain: "Lời giải thích",
+    title: (name: string) => `Bài nộp: ${name}`, asked: "Yêu cầu", explain: "Lời giải thích",
     note: "Lời dặn", submitted: (n: number) => `Đã nộp (${n})`, pending: (n: number) => `Chưa nộp (${n})`, none: "Chưa có bài nộp nào.",
     status: { SUBMITTED: "Đã nộp", REVIEWED: "Đã nhận xét" }, late: "Nộp trễ", at: (when: string) => `Nộp lúc ${when}`,
     feedback: "Nhận xét", send: "Gửi nhận xét", sending: "Đang gửi…", sent: "Đã gửi nhận xét", failed: "Chưa gửi được nhận xét.",
     noScore: "Bài Explore không chấm điểm và không tính vào tiến độ.", close: "Đóng",
   },
   en: {
-    title: (name: string) => `Submissions: ${name}`, asked: "What was asked", measure: (name: string) => `pH of ${name}`, explain: "Explanation",
+    title: (name: string) => `Submissions: ${name}`, asked: "What was asked", explain: "Explanation",
     note: "Note", submitted: (n: number) => `Submitted (${n})`, pending: (n: number) => `Not submitted (${n})`, none: "No submissions yet.",
     status: { SUBMITTED: "Submitted", REVIEWED: "Commented" }, late: "Late", at: (when: string) => `Submitted ${when}`,
     feedback: "Comment", send: "Send comment", sending: "Sending…", sent: "Comment sent", failed: "Could not send the comment.",
@@ -30,12 +30,14 @@ const text = defineText({
 });
 
 type Board = {
-  assignment: { id: string; title: string; dueDate: string | null; requirements: ExploreRequirement[]; instructions: string };
+  assignment: { id: string; title: string; dueDate: string | null; requirements: ExploreRequirement[]; instructions: string; effectiveConfig?: Record<string, unknown> };
   submissions: Array<ExploreSubmission & { student: { id: string; fullName: string | null; username: string | null } }>;
   pending: Array<{ id: string; fullName: string | null; username: string | null }>;
 };
 
-const reagentName = (id: string) => reagentById(id)?.labelVi ?? id;
+/** What a requirement asks, in words; item names come from the bench of the pinned config. */
+const askedOf = (labels: Record<string, string>, explain: string) => (item: ExploreRequirement) =>
+  item.kind === "measure" ? measureText()[item.measurement].asked(labels[item.itemId] ?? item.itemId) : explain;
 const who = (student: { fullName: string | null; username: string | null }) => student.fullName || (student.username ? `@${student.username}` : "—");
 
 export function ExploreBoard({ classroom, assignment, onClose }: { classroom: ClassSummary; assignment: TeacherAssignment; onClose: () => void }) {
@@ -43,17 +45,19 @@ export function ExploreBoard({ classroom, assignment, onClose }: { classroom: Cl
   const key = ["explore-submissions", classroom.id, assignment.id];
   const board = useQuery<Board>({ queryKey: key, queryFn: () => api(`/classes/${classroom.id}/assignments/${assignment.id}/explore-submissions`) });
   const data = board.data;
+  const labels = classItemLabels(data?.assignment.effectiveConfig ?? { kit: "k2-wet-bench@1" });
+  const asked = askedOf(labels, t.explain);
   return <Modal title={t.title(assignment.title)} onClose={onClose}>
     <LoadError query={board} what={assignment.title} />
     {data && <div data-testid="explore-board">
       <section aria-label={t.asked}>
         <h3>{t.asked}</h3>
-        <ul>{data.assignment.requirements.map((item, index) => <li key={index}>{item.kind === "measure" ? t.measure(reagentName(item.itemId)) : t.explain}</li>)}</ul>
+        <ul>{data.assignment.requirements.map((item, index) => <li key={index}>{asked(item)}</li>)}</ul>
         {data.assignment.instructions && <p className="tiny muted">{t.note}: {data.assignment.instructions}</p>}
       </section>
       <h3>{t.submitted(data.submissions.length)}</h3>
       {data.submissions.length === 0 && <p className="muted">{t.none}</p>}
-      {data.submissions.map((row) => <SubmissionCard key={row.id} classId={classroom.id} assignmentId={assignment.id} row={row} queryKey={key} />)}
+      {data.submissions.map((row) => <SubmissionCard key={row.id} classId={classroom.id} assignmentId={assignment.id} row={row} queryKey={key} requirements={data.assignment.requirements} labels={labels} />)}
       {data.pending.length > 0 && <>
         <h3>{t.pending(data.pending.length)}</h3>
         <p data-testid="explore-pending">{data.pending.map(who).join(" · ")}</p>
@@ -64,7 +68,7 @@ export function ExploreBoard({ classroom, assignment, onClose }: { classroom: Cl
   </Modal>;
 }
 
-function SubmissionCard({ classId, assignmentId, row, queryKey }: { classId: string; assignmentId: string; row: Board["submissions"][number]; queryKey: unknown[] }) {
+function SubmissionCard({ classId, assignmentId, row, queryKey, requirements, labels }: { classId: string; assignmentId: string; row: Board["submissions"][number]; queryKey: unknown[]; requirements: ExploreRequirement[]; labels: Record<string, string> }) {
   const t = text();
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState(row.feedback ?? "");
@@ -75,7 +79,7 @@ function SubmissionCard({ classId, assignmentId, row, queryKey }: { classId: str
   });
   return <article className="panel" aria-label={who(row.student)} data-testid="explore-submission">
     <header><strong>{who(row.student)}</strong> · <span data-testid="explore-submission-status">{t.status[row.status]}</span>{row.late && <> · <strong data-testid="explore-late">{t.late}</strong></>} · <span className="tiny muted">{t.at(formatDateTime(row.submittedAt))}</span></header>
-    <ul>{row.answers.measures.map((item) => <li key={item.itemId}>{t.measure(reagentName(item.itemId))}: <b>{formatTenthsPh(item.tenthsPh)}</b></li>)}</ul>
+    <ul>{row.answers.measures.map((item) => { const requirement = requirements.find((other) => other.kind === "measure" && other.itemId === item.itemId); return <li key={item.itemId}>{requirement ? askedOf(labels, t.explain)(requirement) : item.itemId}: <b>{formatMeasure(unitOf(requirements, item.itemId), answerValue(item))}</b></li>; })}</ul>
     {row.answers.explanation && <p>{row.answers.explanation}</p>}
     <label className="field"><span>{t.feedback}</span>
       <textarea rows={3} maxLength={2000} value={feedback} onChange={(event) => { setFeedback(event.target.value); setSaved(false); }} />

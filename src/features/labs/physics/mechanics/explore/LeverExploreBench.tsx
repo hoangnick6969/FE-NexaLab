@@ -3,7 +3,7 @@
  * gauge the config enables. No LabRun, no submission, no score; every change goes to the local notebook.
  * Layout A of the Lab Space: header controls, full-bleed scene, panel on the right, notebook dock bottom left.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BookOpen, Download, Info, RotateCcw } from "lucide-react";
 import { evaluateLeverBench } from "@nexalab/sim";
 import type { LeverLabConfig } from "@nexalab/sim/mechanics";
@@ -36,9 +36,11 @@ export type LeverExploreBenchProps = {
   exitTo?: string;
   onExit?: () => void;
   draftNotice?: string;
+  /** Class Explore: the student's task panel, shown in the question panel (P0 C3.4). */
+  classSection?: ReactNode;
 };
 
-export function LeverExploreBench({ config, storageKey, activityId, exitTo, onExit, draftNotice }: LeverExploreBenchProps) {
+export function LeverExploreBench({ config, storageKey, activityId, exitTo, onExit, draftNotice, classSection }: LeverExploreBenchProps) {
   const [mode, setMode] = useLabRendererMode("nexalab:lab-view:mechanics-k5");
   const [attachments, setAttachments] = useState<K5Attachment[]>(() => config.initialAttachments.map(a => ({ ...a })));
   const [log, setLog] = useState<LeverLogEntry[]>([]);
@@ -52,6 +54,7 @@ export function LeverExploreBench({ config, storageKey, activityId, exitTo, onEx
   const items = useMemo(() => listLeverKitItems(config), [config]);
   const gauge = config.enabledApparatus.some(item => item.kind === "spring_gauge");
   const show = (measurement: LeverLabConfig["measurements"][number]) => config.measurements.includes(measurement);
+  const locked = useMemo(() => (config.lockInitialAttachments ? config.initialAttachments.map(a => a.positionMillimetres) : []), [config]);
   const current = read(config, attachments);
   const logRef = useRef(log);
   logRef.current = log;
@@ -89,7 +92,7 @@ export function LeverExploreBench({ config, storageKey, activityId, exitTo, onEx
     <button type="button" className="lab-reset" onClick={reset} aria-label="Làm lại"><RotateCcw size={14} aria-hidden="true" /><span>Làm lại</span></button>
   </>;
 
-  return <LabSpace title={config.title} exitTo={exitTo} onExit={onExit} tools={tools}>
+  return <LabSpace title={config.title} exitTo={exitTo} onExit={onExit} tools={tools} classSection={classSection}>
     <div className="k5-activity k5-explore" data-testid="lever-explore" data-kit={config.kit}>
       <div className="k5-scene">
         {mode === "3d" ? <K5Stage3D attachments={attachments} tilt={tilt} reduced={reduced} /> : <K5Stage2D attachments={attachments} tilt={tilt} />}
@@ -101,7 +104,7 @@ export function LeverExploreBench({ config, storageKey, activityId, exitTo, onEx
         <section className="lqp-section" data-testid="lever-kit-items"><h3>Dụng cụ và thành phần</h3>
           <ul className="k5-explore-items">{items.map(item => <li key={item.id} data-item={item.id}><b>{item.labelVi}</b><span>{item.purposeVi}</span></li>)}</ul>
         </section>
-        <K5Toolbox title="Treo dụng cụ" attachments={attachments} onChange={change} onError={setError} weights={config.weights.availableMilliNewtons} gauge={gauge} maxWeights={config.weights.maxCount} />
+        <K5Toolbox title="Treo dụng cụ" attachments={attachments} onChange={change} onError={setError} weights={config.weights.availableMilliNewtons} gauge={gauge} maxWeights={config.weights.maxCount} locked={locked} />
         {error && <p role="alert" className="k5-error">{error}</p>}
         {show("moment_table") && current && <section className="lqp-section"><h3>Bảng moment</h3>
           {current.value.attachments.length === 0 ? <p>Chưa treo dụng cụ nào.</p> : <table className="k5-explore-table" data-testid="lever-moment-table">
@@ -127,7 +130,7 @@ export function LeverExploreBench({ config, storageKey, activityId, exitTo, onEx
     {logOpen && <section className="k5-explore-log" aria-label="Nhật ký thí nghiệm" data-testid="lever-log">
         <h2>Nhật ký thí nghiệm</h2>
         {log.length === 0 ? <p>Chưa có dòng nào. Mỗi lần treo, tháo hay chỉnh dụng cụ sẽ được ghi ở đây.</p>
-          : <ol>{[...log].reverse().map(entry => <li key={entry.seq}><b>{entry.actionVi}</b><span>{entry.phenomenaVi.join(". ")}</span><small>Trái {formatMoment(entry.readings.leftMomentNmm)} · Phải {formatMoment(entry.readings.rightMomentNmm)}</small></li>)}</ol>}
+          : <ol>{[...log].reverse().map(entry => <li key={entry.seq}><b>{entry.actionVi}</b><span>{entry.phenomenaVi.join(". ")}</span>{show("moment_table") && <small>Trái {formatMoment(entry.readings.leftMomentNmm)} · Phải {formatMoment(entry.readings.rightMomentNmm)}</small>}</li>)}</ol>}
       </section>}
       <div className="lab-actions k5-explore-dock">
         <button type="button" className="secondary" aria-expanded={logOpen} onClick={() => setLogOpen(!logOpen)}><BookOpen size={16} aria-hidden="true" />Nhật ký ({log.length})</button>

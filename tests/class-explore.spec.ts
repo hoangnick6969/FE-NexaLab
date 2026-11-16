@@ -201,7 +201,7 @@ test.describe("student does a Class Explore assignment", () => {
     await expect(task.getByTestId("explore-submitted")).toContainText("1,0");
     await expect(task.getByTestId("explore-submitted")).toContainText("2,9");
     expect(posts).toHaveLength(1);
-    expect(posts[0].body).toEqual({ measures: [{ itemId: "HCl_0_1M", tenthsPh: 10 }, { itemId: "CH3COOH_0_1M", tenthsPh: 29 }], explanation: "HCl phân li hoàn toàn nên pH nhỏ hơn." });
+    expect(posts[0].body).toEqual({ measures: [{ itemId: "HCl_0_1M", value: 10 }, { itemId: "CH3COOH_0_1M", value: 29 }], explanation: "HCl phân li hoàn toàn nên pH nhỏ hơn." });
     expect(posts[0].key).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
     await expect(task.getByRole("button", { name: "Nộp bài" })).toHaveCount(0);
 
