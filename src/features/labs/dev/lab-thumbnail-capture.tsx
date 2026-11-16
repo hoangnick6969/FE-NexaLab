@@ -27,7 +27,7 @@ import "../biology/ecology/food-web/FoodWebActivity.css";
 import "../shared/LabSpace.css";
 import { WetBenchKitStage } from "../chemistry/wet-bench/kit/WetBenchKitStage";
 import { benchReducer, initialBenchState, type BenchAction, type BenchUiState } from "../chemistry/wet-bench/kit/bench-reducer";
-import { fl11Config, fl12Config, fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
+import { fl11Config, fl12Config, fl13Config, fl14aConfig, fl14bConfig, fl14cConfig } from "../chemistry/wet-bench/labs";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { FL15_SAFETY_CONFIG } from "@nexalab/sim/safety-scenario";
 import SafetyBenchStage from "../chemistry/safety/SafetyBenchStage";
@@ -113,6 +113,24 @@ const reactionRateThumbnail = () => k2Thumbnail(fl12Config, [
   { type: "wait", seconds: 10 },
 ], reactionRateView);
 
+/** FL-14b: carbonate with acid (bubbling), silver chloride (white), iron(III) hydroxide (brown) and copper(II) hydroxide (blue). */
+const saltReactionsThumbnail = () => k2Thumbnail(fl14bConfig, [
+  dropper, { type: "preset", microliters: 1000 },
+  ...fill("Na2CO3_0_1M", "T1"), ...fill("AgNO3_0_1M", "T2"), ...fill("FeCl3_0_1M", "T3"), ...fill("CuSO4_0_1M", "T4"),
+  ...fill("HCl_0_1M", "T1"), ...fill("NaCl_0_1M", "T2"), ...fill("NaOH_0_1M", "T3"), ...fill("NaOH_0_1M", "T4"),
+  { type: "release" },
+]);
+
+/** FL-14c: black CuO in sulfuric acid turning blue, white MgO and brown Fe2O3 in hydrochloric acid, CuO next to NaOH unchanged. */
+const oxideReactionsThumbnail = () => k2Thumbnail(fl14cConfig, [
+  dropper, { type: "preset", microliters: 1000 },
+  ...fill("H2SO4_0_1M", "T1"), ...fill("HCl_0_1M", "T2"), ...fill("HCl_0_1M", "T3"), ...fill("NaOH_0_1M", "T4"),
+  { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "spatula", apparatusId: "spoon" } },
+  ...fill("CuO_powder", "T1"), ...fill("MgO_powder", "T2"), ...fill("Fe2O3_powder", "T3"), ...fill("CuO_powder", "T4"),
+  { type: "release" },
+]);
+
 const densityThumbnailView: StageView = {
   position: [-0.25, 1.28, 1.95], target: [-0.4, 0.3, 0.08],
   narrowPosition: [-0.25, 1.28, 1.95], narrowTarget: [-0.4, 0.3, 0.08],
@@ -150,6 +168,8 @@ const scenes: Record<string, () => ReactNode> = {
   "solution-concentration": solutionConcentrationThumbnail,
   "reaction-rate": reactionRateThumbnail,
   "lab-safety": () => <SafetyBenchStage items={listSafetySceneItems(FL15_SAFETY_CONFIG, FL15_SAFETY_CONFIG.scenes[0])} showLabels={false} />,
+  "salt-reactions": saltReactionsThumbnail,
+  "oxide-reactions": oxideReactionsThumbnail,
   "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,

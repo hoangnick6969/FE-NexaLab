@@ -43,6 +43,10 @@ export const formatGasMl = (tenths: number) => `${comma((tenths / 10).toFixed(1)
 
 export const PIECE_NAME: Record<string, string> = { granule: "hạt", chips: "viên", nail: "chiếc đinh", foil: "lá", powder: "muỗng bột" };
 
+/** Child-facing names for the precipitate and solution colours of the salt and oxide Labs (FL-14b, FL-14c). Other colours keep their old wording. */
+const PRECIPITATE_COLOUR_VI: Record<string, string> = { "#f4f4ee": "màu trắng", "#f5f5f0": "màu trắng", "#9a3412": "màu nâu đỏ", "#4f9fd6": "màu xanh lam" };
+const TINT_VI: Record<string, string> = { "#0284c7": "xanh lam", "#d4a017": "vàng nâu" };
+
 const BAND_VI = { colourless: "không màu", light_pink: "hồng nhạt", deep_pink: "hồng đậm", unknown: "chưa xác định" } as const;
 
 /** Observable change in one vessel, in child-facing words. Never names a product unless equations are revealed. */
@@ -66,12 +70,20 @@ export function describeVesselChange(before: VesselState, after: VesselState, tr
     phenomena.push(next.gasBubbles.intensity === "vigorous" ? "Sủi bọt khí mạnh" : next.gasBubbles.intensity === "low" ? "Sủi bọt khí chậm, ít" : "Sủi bọt khí");
   }
   if (next.precipitate && (!prev.precipitate || next.precipitate.amount > prev.precipitate.amount + 0.001)) {
-    phenomena.push(prev.precipitate ? "Kết tủa nhiều thêm" : `Xuất hiện kết tủa ${next.precipitate.color === "#f4f4ee" ? "màu trắng" : ""}`.trim());
+    phenomena.push(prev.precipitate ? "Kết tủa nhiều thêm" : `Xuất hiện kết tủa ${PRECIPITATE_COLOUR_VI[next.precipitate.color] ?? ""}`.trim());
   }
   const coated = next.solids.some((solid) => solid.coatingColor && !prev.solids.find((p) => p.pieceId === solid.pieceId)?.coatingColor);
   if (coated) phenomena.push("Bề mặt kim loại phủ một lớp màu đỏ nâu");
   if (!next.indicator && prev.liquidTint && next.liquidTint && next.liquidTint.opacity < prev.liquidTint.opacity - 0.02 && after.solutionMicroliters <= before.solutionMicroliters + 2000) {
     phenomena.push("Màu xanh của dung dịch nhạt dần");
+  }
+  // A solid shrinking with no gas, precipitate or coating: an oxide dissolving in acid (FL-14c).
+  // A piece added in this very step starts at 1.
+  const shrank = next.solids.some((piece) => (prev.solids.find((item) => item.pieceId === piece.pieceId)?.remainingRatio ?? 1) - piece.remainingRatio > 0.001);
+  if (!phenomena.length && shrank) {
+    const left = next.solids.some((solid) => solid.remainingRatio > 0.001);
+    const tint = next.liquidTint && next.liquidTint.color !== prev.liquidTint?.color ? TINT_VI[next.liquidTint.color] : undefined;
+    phenomena.push(`${left ? "Chất rắn tan một phần, phần còn lại nằm dưới đáy" : "Chất rắn tan hết"}${tint ? `, dung dịch chuyển sang màu ${tint}` : ""}`);
   }
   if (!phenomena.length) {
     if (before.solutionMicroliters === 0 && after.solutionMicroliters > 0 && !next.liquidTint) phenomena.push("Dung dịch trong suốt, không màu");
