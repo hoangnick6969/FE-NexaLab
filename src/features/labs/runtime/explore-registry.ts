@@ -6,12 +6,14 @@ import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
 import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim/mechanics";
 import { validateFluidLabConfig } from "@nexalab/sim/fluid";
+import { validateThermalLabConfig } from "@nexalab/sim/thermal";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
 import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
+import { listThermalKitItems } from "../physics/thermal/transfer/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -106,6 +108,17 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/fluid/pressure/PressureExploreLabPage"),
     listKitItems: listFluidKitItems,
+  },
+  {
+    // FL-08 heat transfer (D1-3.2). No Class Explore templates yet (spec fl-08-heat-transfer-explore-spec.md §8).
+    kit: "k4-thermal-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateThermalLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/thermal/transfer/ThermalExploreLabPage"),
+    listKitItems: listThermalKitItems,
   },
 ];
 

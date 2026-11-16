@@ -1,0 +1,62 @@
+/* FL-08 thermal bench Explore: same layout as FL-04 (status under the header, notebook dock bottom left). */
+.fl08-explore { position: absolute; inset: 0; }
+.fl08-scene { position: absolute; inset: 0; }
+.fl08-2d { position: absolute; inset: 96px calc(var(--lqp-panel-w, 380px) + 40px) 96px 24px; display: grid; place-items: center; }
+.fl08-svg { width: 100%; max-width: 520px; height: auto; }
+.fl08-label { fill: var(--text, #21313a); font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.fl08-start { text-anchor: start; font-weight: 600; }
+.fl08-small { font-size: 9px; }
+.fl08-rod { stroke: #4b5557; stroke-width: .8; }
+.fl08-rod-copper { fill: #b87333; } .fl08-rod-aluminium { fill: #c9ced3; } .fl08-rod-steel { fill: #7d868c; } .fl08-rod-glass { fill: #cfeaf2; } .fl08-rod-wood { fill: #a4703f; }
+.fl08-wax { fill: #f6e27a; stroke: #b59b2c; stroke-width: 1; }
+.fl08-pin { stroke: #6b7774; stroke-width: 2.2; stroke-linecap: round; }
+.fl08-pin-down { opacity: .6; }
+.fl08-flame { fill: #ff9a3c; }
+.fl08-tube { stroke: #8fb3c2; stroke-width: 22; stroke-linecap: round; opacity: .55; }
+.fl08-water { stroke: #5fb4dc; stroke-width: 16; stroke-linecap: round; opacity: .5; }
+.fl08-bulb { fill: #eef1f2; stroke: #9aa3a0; stroke-width: 2; }
+.fl08-bulb.fl08-on { fill: #ffe38a; stroke: #e7a521; }
+.fl08-ray { stroke: #f0a032; stroke-width: 2; stroke-dasharray: 6 5; }
+.fl08-screen { fill: #c58a49; }
+.fl08-flask { stroke: #6b7774; stroke-width: 2; }
+.fl08-black { fill: #1d1f20; } .fl08-silver { fill: #d9dee2; }
+.fl08-thermo { fill: #f4f7f8; stroke: #c0392b; stroke-width: 2; }
+.lab-space:has(.fl08-explore) .fl08-observation { position: absolute; z-index: 5; top: 96px; left: max(18px, env(safe-area-inset-left)); margin: 0; padding: 6px 12px; border-radius: 999px; background: var(--surface); box-shadow: 0 6px 18px rgb(18 38 30 / 12%); font-size: 13px; max-width: calc(100% - var(--lqp-panel-w, 380px) - 60px); }
+.fl08-items { display: grid; gap: 8px; padding: 0; list-style: none; }
+.fl08-items li { display: grid; gap: 2px; }
+.fl08-items span, .fl08-limits { color: var(--muted); font-size: 13px; }
+.fl08-limits { display: grid; gap: 4px; padding-left: 18px; }
+.fl08-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.fl08-tabs button { flex: 1 1 90px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+.fl08-tabs button[aria-selected="true"] { border-color: var(--accent, #0f766e); background: color-mix(in srgb, var(--accent, #0f766e) 12%, var(--surface)); }
+.fl08-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.fl08-row button, .fl08-primary { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; min-width: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.fl08-row button[aria-pressed="true"] { border-color: var(--accent, #0f766e); font-weight: 700; }
+.fl08-primary { margin-top: 10px; background: var(--accent, #0f766e); color: white; border-color: transparent; font-weight: 700; }
+.fl08-primary:disabled { opacity: .55; }
+.fl08-tube span { flex: 1 1 100%; font-weight: 600; }
+.fl08-rods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.fl08-rods label { display: grid; gap: 4px; font-size: 13px; }
+.fl08-rods select { min-height: 40px; border-radius: 8px; border: 1px solid var(--line); padding: 0 6px; }
+.fl08-clock { margin-top: 12px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--accent, #0f766e) 6%, var(--surface)); }
+.fl08-time { font-variant-numeric: tabular-nums; }
+.fl08-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.fl08-table th, .fl08-table td { padding: 5px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.fl08-table thead th { color: var(--muted); font-weight: 600; }
+.fl08-table td[data-dropped="true"] { font-weight: 700; }
+.fl08-k { margin-top: 10px; }
+.fl08-results { display: grid; gap: 4px; padding-left: 18px; margin: 10px 0 0; }
+.fl08-reading { margin: 10px 0 0; font-size: 15px; }
+.fl08-link { margin-top: 6px; border: 0; background: none; color: var(--accent, #0f766e); text-decoration: underline; padding: 0; min-height: 32px; }
+.fl08-dock button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.fl08-log { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: 84px; z-index: 11; display: grid; gap: 8px; width: min(380px, calc(100% - var(--lqp-panel-w, 380px) - 72px)); max-height: calc(100% - 200px); overflow-y: auto; padding: 14px 16px; border-radius: 16px; background: var(--surface); box-shadow: 0 12px 36px rgb(18 38 30 / 14%); }
+.fl08-log h2 { margin: 0; font-size: 15px; }
+.fl08-log ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fl08-log li { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.fl08-log small { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 780px) {
+  .lab-space:has(.fl08-explore) .fl08-observation { top: 88px; left: 8px; right: 8px; max-width: none; }
+  .fl08-2d { inset: 130px 8px 52dvh 8px; }
+  .lab-space:has(.fl08-log) .fl08-explore-panel { visibility: hidden; }
+  .fl08-log { left: 10px; right: 10px; width: auto; bottom: 84px; max-height: 46dvh; z-index: 26; }
+}
