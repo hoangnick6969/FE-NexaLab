@@ -3,10 +3,10 @@
  * Station 1: a glass tank with a depth ruler and the membrane probe; the membranes cup inwards by level.
  * Station 2: two connected cylinders with pistons, pans and weights; the pistons only show the direction.
  */
-import { useContext, useEffect, useRef, type ReactNode } from "react";
+import { useContext, useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { DepthProbeSettings, FluidStation, PistonSettings } from "@nexalab/sim/fluid";
+import type { DepthProbeSettings, FluidApparatusKind, FluidStation, PistonSettings } from "@nexalab/sim/fluid";
 import type { BenchViewPreset } from "../../shared/PhysicsStage";
 import { LabSceneContext } from "../../../shared/LabSpace";
 import { FluidBench3D } from "../kit";
@@ -81,14 +81,14 @@ function DepthRuler({ waterLevelMm, height }: { waterLevelMm: number; height: nu
   </group>;
 }
 
-function DepthStation({ settings, levels, probe, reduced }: { settings: DepthProbeSettings; levels: number; probe: ProbeReading; reduced: boolean }) {
-  const holder = useRef<THREE.Group>(null);
+/** What every apparatus renderer of this bench receives: the station settings and the current readings. */
+export type FluidStageState = { depth?: DepthProbeSettings; pistons?: PistonSettings; levels: number; probe: ProbeReading | null; reading: PistonReading | null; reduced: boolean };
+
+function TankItem({ state }: { state: FluidStageState }) {
+  const settings = state.depth;
+  if (!settings) return null;
   const water = settings.waterLevelMm;
-  // The probe is placed by the depth of its floor membrane C below the water surface.
-  useDamped(water - probe.depthMm, reduced, (y) => { if (holder.current) holder.current.position.y = y; });
-  const slide = useRef<THREE.Group>(null);
-  useDamped(probe.positionMm * 0.9, reduced, (x) => { if (slide.current) slide.current.position.x = x; });
-  return <group position={[TANK_X, 0, 0]} name="fl04-depth-station">
+  return <group position={[TANK_X, 0, 0]} name="tall_tank">
     <mesh position={[0, 3, 0]} receiveShadow><boxGeometry args={[TANK_W + 16, 6, TANK_D + 16]} /><meshStandardMaterial color="#3a4a52" roughness={0.6} /></mesh>
     <mesh position={[0, water / 2 + 6, 0]} name="fl04-water">
       <boxGeometry args={[TANK_W - 6, water, TANK_D - 6]} />
@@ -99,6 +99,19 @@ function DepthStation({ settings, levels, probe, reduced }: { settings: DepthPro
       <meshStandardMaterial color={GLASS} transparent opacity={0.16} roughness={0.05} depthWrite={false} side={THREE.DoubleSide} />
     </mesh>
     <DepthRuler waterLevelMm={water} height={settings.tankHeightMm} />
+  </group>;
+}
+
+function ProbeItem({ state }: { state: FluidStageState }) {
+  const { depth: settings, probe, levels, reduced } = state;
+  const holder = useRef<THREE.Group>(null);
+  const slide = useRef<THREE.Group>(null);
+  const water = settings?.waterLevelMm ?? 0;
+  // The probe is placed by the depth of its floor membrane C below the water surface.
+  useDamped(water - (probe?.depthMm ?? 0), reduced, (y) => { if (holder.current) holder.current.position.y = y; });
+  useDamped((probe?.positionMm ?? 0) * 0.9, reduced, (x) => { if (slide.current) slide.current.position.x = x; });
+  if (!settings || !probe) return null;
+  return <group position={[TANK_X, 0, 0]} name="membrane_probe">
     <group ref={slide}>
       <group ref={holder} position={[0, water - probe.depthMm, 0]}>
         <group position={[0, 6, 0]}>
@@ -114,52 +127,75 @@ function DepthStation({ settings, levels, probe, reduced }: { settings: DepthPro
   </group>;
 }
 
-function Weights({ count }: { count: number }) {
-  return <>{Array.from({ length: count }, (_, index) => <mesh key={index} position={[0, 6 + index * 11, 0]} castShadow>
-    <cylinderGeometry args={[11, 11, 10, 24]} /><meshStandardMaterial color="#59646b" metalness={0.55} roughness={0.35} />
-  </mesh>)}</>;
-}
+const PISTON_TOP = 150;
+const PAN_ABOVE_PISTON = 76;
+const PISTON_X: [number, number] = [-90, 90];
+/** Radii keep the area ratio of the config (r ∝ √area); offsets only show the direction. */
+const pistonRadii = (settings: PistonSettings): [number, number] => [42, 42 * Math.sqrt(settings.areasMm2[1] / settings.areasMm2[0])];
+const pistonOffsets = (reading: PistonReading): [number, number] => [
+  reading.outcome === "piston1_down" ? -PISTON_TRAVEL_MM : reading.outcome === "piston2_down" ? PISTON_TRAVEL_MM / 2 : 0,
+  reading.outcome === "piston2_down" ? -PISTON_TRAVEL_MM : reading.outcome === "piston1_down" ? PISTON_TRAVEL_MM * 2 : 0,
+];
 
-function Piston({ x, r, offset, count, label, reduced }: { x: number; r: number; offset: number; count: number; label: string; reduced: boolean }) {
+function PistonColumn({ x, r, offset, label, reduced }: { x: number; r: number; offset: number; label: string; reduced: boolean }) {
   const rod = useRef<THREE.Group>(null);
-  const top = 150;
-  useDamped(top + offset, reduced, (y) => { if (rod.current) rod.current.position.y = y; });
+  useDamped(PISTON_TOP + offset, reduced, (y) => { if (rod.current) rod.current.position.y = y; });
   return <group position={[x, 0, 0]} name={label}>
     <mesh position={[0, 100, 0]}><cylinderGeometry args={[r + 3, r + 3, 200, 40, 1, true]} /><meshStandardMaterial color={GLASS} transparent opacity={0.25} roughness={0.05} side={THREE.DoubleSide} depthWrite={false} /></mesh>
-    <mesh position={[0, (top + offset + 14) / 2, 0]}><cylinderGeometry args={[r, r, top + offset - 14, 40]} /><meshStandardMaterial color={WATER} transparent opacity={0.5} roughness={0.15} depthWrite={false} /></mesh>
-    <group ref={rod} position={[0, top + offset, 0]}>
+    <mesh position={[0, (PISTON_TOP + offset + 14) / 2, 0]}><cylinderGeometry args={[r, r, PISTON_TOP + offset - 14, 40]} /><meshStandardMaterial color={WATER} transparent opacity={0.5} roughness={0.15} depthWrite={false} /></mesh>
+    <group ref={rod} position={[0, PISTON_TOP + offset, 0]}>
       <mesh><cylinderGeometry args={[r, r, 10, 40]} /><meshStandardMaterial color="#e06a9a" roughness={0.5} /></mesh>
       <mesh position={[0, 40, 0]}><cylinderGeometry args={[4, 4, 70, 12]} /><meshStandardMaterial color="#9aa3a0" metalness={0.6} roughness={0.3} /></mesh>
-      <group position={[0, 76, 0]}>
-        <mesh><cylinderGeometry args={[30, 26, 4, 32]} /><meshStandardMaterial color="#cfd6d2" metalness={0.4} roughness={0.35} /></mesh>
-        <Weights count={count} />
-      </group>
+      <mesh position={[0, PAN_ABOVE_PISTON, 0]}><cylinderGeometry args={[30, 26, 4, 32]} /><meshStandardMaterial color="#cfd6d2" metalness={0.4} roughness={0.35} /></mesh>
     </group>
   </group>;
 }
 
-function PistonStation({ settings, pistons, reduced }: { settings: PistonSettings; pistons: PistonReading; reduced: boolean }) {
-  // Radii keep the area ratio of the config: r ∝ √area.
-  const r1 = 42;
-  const r2 = r1 * Math.sqrt(settings.areasMm2[1] / settings.areasMm2[0]);
-  const offset1 = pistons.outcome === "piston1_down" ? -PISTON_TRAVEL_MM : pistons.outcome === "piston2_down" ? PISTON_TRAVEL_MM / 2 : 0;
-  const offset2 = pistons.outcome === "piston2_down" ? -PISTON_TRAVEL_MM : pistons.outcome === "piston1_down" ? PISTON_TRAVEL_MM * 2 : 0;
-  return <group position={[PISTONS_X, 0, -20]} name="fl04-piston-station">
+function PistonPairItem({ state }: { state: FluidStageState }) {
+  const { pistons: settings, reading, reduced } = state;
+  if (!settings || !reading) return null;
+  const radii = pistonRadii(settings);
+  const offsets = pistonOffsets(reading);
+  return <group position={[PISTONS_X, 0, -20]} name="piston_pair">
     <mesh position={[0, 4, 0]} receiveShadow><boxGeometry args={[320, 8, 120]} /><meshStandardMaterial color="#3a4a52" roughness={0.6} /></mesh>
     <mesh position={[0, 22, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[12, 12, 200, 20]} /><meshStandardMaterial color={WATER} transparent opacity={0.6} roughness={0.15} /></mesh>
-    <Piston x={-90} r={r1} offset={offset1} count={pistons.pan1} label="piston-1" reduced={reduced} />
-    <Piston x={90} r={r2} offset={offset2} count={pistons.pan2} label="piston-2" reduced={reduced} />
+    {PISTON_X.map((x, index) => <PistonColumn key={x} x={x} r={radii[index]} offset={offsets[index]} label={`piston-${index + 1}`} reduced={reduced} />)}
   </group>;
 }
 
-export function PressureStage3D({ station, depthSettings, pistonSettings, levels, probe, pistons, reduced, active = true, children }: {
+function WeightStack({ x, offset, count, reduced }: { x: number; offset: number; count: number; reduced: boolean }) {
+  const stack = useRef<THREE.Group>(null);
+  // Follows its piston: same target and damping as the piston column.
+  useDamped(PISTON_TOP + offset + PAN_ABOVE_PISTON, reduced, (y) => { if (stack.current) stack.current.position.y = y; });
+  return <group ref={stack} position={[x, PISTON_TOP + offset + PAN_ABOVE_PISTON, 0]}>
+    {Array.from({ length: count }, (_, index) => <mesh key={index} position={[0, 6 + index * 11, 0]} castShadow>
+      <cylinderGeometry args={[11, 11, 10, 24]} /><meshStandardMaterial color="#59646b" metalness={0.55} roughness={0.35} />
+    </mesh>)}
+  </group>;
+}
+
+function WeightSetItem({ state }: { state: FluidStageState }) {
+  const { reading, reduced } = state;
+  if (!state.pistons || !reading) return null;
+  const offsets = pistonOffsets(reading);
+  const counts = [reading.pan1, reading.pan2];
+  return <group position={[PISTONS_X, 0, -20]} name="weight_set">
+    {PISTON_X.map((x, index) => <WeightStack key={x} x={x} offset={offsets[index]} count={counts[index]} reduced={reduced} />)}
+  </group>;
+}
+
+/** One renderer per apparatus kind of the engine (P0 C2.3): the stage looks each enabled item up by its kind. */
+export const APPARATUS_RENDERERS: Record<FluidApparatusKind, ComponentType<{ state: FluidStageState }>> = {
+  tall_tank: TankItem,
+  membrane_probe: ProbeItem,
+  piston_pair: PistonPairItem,
+  weight_set: WeightSetItem,
+};
+
+export function PressureStage3D({ station, apparatus, state, active = true, children }: {
   station: FluidStation;
-  depthSettings?: DepthProbeSettings;
-  pistonSettings?: PistonSettings;
-  levels: number;
-  probe: ProbeReading | null;
-  pistons: PistonReading | null;
-  reduced: boolean;
+  apparatus: ReadonlyArray<{ id: string; kind: FluidApparatusKind }>;
+  state: FluidStageState;
   active?: boolean;
   children?: ReactNode;
 }) {
@@ -170,8 +206,10 @@ export function PressureStage3D({ station, depthSettings, pistonSettings, levels
     return () => sceneRoot.removeAttribute("aria-hidden");
   }, [sceneRoot]);
   return <FluidBench3D view={STATION_VIEWS[station]} active={active}>
-    {depthSettings && probe && <DepthStation settings={depthSettings} levels={levels} probe={probe} reduced={reduced} />}
-    {pistonSettings && pistons && <PistonStation settings={pistonSettings} pistons={pistons} reduced={reduced} />}
+    {apparatus.map((item) => {
+      const Renderer = APPARATUS_RENDERERS[item.kind];
+      return <Renderer key={item.id} state={state} />;
+    })}
     {children}
   </FluidBench3D>;
 }
