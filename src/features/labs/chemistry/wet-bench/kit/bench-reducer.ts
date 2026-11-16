@@ -3,12 +3,12 @@
  * goes through the same `hold` / `apply` actions, so all input methods behave identically.
  */
 import {
-  applyOperation, assessSolution, createBench, engineContextFor, measure, readVolume, reagentById, scaleReadingMicrograms,
+  applyOperation, assessSolution, createBench, engineContextFor, measure, observeVessel, readGasVolume, readVolume, reagentById, scaleReadingMicrograms,
   type ApplyResult, type Bench, type ChemistryLabConfig, type EngineContext, type Operation, type SolutionAssessment, type Transition,
 } from "@nexalab/sim/wet-bench";
 import { K2_APPARATUS, isVesselKind, type HeldTool } from "./apparatus-manifest";
 import { isPlacementSlot, slotById } from "./bench-layout";
-import { describeVesselChange, equationsFor, formatGrams, formatMilligrams, formatMolar, formatPercent, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
+import { describeVesselChange, equationsFor, formatClock, formatGasMl, formatGrams, formatMilligrams, formatMolar, formatPercent, formatPh, formatQuantity, PIECE_NAME, reagentLabel, type ObservationLogEntry } from "./observation-log";
 import { OBSERVATION_LOG_LIMIT } from "../../../shared/explore/observation-log";
 
 /** A dropper draws up to 1.0 mL (20 standard drops of 0.05 mL) per fill. */
@@ -19,6 +19,9 @@ export type Held =
   | { kind: "tool"; tool: HeldTool; apparatusId: string }
   | { kind: "vessel"; vesselId: string };
 
+/** Operations on one vessel. The stopwatch and the passage of time are bench-level actions with their own reducer cases. */
+type VesselOperation = Exclude<Operation, { type: "clock" } | { type: "advance_time" }>;
+
 /** The learner's conclusion for one target: the real concentration, shown only after "Kết luận". */
 export type Conclusion = { targetId: string; vesselId: string; result: Extract<SolutionAssessment, { ok: true }> };
 
@@ -27,7 +30,7 @@ export type Conclusion = { targetId: string; vesselId: string; result: Extract<S
  * (to 1 mL); a flask shows whether it is at the mark and a beaker only a rough level, so the cylinder is the tool to use.
  */
 export function volumeLabel(config: ChemistryLabConfig, vessel: Bench["vessels"][string]) {
-  if (!config.measurements.includes("volume")) return formatQuantity(vessel.solutionMicroliters);
+  if (!config.measurements.includes("volume")) return formatQuantity(vessel.solutionMicroliters, Boolean(config.rateModel));
   if (vessel.kind === "graduated_cylinder_100ml") {
     const reading = readVolume(vessel);
     return reading.ok ? `${reading.milliliters} mL` : "";
@@ -49,6 +52,8 @@ export type Snapshot = {
   probeIn: string | null;
   strips: Record<string, "red" | "purple" | "blue">;
   wasteMicroliters: number;
+  /** Gas collected over time (engine 1.2.0): tenths of a mL per stoppered flask at each simulated moment, for the chart. */
+  series: Array<{ t: number; volumes: Record<string, number> }>;
 };
 
 export type BenchUiState = {
@@ -87,6 +92,8 @@ export type BenchAction =
   | { type: "click_slot"; slotId: string; now: number }
   | { type: "empty"; vesselId: string; now: number }
   | { type: "set_powder"; milligrams: number }
+  | { type: "clock"; action: "start" | "stop" | "reset"; now: number }
+  | { type: "wait"; seconds: number; now: number }
   | { type: "tare"; now: number }
   | { type: "fill_mark"; vesselId: string; now: number }
   | { type: "conclude"; targetId: string; vesselId: string; now: number }
@@ -110,6 +117,7 @@ export function initialBenchState(config: ChemistryLabConfig): BenchUiState {
     probeIn: null,
     strips: {},
     wasteMicroliters: 0,
+    series: [{ t: 0, volumes: {} }],
   };
   return {
     config,
@@ -143,7 +151,7 @@ function pushLog(state: BenchUiState, entry: Omit<ObservationLogEntry, "seq">): 
       && entry.reactions.length === 0 && last.reactions.length === 0 && entry.equations.length === 0
       && JSON.stringify(last.phenomenaVi) === JSON.stringify(entry.phenomenaVi)) {
     const microliters = last.merge.microliters + entry.merge.microliters;
-    const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters, Boolean(state.config.solutes?.length))} ${last.merge.label}` };
+    const merged: ObservationLogEntry = { ...last, at: entry.at, readings: entry.readings, merge: { ...last.merge, microliters }, actionVi: `Thêm ${formatQuantity(microliters, Boolean(state.config.solutes?.length || state.config.rateModel))} ${last.merge.label}` };
     return { ...state, log: [...state.log.slice(0, -1), merged], seen };
   }
   return { ...state, log: [...state.log, { ...entry, seq }].slice(-OBSERVATION_LOG_LIMIT), seen };
@@ -166,8 +174,8 @@ function rejectionText(state: BenchUiState, result: Extract<ApplyResult, { statu
   }
 }
 
-function describeAction(state: BenchUiState, op: Operation) {
-  if (op.type === "add_liquid") return `Thêm ${formatQuantity(op.microliters, Boolean(state.config.solutes?.length))} ${reagentLabel(op.reagentId)}`;
+function describeAction(state: BenchUiState, op: VesselOperation) {
+  if (op.type === "add_liquid") return `Thêm ${formatQuantity(op.microliters, Boolean(state.config.solutes?.length || state.config.rateModel))} ${reagentLabel(op.reagentId)}`;
   if (op.type === "add_indicator") return `Thêm ${op.drops} giọt ${reagentLabel(op.reagentId)}`;
   if (op.type === "add_solid") {
     const composition = reagentById(op.reagentId)?.composition;
@@ -194,7 +202,7 @@ function liveReadings(state: BenchUiState, snapshot: Snapshot, vesselId: string)
 }
 
 /** Runs one model operation and records it. */
-function runOperation(state: BenchUiState, op: Operation, now: number): BenchUiState {
+function runOperation(state: BenchUiState, op: VesselOperation, now: number): BenchUiState {
   const targetId = op.type === "pour_all" ? op.toVesselId : op.vesselId;
   const result = applyOperation(state.current.bench, op, state.context);
   if (result.status === "rejected") return notice(state, rejectionText(state, result, op.type === "pour_all" ? op.fromVesselId : targetId), now);
@@ -360,6 +368,48 @@ function reduce(state: BenchUiState, action: BenchAction): BenchUiState {
       return { ...state, current: takePen ? { ...state.current, probeIn: null } : state.current, stripColour: null, held: action.held, notice: null, focusVesselId: action.held?.kind === "vessel" ? action.held.vesselId : state.focusVesselId };
     }
     case "preset": return { ...state, presetMicroliters: action.microliters };
+    case "clock": {
+      const result = applyOperation(state.current.bench, { type: "clock", action: action.action }, state.context);
+      if (result.status !== "applied") return state;
+      const seconds = result.bench.clock?.seconds ?? 0;
+      const label = action.action === "start" ? "Bắt đầu bấm giờ" : action.action === "stop" ? "Dừng đồng hồ" : "Đưa đồng hồ về 0";
+      return pushLog({ ...state, current: { ...state.current, bench: result.bench }, notice: null }, {
+        at: action.now, vesselId: null, locationVi: "Đồng hồ bấm giờ", actionVi: label, phenomenaVi: [`Đồng hồ chỉ ${formatClock(seconds)}`],
+        equations: [], readings: { time: formatClock(seconds) }, reactions: [], measurement: "time",
+      });
+    }
+    case "wait": {
+      const before = state.current;
+      const result = applyOperation(before.bench, { type: "advance_time", seconds: action.seconds }, state.context);
+      if (result.status === "rejected") return notice(state, result.code === "TIME_LIMIT" ? "Đã tới giới hạn thời gian của bài này (10 phút mô phỏng). Hãy bấm Làm mới để thử lại." : "Bài này không có trục thời gian.", action.now);
+      if (result.status !== "applied") return state;
+      const bench = result.bench;
+      const elapsed = bench.elapsedSeconds ?? 0;
+      const volumes: Record<string, number> = {};
+      for (const vessel of Object.values(bench.vessels)) {
+        const reading = readGasVolume(vessel);
+        if (reading.ok) volumes[vessel.vesselId] = reading.tenthsMilliliters;
+      }
+      const current: Snapshot = { ...before, bench, series: [...before.series, { t: elapsed, volumes }] };
+      const flashes = { ...state.flashes };
+      for (const transition of result.transitions) flashes[transition.vesselId] = { transition, at: action.now };
+      const word = { none: "không sủi bọt", low: "sủi bọt nhẹ", medium: "sủi bọt vừa", vigorous: "sủi bọt mạnh" } as const;
+      const lines = result.transitions.map((transition) => {
+        const vessel = bench.vessels[transition.vesselId];
+        const intensity = observeVessel(vessel, transition).visual.gasBubbles.intensity;
+        const collected = readGasVolume(vessel);
+        return `${apparatusLabel(state.config, transition.vesselId)}: ${word[intensity]}${collected.ok ? `, khí thu được ${formatGasMl(collected.tenthsMilliliters)}` : ", khí thoát ra ngoài (bình chưa đậy nút)"}`;
+      });
+      const next: BenchUiState = {
+        ...state, current, flashes, banner: null, notice: null,
+        history: [...state.history, { snapshot: before, labelVi: `Chờ ${action.seconds} giây` }].slice(-HISTORY_LIMIT),
+      };
+      return pushLog(next, {
+        at: action.now, vesselId: null, locationVi: "Bàn thí nghiệm", actionVi: `Chờ ${action.seconds} giây (đã trôi ${formatClock(elapsed)})`,
+        phenomenaVi: lines.length ? lines : ["Không thấy biến đổi rõ rệt"], equations: [],
+        readings: bench.clock ? { time: formatClock(bench.clock.seconds) } : {}, reactions: result.transitions.flatMap((transition) => transition.fired.map((fired) => fired.reactionId)), measurement: "time",
+      });
+    }
     case "set_powder": return { ...state, powderMilligrams: Math.max(1, Math.min(POWDER_MAX_MILLIGRAMS, Math.round(Number.isFinite(action.milligrams) ? action.milligrams : POWDER_DEFAULT_MILLIGRAMS))) };
     case "tare": {
       const zero = scaleDisplayMicrograms({ ...state, scaleZero: 0 });

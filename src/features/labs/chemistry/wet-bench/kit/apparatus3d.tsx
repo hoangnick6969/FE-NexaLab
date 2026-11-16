@@ -58,6 +58,7 @@ function Solids({ visual, floorY, spread }: { visual: VesselVisualState; floorY:
       <mesh position={[0, 0.13, 0]}><cylinderGeometry args={[0.016, 0.016, 0.006, 14]} /><meshStandardMaterial color={color} metalness={0.6} roughness={0.45} /></mesh>
     </group>;
     if (solid.shape === "foil") return <mesh key={solid.pieceId} position={[x * 0.5, floorY + 0.06, 0]} rotation={[0, 0.4, 0.08]} castShadow><boxGeometry args={[0.035, 0.11, 0.004]} /><meshStandardMaterial color={color} metalness={0.7} roughness={0.35} /></mesh>;
+    if (solid.shape === "powder") return <mesh key={solid.pieceId} position={[x * 0.4, floorY + 0.012 * size, 0]} scale={[size * 1.6, size * 0.5, size * 1.6]}><sphereGeometry args={[0.03, 14, 8]} /><meshStandardMaterial color={color === "#999999" ? "#efe9dc" : color} roughness={1} /></mesh>;
     if (solid.shape === "chips") return <mesh key={solid.pieceId} position={[x, floorY + 0.03 * size, 0]} scale={size} castShadow><dodecahedronGeometry args={[0.035, 0]} /><meshStandardMaterial color={color} roughness={0.9} /></mesh>;
     return <mesh key={solid.pieceId} position={[x, floorY + 0.02 * size, 0.005 * index]} scale={size} castShadow><icosahedronGeometry args={[0.022, 0]} /><meshStandardMaterial color={color} metalness={0.5} roughness={0.5} /></mesh>;
   })}</>;
