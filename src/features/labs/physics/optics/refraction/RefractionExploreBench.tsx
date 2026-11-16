@@ -41,7 +41,7 @@ type Input = { station: OpticsStation; mediumId: string; angles: Record<OpticsSt
 type Search = Record<string, { maxRefractedDeg?: number; firstTotalDeg?: number }>;
 type Check = { mediumId: string; guessDeg: number; ok: boolean; criticalDeg: number };
 
-function readRay(config: RefractionLabConfig, input: Input): { ok: true; view: RayView } | { ok: false; error: string } {
+export function readRay(config: RefractionLabConfig, input: Input): { ok: true; view: RayView } | { ok: false; error: string } {
   const result = evaluateRay(config, { station: input.station, mediumId: input.mediumId, incidenceDeg: input.angles[input.station] });
   if (!result.ok) return { ok: false, error: result.code };
   const refraction = result.refraction;
@@ -56,7 +56,7 @@ const initialInput = (config: RefractionLabConfig): Input => ({
   angles: { "into-block": 30, "out-of-block": 30, prism: config.prism ? Math.min(Math.max(50, config.prism.minIncidenceDeg), config.prism.maxIncidenceDeg) : 50 },
 });
 
-function readPrism(config: RefractionLabConfig, incidenceDeg: number, light: PrismLight): { ok: true; view: PrismView } | { ok: false; error: string } {
+export function readPrism(config: RefractionLabConfig, incidenceDeg: number, light: PrismLight): { ok: true; view: PrismView } | { ok: false; error: string } {
   const result = evaluatePrism(config, { incidenceDeg, light });
   if (!result.ok) return { ok: false, error: result.code };
   return { ok: true, view: {

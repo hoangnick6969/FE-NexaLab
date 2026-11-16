@@ -2,7 +2,8 @@ import { Bounds } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import type { ReactNode } from "react";
 import { FL06_LEVER_EXPLORE_CONFIG } from "@nexalab/sim/mechanics";
-import { REAGENTS, type VesselVisualState } from "@nexalab/sim/wet-bench";
+import { reagentById, type VesselVisualState } from "@nexalab/sim/wet-bench";
+import { FL15_SAFETY_CONFIG, safetyScenarioReagentById } from "@nexalab/sim/safety-scenario";
 import { Dropper3D, ReagentBottle3D, TestTube3D } from "../chemistry/wet-bench/kit/apparatus3d";
 import { FIXTURE_RENDERERS, VESSEL_RENDERERS } from "../chemistry/wet-bench/kit/apparatus-renderers";
 import { bottleCategory, CLEAR, reagentLook } from "../chemistry/wet-bench/kit/liquid-look";
@@ -12,7 +13,10 @@ import { Stopwatch3D } from "../shared/items/stopwatch";
 import { Thermometer3D } from "../shared/items/thermometer";
 import { K5Hanger } from "../physics/mechanics/kit/K5Stage";
 import { weightSetThumbnailKey } from "../physics/mechanics/explore/kit-items";
-import { fl13Config } from "../chemistry/wet-bench/labs/fl-13.config";
+import { k2LabConfigs } from "../chemistry/wet-bench/labs";
+import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
+import { listSafetyKitItems } from "../chemistry/safety/kit-items";
+import { physicsKitScenes } from "./physics-kit-thumbnail-scenes";
 import { accommodationFromLensPower } from "../biology/anatomy/kit/eye-geometry";
 import { EyeModel } from "../biology/anatomy/kit/EyeModel";
 import { Thermometer3D as PondThermometer3D } from "../biology/ecology/kit/Thermometer3D";
@@ -29,6 +33,10 @@ const empty: VesselVisualState = {
 const emptyVessel = { visual: empty, look: CLEAR, flashAt: null };
 const coding = parseDna(fl27GeneConfig.variants[0].coding);
 const helix = helixSpec(fl27GeneConfig.structure);
+const reagents = new Set([
+  ...Object.values(k2LabConfigs).flatMap(listWetBenchKitItems),
+  ...listSafetyKitItems(FL15_SAFETY_CONFIG),
+].filter(({ category }) => category === "material").map(({ id }) => id));
 
 export const kitScenes: Record<string, ReactNode> = {
   ...Object.fromEntries(Object.entries(VESSEL_RENDERERS).map(([key, { Body }]) =>
@@ -45,6 +53,7 @@ export const kitScenes: Record<string, ReactNode> = {
   "kit/physics/thermometer": <Thermometer3D fill={0.25} reading="25,0 °C" />,
   "kit/physics/weight_set": <K5Hanger kind="WEIGHT" />,
   "kit/physics/spring_gauge": <K5Hanger kind="GAUGE" />,
+  ...physicsKitScenes,
   "kit/biology/garden-plot": <PeaPlant3D position={[0, 0, 0]} genotype="Aa" />,
   "kit/explore-support/eye-model": <group rotation-z={-Math.PI / 2}>
     <EyeModel axialMm={22.6} accommodation={accommodationFromLensPower(20)} pupilMm={2.5} sectioned highlight={null} />
@@ -55,14 +64,14 @@ export const kitScenes: Record<string, ReactNode> = {
     <DnaDuplex3D structure={fl27GeneConfig.structure} upper={coding} lower={coding.map(pairDna)} />
   </group>,
   "kit/biology/thermometer": <PondThermometer3D valueDeciC={250} label="" animate={false} position={[0, 0, 0]} />,
-  ...Object.fromEntries((fl13Config.classTemplates ?? []).flatMap((template) => template.reagentGroups.flatMap((group) =>
-    group.options.map((id) => {
-      const reagent = REAGENTS[id];
+  ...Object.fromEntries([...reagents].map((id) => {
+      const reagent = reagentById(id) ?? safetyScenarioReagentById(id);
+      if (!reagent) throw new Error(`Missing thumbnail reagent: ${id}`);
       return [`kit/chemistry/reagent-${id}`, <ReagentBottle3D
         look={reagentLook(reagent)} category={bottleCategory(reagent)}
         solid={reagent.composition.kind === "solid" || reagent.composition.kind === "powder"}
       />];
-    })))),
+    })),
   ...Object.fromEntries((FL06_LEVER_EXPLORE_CONFIG.classTemplates ?? []).flatMap((template) => template.weightOptions.map((set) =>
     [`kit/physics/${weightSetThumbnailKey(set)}`, <group rotation-y={-0.36}>
       {set.map((_, index) => <group key={index} position={[index * 0.46, 0, 0]}><K5Hanger kind="WEIGHT" /></group>)}

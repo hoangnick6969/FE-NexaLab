@@ -51,17 +51,51 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   // Reagents carry their hazard and the same list as the bench.
   await expect(card("HCl_0_1M")).toContainText("Dùng ở: FL-13 · FL-14a");
   await expect(card("HCl_0_1M")).toContainText("Ăn mòn");
-  // Apparatus assets are lazy images. Reagents retain their icon and do not open a 3D viewport.
+  // Apparatus and reagent assets are lazy images and never open a 3D viewport.
   const tube = card("test_tube").locator("img");
   await expect(tube).toHaveAttribute("loading", "lazy");
   await expect.poll(() => tube.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(512);
-  await expect(card("HCl_0_1M").locator("svg")).toHaveCount(1);
+  await expect(card("HCl_0_1M").locator("img")).toHaveAttribute("loading", "lazy");
+  await expect(card("CuSO4_0_1M").locator("img")).toHaveCount(1);
+  await expect(card("Zn_granule").locator("img")).toHaveCount(1);
   await expect(kit.locator("canvas")).toHaveCount(0);
   await expect(kit.getByTestId("kit-debug")).toHaveCount(0);
 
   // The Labs listed under an item open that Lab.
   await card("tongs").getByRole("link", { name: "FL-14a" }).click();
   await expect(page).toHaveURL(/\/labs\/metal-reactivity$/);
+});
+
+test("Physics previews cover pressure and lens models and keep each screen on a separate card", async ({ page }) => {
+  const row = (catalogId: string, kit: string, items: [string, string][], id = catalogId) => ({
+    id, title: catalogId, mode: "explore",
+    explore: { ok: true, kit, activity, config: {
+      catalogId, display: {}, enabledApparatus: items.map(([id, kind]) => ({ id, kind })),
+    } },
+  });
+  await open(page, student, [
+    row("FL-04", "k3-fluid-bench@1", [["tank", "tall_tank"], ["probe", "membrane_probe"], ["pistons", "piston_pair"], ["weights", "weight_set"]]),
+    row("FL-08", "k4-thermal-bench@1", [["screen", "wood_screen"]]),
+    row("FL-23", "k6-optics-bench@1", [["screen", "screen"], ["table", "measurement_table"], ["speed", "speed_card"]]),
+    row("FL-23", "k6-lens-bench@1", [
+      ["bench", "optical_bench"], ["lens", "lens"], ["lamp", "object_lamp"],
+      ["screen", "screen"], ["loupe", "magnifier"], ["grid", "grid"],
+    ], "thin-lens"),
+  ]);
+  const physics = page.getByRole("region", { name: "Kit Vật lý" });
+  await expect(physics.locator(".kit-card")).toHaveCount(14);
+  await expect(physics.locator(".kit-card img")).toHaveCount(11);
+  for (const [key, label, lab] of [["wood_screen", "Tấm gỗ dày", "FL-08"], ["screen", "Màn hứng", "FL-23"], ["lens_screen", "Màn hứng ảnh", "thin-lens"]]) {
+    const card = physics.locator(`[data-key="${key}"]`);
+    await expect(card).toContainText(label);
+    await expect(card.getByRole("link")).toHaveAttribute("href", `/labs/${lab}`);
+  }
+  const tank = physics.locator('[data-key="tank"] img');
+  await tank.scrollIntoViewIfNeeded();
+  await expect.poll(() => tank.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(512);
+  await expect(physics.locator('[data-key="table"] img')).toHaveCount(0);
+  await expect(physics.locator('[data-key="lens_grid"] img')).toHaveCount(0);
+  await expect(page.getByTestId("kit-components").locator("canvas")).toHaveCount(0);
 });
 
 test("a teacher can open the apparatus catalog from Class Lab", async ({ page }) => {

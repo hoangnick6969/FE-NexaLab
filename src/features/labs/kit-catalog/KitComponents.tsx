@@ -2,7 +2,7 @@
  * "Dụng cụ theo bộ Kit" on /labs: every apparatus, instrument and reagent of the published Explore benches, grouped by Kit,
  * with a picture, what it is for, and which Labs use it. Admins (or ?debug=1) also see the ids behind each entry.
  */
-import { Beaker, Box, Cylinder, Droplet, FileText, Flame, FlaskConical, Gauge, Glasses, Hand, Pipette, Scale, Scissors, Shirt, TestTube, TestTubes, Trash2, type LucideIcon, FlaskRound, Ruler, Shovel, Minus, Timer, Thermometer } from "lucide-react";
+import { Beaker, Box, Cylinder, Droplet, FileText, Flame, FlaskConical, Gauge, Glasses, Grid3X3, Hand, Pipette, Scale, Scissors, Shirt, TestTube, TestTubes, Trash2, type LucideIcon, FlaskRound, Ruler, Shovel, Minus, Timer, Thermometer, TableProperties } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -41,6 +41,7 @@ const ICONS: Record<string, LucideIcon> = {
   dropper_pipette: Pipette, litmus_strip_dispenser: FileText, digital_ph_meter: Gauge, tongs: Scissors, stopper: Cylinder, electronic_scale: Scale, stopwatch: Timer, thermometer: Thermometer,
   graduated_cylinder_100ml: Ruler, volumetric_flask_100ml: FlaskRound, spatula: Shovel, glass_rod: Minus,
   safety_goggles: Glasses, protective_gloves: Hand, lab_coat: Shirt, test_tube_holder: Scissors, alcohol_lamp: Flame,
+  table: TableProperties, speed: Gauge, lens_grid: Grid3X3,
 };
 export const iconFor = (entry: Pick<CatalogEntry, "key" | "category">): LucideIcon => (entry.category === "material" ? Droplet : ICONS[entry.key] ?? Box);
 
@@ -48,7 +49,7 @@ function Card({ entry, group, debug }: { entry: CatalogEntry; group: KitGroup; d
   const t = text();
   const Icon = iconFor(entry);
   const [failedImage, setFailedImage] = useState<string>();
-  const image = entry.category !== "material" ? kitThumbnail(group, entry.key) : undefined;
+  const image = kitThumbnail(group, entry.category === "material" ? `reagent-${entry.key}` : entry.key);
   const sharing = entry.sharedItemId ? t.shared : entry.category !== "material" && entry.usedIn.length > 1 ? t.inKit : null;
   const hazard = entry.safety && entry.safety.level !== "none"
     ? [HAZARD_LEVEL_VI[entry.safety.level], ...entry.safety.tags.map((tag) => HAZARD_TAG_VI[tag] ?? tag)].filter(Boolean).join(" · ") : "";

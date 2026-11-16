@@ -52,7 +52,7 @@ Conventions:
 
 ### Kit apparatus thumbnails
 
-The catalog loads static WebP images from `src/features/labs/assets/thumbnails/kit/<group>/<rendererKey>.webp` and uses an icon when a renderer has no image or the image fails. Reagents keep their catalog icons. Run `npm run capture:lab-thumbnails -- --kit` to regenerate the 512 × 512 previews (30 KiB max each), or pass a single ID such as `kit/chemistry/test_tube`. The development harness uses the K2 renderer registries, safety apparatus meshes and individual physics meshes in `kit-thumbnail-scenes.tsx`. It blocks API requests. The command with no arguments still captures full lab thumbnails.
+The catalog loads static WebP images from `src/features/labs/assets/thumbnails/kit/<group>/<itemKey>.webp` and uses an icon when an item has no scene or its image fails. Chemical materials use `reagent-<id>`, so the catalog and assignment form share the same images. Physics capture uses the renderer registries for FL‑04, FL‑08, both FL‑23 benches and FL‑24, plus the FL‑06 apparatus meshes. The heat shield, refraction screen and lens projection screen have separate keys. The FL‑23 measurement table, speed readout and scale grid keep icons because they are UI elements. Run `npm run capture:lab-thumbnails -- --kit` to regenerate the 512 × 512 previews (30 KiB max each), or pass an ID such as `kit/physics/tank`. The harness blocks API requests. With no arguments it still captures full lab thumbnails.
 
 The Explore assignment form uses the same image lookup for FL‑13 reagent options (`reagent-<id>`) and FL‑06 weight sets (`weights-<forces-in-mN>`). The harness captures the bottle and hanger meshes used on those benches. Option labels retain the reagent name and any concentration, or the force values in N.
 

@@ -34,7 +34,7 @@ const levelVi = (level: number, levels: number) => level === 0 ? "ph·∫≥ng" : `l√
 
 type Read<T, E> = { ok: true; reading: T } | { ok: false; error: E } | null;
 
-function readProbe(config: FluidLabConfig, depthMm: number, positionMm: number): Read<ProbeReading, keyof typeof PROBE_ERROR_VI> {
+export function readProbe(config: FluidLabConfig, depthMm: number, positionMm: number): Read<ProbeReading, keyof typeof PROBE_ERROR_VI> {
   if (!config.depthProbe) return null;
   const result = evaluateDepthProbe(config.depthProbe, config.display.deformationLevels, { depthMm, positionMm });
   if (!result.ok) return { ok: false, error: result.code };
@@ -42,7 +42,7 @@ function readProbe(config: FluidLabConfig, depthMm: number, positionMm: number):
   return { ok: true, reading: { depthMm, positionMm, levels: { A: A.level, B: B.level, C: C.level }, pascals: { A: A.pascals, C: C.pascals } } };
 }
 
-function readPistons(config: FluidLabConfig, pan1: number, pan2: number): Read<PistonReading, keyof typeof PISTON_ERROR_VI> {
+export function readPistons(config: FluidLabConfig, pan1: number, pan2: number): Read<PistonReading, keyof typeof PISTON_ERROR_VI> {
   if (!config.pistons) return null;
   const result = evaluatePistons(config.pistons, { pan1, pan2 });
   if (!result.ok) return { ok: false, error: result.code };

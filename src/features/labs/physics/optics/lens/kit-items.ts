@@ -19,6 +19,6 @@ const ITEM_TEXT: Record<LensApparatusKind, ItemText> = {
 export function listLensKitItems(config: LensLabConfig): KitItem[] {
   return config.enabledApparatus.map((item): KitItem => {
     const text = ITEM_TEXT[item.kind];
-    return { id: item.id, category: text.category, labelVi: item.labelVi ?? text.label, purposeVi: text.purpose(config) };
+    return { id: item.id, rendererKey: `lens_${item.kind}`, category: text.category, labelVi: item.labelVi ?? text.label, purposeVi: text.purpose(config) };
   });
 }

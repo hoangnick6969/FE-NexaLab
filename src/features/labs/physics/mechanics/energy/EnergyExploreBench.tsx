@@ -39,14 +39,14 @@ type PendulumInput = { massG: number; dropHeightMm: number; position: PendulumPo
 type HoistInput = { massG: number; distanceMm: number; motorId: string };
 type Read<T> = { ok: true; view: T } | { ok: false; error: string } | null;
 
-function readPendulum(config: EnergyLabConfig, input: PendulumInput): Read<PendulumView> {
+export function readPendulum(config: EnergyLabConfig, input: PendulumInput): Read<PendulumView> {
   if (!config.pendulum) return null;
   const result = evaluatePendulum(config.pendulum, input);
   if (!result.ok) return { ok: false, error: result.code };
   return { ok: true, view: { massG: input.massG, dropHeightMm: input.dropHeightMm, position: result.position, heightMm: result.heightMm, potentialMj: result.potentialMj, kineticMj: result.kineticMj, mechanicalMj: result.mechanicalMj } };
 }
 
-function readHoist(config: EnergyLabConfig, input: HoistInput): Read<LiftView> {
+export function readHoist(config: EnergyLabConfig, input: HoistInput): Read<LiftView> {
   if (!config.hoist) return null;
   const result = evaluateHoist(config.hoist, input);
   if (!result.ok) return { ok: false, error: result.code };
