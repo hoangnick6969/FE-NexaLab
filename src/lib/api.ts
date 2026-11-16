@@ -324,10 +324,14 @@ export async function api<T = any>(
     throw new ApiError(0, "NETWORK_ERROR", apiErrorMessage(0, "NETWORK_ERROR", undefined));
   }
   const authenticatedAuthEndpoint = Boolean(token) && ["/auth/password", "/auth/me"].includes(path);
-  if (r.status === 401 && retry && useAuth.getState().token === token && (!path.startsWith("/auth/") || authenticatedAuthEndpoint)) {
-    const restored = await restore();
-    if (restored && (!userId || useAuth.getState().user?.id === userId)) return api(path, method, body, false, headers);
-    if (!restored && useAuth.getState().token === token) useAuth.getState().set(null, null);
+  if (r.status === 401 && retry && (!path.startsWith("/auth/") || authenticatedAuthEndpoint)) {
+    const restored = useAuth.getState().token === token && await restore();
+    const current = useAuth.getState();
+    // Another request may already have refreshed the same user's token while this response was in flight.
+    if (current.token && current.token !== token && (userId ? current.user?.id === userId : restored)) {
+      return api(path, method, body, false, headers);
+    }
+    if (!restored && current.token === token) current.set(null, null);
   }
   if (safeRead && retry && [502, 503, 504].includes(r.status)) {
     await new Promise((resolve) => setTimeout(resolve, 100));
