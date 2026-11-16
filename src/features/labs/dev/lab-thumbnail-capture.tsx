@@ -32,6 +32,7 @@ import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { FL15_SAFETY_CONFIG } from "@nexalab/sim/safety-scenario";
 import SafetyBenchStage from "../chemistry/safety/SafetyBenchStage";
 import { listSafetySceneItems } from "../chemistry/safety/kit-items";
+import { KitThumbnailScene, kitScenes } from "./kit-thumbnail-scenes";
 
 /** K2 explore benches: a mid-session state built from the same reducer actions a student would perform. */
 function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unknown>>, view: BenchViewPreset = k2ThumbnailView) {
@@ -213,7 +214,8 @@ const scenes: Record<string, () => ReactNode> = {
 };
 
 const labId = new URLSearchParams(location.search).get("lab");
-document.documentElement.dataset.labThumbnailIds = Object.keys(scenes).join(",");
+const kitScene = labId ? kitScenes[labId] : undefined;
+document.documentElement.dataset.labThumbnailIds = [...Object.keys(scenes), ...Object.keys(kitScenes)].join(",");
 
 function Scene() {
   const scene = labId ? scenes[labId] : undefined;
@@ -221,8 +223,8 @@ function Scene() {
 }
 
 function CapturePage() {
-  return <main className="capture-scene" data-lab-id={labId ?? ""}>
-    <Scene />
+  return <main className={kitScene ? "capture-scene capture-kit" : "capture-scene"} data-lab-id={labId ?? ""}>
+    {kitScene ? <KitThumbnailScene>{kitScene}</KitThumbnailScene> : <Scene />}
   </main>;
 }
 
@@ -235,6 +237,7 @@ captureStyle.textContent = `
   .capture-scene { position: relative; width: 1280px; height: 720px; overflow: hidden; background: #dfe3e1; }
   .capture-scene .physics-stage { position: relative !important; inset: auto !important; width: 1280px !important; height: 720px !important; z-index: 0 !important; }
   .capture-scene canvas { display: block; width: 100% !important; height: 100% !important; }
+  .capture-scene.capture-kit { width: 512px; height: 512px; }
 `;
 document.head.append(captureStyle);
 createRoot(document.getElementById("root")!).render(<CapturePage />);

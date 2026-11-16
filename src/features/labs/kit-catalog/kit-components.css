@@ -15,7 +15,8 @@
 .kit-group h4 { margin: 8px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
 .kit-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr)); gap: 10px; }
 .kit-card { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.kit-card-icon { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: rgba(31, 111, 120, 0.1); color: var(--brand); }
+.kit-card-icon { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 9px; overflow: hidden; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
+.kit-card-icon img { width: 100%; height: 100%; object-fit: contain; }
 .kit-card-icon.is-caution { background: #fff1d6; color: #7a4d00; }
 .kit-card-icon.is-warning, .kit-card-icon.is-danger { background: #fde3e3; color: #9b1c1c; }
 .kit-card-body { display: grid; gap: 4px; min-width: 0; align-content: start; font-size: 14px; }
@@ -25,3 +26,9 @@
 .kit-tag { font-size: 12px; font-weight: 650; padding: 2px 7px; border-radius: 5px; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
 .kit-card-used { font-size: 12px; color: var(--muted); }
 .kit-card-debug { font-size: 11px; color: var(--muted); word-break: break-all; }
+
+@media (max-width: 560px) {
+  .kit-group { padding: 10px; }
+  .kit-card { padding: 10px; gap: 10px; }
+  .kit-card-icon { width: 52px; height: 52px; }
+}

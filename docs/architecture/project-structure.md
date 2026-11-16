@@ -50,6 +50,10 @@ Conventions:
 - Labs use subfolders where implementations share a discipline kit/environment. Cross-discipline presentation stays in `features/labs/shared/`; route hosts stay at the feature root; lesson assignment integration stays in `pathways/`. Create a kit folder with its first implementation rather than committing empty placeholders. The provisional 20-slot mapping and current FE status are indexed in `features/labs/README.md` and governed by the BE lab catalog.
 - Playwright scenarios stay in `tests/`; shared live-test helpers are in `tests/fixtures/live.ts`.
 
+### Kit apparatus thumbnails
+
+The catalog loads static WebP images from `src/features/labs/assets/thumbnails/kit/<group>/<rendererKey>.webp` and uses an icon when a renderer has no image or the image fails. Reagents keep their catalog icons. Run `npm run capture:lab-thumbnails -- --kit` to regenerate the 512 × 512 previews (30 KiB max each), or pass a single ID such as `kit/chemistry/test_tube`. The development harness uses the K2 renderer registries, safety apparatus meshes and individual physics meshes in `kit-thumbnail-scenes.tsx`. It blocks API requests. The command with no arguments still captures full lab thumbnails.
+
 ### Known follow-ups
 
 - `features/lessons/Lessons.tsx` (≈600 lines) is one component with a teacher and a student branch; split it into a student hub and

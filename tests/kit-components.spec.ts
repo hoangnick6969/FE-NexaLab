@@ -47,8 +47,12 @@ test("a student sees each Kit's apparatus and reagents, which Labs use them, and
   // Reagents carry their hazard and the same list as the bench.
   await expect(card("HCl_0_1M")).toContainText("Dùng ở: FL-13 · FL-14a");
   await expect(card("HCl_0_1M")).toContainText("Ăn mòn");
-  // Every card has a picture, and a student never sees the ids behind it.
-  await expect(kit.locator('[data-testid="kit-card"] svg')).toHaveCount(await kit.getByTestId("kit-card").count());
+  // Apparatus assets are lazy images. Reagents retain their icon and do not open a 3D viewport.
+  const tube = card("test_tube").locator("img");
+  await expect(tube).toHaveAttribute("loading", "lazy");
+  await expect.poll(() => tube.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(512);
+  await expect(card("HCl_0_1M").locator("svg")).toHaveCount(1);
+  await expect(kit.locator("canvas")).toHaveCount(0);
   await expect(kit.getByTestId("kit-debug")).toHaveCount(0);
 
   // The Labs listed under an item open that Lab.
