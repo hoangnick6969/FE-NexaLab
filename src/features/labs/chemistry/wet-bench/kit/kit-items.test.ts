@@ -15,8 +15,11 @@ function legacyIntro(config: ChemistryLabConfig) {
     label: item.kind === "test_tube" ? `${K2_APPARATUS.test_tube.labelVi} × ${config.enabledApparatus.filter((other) => other.kind === "test_tube").length}` : apparatusLabel(config, item.id),
     purpose: K2_APPARATUS[item.kind].purposeVi,
   }));
-  const materials = [...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).flatMap((bottle) => {
-    const reagent = reagentById(bottle.reagentId);
+  // The shelf first, then reagents that already stand in a vessel (FL-12 acid) so their hazards are listed.
+  const shelfIds = new Set(config.availableReagents.map((bottle) => bottle.reagentId));
+  const inVessels = [...new Set(config.enabledApparatus.flatMap((item) => item.initial?.contents ?? []).map((content) => content.reagentId))].filter((id) => !shelfIds.has(id));
+  const materials = [...[...config.availableReagents].sort((a, b) => a.shelfPosition - b.shelfPosition).map((bottle) => bottle.reagentId), ...inVessels].flatMap((reagentId) => {
+    const reagent = reagentById(reagentId);
     return reagent ? [{ id: reagent.id, label: reagent.labelVi, hazardLevel: reagent.hazard.level, hazardTags: reagent.hazard.tags, noteSim: reagent.safetyNoteSim, noteReal: reagent.safetyNoteRealLab }] : [];
   });
   return { apparatus, materials };

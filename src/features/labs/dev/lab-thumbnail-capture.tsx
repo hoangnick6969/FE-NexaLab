@@ -27,7 +27,7 @@ import "../biology/ecology/food-web/FoodWebActivity.css";
 import "../shared/LabSpace.css";
 import { WetBenchKitStage } from "../chemistry/wet-bench/kit/WetBenchKitStage";
 import { benchReducer, initialBenchState, type BenchAction, type BenchUiState } from "../chemistry/wet-bench/kit/bench-reducer";
-import { fl11Config, fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
+import { fl11Config, fl12Config, fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 
 /** K2 explore benches: a mid-session state built from the same reducer actions a student would perform. */
@@ -94,6 +94,22 @@ const solutionConcentrationThumbnail = () => k2Thumbnail(fl11Config, [
   { type: "fill_mark", vesselId: "V1" },
 ], solutionConcentrationView);
 
+/** FL-12: three stoppered flasks after 40 simulated seconds: chips in 0,1 M, chips in 0,2 M and powder in 0,1 M, bubbling at different rates. */
+const reactionRateView: BenchViewPreset = {
+  wide: { position: [0.3, 1.15, 2.2], target: [0.3, 0.2, 0.5] },
+  narrow: { position: [0.3, 1.15, 2.2], target: [0.3, 0.2, 0.5] },
+  minDistance: 0.8, maxDistance: 6,
+};
+const stopFlask = (vesselId: string) => [{ type: "hold", held: { kind: "tool", tool: "stopper", apparatusId: "stopper" } }, { type: "click_vessel", vesselId }];
+const reactionRateThumbnail = () => k2Thumbnail(fl12Config, [
+  ...stopFlask("F1"), ...stopFlask("F2"), ...stopFlask("F3"),
+  { type: "hold", held: { kind: "tool", tool: "tongs", apparatusId: "tongs" } }, { type: "click_bottle", reagentId: "CaCO3_chips" },
+  { type: "click_vessel", vesselId: "F1" }, { type: "click_vessel", vesselId: "F2" }, { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "spatula", apparatusId: "spoon" } }, { type: "click_bottle", reagentId: "CaCO3_powder" },
+  { type: "click_vessel", vesselId: "F3" }, { type: "release" },
+  { type: "wait", seconds: 10 },
+], reactionRateView);
+
 const densityThumbnailView: StageView = {
   position: [-0.25, 1.28, 1.95], target: [-0.4, 0.3, 0.08],
   narrowPosition: [-0.25, 1.28, 1.95], narrowTarget: [-0.4, 0.3, 0.08],
@@ -129,6 +145,7 @@ const scenes: Record<string, () => ReactNode> = {
   "acid-base-indicators": acidBaseThumbnail,
   "metal-reactivity": metalReactivityThumbnail,
   "solution-concentration": solutionConcentrationThumbnail,
+  "reaction-rate": reactionRateThumbnail,
   "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,

@@ -33,6 +33,8 @@ export const K2_APPARATUS: Readonly<Record<ApparatusKind, ApparatusDef>> = {
   volumetric_flask_100ml: { kind: "volumetric_flask_100ml", role: "vessel", labelVi: "Bình định mức 100 mL", purposeVi: "Pha dung dịch có thể tích chính xác: thêm nước đến vạch 100 mL.", movable: true },
   glass_rod: { kind: "glass_rod", role: "tool", tool: "glass_rod", labelVi: "Đũa thuỷ tinh", purposeVi: "Khuấy để chất rắn tan: chọn đũa rồi chọn vật chứa." },
   spatula: { kind: "spatula", role: "tool", tool: "spatula", labelVi: "Thìa lấy hoá chất", purposeVi: "Lấy chất rắn dạng bột: chọn thìa, chọn lọ, nhập khối lượng rồi chọn vật chứa." },
+  stopwatch: { kind: "stopwatch", role: "instrument", labelVi: "Đồng hồ bấm giờ", purposeVi: "Đo thời gian mô phỏng của phản ứng: bấm Bắt đầu rồi chọn Chờ để thời gian trôi.", sharedItem: "stopwatch" },
+  thermometer: { kind: "thermometer", role: "instrument", labelVi: "Nhiệt kế", purposeVi: "Cho biết nhiệt độ phòng thí nghiệm: ở bài này nhiệt độ giữ cố định 25 °C.", sharedItem: "thermometer" },
   electronic_scale: { kind: "electronic_scale", role: "instrument", labelVi: "Cân điện tử", purposeVi: "Cân tổng khối lượng các vật chứa đặt trên đĩa cân (0,01 g).", sharedItem: "digital-scale" },
 };
 

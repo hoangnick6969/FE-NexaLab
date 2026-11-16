@@ -3,11 +3,11 @@
  * Buttons dispatch the same reducer actions as the 3D scene.
  */
 import { useState, type Dispatch } from "react";
-import { measure, observeVessel, reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
+import { measure, observeVessel, readGasVolume, reagentById, type ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { K2_APPARATUS, isVesselKind } from "./apparatus-manifest";
 import { slotById } from "./bench-layout";
 import { apparatusLabel, DROPPER_CAPACITY_MICROLITERS, POWDER_MAX_MILLIGRAMS, scaleDisplayMicrograms, validTargets, volumeLabel, type BenchAction, type BenchUiState, type Held } from "./bench-reducer";
-import { formatGrams, formatMilligrams, formatMolar, formatPercent, formatPh, formatQuantity, PIECE_NAME, reagentLabel } from "./observation-log";
+import { formatClock, formatGasMl, formatGrams, formatMilligrams, formatMolar, formatPercent, formatPh, formatQuantity, PIECE_NAME, reagentLabel } from "./observation-log";
 import { shortReagent } from "./WetBenchKitStage";
 
 const BAND = { colourless: "không màu", light_pink: "hồng nhạt", deep_pink: "hồng đậm", unknown: "chưa xác định" } as const;
@@ -16,6 +16,7 @@ const same = (a: Held | null, b: Held) => !!a && JSON.stringify(a) === JSON.stri
 const mlText = (microliters: number) => (microliters / 1000).toFixed(2).replace(".", ",");
 
 const usesSolutions = (config: ChemistryLabConfig) => (config.solutes?.length ?? 0) > 0;
+const usesRate = (config: ChemistryLabConfig) => Boolean(config.rateModel);
 
 export function heldLabel(config: ChemistryLabConfig, held: Held, loadedMicroliters = 0) {
   if (held.kind === "reagent") {
@@ -60,7 +61,7 @@ export function BenchHud({ state, dispatch }: { state: BenchUiState; dispatch: D
         <span className="k2-held-dot" aria-hidden="true" />
         <span>Đang cầm: <b>{heldLabel(config, held, state.loadedMicroliters)}</b></span>
         {showPresets && <div className="k2-presets" role="radiogroup" aria-label="Lượng mỗi lần nhỏ">
-          {(presets.length ? presets : [config.dispensing.liquidPresetsMicroliters[0]]).map((value) => <button key={value} type="button" role="radio" aria-checked={state.presetMicroliters === value} className={state.presetMicroliters === value ? "is-on" : ""} onClick={() => dispatch({ type: "preset", microliters: value })}>{formatQuantity(value, usesSolutions(config))}</button>)}
+          {(presets.length ? presets : [config.dispensing.liquidPresetsMicroliters[0]]).map((value) => <button key={value} type="button" role="radio" aria-checked={state.presetMicroliters === value} className={state.presetMicroliters === value ? "is-on" : ""} onClick={() => dispatch({ type: "preset", microliters: value })}>{formatQuantity(value, usesSolutions(config) || usesRate(config))}</button>)}
         </div>}
         {showPowder && <div className="k2-powder" role="group" aria-label="Khối lượng mỗi lần lấy">
           <label>Khối lượng (mg) <input type="number" min={1} max={POWDER_MAX_MILLIGRAMS} step={1} inputMode="numeric" value={state.powderMilligrams} onChange={(event) => dispatch({ type: "set_powder", milligrams: Number(event.target.value) })} /></label>
@@ -110,6 +111,7 @@ export function BenchHud({ state, dispatch }: { state: BenchUiState; dispatch: D
         </div>
       </div>}
       {(config.targets?.length ?? 0) > 0 && <ConclusionPanel state={state} dispatch={dispatch} />}
+      {usesRate(config) && <TimePanel state={state} dispatch={dispatch} />}
       <div className="k2-group" role="group" aria-label="Vật chứa">
         <h3>Vật chứa {held ? "· chọn đích" : ""}</h3>
         <div className="k2-chips">{vessels.map((item) => {
@@ -131,6 +133,58 @@ export function BenchHud({ state, dispatch }: { state: BenchUiState; dispatch: D
     </div>
     <VesselInspector state={state} dispatch={dispatch} />
   </section>;
+}
+
+const WAIT_STEPS = [5, 10, 30, 60] as const;
+const CHART_COLORS = ["#2563eb", "#dc2626", "#16a34a", "#9333ea"] as const;
+
+/** Stopwatch, passing of simulated time and the gas collected so far (engine 1.2.0). */
+function TimePanel({ state, dispatch }: { state: BenchUiState; dispatch: Dispatch<BenchAction> }) {
+  const { config } = state;
+  const model = config.rateModel!;
+  const clock = state.current.bench.clock;
+  const elapsed = state.current.bench.elapsedSeconds ?? 0;
+  return <div className="k2-group k2-time" role="group" aria-label="Thời gian và khí thu được">
+    <h3>Thời gian và khí thu được</h3>
+    <div className="k2-chips">
+      <span className="k2-lcd" data-testid="clock-reading">{formatClock(clock?.seconds ?? 0)}</span>
+      <button type="button" className="k2-chip" onClick={() => dispatch({ type: "clock", action: clock?.running ? "stop" : "start", now: Date.now() })}>{clock?.running ? "Dừng đồng hồ" : "Bắt đầu bấm giờ"}</button>
+      <button type="button" className="k2-chip" onClick={() => dispatch({ type: "clock", action: "reset", now: Date.now() })}>Về 0</button>
+    </div>
+    <div className="k2-chips" role="group" aria-label="Cho thời gian trôi">
+      {WAIT_STEPS.map((seconds) => <button key={seconds} type="button" className="k2-chip" disabled={elapsed + seconds > model.maxSeconds}
+        onClick={() => dispatch({ type: "wait", seconds, now: Date.now() })}>Chờ {seconds} giây</button>)}
+    </div>
+    <p className="k2-small" data-testid="elapsed">Thời gian đã trôi {formatClock(elapsed)} / {formatClock(model.maxSeconds)} · nhiệt độ phòng {model.atCelsius},0 °C, giữ cố định. Đậy nút bình để thu khí.</p>
+    <GasChart state={state} />
+  </div>;
+}
+
+/** Gas collected against simulated time, one line per stoppered flask. A text summary stands in for the picture. */
+function GasChart({ state }: { state: BenchUiState }) {
+  const series = state.current.series;
+  const ids = [...new Set(series.flatMap((sample) => Object.keys(sample.volumes)))];
+  const last = series.at(-1);
+  if (ids.length === 0) return <p className="k2-small">Chưa có khí thu được: đậy nút bình, cho chất rắn vào rồi bấm Chờ.</p>;
+  const width = 300;
+  const height = 120;
+  const tMax = Math.max(60, Math.ceil((last?.t ?? 0) / 60) * 60);
+  const yMax = Math.max(100, ...series.flatMap((sample) => Object.values(sample.volumes)));
+  const summary = ids.map((id) => `${apparatusLabel(state.config, id)}: ${formatGasMl(last?.volumes[id] ?? 0)}`).join("; ");
+  return <figure className="k2-chart" data-testid="gas-chart">
+    <svg viewBox={`0 0 ${width + 40} ${height + 24}`} role="img" aria-label={`Thể tích khí thu được theo thời gian. Lúc này: ${summary}`}>
+      <g transform="translate(34 6)">
+        <rect width={width} height={height} fill="none" stroke="currentColor" strokeOpacity="0.3" />
+        {ids.map((id, index) => <polyline key={id} fill="none" stroke={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth="2"
+          points={series.filter((sample) => sample.volumes[id] !== undefined).map((sample) => `${(sample.t / tMax) * width},${height - (sample.volumes[id] / yMax) * height}`).join(" ")} />)}
+        <text x="-4" y="8" textAnchor="end" fontSize="9" fill="currentColor">{formatGasMl(yMax).replace(" mL", "")}</text>
+        <text x="-4" y={height} textAnchor="end" fontSize="9" fill="currentColor">0</text>
+        <text x="0" y={height + 12} fontSize="9" fill="currentColor">0 s</text>
+        <text x={width} y={height + 12} textAnchor="end" fontSize="9" fill="currentColor">{tMax} s</text>
+      </g>
+    </svg>
+    <figcaption className="k2-small">Khí thu được (mL) theo thời gian: {ids.map((id, index) => <span key={id} style={{ color: CHART_COLORS[index % CHART_COLORS.length] }}>■ {apparatusLabel(state.config, id)} </span>)}</figcaption>
+  </figure>;
 }
 
 /** "Kết luận": the real concentration of a prepared solution, shown only when the learner asks for it. */
@@ -177,12 +231,13 @@ function VesselInspector({ state, dispatch }: { state: BenchUiState; dispatch: D
     <h3>{apparatusLabel(state.config, vessel.vesselId)}</h3>
     {added.length ? <ul>{added.map(([reagentId, amount]) => {
       const composition = reagentById(reagentId)?.composition;
-      const quantity = amount.micrograms ? formatMilligrams(amount.micrograms / 1000) : amount.microliters ? formatQuantity(amount.microliters, usesSolutions(state.config)) : amount.drops ? `${amount.drops} giọt` : `${amount.pieces} ${composition?.kind === "solid" ? PIECE_NAME[composition.shape] : "mẩu"}`;
+      const quantity = amount.micrograms ? formatMilligrams(amount.micrograms / 1000) : amount.microliters ? formatQuantity(amount.microliters, usesSolutions(state.config) || usesRate(state.config)) : amount.drops ? `${amount.drops} giọt` : `${amount.pieces} ${composition?.kind === "solid" ? PIECE_NAME[composition.shape] : "mẩu"}`;
       return <li key={reagentId}>{quantity} · {reagentLabel(reagentId)}</li>;
     })}</ul> : <p className="k2-small">Đang trống.</p>}
     <dl>
       {vessel.solutionMicroliters > 0 && <><dt>Thể tích</dt><dd>{volumeLabel(state.config, vessel)}</dd></>}
       {Object.values(vessel.powders).some((amount) => (amount ?? 0) > 0) && <><dt>Chất rắn</dt><dd>chưa tan hết</dd></>}
+      {usesRate(state.config) && vessel.kind === "erlenmeyer_flask_100ml" && <><dt>Khí thu được</dt><dd>{(() => { const gas = readGasVolume(vessel); return gas.ok ? formatGasMl(gas.tenthsMilliliters) : "bình chưa đậy nút"; })()}</dd></>}
       {visual.indicator && <><dt>Phenolphthalein</dt><dd>{BAND[visual.indicator.band]}</dd></>}
       {strip && <><dt>Giấy quỳ</dt><dd>{strip === "red" ? "đỏ" : strip === "blue" ? "xanh" : "tím"}</dd></>}
       {probe && <><dt>Bút đo pH</dt><dd className="k2-mono">{probe.ok && probe.kind === "ph_meter" ? `pH ${formatPh(probe.tenthsPh)}` : probe.ok ? "—" : probe.code === "NO_SOLUTION" ? "chưa có dung dịch" : "ngoài phạm vi mô hình"}</dd></>}
