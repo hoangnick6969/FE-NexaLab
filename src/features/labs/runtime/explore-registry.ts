@@ -8,6 +8,7 @@ import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim
 import { validateFluidLabConfig } from "@nexalab/sim/fluid";
 import { validateThermalLabConfig } from "@nexalab/sim/thermal";
 import { validateEnergyLabConfig } from "@nexalab/sim/mechanics/energy";
+import { validateRefractionLabConfig } from "@nexalab/sim/optics";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
@@ -18,6 +19,7 @@ import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassT
 import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
 import { listThermalKitItems } from "../physics/thermal/transfer/kit-items";
 import { listEnergyKitItems } from "../physics/mechanics/energy/kit-items";
+import { listRefractionKitItems } from "../physics/optics/refraction/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -144,6 +146,17 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/mechanics/energy/EnergyExploreLabPage"),
     listKitItems: listEnergyKitItems,
+  },
+  {
+    // FL-23 refraction slice (D1-3.2). First bench of the K6 optics kit; no Class Explore templates yet (spec fl-23-refraction-explore-spec.md §6–9).
+    kit: "k6-optics-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateRefractionLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/optics/refraction/RefractionExploreLabPage"),
+    listKitItems: listRefractionKitItems,
   },
   {
     kit: SAFETY_SCENARIO_KIT,
