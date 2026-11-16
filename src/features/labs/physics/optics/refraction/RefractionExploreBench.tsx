@@ -5,8 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Download, Info, RotateCcw } from "lucide-react";
 import {
-  appendReading, checkCriticalGuess, evaluateRay, lightSpeedInMedium, sineRatio,
-  type OpticsStation, type RefractionLabConfig, type TableRow,
+  appendReading, checkCriticalGuess, evaluatePrism, evaluateRay, lightSpeedInMedium, sineRatio,
+  type OpticsStation, type PrismLight, type RefractionLabConfig, type TableRow,
 } from "@nexalab/sim/optics";
 import { buildObservationLogExport } from "../../../shared/explore/observation-log";
 import { LabIntroOverlay } from "../../../shared/LabIntroOverlay";
@@ -15,10 +15,10 @@ import { LabHeaderSlot, LabSpace } from "../../../shared/LabSpace";
 import { LabQuestionPanel } from "../../../shared/question-panel/LabQuestionPanel";
 import { listRefractionKitItems } from "./kit-items";
 import {
-  STATION_VI, appendRefractionEntry, describeRay, describeRayChange, describeReading, formatAngle, formatIndex, formatRatio, formatSine, formatSpeed,
-  parseAngle, refractionLogStore, type RayView, type RefractionLogEntry,
+  PREDICTION_VI, STATION_VI, appendRefractionEntry, describePrism, describePrismPath, describeRay, describeRayChange, describeReading, formatAngle, formatIndex,
+  formatRatio, formatSine, formatSpeed, parseAngle, prismAnswer, refractionLogStore, type Prediction, type PrismView, type RayView, type RefractionLogEntry,
 } from "./refraction-log";
-import { RefractionDiagram } from "./RefractionStage2D";
+import { PrismDiagram, RefractionDiagram } from "./RefractionStage2D";
 import { RefractionStage3D } from "./RefractionStage3D";
 import "./refraction-explore.css";
 
@@ -30,6 +30,8 @@ const ERROR_VI: Record<string, string> = {
   TABLE_FULL: "Bảng đo của khối này đã đủ số lần đo. Xoá bảng để đo lại.",
   ALREADY_MEASURED: "Góc tới này đã có trong bảng.",
   NO_REFRACTED_RAY: "Không có tia khúc xạ để đo.",
+  WHITE_LIGHT_OFF: "Bàn này chưa bật ánh sáng trắng.",
+  ENGINE_TOO_OLD: "Cấu hình này chưa có trạm lăng kính.",
 };
 const STEPS = [-5, -1, 1, 5] as const;
 const rad = (deg: number) => deg * Math.PI / 180;
@@ -49,7 +51,19 @@ function readRay(config: RefractionLabConfig, input: Input): { ok: true; view: R
   } };
 }
 
-const initialInput = (config: RefractionLabConfig): Input => ({ station: config.stations[0], mediumId: config.media[0].id, angles: { "into-block": 30, "out-of-block": 30 } });
+const initialInput = (config: RefractionLabConfig): Input => ({
+  station: config.stations[0], mediumId: config.media[0].id,
+  angles: { "into-block": 30, "out-of-block": 30, prism: config.prism ? Math.min(Math.max(50, config.prism.minIncidenceDeg), config.prism.maxIncidenceDeg) : 50 },
+});
+
+function readPrism(config: RefractionLabConfig, incidenceDeg: number, light: PrismLight): { ok: true; view: PrismView } | { ok: false; error: string } {
+  const result = evaluatePrism(config, { incidenceDeg, light });
+  if (!result.ok) return { ok: false, error: result.code };
+  return { ok: true, view: {
+    incidenceDeg: result.incidenceDeg, apexDeg: result.apexDeg, mediumVi: result.medium.labelVi, indexMilli: result.medium.indexMilli, light: result.light, laser: result.laser,
+    spectrum: result.spectrum.map((item) => ({ id: item.colour.id, labelVi: item.colour.labelVi, indexMilli: item.colour.indexMilli, path: item.trace })),
+  } };
+}
 
 export type RefractionExploreBenchProps = {
   config: RefractionLabConfig;
@@ -69,6 +83,9 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
   const [search, setSearch] = useState<Search>({});
   const [guess, setGuess] = useState("");
   const [check, setCheck] = useState<Check | null>(null);
+  const [light, setLight] = useState<PrismLight>("laser");
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [revealed, setRevealed] = useState(false);
   const [log, setLog] = useState<RefractionLogEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -81,7 +98,9 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
   const read = readRay(config, input);
   const ray = read.ok ? read.view : null;
   const station = input.station;
-  const settings = station === "into-block" ? config.intoBlock : config.outOfBlock;
+  const settings = station === "into-block" ? config.intoBlock : station === "out-of-block" ? config.outOfBlock : undefined;
+  const prismRead = station === "prism" ? readPrism(config, input.angles.prism, light) : null;
+  const prism = prismRead?.ok ? prismRead.view : null;
   const logRef = useRef(log);
   logRef.current = log;
   const inputRef = useRef(input);
@@ -128,6 +147,31 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
     track(view);
   };
   const setAngle = (deg: number) => move({ ...inputRef.current, angles: { ...inputRef.current.angles, [station]: deg } });
+  /* Station 3 (prism, engine 1.1.0). */
+  const setPrismAngle = (deg: number) => {
+    const after = readPrism(config, deg, light);
+    if (!after.ok) { setError(ERROR_VI[after.error] ?? after.error); return; }
+    setError("");
+    const next = { ...inputRef.current, angles: { ...inputRef.current.angles, prism: deg } };
+    inputRef.current = next;
+    setInput(next);
+    if (revealed) add({ station: "prism", actionVi: `Xoay đèn tới góc tới ${formatAngle(deg)} trên lăng kính`, merge: `angle-prism-${light}`, phenomenaVi: describePrismPath(after.view), prism: after.view });
+  };
+  const switchLight = (next: PrismLight) => {
+    const after = readPrism(config, inputRef.current.angles.prism, next);
+    if (!after.ok) { setError(ERROR_VI[after.error] ?? after.error); return; }
+    setError("");
+    setLight(next);
+    add({ station: "prism", actionVi: next === "white" ? "Đổi nguồn sang ánh sáng trắng" : "Đổi nguồn về đèn laser", phenomenaVi: revealed ? describePrismPath(after.view) : [describePrism(after.view, false)], prism: after.view });
+  };
+  const reveal = () => {
+    if (!prism || !prediction) return;
+    setRevealed(true);
+    const answer = prismAnswer(prism);
+    add({ station: "prism", actionVi: `Dự đoán tia ló: ${PREDICTION_VI[prediction].toLowerCase()}; hiện đường truyền`,
+      phenomenaVi: [...describePrismPath(prism), answer ? `Dự đoán của em ${answer === prediction ? "khớp" : "chưa khớp"} với mô hình` : "Không có tia ló ở mặt bên thứ hai"], prism });
+  };
+
   const switchStation = (next: OpticsStation) => {
     setError("");
     const target = { ...inputRef.current, station: next };
@@ -171,6 +215,9 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
     setSearch({});
     setGuess("");
     setCheck(null);
+    setLight("laser");
+    setPrediction(null);
+    setRevealed(false);
     setError("");
   };
   const exportLog = () => {
@@ -194,10 +241,10 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
   return <LabSpace title={config.title} exitTo={exitTo} onExit={onExit} tools={tools}>
     <div className="fl23-explore" data-testid="optics-explore" data-kit={config.kit} data-station={station}>
       <div className="fl23-scene">
-        {ray && (mode === "3d"
-          ? <RefractionStage3D apparatus={config.enabledApparatus} state={{ ray, reduced }} />
-          : <div className="fl23-2d" data-testid="optics-2d"><RefractionDiagram ray={ray} /></div>)}
-        <p className="fl23-observation" role="status">{ray ? describeRay(ray) : ""} · Mô hình tia sáng</p>
+        {(ray || prism) && (mode === "3d"
+          ? <RefractionStage3D apparatus={config.enabledApparatus} state={{ station, ray, prism, revealed, reduced }} />
+          : <div className="fl23-2d" data-testid="optics-2d">{station === "prism" ? prism && <PrismDiagram view={prism} revealed={revealed} /> : ray && <RefractionDiagram ray={ray} />}</div>)}
+        <p className="fl23-observation" role="status">{station === "prism" ? (prism ? describePrism(prism, revealed) : "") : ray ? describeRay(ray) : ""} · Mô hình tia sáng</p>
       </div>
       <LabHeaderSlot fallbackClassName="fl23-view-toggle"><LabRendererToggle mode={mode} onChange={setMode} /></LabHeaderSlot>
       <LabQuestionPanel id="fl23-explore" prefix="fl23" className="fl23-explore-panel" ariaLabel="Bàn quang học" open={panelOpen} onOpenChange={setPanelOpen}
@@ -260,6 +307,38 @@ export function RefractionExploreBench({ config, storageKey, activityId, exitTo,
           {speedCard && station === "into-block" && <p className="fl23-speed" data-testid="optics-speed">
             Chiết suất {ray.mediumVi.toLowerCase()} n = {formatIndex(ray.indexMilli)} · tốc độ ánh sáng v = c/n = {formatSpeed(lightSpeedInMedium(ray.indexMilli))} (c = {formatSpeed(config.lightSpeedKmS)})
           </p>}
+        </section>}
+        {station === "prism" && prism && config.prism && <section className="lqp-section" data-testid="optics-prism"><h3>Lăng kính {prism.mediumVi.toLowerCase()}, A = {formatAngle(prism.apexDeg)}</h3>
+          {config.prism.whiteLight && <div className="fl23-row" role="group" aria-label="Nguồn sáng">
+            <button type="button" aria-pressed={light === "laser"} onClick={() => switchLight("laser")}>Đèn laser</button>
+            <button type="button" aria-pressed={light === "white"} onClick={() => switchLight("white")}>Ánh sáng trắng</button>
+          </div>}
+          <label className="fl23-slider">Góc tới i₁: <b>{formatAngle(prism.incidenceDeg)}</b>
+            <input type="range" min={config.prism.minIncidenceDeg} max={config.prism.maxIncidenceDeg} step={1} value={prism.incidenceDeg} aria-label="Góc tới lăng kính" onChange={e => setPrismAngle(Number(e.target.value))} />
+          </label>
+          <div className="fl23-row" role="group" aria-label="Xoay đèn">
+            {STEPS.map(step => <button key={step} type="button" disabled={prism.incidenceDeg + step < config.prism!.minIncidenceDeg || prism.incidenceDeg + step > config.prism!.maxIncidenceDeg} onClick={() => setPrismAngle(prism.incidenceDeg + step)}>{step > 0 ? `+${step}°` : `${step}°`}</button>)}
+          </div>
+          {!revealed ? <div className="fl23-predict">
+            <p className="fl23-note">Em dự đoán tia ló ra khỏi lăng kính sẽ đi thế nào so với tia tới? Vẽ ra giấy rồi chọn:</p>
+            <div className="fl23-row" role="group" aria-label="Dự đoán tia ló">
+              {(Object.keys(PREDICTION_VI) as Prediction[]).map(option => <button key={option} type="button" aria-pressed={prediction === option} onClick={() => setPrediction(option)}>{PREDICTION_VI[option]}</button>)}
+            </div>
+            <div className="fl23-row"><button type="button" className="fl23-primary" disabled={!prediction} onClick={reveal}>Hiện đường truyền</button></div>
+          </div> : light === "white" ? <p className="fl23-note">Ánh sáng trắng chỉ để quan sát dải màu; chuyển về đèn laser để đọc số đo r₁, r₂, i₂ và D.</p> : <table className="fl23-table" data-testid="optics-prism-readings">
+            <tbody>
+              {prism.laser.kind === "exits" ? <>
+                <tr data-reading="r1"><th scope="row">Góc khúc xạ r₁</th><td>{formatAngle(prism.laser.firstRefractionDeg)}</td></tr>
+                <tr data-reading="r2"><th scope="row">Góc tới mặt thứ hai r₂</th><td>{formatAngle(prism.laser.secondIncidenceDeg)}</td></tr>
+                <tr data-reading="i2"><th scope="row">Góc ló i₂</th><td>{formatAngle(prism.laser.exitDeg)}</td></tr>
+                <tr data-reading="deviation"><th scope="row">Góc lệch D</th><td>{formatAngle(prism.laser.deviationDeg)}</td></tr>
+              </> : <tr><td colSpan={2}>Phản xạ toàn phần ở mặt bên thứ hai</td></tr>}
+            </tbody>
+          </table>}
+          {revealed && prediction && <p className="fl23-result" data-testid="optics-prediction" data-match={prismAnswer(prism) === prediction}>
+            Em dự đoán: {PREDICTION_VI[prediction].toLowerCase()} · {prismAnswer(prism) === prediction ? "khớp với mô hình" : "chưa khớp: tia ló lệch về phía đáy"}
+          </p>}
+          {revealed && light === "white" && <p className="fl23-note" data-testid="optics-spectrum">Trên màn từ trên xuống: {prism.spectrum.map((colour) => colour.labelVi.toLowerCase()).join(", ")}.</p>}
         </section>}
         {error && <p role="alert" className="fl23-error">{error}</p>}
         {(config.pedagogy.observationPrompts?.length ?? 0) > 0 && <section className="lqp-section"><h3>Gợi ý quan sát</h3>

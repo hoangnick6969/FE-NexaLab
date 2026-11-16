@@ -2,7 +2,7 @@
  * FL-23 main view (catalog "2D-first"): the protractor disk seen from above, 1° ticks, the half-cylinder on the lower half,
  * the normal and the three rays drawn with the model's brightness. Students read the angles here.
  */
-import { describeRay, formatAngle, rayGeometry, type RayView } from "./refraction-log";
+import { describePrism, describeRay, formatAngle, prismGeometry, rayGeometry, type PrismView, type RayView } from "./refraction-log";
 
 const SIZE = 400;
 const C = SIZE / 2;
@@ -59,4 +59,58 @@ export function RefractionDiagram({ ray }: { ray: RayView }) {
     {!geometry.refracted && <text x={C + 64} y={ray.station === "into-block" ? C + 40 : C - 30} textAnchor="middle" className="fl23-angle fl23-total">Phản xạ toàn phần</text>}
     <circle cx={C} cy={C} r={3} className="fl23-centre" />
   </svg>;
+}
+
+/** Colours of the spectrum rays by id (the config names them; unknown ids fall back to white). */
+const SPECTRUM_FILL: Record<string, string> = { red: "#e0221f", orange: "#f08a24", yellow: "#e8c51c", green: "#2e9d4f", blue: "#2f6fd1", indigo: "#4b3aa8", violet: "#8a3fc4" };
+const PRISM_SIDE = 190;
+const SCREEN_X = 370;
+
+/** Station 3: the prism with its normals, the incident ray, and (once revealed) the path inside, the exit ray or the spectrum on the screen. */
+export function PrismDiagram({ view, revealed }: { view: PrismView; revealed: boolean }) {
+  const indices = view.light === "white" && view.spectrum.length ? view.spectrum.map((colour) => colour.indexMilli) : [view.indexMilli];
+  const g = prismGeometry(view.apexDeg, view.incidenceDeg, indices, 170, 215, PRISM_SIDE, SCREEN_X);
+  const start = { x: g.entry.x - g.incident.x * 150, y: g.entry.y - g.incident.y * 150 };
+  const normal = (at: { x: number; y: number }, n: { x: number; y: number }) => <line x1={at.x - n.x * 40} y1={at.y - n.y * 40} x2={at.x + n.x * 40} y2={at.y + n.y * 40} className="fl23-normal" />;
+  const first = g.rays[0];
+  const deviation = view.laser.kind === "exits" ? view.laser.deviationDeg : null;
+  const colourOf = (k: number) => view.light === "white" && view.spectrum[k] ? SPECTRUM_FILL[view.spectrum[k].id] ?? "#ffffff" : "#e0221f";
+  return <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="fl23-svg" role="img" aria-label={describePrism(view, revealed)} data-station="prism" data-revealed={revealed} data-light={view.light}>
+    <rect x={SCREEN_X} y={60} width={8} height={300} rx={2} className="fl23-screen" />
+    <text x={SCREEN_X + 4} y={52} textAnchor="middle" className="fl23-small">Màn</text>
+    <polygon points={`${g.apex.x},${g.apex.y} ${g.left.x},${g.left.y} ${g.right.x},${g.right.y}`} className="fl23-prism" />
+    <text x={g.apex.x} y={g.apex.y - 8} textAnchor="middle" className="fl23-small">A = {formatAngle(view.apexDeg)}</text>
+    <text x={(g.left.x + g.right.x) / 2} y={g.left.y + 16} textAnchor="middle" className="fl23-small">Đáy</text>
+    {normal(g.entry, g.n1)}
+    <line x1={start.x} y1={start.y} x2={g.entry.x} y2={g.entry.y} className="fl23-ray" data-ray="incident" style={view.light === "white" ? { stroke: "#f2f2f2", filter: "drop-shadow(0 0 1px #555)" } : undefined} />
+    {!revealed && <text x={g.entry.x + 30} y={g.entry.y + 4} className="fl23-angle">?</text>}
+    {revealed && <>
+      {/* Dashed continuation of the incident ray: the exit ray turns away from it towards the base by D. */}
+      {deviation !== null && <line x1={g.entry.x} y1={g.entry.y} x2={g.entry.x + g.incident.x * 230} y2={g.entry.y + g.incident.y * 230} className="fl23-guide" />}
+      {g.rays.map((ray, k) => <g key={ray.indexMilli} data-colour={view.light === "white" ? view.spectrum[k]?.id : "laser"}>
+        {ray.exit && <line x1={ray.entry.x} y1={ray.entry.y} x2={ray.exit.x} y2={ray.exit.y} className="fl23-ray fl23-ray-thin" style={{ stroke: colourOf(k), opacity: view.light === "white" ? 0.7 : 1 }} />}
+        {ray.exit && ray.out && (() => { const end = g.toScreen(ray.exit, ray.out); return <line x1={ray.exit.x} y1={ray.exit.y} x2={end.x} y2={end.y} className="fl23-ray" data-ray="exit" style={{ stroke: colourOf(k) }} />; })()}
+      </g>)}
+      {first.exit && normal(first.exit, (() => { const f = { x: g.right.x - g.apex.x, y: g.right.y - g.apex.y }; const len = Math.hypot(f.x, f.y); return { x: f.y / len, y: -f.x / len }; })())}
+      {deviation !== null && view.light === "laser" && <text x={20} y={380} className="fl23-angle">Góc lệch D = {formatAngle(deviation)}</text>}
+      {view.light === "white" && <SpectrumInset view={view} landings={g.rays.map((ray) => ray.exit && ray.out ? g.toScreen(ray.exit, ray.out).y : null)} />}
+      {view.laser.kind === "total" && <text x={20} y={380} className="fl23-angle fl23-total">Phản xạ toàn phần ở mặt bên thứ hai</text>}
+    </>}
+    <text x={20} y={24} className="fl23-angle">i₁ = {formatAngle(view.incidenceDeg)}</text>
+  </svg>;
+}
+
+/** The colours land about 2° apart, too close to read on the screen itself: this inset magnifies the strip, keeping their real relative positions. */
+function SpectrumInset({ view, landings }: { view: PrismView; landings: (number | null)[] }) {
+  const ys = landings.filter((y): y is number => y !== null);
+  if (ys.length < 2) return null;
+  const top = Math.min(...ys);
+  const span = Math.max(...ys) - top || 1;
+  const x = 20, y = 318, w = 170, h = 56;
+  return <g className="fl23-inset" data-testid="optics-spectrum-inset">
+    <rect x={x - 6} y={y - 18} width={w + 12} height={h + 26} rx={6} className="fl23-inset-box" />
+    <text x={x} y={y - 6} className="fl23-small">Dải màu trên màn (phóng to)</text>
+    {landings.map((landing, k) => landing === null ? null : <rect key={view.spectrum[k]?.id ?? k} x={x} y={y + ((landing - top) / span) * (h - 7)} width={w} height={7}
+      style={{ fill: SPECTRUM_FILL[view.spectrum[k]?.id ?? ""] ?? "#999" }} data-colour={view.spectrum[k]?.id} />)}
+  </g>;
 }

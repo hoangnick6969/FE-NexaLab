@@ -13,6 +13,8 @@ const ITEM_TEXT: Record<OpticsApparatusKind, ItemText> = {
   half_cylinder: { label: "Khối bán trụ", category: "apparatus", purpose: (c) => `Mặt phẳng đặt qua tâm đĩa; chọn khối ${media(c)}.` },
   measurement_table: { label: "Bảng đo góc", category: "instrument", purpose: (c) => `Ghi tối đa ${c.intoBlock?.maxReadings ?? 0} cặp góc i, r cho mỗi khối${c.display.sineColumns ? ", kèm sin i, sin r và tỉ số" : "; sin i, sin r để em tự tính"}.` },
   speed_card: { label: "Thẻ tốc độ ánh sáng", category: "instrument", purpose: () => "Tốc độ ánh sáng trong khối đang chọn, v = c/n với c = 300 000 km/s." },
+  prism: { label: "Lăng kính", category: "apparatus", purpose: (c) => c.prism ? `Lăng kính ${c.media.find((m) => m.id === c.prism!.mediumId)?.labelVi.toLowerCase() ?? ""} tiết diện tam giác, góc chiết quang ${c.prism.apexDeg}°; tia sáng khúc xạ hai lần và lệch về phía đáy.` : "Lăng kính tiết diện tam giác." },
+  screen: { label: "Màn hứng", category: "instrument", purpose: () => "Hứng tia ló; với ánh sáng trắng thấy dải màu từ đỏ đến tím." },
 };
 
 export function listRefractionKitItems(config: RefractionLabConfig): KitItem[] {

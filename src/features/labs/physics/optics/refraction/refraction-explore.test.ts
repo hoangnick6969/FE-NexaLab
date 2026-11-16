@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import type { RefractionLabConfig } from "@nexalab/sim/optics";
 import { listRefractionKitItems } from "./kit-items.ts";
 import {
-  appendRefractionEntry, describeRay, describeRayChange, describeReading, formatAngle, formatIndex, formatRatio, formatSpeed, parseAngle, rayGeometry, type RayView,
+  appendRefractionEntry, describePrism, describePrismPath, describeRay, describeRayChange, describeReading, formatAngle, formatIndex, formatRatio, formatSpeed, parseAngle,
+  prismAnswer, prismGeometry, rayGeometry, type PrismPath, type PrismView, type RayView,
 } from "./refraction-log.ts";
 
 // Same fields as FL23_REFRACTION_EXPLORE_CONFIG (the sim golden test validates that copy); tsx cannot read the sim's named exports.
@@ -88,4 +89,52 @@ test("angle changes fold into one notebook line", () => {
   assert.equal(log[0].actionVi, "b");
   log = appendRefractionEntry(log, { ...entry, merge: "angle-into-block-water" });
   assert.deepEqual(log.map((item) => item.seq), [1, 2]);
+});
+
+// Same formula as the sim's tracePrism (tsx cannot read the sim's named exports).
+const RAD = Math.PI / 180;
+function trace(nMilli: number, apex: number, i1: number): PrismPath {
+  const r1 = Math.asin(Math.sin(i1 * RAD) * 1000 / nMilli) / RAD;
+  const r2 = apex - r1;
+  const s = nMilli * Math.sin(r2 * RAD) / 1000;
+  if (s > 1) return { kind: "total", firstRefractionDeg: r1, secondIncidenceDeg: r2 };
+  const i2 = Math.asin(s) / RAD;
+  return { kind: "exits", firstRefractionDeg: r1, secondIncidenceDeg: r2, exitDeg: i2, deviationDeg: i1 + i2 - apex };
+}
+const SPECTRUM = [["red", "Đỏ", 1513], ["orange", "Cam", 1517], ["yellow", "Vàng", 1519], ["green", "Lục", 1523], ["blue", "Lam", 1528], ["indigo", "Chàm", 1532], ["violet", "Tím", 1538]] as const;
+const prismView = (i1: number, light: "laser" | "white" = "laser"): PrismView => ({
+  incidenceDeg: i1, apexDeg: 60, mediumVi: "Thuỷ tinh", indexMilli: 1500, light, laser: trace(1500, 60, i1),
+  spectrum: light === "white" ? SPECTRUM.map(([id, labelVi, n]) => ({ id, labelVi, indexMilli: n, path: trace(n, 60, i1) })) : [],
+});
+const angleBetween = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.acos(Math.max(-1, Math.min(1, (a.x * b.x + a.y * b.y) / (Math.hypot(a.x, a.y) * Math.hypot(b.x, b.y))))) / RAD;
+
+test("prism geometry agrees with D = i₁ + i₂ − A and bends the ray towards the base", () => {
+  for (const i1 of [35, 40, 48.59, 60, 80]) {
+    const g = prismGeometry(60, i1, [1500], 0, 0, 190, 300);
+    const ray = g.rays[0];
+    assert.ok(ray.exit && ray.out, `exits at ${i1}°`);
+    const expected = trace(1500, 60, i1);
+    assert.equal(expected.kind, "exits");
+    if (expected.kind !== "exits") continue;
+    assert.ok(Math.abs(angleBetween(g.incident, ray.out!) - expected.deviationDeg) < 1e-6, `D at ${i1}°`);
+    // Towards the base (screen y grows downwards): the exit ray points further down than the incident ray.
+    assert.ok(ray.out!.y > g.incident.y, `towards the base at ${i1}°`);
+    assert.ok(Math.abs(angleBetween(g.incident, { x: -g.n1.x, y: -g.n1.y }) - i1) < 1e-6, "angle of incidence on the first face");
+  }
+  assert.equal(prismGeometry(60, 25, [1500], 0, 0, 190, 300).rays[0].out, null, "P-05: no exit ray at 25°");
+});
+
+test("white light: violet lands lowest on the screen, red highest", () => {
+  const g = prismGeometry(60, 50, SPECTRUM.map(([, , n]) => n), 0, 0, 190, 300);
+  const ys = g.rays.map((ray) => g.toScreen(ray.exit!, ray.out!).y);
+  for (let k = 1; k < ys.length; k++) assert.ok(ys[k] > ys[k - 1], "each colour lands below the previous one");
+});
+
+test("prism lines: hidden path before the prediction, then the two refractions, deviation and colours", () => {
+  assert.equal(describePrism(prismView(40), false), "Tia sáng laser tới lăng kính thuỷ tinh (A = 60°), góc tới 40°; đường truyền đang ẩn để em dự đoán");
+  assert.equal(describePrism(prismView(40), true), "Tia sáng laser tới lăng kính thuỷ tinh (A = 60°), góc tới 40°, tia ló 58,5°, góc lệch D = 38,5°");
+  assert.deepEqual(describePrismPath(prismView(40)), ["Khúc xạ hai lần: r₁ = 25,4°, r₂ = 34,6°, tia ló i₂ = 58,5°", "Tia ló lệch về phía đáy lăng kính, góc lệch D = 38,5°"]);
+  assert.match(describePrismPath(prismView(50, "white"))[2], /^Trên màn từ trên xuống: đỏ, cam, vàng, lục, lam, chàm, tím; tím lệch nhiều nhất, đỏ lệch ít nhất$/);
+  assert.equal(prismAnswer(prismView(40)), "base");
+  assert.equal(prismAnswer({ ...prismView(40), laser: trace(1500, 60, 25) }), null);
 });
