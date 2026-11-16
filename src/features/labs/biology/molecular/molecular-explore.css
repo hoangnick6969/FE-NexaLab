@@ -1,0 +1,11 @@
+/* k7-molecular Explore bench (FL-27): 2D sequence diagram card and the codon strip shared by both views. */
+.molecular-2d { display: grid; gap: 14px; }
+.molecular-diagram { padding: 12px; border: 1px solid var(--explore-card-line); border-radius: 16px; background: var(--k7-diagram-bg, #f7faf9); overflow-x: auto; }
+.molecular-diagram .k7-2d { max-height: calc(100dvh - 400px); min-height: 220px; }
+.molecular-codons { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.molecular-codons li { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border: 1.5px solid var(--explore-card-line); border-radius: 10px; background: var(--surface); color: var(--text-base); }
+.molecular-codons li .explore-mono { font-size: 15px; font-weight: 800; letter-spacing: 1.5px; }
+.molecular-codons li small { font-size: 12px; font-weight: 650; color: var(--ink-neutral-53); }
+.molecular-codons li[data-mutated="true"] { border-color: #b91c1c; background: #fdecec; }
+.molecular-codons li[data-mutated="true"] .explore-mono, .molecular-codons li[data-mutated="true"] small { color: #8f1414; }
+.molecular-overlay { width: min(620px, calc(100% - var(--explore-aside-w) - 72px)); }

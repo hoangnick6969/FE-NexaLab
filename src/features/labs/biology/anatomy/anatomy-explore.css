@@ -1,0 +1,26 @@
+/* anatomy Explore studio (FL-16): 2D ray diagram card. Ray colours match the 3D studio (blue/amber). */
+.anatomy-2d { display: grid; gap: 14px; }
+.eye-diagram { display: grid; gap: 8px; margin: 0; }
+.eye-diagram svg { display: block; width: min(100%, calc((100dvh - 330px) * 2.16)); height: auto; margin: 0 auto; border: 1px solid var(--explore-card-line); border-radius: 16px; }
+.eye-diagram-bg { fill: #f6f9fb; }
+.eye-axis { stroke: #8a959c; stroke-width: 1; stroke-dasharray: 6 5; }
+.eye-globe { fill: #fdf3ee; stroke: #9c6b5a; stroke-width: 3; }
+.eye-retina { fill: none; stroke: #c2410c; stroke-width: 6; stroke-linecap: round; }
+.eye-cornea { fill: none; stroke: #2b6c8f; stroke-width: 4; stroke-linecap: round; }
+.eye-iris { fill: #5b4636; }
+.eye-lens { fill: rgb(147 197 253 / 55%); stroke: #2563eb; stroke-width: 2; }
+.eye-glasses path { fill: rgb(186 230 253 / 70%); stroke: #0e7490; stroke-width: 2; }
+.eye-object line, .eye-object path { fill: none; stroke: #2f6b52; stroke-width: 3; stroke-linecap: round; }
+.eye-ray { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.eye-image { fill: #9aa59c; stroke: #fff; stroke-width: 2; }
+.eye-image[data-in-focus="true"] { fill: #2f6b52; }
+.eye-focus circle:first-child { fill: #dc2626; }
+.eye-focus circle:last-child { fill: none; stroke: #dc2626; stroke-width: 2; }
+.eye-tag { font: 650 13px system-ui, sans-serif; fill: #24323a; }
+.eye-diagram-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; font-weight: 650; color: var(--text-base); }
+.eye-diagram-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.eye-diagram-legend span::before { content: ""; width: 12px; height: 12px; border-radius: 50%; }
+.eye-diagram-legend [data-tone="ray"]::before { width: 18px; height: 3px; border-radius: 2px; background: #1d4ed8; }
+.eye-diagram-legend [data-tone="focus"]::before { background: #dc2626; }
+.eye-diagram-legend [data-tone="sharp"]::before { background: #2f6b52; }
+.eye-tag-muted { font-weight: 500; fill: #4b5a62; }

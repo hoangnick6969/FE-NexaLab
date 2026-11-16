@@ -1,51 +1,26 @@
-import { useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
-import * as THREE from "three";
+import type * as THREE from "three";
+import { DIGITAL_SCALE_ANCHORS, DigitalScale3D } from "../../../../shared/items/digital-scale";
 import type { K3Instruments } from "../k3-config";
 import { balanceSettleSequence, formatReading } from "../k3-geometry";
 import { K3_MOTION, usePrefersReducedMotion, type BalanceSample } from "../k3-motion";
 
-const BODY: [number, number, number] = [180, 42, 200];
-const PAN_RADIUS = 60;
-export const BALANCE_PAN_TOP_MM = BODY[1] + 14;
-
-function useLcdTexture() {
-  return useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 128;
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
-    return { canvas, texture };
-  }, []);
-}
-
-function drawLcd(canvas: HTMLCanvasElement, value: string, stable: boolean) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.fillStyle = "#a9b8a2";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(20, 32, 24, .08)";
-  ctx.font = "600 84px ui-monospace, Consolas, monospace";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.fillText("8888.8", 430, 66);
-  ctx.fillStyle = "#16241a";
-  ctx.fillText(value, 430, 66);
-  ctx.font = "600 34px ui-monospace, Consolas, monospace";
-  ctx.fillText("g", 488, 82);
-  if (stable) {
-    ctx.beginPath();
-    ctx.arc(34, 34, 9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
+/** The shared scale is modelled in item units; the fluid bench works in mm (body ≈ 180 mm wide). */
+const SCALE_MM = 230;
+/** Pan surface height above the bench, in mm. */
+export const BALANCE_PAN_TOP_MM = 0.096 * SCALE_MM;
+/** Pan centre offset from the balance origin along z, in mm (a load placed in bench coordinates sits here). */
+export const BALANCE_PAN_Z_MM = DIGITAL_SCALE_ANCHORS.pan[2] * SCALE_MM;
+const MAX_DIP_MM = 1.2;
 
 /**
- * Electronic balance. `readingG` is the model's reading (null = nothing
- * weighed yet); the display settles on exactly that value. Units are mm.
+ * FL-03 electronic balance on the shared digital scale (D1-2.3).
+ * `readingG` is the model's reading (null = nothing weighed yet); the display
+ * shows dashes, runs through a short settle sequence and stops on exactly
+ * that value. With `liveReading` (pouring) it follows the sample instead.
+ * The pan dips with load on a damped spring. Children are in mm with y = 0
+ * on the pan surface.
  */
 export function DigitalBalance3D({ instrument, readingG, liveReading, onTare, children }: {
   instrument: K3Instruments["balance"];
@@ -56,9 +31,9 @@ export function DigitalBalance3D({ instrument, readingG, liveReading, onTare, ch
 }) {
   const reduced = usePrefersReducedMotion();
   const invalidate = useThree((state) => state.invalidate);
-  const lcd = useLcdTexture();
   const pan = useRef<THREE.Group>(null);
   const motion = useRef({ start: 0, sequence: [0], shown: "", dip: 0, velocity: 0 });
+  const [lcd, setLcd] = useState({ text: formatReading(readingG ?? 0, instrument.resolutionG, "en"), stable: true });
 
   useEffect(() => {
     const value = readingG ?? 0;
@@ -66,33 +41,31 @@ export function DigitalBalance3D({ instrument, readingG, liveReading, onTare, ch
     motion.current.sequence = reduced ? [value] : balanceSettleSequence(value, instrument.resolutionG);
     invalidate();
   }, [readingG, reduced, instrument.resolutionG, invalidate]);
-  useEffect(() => () => lcd.texture.dispose(), [lcd]);
 
   useFrame((state, delta) => {
     const m = motion.current;
     const elapsed = performance.now() - m.start;
     const { sequence } = m;
-    let display: string;
+    let text: string;
     let stable = false;
     if (liveReading) {
-      display = formatReading(liveReading.current.readingG, instrument.resolutionG, "en");
+      text = formatReading(liveReading.current.readingG, instrument.resolutionG, "en");
       stable = !liveReading.current.flowing;
     }
-    else if (!reduced && elapsed < K3_MOTION.balanceDashesMs && sequence.length > 1) display = "----";
+    else if (!reduced && elapsed < K3_MOTION.balanceDashesMs && sequence.length > 1) text = "----";
     else {
       const progress = reduced ? 1 : Math.min(1, (elapsed - K3_MOTION.balanceDashesMs) / (K3_MOTION.balanceSettleMs - K3_MOTION.balanceDashesMs));
       const index = Math.min(sequence.length - 1, Math.floor(progress * sequence.length));
       stable = index === sequence.length - 1;
-      display = formatReading(sequence[index], instrument.resolutionG, "en");
+      text = formatReading(sequence[index], instrument.resolutionG, "en");
     }
-    const key = display + (stable ? "|s" : "");
+    const key = text + (stable ? "|s" : "");
     if (key !== m.shown) {
       m.shown = key;
-      drawLcd(lcd.canvas, display, stable);
-      lcd.texture.needsUpdate = true;
+      setLcd({ text, stable });
     }
     // Pan deflection grows with load (≤ 1.2 mm), on a damped spring.
-    const target = -1.2 * Math.min(1, (liveReading?.current.readingG ?? readingG ?? 0) / instrument.capacityG);
+    const target = -MAX_DIP_MM * Math.min(1, (liveReading?.current.readingG ?? readingG ?? 0) / instrument.capacityG);
     if (reduced) m.dip = target;
     else {
       const { stiffness, damping } = K3_MOTION.panSpring;
@@ -100,42 +73,13 @@ export function DigitalBalance3D({ instrument, readingG, liveReading, onTare, ch
       m.velocity += (stiffness * (target - m.dip) - damping * m.velocity) * dt;
       m.dip += m.velocity * dt;
     }
-    if (pan.current) pan.current.position.y = BALANCE_PAN_TOP_MM - 2 + m.dip;
+    if (pan.current) pan.current.position.y = m.dip / SCALE_MM;
     if (!stable || Math.abs(m.velocity) > 1e-3 || Math.abs(target - m.dip) > 1e-3) state.invalidate();
   });
 
-  return <group>
-    <RoundedBox args={BODY} radius={8} smoothness={4} position={[0, BODY[1] / 2, 0]} castShadow receiveShadow>
-      <meshStandardMaterial color="#e9ecea" roughness={0.55} />
-    </RoundedBox>
-    {/* Display bezel on the front face, tilted slightly up towards the learner. */}
-    <group position={[0, BODY[1] * 0.5, BODY[2] / 2 + 2]} rotation={[-0.18, 0, 0]}>
-      <RoundedBox args={[150, 34, 6]} radius={3} smoothness={3}>
-        <meshStandardMaterial color="#2c3532" roughness={0.4} />
-      </RoundedBox>
-      <mesh position={[-22, 0, 3.2]}>
-        <planeGeometry args={[88, 22]} />
-        <meshStandardMaterial map={lcd.texture} roughness={0.25} emissive="#ffffff" emissiveMap={lcd.texture} emissiveIntensity={0.18} />
-      </mesh>
-      <mesh position={[48, 0, 3.4]} onClick={(event) => { event.stopPropagation(); onTare?.(); }}>
-        <cylinderGeometry args={[6, 6, 2, 24]} />
-        <meshStandardMaterial color="#cfd6d2" roughness={0.35} />
-      </mesh>
-      <mesh position={[63, 0, 3.4]}>
-        <cylinderGeometry args={[6, 6, 2, 24]} />
-        <meshStandardMaterial color="#b9473d" roughness={0.35} />
-      </mesh>
-    </group>
-    <mesh position={[0, BODY[1] + 4, -12]}>
-      <cylinderGeometry args={[10, 12, 8, 24]} />
-      <meshStandardMaterial color="#9aa3a0" metalness={0.6} roughness={0.35} />
-    </mesh>
-    <group name="balance-pan" ref={pan} position={[0, BALANCE_PAN_TOP_MM - 2, -12]}>
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[PAN_RADIUS, PAN_RADIUS - 2, 3, 64]} />
-        <meshStandardMaterial color="#e4e8eb" metalness={0.65} roughness={0.28} />
-      </mesh>
-      <group position={[0, 1.5, 0]}>{children}</group>
-    </group>
+  return <group name="balance" scale={SCALE_MM}>
+    <DigitalScale3D reading={`${lcd.text} g`} stable={lcd.stable} onTare={onTare} panRef={pan}>
+      {children !== undefined && <group scale={1 / SCALE_MM}>{children}</group>}
+    </DigitalScale3D>
   </group>;
 }
