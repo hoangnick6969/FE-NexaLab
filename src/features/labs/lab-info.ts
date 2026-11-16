@@ -34,6 +34,7 @@ const text = defineText({
     acidBase: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Acid – base, chỉ thị và pH", description: "Tự pha dung dịch, nhúng quỳ tím, nhỏ phenolphthalein và đo pH; quan sát màu đổi khi trung hoà." },
     metalReactivity: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Kim loại với acid và dung dịch muối", description: "Thả kẽm, sắt, đồng vào acid loãng và dung dịch CuSO₄ để so sánh mức độ hoạt động của kim loại." },
     reactionRate: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Tốc độ phản ứng", description: "Cho đá vôi (viên hoặc bột) vào acid HCl, bấm giờ và đo khí thu được để so sánh tốc độ phản ứng theo nồng độ và dạng chất rắn." },
+    labSafety: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "An toàn phòng thí nghiệm", description: "Đọc nhãn hóa chất, chọn đồ bảo hộ và khám phá cách xử lý ba tình huống trong phòng thí nghiệm." },
     solutionConcentration: { subject: "HÓA HỌC", tag: "KHÁM PHÁ", title: "Dung dịch và nồng độ", description: "Tự tính khối lượng chất tan, cân, hòa tan và thêm nước đến vạch để pha dung dịch NaCl 0,10 M và CuSO₄ 5 %; rồi kiểm tra nồng độ thực." },
     fl26Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Lai Mendel một tính trạng", description: "Chọn cặp bố mẹ, lật từng ô bảng Punnett và tìm tỉ lệ kiểu gen, kiểu hình của đời con." },
     fl20Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Giới hạn sinh thái: nhiệt độ", description: "Đổi nhiệt độ nước và tìm vùng sống của cá rô phi." },
@@ -42,6 +43,7 @@ const text = defineText({
     fl16Explore: { subject: "SINH HỌC", tag: "KHÁM PHÁ", title: "Cấu tạo mắt và điều tiết", description: "So sánh độ tụ mắt cần có khi nhìn gần, nhìn xa, khi cận thị và viễn thị." },
   },
   en: {
+    labSafety: { subject: "CHEMISTRY", tag: "EXPLORE", title: "Laboratory safety", description: "Read chemical labels, choose protective equipment and explore three lab safety scenarios." },
     buoyancy: { subject: "SCIENCE", tag: "PRACTICAL", title: "Archimedes’ buoyancy force", description: "Immerse a specimen, read the dynamometer and verify the buoyant force." },
     circuit: { subject: "PHYSICS", tag: "CHALLENGE", title: "Light up an idea", description: "Build a circuit yourself and find a safe way to light the LED." },
     eye: { subject: "BIOLOGY", tag: "3D MODEL", title: "The world through your eyes", description: "Look inside the eye and follow the path of light." },
@@ -124,6 +126,7 @@ const catalogEntries = [
   { id: "metal-reactivity", ...t.metalReactivity, className: "chemistry", number: "13", grade: 8 },
   { id: "solution-concentration", ...t.solutionConcentration, className: "chemistry", number: "14", grade: 8 },
   { id: "reaction-rate", ...t.reactionRate, className: "chemistry", number: "15", grade: 8 },
+  { id: "lab-safety", ...t.labSafety, className: "chemistry", number: "16", grade: 8, localizedCopy: true },
   // Explore benches (Kit Sinh học, Dev 2). `artOf` reuses the thumbnail and icon of the Guided Lab on the same topic.
   { id: "fl-26-explore", ...t.fl26Explore, className: "biology", number: "26", grade: 9, artOf: "gene-protein" },
   { id: "fl-20-explore", ...t.fl20Explore, className: "biology", number: "20", grade: 8, artOf: "ecology-tolerance" },
@@ -136,6 +139,7 @@ export const labInfo = catalogEntries.map((entry) => {
   const artOf = "artOf" in entry ? entry.artOf : undefined;
   return {
     ...entry,
+    localizedCopy: "localizedCopy" in entry && entry.localizedCopy,
     /** Lab id whose icon the card draws; Explore benches borrow the Guided Lab on the same topic. */
     artId: artOf ?? entry.id,
     // FL-26 has its own SVG banner instead of borrowing the gene-protein scene.
