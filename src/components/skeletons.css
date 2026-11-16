@@ -1,0 +1,25 @@
+/* Shape-matched loading skeletons (see skeletons.tsx). The base shimmer lives on `.skeleton` in styles.css. */
+
+.sk-region { min-width: 0; }
+.sk-region.sk-stack { display: grid; gap: 10px; }
+
+.skeleton.sk-bar { width: var(--sk-w, 100%); height: var(--sk-h, 14px); max-width: 100%; flex: none; }
+.skeleton.sk-pill { border-radius: 999px; }
+.skeleton.sk-tile { border-radius: 8px; }
+.skeleton.sk-cover { border-radius: 12px 16px 16px 12px; min-height: 172px; height: 100%; }
+.sk-grow { flex: 1 1 auto; }
+
+/* A skeleton card is never interactive: it keeps the real card's border and radius but not its hover. */
+.sk-card { pointer-events: none; }
+.sk-card:hover { transform: none; box-shadow: none; }
+.panel.sk-card { gap: 12px; display: grid; align-content: start; }
+.student-class-card.sk-card { min-height: 0; }
+
+.sk-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 6px; }
+.sk-inline { display: flex; align-items: center; gap: 8px; }
+.sk-body { gap: 10px; align-self: stretch; }
+.sk-push { margin-top: auto; }
+
+@media (max-width: 560px) {
+  .skeleton.sk-cover { min-height: 150px; }
+}
