@@ -27,6 +27,8 @@ import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathw
 import { revealInPanel } from "./shared/question-panel/LabQuestionPanel";
 import { LabSpace } from "./shared/LabSpace";
 import { labInfo } from "./lab-info";
+import { labModePair } from "./lab-modes";
+import { LabModeContext, type LabModeValue } from "./shared/LabModeSwitch";
 import { buoyancyStepQuestions } from "./physics/fluid/buoyancy/buoyancy-questions";
 import { toLocalInput } from "../classes/class-ui";
 import { StudentClassLabAdditionalResponses } from "../classes/ClassLabAdditionalResponses";
@@ -195,7 +197,22 @@ export default function Lab() {
   if (assignmentId && searchParams.get("explore") === "1")
     return <Suspense fallback={<p role="status" className="panel">Đang tải bài…</p>}><ExploreClassAssignment key={assignmentId} assignmentId={assignmentId} /></Suspense>;
   if (assignmentId || searchParams.get("resourceId")) return <GuidedLab key="guided" />;
-  return <LibraryLab />;
+  return <LibraryLabWithModes />;
+}
+
+/**
+ * Interim D-5: a Lab with both modes offers a Guided / Explore switch in the Lab Space header, but only when the other
+ * mode is also available to this user (published row, or the DEV fixture for a bundled Explore bench).
+ */
+function LibraryLabWithModes() {
+  const { id = "" } = useParams();
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
+  const pair = labModePair(id);
+  const available = (labId: string) => Boolean(devExploreRow(labId) || labs.data?.some((row) => row.id === labId));
+  const mode: LabModeValue | null = pair && available(pair.guidedId) && available(pair.exploreId)
+    ? { ...pair, current: id === pair.exploreId ? "explore" : "guided" }
+    : null;
+  return <LabModeContext.Provider value={mode}><LibraryLab key={id} /></LabModeContext.Provider>;
 }
 
 function LibraryLab() {

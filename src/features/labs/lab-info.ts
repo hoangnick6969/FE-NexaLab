@@ -134,11 +134,14 @@ const catalogEntries = [
   { id: "salt-reactions", ...t.saltReactions, className: "chemistry", number: "17", grade: 8 },
   { id: "oxide-reactions", ...t.oxideReactions, className: "chemistry", number: "18", grade: 8 },
   // Explore benches (Kit Sinh học, Dev 2). `artOf` reuses the thumbnail and icon of the Guided Lab on the same topic.
+  // `exploreOf` names the Guided Lab of the same FL slot: the 20-slot spec publishes these Explore modes "trên cùng
+  // Lab ID" once D-5 lands, so /labs shows one card per slot and the Lab page switches mode (see lab-modes.ts).
+  // FL-26 is a new Lab with no Guided mode, so it keeps its own card.
   { id: "fl-26-explore", ...t.fl26Explore, className: "biology", number: "26", grade: 9, artOf: "gene-protein" },
-  { id: "fl-20-explore", ...t.fl20Explore, className: "biology", number: "20", grade: 8, artOf: "ecology-tolerance" },
-  { id: "fl-21-explore", ...t.fl21Explore, className: "biology", number: "21", grade: 8, artOf: "food-web" },
-  { id: "fl-27-explore", ...t.fl27Explore, className: "biology", number: "27", grade: 9, artOf: "gene-protein" },
-  { id: "fl-16-explore", ...t.fl16Explore, className: "biology", number: "16", grade: 8, artOf: "eye-optics" },
+  { id: "fl-20-explore", ...t.fl20Explore, className: "biology", number: "20", grade: 8, artOf: "ecology-tolerance", exploreOf: "ecology-tolerance" },
+  { id: "fl-21-explore", ...t.fl21Explore, className: "biology", number: "21", grade: 8, artOf: "food-web", exploreOf: "food-web" },
+  { id: "fl-27-explore", ...t.fl27Explore, className: "biology", number: "27", grade: 9, artOf: "gene-protein", exploreOf: "gene-protein" },
+  { id: "fl-16-explore", ...t.fl16Explore, className: "biology", number: "16", grade: 8, artOf: "eye-optics", exploreOf: "eye-optics" },
 ];
 
 export const labInfo = catalogEntries.map((entry) => {

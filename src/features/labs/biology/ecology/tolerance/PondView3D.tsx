@@ -23,7 +23,7 @@ const AVOID = [".lab-space-header", ".lab-space-header-actions", ".eco-stage-inn
  * thermometer. Same props and `data-fish` contract as the 2D `PondScene`,
  * which is also the fallback when WebGL is unavailable.
  */
-export function PondView3D({ valueDeciC, fish, vigor, label, valueLabel, layoutKey }: {
+export function PondView3D({ valueDeciC, fish, vigor, label, valueLabel, layoutKey, onValueChange }: {
   valueDeciC: number;
   fish: FishState;
   /** 0–1, how lively the fish look while they can persist (illustrative growth curve). */
@@ -31,14 +31,16 @@ export function PondView3D({ valueDeciC, fish, vigor, label, valueLabel, layoutK
   label: string;
   valueLabel: string;
   layoutKey: string;
+  /** Explore: the student drags the thermometer column to set the water temperature. */
+  onValueChange?: (deciC: number) => void;
 }) {
   return <div className="eco-pond eco-pond-3d" data-fish={fish} role="img" aria-label={label}>
     <EcoStage view={POND_VIEW} avoid={AVOID} layoutKey={layoutKey}
-      fallback={<PondScene valueDeciC={valueDeciC} fish={fish} label={label} />}
+      fallback={<PondScene valueDeciC={valueDeciC} fish={fish} label={label} onValueChange={onValueChange} />}
       scene={({ animate, dark }) => <>
         <PondDiorama3D valueDeciC={valueDeciC} animate={animate} dark={dark} />
         <FishSchool3D mood={mood(fish, valueDeciC)} vigor={vigor} animate={animate} />
-        <Thermometer3D valueDeciC={valueDeciC} label={valueLabel} animate={animate} position={THERMOMETER_AT} />
+        <Thermometer3D valueDeciC={valueDeciC} label={valueLabel} animate={animate} position={THERMOMETER_AT} onDrag={onValueChange} />
         {fish === "hidden" && <Html position={[0.6, POND.surface + 1.3, 0]} center zIndexRange={[5, 0]}>
           <span className="eco-pond-question" aria-hidden="true">?</span>
         </Html>}

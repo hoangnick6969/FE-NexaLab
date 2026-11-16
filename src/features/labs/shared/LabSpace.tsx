@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { defineText } from "../../../i18n";
 import { LabClassSectionProvider } from "./LabClassSection";
+import { LabModeSwitch } from "./LabModeSwitch";
 import "./LabSpace.css";
 
 const text = defineText({ vi: { enter: "Vào phòng thực hành", exit: "← Quay về", unavailable: "Không thể tải giao diện thí nghiệm. Bài làm vẫn được giữ trong phiên này.", retry: "Thử tải lại" }, en: { enter: "Enter lab space", exit: "← Back", unavailable: "The experiment view could not load. Your work is retained in this session.", retry: "Retry view" } });
@@ -43,7 +44,7 @@ export function LabSpace({ title, exitTo, onExit, children, classSection, result
     };
   }, [active]);
   return createPortal(<section hidden={!active} className="lab-space" aria-label={title} data-testid="lab-space">
-    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1><div className="lab-space-header-actions" ref={setHeaderActions} />{tools && <div className="lab-space-header-tools">{tools}</div>}</header>
+    <header className="lab-space-header">{exitTo ? <Link className="secondary" to={exitTo}>{t.exit}</Link> : <button ref={exit} type="button" className="secondary" onClick={onExit}>{t.exit}</button>}<h1>{title}</h1><LabModeSwitch /><div className="lab-space-header-actions" ref={setHeaderActions} />{tools && <div className="lab-space-header-tools">{tools}</div>}</header>
     <div className="lab-space-scene" ref={setSceneRoot} />
     <LabHeaderActionsContext.Provider value={headerActions}><LabSceneContext.Provider value={sceneRoot}><div className="lab-space-body"><LabClassSectionProvider section={classSection} result={result} headerActions={headerActions}><LabViewBoundary>{children}</LabViewBoundary></LabClassSectionProvider></div></LabSceneContext.Provider></LabHeaderActionsContext.Provider>
   </section>, document.body);

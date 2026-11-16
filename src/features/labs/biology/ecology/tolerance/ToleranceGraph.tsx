@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { formatDeciC, type EcoObservation } from "./eco-evidence";
+import { nudgeKey, svgDrag } from "../../../shared/explore/svg-drag";
 
 type Comparison = Extract<EcoObservation, { setup: "import-comparison" }>;
 const LEFT = 88, RIGHT = 616;
@@ -20,12 +22,29 @@ function Axis({ y }: { y: number }) {
  * One species: an illustrative growth curve between the limits (no y values,
  * no optimum in v1). Limit markers appear only once the learner has read them.
  */
-export function ToleranceGraph({ limits, valueDeciC, showLimits, labels }: {
+export type LimitGuess = { minDeciC: number; maxDeciC: number };
+const toDeciC = (px: number) => Math.min(500, Math.max(0, Math.round(((px - LEFT) / (RIGHT - LEFT)) * 50) * 10));
+
+/**
+ * Explore adds direct manipulation (both optional, the Guided Lab passes neither): `onValueChange` lets the student drag
+ * the temperature cursor along the axis; `guess` + `onGuessChange` draw two amber lines the student drags to bracket
+ * where the fish can live, before the real limits are shown.
+ */
+export function ToleranceGraph({ limits, valueDeciC, showLimits, labels, onValueChange, guess, onGuessChange }: {
   limits: { minDeciC: number; maxDeciC: number };
   valueDeciC: number | null;
   showLimits: boolean;
   labels: { title: string; curve: string; lower: string; upper: string; illustrative: string };
+  onValueChange?: (deciC: number) => void;
+  guess?: LimitGuess | null;
+  onGuessChange?: (guess: LimitGuess) => void;
 }) {
+  const svg = useRef<SVGSVGElement>(null);
+  const frame = () => svg.current;
+  const cursorDrag = onValueChange ? svgDrag((point) => onValueChange(toDeciC(point.x)), frame) : null;
+  const clampGuess = (side: "minDeciC" | "maxDeciC", value: number): LimitGuess => side === "minDeciC"
+    ? { ...guess!, minDeciC: Math.min(value, guess!.maxDeciC - 10) }
+    : { ...guess!, maxDeciC: Math.max(value, guess!.minDeciC + 10) };
   const { minDeciC: min, maxDeciC: max } = limits;
   const base = 150;
   const curve = Array.from({ length: 41 }, (_, i) => {
@@ -33,7 +52,8 @@ export function ToleranceGraph({ limits, valueDeciC, showLimits, labels }: {
     return `${x(min + t * (max - min)).toFixed(1)},${(base - Math.pow(Math.sin(Math.PI * t), 0.7) * 104).toFixed(1)}`;
   }).join(" ");
   return <figure className="eco-graph" data-testid="eco-graph">
-    <svg viewBox="0 0 640 200" role="img" aria-label={labels.title}>
+    <svg ref={svg} viewBox="0 0 640 200" role="img" aria-label={labels.title}>
+      {guess && <rect className="eco-guess-band" x={x(guess.minDeciC)} y="30" width={x(guess.maxDeciC) - x(guess.minDeciC)} height={base - 30} />}
       <text className="eco-graph-y" x={LEFT - 10} y="40" textAnchor="end">{labels.curve}</text>
       {showLimits && <polyline className="eco-curve" points={curve} />}
       {showLimits && <g className="eco-limits" data-testid="eco-limit-markers">
@@ -46,6 +66,22 @@ export function ToleranceGraph({ limits, valueDeciC, showLimits, labels }: {
         <line x1={LEFT} y1="30" x2={LEFT} y2={base} />
         <circle cx={LEFT} cy={base} r="6" />
       </g>}
+      {cursorDrag && valueDeciC !== null && <rect className="eco-axis-grip" x={LEFT - 12} y={base - 14} width={RIGHT - LEFT + 24} height="44" role="slider" tabIndex={0}
+        aria-label="Kéo trên trục để đổi nhiệt độ" aria-valuemin={0} aria-valuemax={50} aria-valuenow={valueDeciC / 10} aria-valuetext={`${formatDeciC(valueDeciC)} °C`}
+        data-testid="eco-axis-drag" onKeyDown={(event) => nudgeKey(event, valueDeciC, 10, 0, 500, onValueChange!)} {...cursorDrag} />}
+      {guess && onGuessChange && (["minDeciC", "maxDeciC"] as const).map((side) => {
+        const value = guess[side];
+        const drag = svgDrag((point) => onGuessChange(clampGuess(side, toDeciC(point.x))), frame);
+        const name = side === "minDeciC" ? "Em khoanh dưới" : "Em khoanh trên";
+        return <g key={side} className="eco-guess" data-side={side} data-testid={`eco-guess-${side === "minDeciC" ? "min" : "max"}`}>
+          <line x1={x(value)} y1="34" x2={x(value)} y2={base - 16} />
+          <text x={x(value)} y={base - 2} textAnchor="middle">{formatDeciC(value)}</text>
+          <circle cx={x(value)} cy="34" r="7" />
+          <rect className="eco-guess-grip" x={x(value) - 14} y="26" width="28" height={base - 34} rx="8" role="slider" tabIndex={0}
+            aria-label={`${name} (kéo để khoanh vùng sống)`} aria-valuemin={0} aria-valuemax={50} aria-valuenow={value / 10} aria-valuetext={`${formatDeciC(value)} °C`}
+            onKeyDown={(event) => nudgeKey(event, value, 10, 0, 500, (next) => onGuessChange(clampGuess(side, next)))} {...drag} />
+        </g>;
+      })}
       <Axis y={base} />
     </svg>
     <figcaption>{labels.illustrative}</figcaption>

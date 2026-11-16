@@ -80,3 +80,35 @@
 .mendel-parents { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; margin: 0; padding: 10px 12px; border: 1px solid var(--explore-card-line, #c3cec8); border-radius: 10px; font-size: 13px; }
 .mendel-parents dt { font: 800 13px ui-monospace, Consolas, monospace; color: var(--text-base); }
 .mendel-parents dd { margin: 0; color: var(--text-base); }
+
+/* FL-26 3D garden (K8 meadow stage) and the Punnett overlay card over it. */
+.explore-bench-full .explore-scene > .mendel-garden-3d { position: absolute; inset: 0; }
+.mendel-garden-3d { position: relative; min-height: 360px; }
+.mendel-overlay { width: min(460px, calc(100% - var(--explore-aside-w) - 72px)); }
+.mendel-overlay .explore-status { justify-self: start; }
+.mendel-aside-board .mendel-board-card { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.mendel-aside-board .mendel-cell { min-height: 60px; }
+.mendel-3d-tag { display: inline-block; padding: 3px 8px; border-radius: 8px; background: rgb(255 255 255 / 88%); color: #24323a; font: 600 12px system-ui, sans-serif; white-space: nowrap; box-shadow: 0 1px 4px rgb(0 0 0 / 15%); pointer-events: none; }
+.mendel-3d-tag b { font-weight: 800; }
+.mendel-3d-tag-small { font-size: 11px; }
+.mendel-3d-gamete { display: inline-grid; place-items: center; width: 22px; height: 22px; font: 800 13px system-ui, sans-serif; color: #3d1f6b; pointer-events: none; }
+.mendel-3d-gamete[data-allele="recessive"] { color: #475569; }
+.mendel-3d-cross { font: 800 28px system-ui, sans-serif; color: #475569; pointer-events: none; }
+
+/* FL-26 direct manipulation: clickable P plants and F1 pots, draggable gametes, carried-gamete chip. */
+.mendel-garden-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.mendel-hit { cursor: pointer; outline: none; }
+.mendel-hit-area { fill: transparent; stroke: transparent; stroke-width: 2; stroke-dasharray: 5 4; }
+.mendel-hit:hover .mendel-hit-area, .mendel-hit:focus-visible .mendel-hit-area { fill: rgb(124 77 189 / 7%); stroke: #7c4dbd; }
+.mendel-hit[data-drop="ready"] .mendel-hit-area { fill: rgb(242 193 46 / 16%); stroke: #c99a0c; }
+.mendel-gamete.is-draggable { cursor: grab; touch-action: none; }
+.mendel-gamete[data-carried] circle { stroke: #f2c12e; stroke-width: 4; }
+.lab-space .mendel-3d-tag.is-button { pointer-events: auto; cursor: pointer; border: 1px solid rgb(124 77 189 / 35%); }
+.lab-space .mendel-3d-tag.is-button:hover, .lab-space .mendel-3d-tag.is-button:focus-visible { background: #fff; border-color: #7c4dbd; outline: none; }
+.lab-space .mendel-3d-tag[data-open] { background: #efe7fa; }
+.mendel-garden-3d[data-carrying] .mendel-3d-tag-small.is-button:not([data-open]) { background: #fff6d6; border-color: #c99a0c; }
+.lab-space .mendel-3d-gamete.is-draggable { pointer-events: auto; cursor: grab; width: 30px; height: 30px; border: 2px solid #7c4dbd; border-radius: 50%; background: #fff; touch-action: none; }
+.lab-space .mendel-3d-gamete.is-draggable[data-allele="recessive"] { border-color: #94a3b8; }
+.lab-space .mendel-3d-gamete[data-carried] { box-shadow: 0 0 0 4px #f2c12e; }
+.mendel-carry-chip { position: fixed; left: 0; top: 0; z-index: 10000; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid #7c4dbd; color: #3d1f6b; font: 800 15px system-ui, sans-serif; pointer-events: none; box-shadow: 0 4px 12px rgb(0 0 0 / 25%); }
+.mendel-carry-chip[data-allele="recessive"] { border-color: #94a3b8; color: #475569; }

@@ -26,3 +26,10 @@
 @media (max-width: 600px) { .lab-library-lesson-row { align-items: flex-start; flex-wrap: wrap; } .lab-library-lesson-primary { flex: 1 1 65%; } .lab-library-lesson-more summary { min-height: 44px; } }
 @media (max-width: 600px) { .lesson-lab-card { padding: 16px; } .lesson-lab-card .button-row > a { width: 100%; justify-content: center; } .lab-lesson-context { padding: 16px; } }
 .lesson-detail-main-col:only-child { grid-column: 1 / -1; min-width: 0; }
+
+/* Two-mode Lab (interim D-5): one card, a row to open either mode. */
+.lab-library-mode-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; min-height: 44px; padding: 4px 8px; font-size: 13px; line-height: 1.4; }
+.lab-mode-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--brand-green); font-weight: 600; text-decoration: none; background: var(--surface); }
+.lab-mode-chip:hover { border-color: var(--brand-green); }
+.lab-mode-chip:focus-visible { outline: 3px solid var(--brand-green); outline-offset: 2px; }
+.lab-modes-badge { background: var(--brand-green); color: var(--on-accent, #fff); }

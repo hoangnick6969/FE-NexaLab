@@ -23,7 +23,7 @@ export { Polypeptide3D } from "./molecules/Polypeptide3D";
 export { AngstromRuler3D } from "./molecules/AngstromRuler3D";
 export { Follow, useDamped } from "./molecules/motion";
 export { TextLabel } from "./molecules/labels";
-export { SequenceDiagram2D, type DiagramBox, type DiagramBracket, type DiagramChain, type DiagramPairing, type DiagramTrack } from "./two-d/SequenceDiagram2D";
+export { SequenceDiagram2D, type DiagramBox, type DiagramBracket, type DiagramChain, type DiagramPairing, type DiagramSlotTargets, type DiagramTrack } from "./two-d/SequenceDiagram2D";
 export { K7Hud, type K7Station } from "./hud/K7Hud";
 export { BasePicker, SequenceTrack, type TrackRow } from "./hud/SequenceTrack";
 export { CodonTable } from "./hud/CodonTable";

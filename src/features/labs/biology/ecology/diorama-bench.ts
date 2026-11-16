@@ -4,8 +4,8 @@ import type { ExploreBenchEntry } from "../../runtime/explore-registry";
 import { kitItemsFrom } from "../explore-kit-items";
 
 const PURPOSES: Record<string, string> = {
-  food_web_board: "Sơ đồ lưới thức ăn: chọn loài để bỏ khỏi lưới và xem loài bị ảnh hưởng.",
-  thermometer: "Nhiệt kế mô phỏng: đặt nhiệt độ và xem loài có nằm trong vùng sống không.",
+  food_web_board: "Sơ đồ lưới thức ăn: bỏ một loài khỏi lưới, hoặc dựng chuỗi thức ăn và xem năng lượng ở mỗi bậc.",
+  thermometer: "Nhiệt kế mô phỏng: đặt nhiệt độ, ghi bảng đo và so sánh vùng sống của các loài cá.",
 };
 
 export const dioramaBench: ExploreBenchEntry = {
