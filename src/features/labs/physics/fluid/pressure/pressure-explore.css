@@ -1,0 +1,50 @@
+/* FL-04 fluid bench Explore: same layout as the mechanics bench (status under the header, notebook dock bottom left). */
+.fl04-explore { position: absolute; inset: 0; }
+.fl04-scene { position: absolute; inset: 0; }
+.fl04-2d { position: absolute; inset: 96px calc(var(--lqp-panel-w, 380px) + 40px) 96px 24px; display: grid; place-items: center; }
+.fl04-svg { width: 100%; max-width: 520px; height: auto; }
+.fl04-glass { fill: color-mix(in srgb, #dff3fb 35%, transparent); stroke: #7aa6b8; stroke-width: 2; }
+.fl04-glass-line { fill: none; stroke: #7aa6b8; stroke-width: 2; }
+.fl04-water { fill: #5fb4dc; fill-opacity: .45; }
+.fl04-ruler line { stroke: var(--text, #21313a); stroke-width: 1.4; }
+.fl04-ruler text, .fl04-label { fill: var(--text, #21313a); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fl04-label { text-anchor: middle; }
+.fl04-ruler text { text-anchor: end; }
+.fl04-probe { fill: #f1f7fa; fill-opacity: .7; stroke: #6b8592; stroke-width: 1.5; }
+.fl04-membrane { fill: none; stroke: #e2725b; stroke-width: 3.5; stroke-linecap: round; }
+.fl04-arrow line { stroke: #c2410c; }
+.fl04-arrow polygon { fill: #c2410c; }
+.fl04-piston { fill: #e06a9a; }
+.fl04-rod { stroke: #6b7774; stroke-width: 3; }
+.fl04-pan { fill: #9aa3a0; }
+.fl04-weight { fill: #59646b; }
+.lab-space:has(.fl04-explore) .fl04-observation { position: absolute; z-index: 5; top: 96px; left: max(18px, env(safe-area-inset-left)); margin: 0; padding: 6px 12px; border-radius: 999px; background: var(--surface); box-shadow: 0 6px 18px rgb(18 38 30 / 12%); font-size: 13px; }
+.fl04-items { display: grid; gap: 8px; padding: 0; list-style: none; }
+.fl04-items li { display: grid; gap: 2px; }
+.fl04-items span, .fl04-limits { color: var(--muted); font-size: 13px; }
+.fl04-limits { display: grid; gap: 4px; padding-left: 18px; }
+.fl04-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.fl04-tabs button { flex: 1 1 140px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+.fl04-tabs button[aria-selected="true"] { border-color: var(--accent, #0f766e); background: color-mix(in srgb, var(--accent, #0f766e) 12%, var(--surface)); }
+.fl04-slider { display: grid; gap: 6px; }
+.fl04-slider input { width: 100%; min-height: 32px; }
+.fl04-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.fl04-row button { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; min-width: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.fl04-row button[aria-pressed="true"] { border-color: var(--accent, #0f766e); font-weight: 700; }
+.fl04-pan span { flex: 1; }
+.fl04-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.fl04-table th, .fl04-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.fl04-table th { color: var(--muted); font-weight: 600; }
+.fl04-outcome { margin: 10px 0 0; font-weight: 700; }
+.fl04-error { color: var(--danger, #b42318); font-size: 13px; }
+.fl04-dock button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.fl04-log { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: 84px; z-index: 11; display: grid; gap: 8px; width: min(380px, calc(100% - var(--lqp-panel-w, 380px) - 72px)); max-height: calc(100% - 200px); overflow-y: auto; padding: 14px 16px; border-radius: 16px; background: var(--surface); box-shadow: 0 12px 36px rgb(18 38 30 / 14%); }
+.fl04-log h2 { margin: 0; font-size: 15px; }
+.fl04-log ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fl04-log li { display: grid; gap: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); font-size: 13px; }
+@media (max-width: 780px) {
+  .lab-space:has(.fl04-explore) .fl04-observation { top: 88px; left: 8px; right: 8px; }
+  .fl04-2d { inset: 130px 8px 52dvh 8px; }
+  .lab-space:has(.fl04-log) .fl04-explore-panel { visibility: hidden; }
+  .fl04-log { left: 10px; right: 10px; width: auto; bottom: 84px; max-height: 46dvh; z-index: 26; }
+}

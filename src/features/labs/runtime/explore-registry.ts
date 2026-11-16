@@ -5,11 +5,13 @@
 import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
 import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim/mechanics";
+import { validateFluidLabConfig } from "@nexalab/sim/fluid";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
+import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -93,6 +95,17 @@ const benches: ExploreBenchEntry[] = [
     loadClassPage: () => import("../physics/mechanics/explore/LeverClassExplorePage"),
     ClassTemplateForm: LeverClassTemplateForm,
     classItemLabels: () => ({ "moment-left": "bên trái", "moment-right": "bên phải" }),
+  },
+  {
+    // FL-04 liquid pressure (D1-3.2). No Class Explore templates yet (spec fl-04-liquid-pressure-explore-spec.md §8).
+    kit: "k3-fluid-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateFluidLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/fluid/pressure/PressureExploreLabPage"),
+    listKitItems: listFluidKitItems,
   },
 ];
 
