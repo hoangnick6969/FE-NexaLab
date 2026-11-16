@@ -9,6 +9,8 @@ import type { ApparatusKind, VesselKind } from "@nexalab/sim/wet-bench";
 import { BEAKER_DEFAULT_SIZE, beakerAnchors, beakerInnerHeight, type BeakerSize } from "../../../shared/items/beaker";
 import { CYLINDER_DEFAULT_SIZE, cylinderAnchors, cylinderInnerHeight } from "../../../shared/items/item-layout";
 import { DigitalScale3D } from "../../../shared/items/digital-scale";
+import { Stopwatch3D } from "../../../shared/items/stopwatch";
+import { Thermometer3D } from "../../../shared/items/thermometer";
 import type { HeldTool } from "./apparatus-manifest";
 import {
   Beaker3D, Cylinder3D, Dropper3D, DropperUpright, Flask3D, GlassRod3D, GlassRodHolding, LitmusBox3D, LitmusStrip3D, PhMeter3D, Rack3D, RestPhMeter3D, Spatula3D, SpatulaHolding, Stopper3D, TestTube3D, Tongs3D, TongsHolding, VolumetricFlask3D,
@@ -19,7 +21,7 @@ import type { LITMUS_HEX, Look } from "./liquid-look";
 /** What the bench state gives a vessel body, beyond its own visual state. */
 export type VesselBodyProps = VesselProps & { wasteMicroliters: number };
 /** What the bench state gives a non-vessel body. */
-export type FixtureBodyProps = { scaleReading: string };
+export type FixtureBodyProps = { scaleReading: string; clockReading: string; clockRunning: boolean };
 
 export type VesselRenderer = {
   Body: ComponentType<VesselBodyProps>;
@@ -70,6 +72,9 @@ export const FIXTURE_RENDERERS: Readonly<Record<Exclude<ApparatusKind, VesselKin
   digital_ph_meter: fixture(RestPhMeter3D),
   tongs: fixture(Tongs3D),
   stopper: fixture(Stopper3D),
+  stopwatch: { Body: ({ clockReading, clockRunning }) => <Stopwatch3D reading={clockReading} running={clockRunning} />, tooltipY: 0.2 },
+  // Room temperature is fixed in FL-12: the thermometer shows 25 °C, a quarter of a 0 to 100 °C scale.
+  thermometer: { Body: () => <Thermometer3D fill={0.25} reading="25,0 °C" />, tooltipY: 0.75 },
   glass_rod: fixture(GlassRod3D, 0.16),
   spatula: fixture(Spatula3D, 0.16),
   electronic_scale: { Body: ({ scaleReading }) => <DigitalScale3D reading={scaleReading} />, tooltipY: 0.3 },

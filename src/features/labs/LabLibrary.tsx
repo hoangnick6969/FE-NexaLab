@@ -9,6 +9,7 @@ import { labInfo } from "./lab-info";
 import { defineText } from "../../i18n";
 import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { labCurriculumLabel } from "./lab-curriculum-label";
+import { KitComponents } from "./kit-catalog/KitComponents";
 
 const text = defineText({
   vi: {
@@ -398,6 +399,7 @@ export function LabLibrary() {
         description={t.description}
       />
       <LabCards showFilters showDisclaimer />
+      <KitComponents />
     </>
   );
 }

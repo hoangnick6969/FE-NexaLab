@@ -27,15 +27,15 @@ import "../biology/ecology/food-web/FoodWebActivity.css";
 import "../shared/LabSpace.css";
 import { WetBenchKitStage } from "../chemistry/wet-bench/kit/WetBenchKitStage";
 import { benchReducer, initialBenchState, type BenchAction, type BenchUiState } from "../chemistry/wet-bench/kit/bench-reducer";
-import { fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
+import { fl11Config, fl12Config, fl13Config, fl14aConfig } from "../chemistry/wet-bench/labs";
 import type { ChemistryLabConfig } from "@nexalab/sim/wet-bench";
 
 /** K2 explore benches: a mid-session state built from the same reducer actions a student would perform. */
-function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unknown>>) {
+function k2Thumbnail(config: ChemistryLabConfig, steps: Array<Record<string, unknown>>, view: BenchViewPreset = k2ThumbnailView) {
   const played = steps.reduce<BenchUiState>((current, step) => benchReducer(current, { now: 0, ...step } as BenchAction), initialBenchState(config));
   const state: BenchUiState = { ...played, focusVesselId: null, notice: null, banner: null };
   return <div className="k2-thumbnail">
-    <WetBenchKitStage state={state} dispatch={() => undefined} hovered={null} onHover={() => undefined} viewResetSignal={0} view={k2ThumbnailView} />
+    <WetBenchKitStage state={state} dispatch={() => undefined} hovered={null} onHover={() => undefined} viewResetSignal={0} view={view} />
     {/* Text tags are hidden so the card reads in any language (and kit.css is not loaded here). */}
     <style>{`.k2-vessel-tag, .k2-bottle-tag, .k2-strip-chip, .k2-drag-tag, .k2-lcd, .lab-item-lcd { display: none !important; }`}</style>
   </div>;
@@ -71,6 +71,45 @@ const metalReactivityThumbnail = () => k2Thumbnail(fl14aConfig, [
   { type: "release" },
 ]);
 
+/** FL-11: CuSO4 dissolved to a blue solution in the beaker, a flask of NaCl filled to its mark, and water in the cylinder. */
+const solutionConcentrationView: BenchViewPreset = {
+  wide: { position: [-0.4, 1.0, 1.95], target: [-0.4, 0.2, 0.3] },
+  narrow: { position: [-0.4, 1.0, 1.95], target: [-0.4, 0.2, 0.3] },
+  minDistance: 0.8, maxDistance: 6,
+};
+const spoon = (reagentId: string, milligrams: number) => [
+  { type: "hold", held: { kind: "tool", tool: "spatula", apparatusId: "spoon" } }, { type: "click_bottle", reagentId },
+  { type: "set_powder", milligrams }, { type: "click_vessel", vesselId: "B1" }, { type: "release" },
+];
+const solutionConcentrationThumbnail = () => k2Thumbnail(fl11Config, [
+  ...spoon("CuSO4_powder", 2500),
+  { type: "click_bottle", reagentId: "H2O_pour" }, { type: "preset", microliters: 25000 },
+  { type: "click_vessel", vesselId: "B1" }, { type: "click_vessel", vesselId: "B1" }, { type: "click_vessel", vesselId: "G1" }, { type: "preset", microliters: 10000 }, { type: "click_vessel", vesselId: "G1" },
+  { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "glass_rod", apparatusId: "rod" } }, { type: "click_vessel", vesselId: "B1" }, { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "spatula", apparatusId: "spoon" } }, { type: "click_bottle", reagentId: "NaCl_powder" }, { type: "set_powder", milligrams: 585 },
+  { type: "click_vessel", vesselId: "V1" }, { type: "release" },
+  { type: "click_bottle", reagentId: "H2O_pour" }, { type: "preset", microliters: 25000 }, { type: "click_vessel", vesselId: "V1" }, { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "glass_rod", apparatusId: "rod" } }, { type: "click_vessel", vesselId: "V1" }, { type: "release" },
+  { type: "fill_mark", vesselId: "V1" },
+], solutionConcentrationView);
+
+/** FL-12: three stoppered flasks after 40 simulated seconds: chips in 0,1 M, chips in 0,2 M and powder in 0,1 M, bubbling at different rates. */
+const reactionRateView: BenchViewPreset = {
+  wide: { position: [0.3, 1.15, 2.2], target: [0.3, 0.2, 0.5] },
+  narrow: { position: [0.3, 1.15, 2.2], target: [0.3, 0.2, 0.5] },
+  minDistance: 0.8, maxDistance: 6,
+};
+const stopFlask = (vesselId: string) => [{ type: "hold", held: { kind: "tool", tool: "stopper", apparatusId: "stopper" } }, { type: "click_vessel", vesselId }];
+const reactionRateThumbnail = () => k2Thumbnail(fl12Config, [
+  ...stopFlask("F1"), ...stopFlask("F2"), ...stopFlask("F3"),
+  { type: "hold", held: { kind: "tool", tool: "tongs", apparatusId: "tongs" } }, { type: "click_bottle", reagentId: "CaCO3_chips" },
+  { type: "click_vessel", vesselId: "F1" }, { type: "click_vessel", vesselId: "F2" }, { type: "release" },
+  { type: "hold", held: { kind: "tool", tool: "spatula", apparatusId: "spoon" } }, { type: "click_bottle", reagentId: "CaCO3_powder" },
+  { type: "click_vessel", vesselId: "F3" }, { type: "release" },
+  { type: "wait", seconds: 10 },
+], reactionRateView);
+
 const densityThumbnailView: StageView = {
   position: [-0.25, 1.28, 1.95], target: [-0.4, 0.3, 0.08],
   narrowPosition: [-0.25, 1.28, 1.95], narrowTarget: [-0.4, 0.3, 0.08],
@@ -105,6 +144,8 @@ const foodWebThumbnail = () => <div className="fw-thumbnail">
 const scenes: Record<string, () => ReactNode> = {
   "acid-base-indicators": acidBaseThumbnail,
   "metal-reactivity": metalReactivityThumbnail,
+  "solution-concentration": solutionConcentrationThumbnail,
+  "reaction-rate": reactionRateThumbnail,
   "food-web": foodWebThumbnail,
   "ecology-tolerance": ecologyThumbnail,
   "thermal-energy": () => <ThermalBench3D output={{ elapsedMilliseconds: 50000, meterReadingMilliJoules: 2100000, thermometerReadingMilliCelsius: 30000, riseMilliCelsius: 5000, heaterState: "ON" }} />,

@@ -10,6 +10,8 @@
 .k2-layout { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 .k2-layout > * { pointer-events: auto; }
 
+.k2-chart { margin: 6px 0 0; }
+.k2-chart svg { width: 100%; max-width: 340px; height: auto; color: var(--text-base); }
 .k2-powder { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 .k2-powder input { width: 7rem; }
 .k2-targets .k2-target { margin-top: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--border, #cbd5e1); }
