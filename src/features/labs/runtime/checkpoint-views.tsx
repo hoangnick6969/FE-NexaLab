@@ -78,7 +78,10 @@ function phasedHintStep(evidence: PhasedEvidence, phase: { kind: string; id?: st
   // An observe-first step (FL-20 LIMITS) is answered after seeing the data, so it has no reflection.
   const last = [...evidence.checkpoints].reverse()
     .find((checkpoint) => evidence.observed[checkpoint.id] && checkpoint.prediction !== null && !observeFirst.has(checkpoint.id));
-  return { ask, reflect: last ? { criterion: "prediction:" + last.id, state: last.state, prediction: last.prediction } : null };
+  // The reflection belongs to the step just observed: once the student answers a later step, it is no longer offered.
+  const lastIndex = last ? evidence.checkpoints.indexOf(last) : -1;
+  const movedOn = last ? evidence.checkpoints.slice(lastIndex + 1).some((checkpoint) => checkpoint.prediction !== null) : false;
+  return { ask, reflect: last && !movedOn ? { criterion: "prediction:" + last.id, state: last.state, prediction: last.prediction } : null };
 }
 
 const verdict = (item: any) => item.predictionCorrect ? text().correct : text().incorrect;

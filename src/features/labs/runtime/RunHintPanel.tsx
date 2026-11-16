@@ -27,7 +27,7 @@ const text = defineText({
     ask: (label: string) => `Gợi ý cho câu “${label}”`,
     askExplanation: "Gợi ý cho câu giải thích",
     askNext: "Gợi ý thêm",
-    reflect: "Vì sao kết quả khác dự đoán của em?",
+    reflect: (label: string) => `Vì sao kết quả câu “${label}” khác dự đoán của em?`,
     level: (n: number) => n === 0 ? "Suy ngẫm sau quan sát" : `Mức ${n}/2 · ${n === 1 ? "Câu hỏi gợi mở" : "Gợi ý khái niệm"}`,
     topLevel: "Trong lúc làm, gợi ý dừng ở mức này. Muốn gợi ý sâu hơn, em hãy ghi câu trả lời, làm hết bài rồi nộp.",
     matched: "Dự đoán của em ở bước vừa rồi đã khớp với kết quả, không cần suy ngẫm thêm.",
@@ -40,7 +40,7 @@ const text = defineText({
     ask: (label: string) => `Hint for “${label}”`,
     askExplanation: "Hint for the explanation",
     askNext: "Another hint",
-    reflect: "Why did the result differ from my prediction?",
+    reflect: (label: string) => `Why did the result of “${label}” differ from your prediction?`,
     level: (n: number) => n === 0 ? "Reflection after observing" : `Level ${n}/2 · ${n === 1 ? "Guiding question" : "Concept hint"}`,
     topLevel: "While working, hints stop at this level. For deeper help, record your answer, finish and submit.",
     matched: "Your prediction for the last step matched the result, so there is nothing to reflect on.",
@@ -109,7 +109,7 @@ export function RunHintPanel({ runId, step, labelOf }: { runId: string; step: Hi
             {offerReflection && reflect && (
               <button type="button" className="secondary" disabled={request.isPending}
                 onClick={() => request.mutate({ criterion: reflect.criterion, moment: "AFTER_OBSERVATION", state: reflect.state, prediction: reflect.prediction })}>
-                <MessageCircleQuestion size={15} aria-hidden /> {t.reflect}
+                <MessageCircleQuestion size={15} aria-hidden /> {t.reflect(labelOf(reflect.criterion))}
               </button>
             )}
           </div>

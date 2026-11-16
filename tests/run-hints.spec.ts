@@ -89,7 +89,7 @@ test("SAI-01A: hints before predicting stop at level 2; a reflection only after 
   await expect(toggle).toHaveAttribute("data-has-reflection", "false");
   await toggle.click();
   await expect(panel).not.toContainText("Gợi ý mẫu mức");
-  await expect(panel.getByRole("button", { name: "Vì sao kết quả khác dự đoán của em?" })).toHaveCount(0);
+  await expect(panel.getByRole("button", { name: /^Vì sao kết quả câu “.+” khác dự đoán của em\?$/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Đóng gợi ý" }).click();
 
   // Chain and energy, then a wrong HUNT prediction gets a reflection after the removal is shown.
@@ -110,7 +110,7 @@ test("SAI-01A: hints before predicting stop at level 2; a reflection only after 
   // A wrong prediction: the dot appears and the reflection is offered.
   await expect(toggle).toHaveAttribute("data-has-reflection", "true");
   await toggle.click();
-  await panel.getByRole("button", { name: "Vì sao kết quả khác dự đoán của em?" }).click();
+  await panel.getByRole("button", { name: /^Vì sao kết quả câu “.+” khác dự đoán của em\?$/ }).click();
   await expect(panel).toContainText("Suy ngẫm sau quan sát");
   await expect(panel).toContainText("Rắn không phải thức ăn của ếch.");
   expect(asked.at(-1)).toMatchObject({ criterion: "prediction:HUNT", moment: "AFTER_OBSERVATION", prediction: "DECREASE" });
