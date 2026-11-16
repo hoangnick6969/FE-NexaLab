@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Calendar, ArrowRight, BookOpen, PlayCircle, HelpCircle, FlaskConical, FileText, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Calendar, BookOpen, PlayCircle, HelpCircle, FlaskConical, FileText, CheckCircle2 } from "lucide-react";
 import { type MyProgressAssignment } from "../../lib/api";
 import { Badge } from "../../components/ui";
 import { type SheetView, stateNames, stateTones, stepLink, stepNames, time } from "./progress-format";
@@ -16,9 +16,8 @@ const text = defineText({
     continue: (step: string) => `Tiếp tục: ${step}`,
     open: "Mở bài",
     requiredSteps: "bước bắt buộc",
-    noRequired: "— Bài này chưa có bước bắt buộc nên không tính phần trăm.",
+    noRequired: "Bài này chưa có bước bắt buộc nên không tính phần trăm.",
     ratio: "Tỉ lệ bước bắt buộc đã hoàn thành",
-    step: "Bước",
     stepN: (n: number) => `Bước ${n}`,
     content: "Nội dung",
     status: "Trạng thái",
@@ -38,9 +37,8 @@ const text = defineText({
     continue: (step: string) => `Continue: ${step}`,
     open: "Open",
     requiredSteps: "required steps",
-    noRequired: "— This work has no required steps, so no percentage.",
+    noRequired: "This work has no required steps, so no percentage.",
     ratio: "Share of required steps completed",
-    step: "Step",
     stepN: (n: number) => `Step ${n}`,
     content: "Content",
     status: "Status",
@@ -54,20 +52,19 @@ const text = defineText({
 });
 const t = text();
 
-function getStepIcon(type: string) {
-  switch (type) {
-    case "READING":
-      return <BookOpen size={14} className="step-type-icon" aria-hidden="true" />;
-    case "VIDEO":
-      return <PlayCircle size={14} className="step-type-icon" aria-hidden="true" />;
-    case "QUIZ":
-      return <HelpCircle size={14} className="step-type-icon" aria-hidden="true" />;
-    case "LAB":
-      return <FlaskConical size={14} className="step-type-icon" aria-hidden="true" />;
-    default:
-      return <FileText size={14} className="step-type-icon" aria-hidden="true" />;
-  }
+const STEP_ICONS: Record<string, typeof BookOpen> = { READING: BookOpen, VIDEO: PlayCircle, QUIZ: HelpCircle, LAB: FlaskConical };
+
+/** A round mark for the step's state: a tick when done, the step's own icon otherwise. */
+function StepMark({ type, state }: { type: string; state: string }) {
+  const Icon = state === "COMPLETED" ? CheckCircle2 : STEP_ICONS[type] ?? FileText;
+  return (
+    <span className={`pg-step-mark${state === "COMPLETED" ? " is-done" : state === "IN_PROGRESS" ? " is-doing" : ""}`} aria-hidden="true">
+      <Icon size={14} />
+    </span>
+  );
 }
+
+const stateClass = (state: string) => (state === "COMPLETED" ? " is-done" : state === "IN_PROGRESS" ? " is-doing" : "");
 
 export function AssignmentProgress({
   assignment,
@@ -80,16 +77,17 @@ export function AssignmentProgress({
   const percent = assignment.percent;
   const isCompleted = assignment.completed;
   const targetLink = stepLink(assignment.assignmentId, assignment.nextStepId)!;
+  const where = [assignment.subject.name, assignment.chapter].filter(Boolean).join(", ");
 
   return (
-    <article className="panel assignment-progress">
-      <header className="assignment-progress-header">
-        <div className="assignment-progress-meta">
-          <p className="eyebrow">{assignment.subject.name} · {assignment.chapter}</p>
+    <article className="pg-assignment assignment-progress">
+      <header className="pg-assignment-head">
+        <div>
+          <p className="pg-assignment-where">{where}</p>
           <h3>{assignment.title}</h3>
-          <div className="assignment-meta-row tiny muted">
+          <p className="pg-assignment-meta">
             {assignment.dueDate ? (
-              <span className="due-date-tag">
+              <span className="pg-due">
                 <Calendar size={13} aria-hidden="true" />
                 <span>{t.due(formatDate(assignment.dueDate))}</span>
               </span>
@@ -100,82 +98,69 @@ export function AssignmentProgress({
             {assignment.kind === "LAB" && <Badge tone="outline">{t.practice}</Badge>}
             {assignment.contentArchived && <Badge tone="outline">{t.archived}</Badge>}
             {assignment.overdue && !assignment.completed && <Badge tone="not_passed">{t.overdue}</Badge>}
-          </div>
+          </p>
         </div>
-        <Link className="primary assignment-action-link" to={targetLink}>
-          <span>{assignment.completed ? t.review : next ? t.continue(stepNames[next.type]) : t.open}</span>
-          <ArrowRight size={15} aria-hidden="true" />
+        <Link className="primary pg-assignment-cta" to={targetLink}>
+          {assignment.completed ? t.review : next ? t.continue(stepNames[next.type]) : t.open}
         </Link>
       </header>
 
-      <div className="completion-meter">
-        <span className="completion-ratio">
+      <div className="pg-meter">
+        <p>
           <b>{assignment.completedRequired}/{assignment.totalRequired}</b> {t.requiredSteps}
           {percent !== null && ` (${percent}%)`}
-        </span>
-        {assignment.percent === null ? (
+        </p>
+        {percent === null ? (
           <span className="tiny muted">{t.noRequired}</span>
         ) : (
-          <div
-            className="progress-track assignment-progress-track"
-            role="progressbar"
-            aria-label={t.ratio}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={assignment.percent}
-          >
-            <i style={{ width: assignment.percent + "%" }} />
+          <div className="progress-track" role="progressbar" aria-label={t.ratio} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+            <i style={{ width: percent + "%" }} />
           </div>
         )}
       </div>
 
-        {assignment.steps.length > 0 && (
-          <div className="table-wrap">
-            <table className="steps-table">
-              <thead>
-                <tr>
-                  <th scope="col">{t.step}</th>
-                  <th scope="col">{t.content}</th>
-                  <th scope="col">{t.status}</th>
-                  <th scope="col">{t.updated}</th>
-                  <th scope="col"><span className="visually-hidden">{t.evidence}</span></th>
+      {assignment.steps.length > 0 && (
+        <div className="pg-steps-wrap">
+          <table className="pg-steps">
+            <thead>
+              <tr>
+                <th scope="col">{t.content}</th>
+                <th scope="col">{t.status}</th>
+                <th scope="col">{t.updated}</th>
+                <th scope="col"><span className="visually-hidden">{t.evidence}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignment.steps.map((step, index) => (
+                <tr key={step.stepId}>
+                  <td data-label={t.stepN(index + 1)}>
+                    <span className="pg-step-name">
+                      <StepMark type={step.type} state={step.state} />
+                      <span>
+                        {stepNames[step.type] ?? step.type}
+                        {!step.required && <span className="pg-step-optional">{t.optional}</span>}
+                      </span>
+                    </span>
+                  </td>
+                  <td className="pg-cell-state">
+                    <span className={`pg-state${stateClass(step.state)}`}>{stateNames[step.state]}</span>
+                  </td>
+                  <td className="pg-cell-time"><span className="pg-time">{time(step.updatedAt)}</span></td>
+                  <td>
+                    {step.evidenceId ? (
+                      <button type="button" className="pg-link" onClick={(event) => onOpen({ kind: "step", assignment, step }, event)}>
+                        {t.seeEvidence}
+                      </button>
+                    ) : (
+                      <span className="tiny muted">{t.none}</span>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {assignment.steps.map((step, index) => (
-                  <tr key={step.stepId}>
-                    <td data-label={t.step} className="step-cell-number">
-                      <span className="step-num-pill">{t.stepN(index + 1)}</span>
-                    </td>
-                    <td data-label={t.content} className="step-cell-content">
-                      <div className="step-content-item">
-                        {getStepIcon(step.type)}
-                        <span>
-                          {stepNames[step.type] ?? step.type}
-                          {!step.required && <span className="tiny muted">{t.optional}</span>}
-                        </span>
-                      </div>
-                    </td>
-                    <td data-label={t.status} className="step-cell-status">
-                      <Badge tone={stateTones[step.state]}>{stateNames[step.state]}</Badge>
-                    </td>
-                    <td data-label={t.updated} className="step-cell-updated">{time(step.updatedAt)}</td>
-                    <td className="step-cell-evidence">
-                      {step.evidenceId ? (
-                        <button type="button" className="link-button step-evidence-btn" onClick={(event) => onOpen({ kind: "step", assignment, step }, event)}>
-                          <span>{t.seeEvidence}</span>
-                          <ExternalLink size={12} aria-hidden="true" />
-                        </button>
-                      ) : (
-                        <span className="tiny muted">{t.none}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </article>
-    );
-  }
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </article>
+  );
+}

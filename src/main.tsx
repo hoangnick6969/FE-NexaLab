@@ -8,6 +8,7 @@ import { queryClient } from "./app/query-client";
 import { defineText } from "./i18n";
 import "./tokens.css";
 import "./styles.css";
+import "./identity.css";
 const text = defineText({
   vi: { title: "Không thể hiển thị trang", body: "Đã xảy ra lỗi khi tải dữ liệu hoặc hiển thị giao diện. Hãy tải lại trang.", reload: "Tải lại" },
   en: { title: "This page cannot be shown", body: "Something went wrong while loading data or drawing the page. Please reload.", reload: "Reload" },

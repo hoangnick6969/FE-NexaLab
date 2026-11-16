@@ -3,13 +3,13 @@
 
 :root {
   color-scheme: light;
-  --text-base: #233c34;
+  --text-base: #1b2a3a;
   --green: #245b47;
   --brand-green: var(--brand);
   --brand-green-hover: var(--brand-hover);
   --dark: #183f35;
-  --muted: #7a857c;
-  --line: #e4e8df;
+  --muted: #5f6d7a;
+  --line: #dce3ea;
   --cream: #f4e5bc;
   --focus: #99b99e;
 }
@@ -26,7 +26,16 @@
 }
 
 :root {
-  --bg: #f6f7f3;
+  /* NexaLab identity (see docs/design/nexalab-identity.md).
+     Display voice: Lexend, drawn for reading fluency; every figure is set in it with its unit beside it.
+     Signal: phenolphthalein, the pink a clear solution turns when a reaction works. The one colour for "needs you",
+     replacing the amber, red and tinted-tile statuses. Ink does everything else. */
+  --font-display: "Lexend", "Be Vietnam Pro", sans-serif;
+  --nx-ink: #142030;
+  --nx-signal: #b8196f;
+  --nx-signal: oklch(0.52 0.2 355);
+  --nx-hairline: var(--line);
+  --bg: #f3f6f8;
   --bg-student: #c9d3e3;
   --brand: #1f6f78;
   --brand-hover: #185b63;
@@ -66,14 +75,14 @@
   --fill-neutral-86: #d5d1c0;
   --fill-neutral-90: #d8e1df;
   --fill-neutral-92: #e0e4ed;
-  --fill-neutral-93: #e4e8df;
+  --fill-neutral-93: #e1e7ed;
   --fill-neutral-94: #fbe6df;
   --fill-neutral-95: #e6f1f3;
-  --fill-neutral-96: #f0f3eb;
+  --fill-neutral-96: #ecf0f4;
   --fill-neutral-96-2: #eaf4e3;
-  --fill-neutral-97: #f5f6f1;
+  --fill-neutral-97: #f2f5f8;
   --fill-neutral-98-a73: rgb(245 250 249 / 73.3%);
-  --fill-neutral-99: #fafbf8;
+  --fill-neutral-99: #fafbfc;
   --fill-neutral-100-a10: rgb(255 255 255 / 10%);
   --fill-neutral-100-a14: rgb(255 255 255 / 14%);
   --fill-neutral-100-a42: rgb(255 255 255 / 42%);
@@ -351,6 +360,9 @@
 }
 
 :root[data-theme="dark"] {
+  --nx-ink: #e4edf5;
+  --nx-signal: #fb78b0;
+  --nx-signal: oklch(0.74 0.17 355);
   --bg: #111816;
   --bg-student: #0f161c;
   --brand: #1f6f78;

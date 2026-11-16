@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowRight, BookOpen, ClipboardList, Clock3, Play } from
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
-import { CardSkeleton, ErrorBox } from "../../components/ui";
+import { ErrorBox } from "../../components/ui";
+import { LessonRowsSkeleton } from "../../components/skeletons";
 import { SubjectGradeChapterBrowser, type HierarchyItem } from "../../components/SubjectGradeChapterBrowser";
 import { buildStudentLessonCatalog, filterStudentLessonCatalog, flattenReleasedCurriculum, type StudentLessonAssignment, type StudentLessonCard } from "./lesson-catalog";
 import { defineText, formatDate } from "../../i18n";
@@ -549,7 +550,7 @@ export function StudentLessonsHub() {
         </div>
       )}
 
-      {loading && <div className="lesson-grid"><CardSkeleton count={3} /></div>}
+      {loading && <LessonRowsSkeleton label={commonText().loading} />}
 
       {!loading && (
         <>

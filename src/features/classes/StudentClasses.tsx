@@ -17,7 +17,8 @@ import {
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, idempotencyKey, isApiError } from "../../lib/api";
-import { Badge, CardSkeleton, Empty, ErrorBox, Field, Modal } from "../../components/ui";
+import { Badge, Empty, ErrorBox, Field, Modal } from "../../components/ui";
+import { ClassCardsSkeleton, LessonRowsSkeleton } from "../../components/skeletons";
 import { PageHeading } from "../../components/PageHeading";
 import { ClassLessonCards } from "./ClassLessonCards";
 import { StudentClassResources } from "./ClassSpaceResources";
@@ -432,7 +433,7 @@ export function StudentClasses() {
                   </div>
                   <LoadError query={classWork} what={t.classSpaceContent} />
                   {classWork.isLoading ? (
-                    <CardSkeleton count={2} />
+                    <LessonRowsSkeleton label={commonText().loading} rows={3} />
                   ) : (
                     <SubjectGradeChapterBrowser
                       items={classItems}
@@ -671,7 +672,7 @@ export function StudentClasses() {
         </p>
       )}
       <LoadError query={list} what={t.classList} />
-      {list.isLoading && <CardSkeleton count={3} />}
+      {list.isLoading && <ClassCardsSkeleton label={commonText().loading} />}
       {list.data && list.data.length === 0 && <Empty>{t.noClasses}</Empty>}
 
       {list.data && list.data.length > 0 && (
