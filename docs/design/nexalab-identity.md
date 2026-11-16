@@ -32,7 +32,8 @@ reading the result, so the interface reads the same way. A count is never a bare
 
 ## Applied so far
 
-Teacher overview and Class Lab, student `/progress`, the Kit rail on `/labs`, and every skeleton on those screens. Not yet:
-student dashboard, lessons, class space, assignments, the lab benches, the parent and admin screens. They already pick up the
+Teacher overview and Class Lab, student `/progress`, the Kit rail on `/labs`, the parent home and the parent's linked-child
+progress (`parent.css`), and every skeleton on those screens. Not yet:
+student dashboard, lessons, class space, assignments, the lab benches, the admin screens. They already pick up the
 new ground, ink and hairlines and the Lexend page title; their own tinted tiles and multi-colour status chips are what is left
 to bring across, one screen at a time, with the rules above.

@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Users, AlertCircle, ShieldCheck, Mail, Trash2, FlaskConical, Atom, Eye, Zap, Clock } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, useAuth } from "../../lib/api";
 import { PageHeading } from "../../components/PageHeading";
-import { Badge, Empty, ErrorBox, Field, useAction, verdictLabel, InlineLoader } from "../../components/ui";
+import { Empty, ErrorBox, Field, useAction, verdictLabel } from "../../components/ui";
 import { StudentProgress } from "./StudentProgress";
 import { dateTime } from "../../lib/test-status";
 import { defineText, formatDateTime } from "../../i18n";
 import { HelpSeekingPanel } from "./HelpSeekingPanel";
+import { ParentLabsSkeleton, ParentRowsSkeleton } from "./ParentSkeletons";
+import "./parent.css";
 
 const text = defineText({
   vi: {
@@ -51,6 +52,9 @@ const text = defineText({
     scoreAttempts: (score: number, n: number) => `${score} điểm · ${n} lần thử`,
     highestHint: (level: number) => `Mức trợ giúp cao nhất: ${level}/4`,
     history: "Lịch sử thực hành",
+    labsTitle: (name?: string) => (name ? `Các bài thực hành của ${name}` : "Các bài thực hành"),
+    points: "điểm",
+    attemptsOf: (n: number) => `${n} lần thử`,
     time: "Thời gian",
     challenge: "Thử thách",
     result: "Kết quả",
@@ -101,6 +105,9 @@ const text = defineText({
     scoreAttempts: (score: number, n: number) => `${score} points · ${n} ${n === 1 ? "attempt" : "attempts"}`,
     highestHint: (level: number) => `Highest help level: ${level}/4`,
     history: "Practice history",
+    labsTitle: (name?: string) => (name ? `${name}'s practice labs` : "Practice labs"),
+    points: "points",
+    attemptsOf: (n: number) => `${n} ${n === 1 ? "attempt" : "attempts"}`,
     time: "Time",
     challenge: "Challenge",
     result: "Result",
@@ -114,16 +121,11 @@ const text = defineText({
 });
 const t = text();
 
-function LabIcon({ contentId }: { contentId: string }) {
-  if (contentId === "circuit") return <Zap size={18} strokeWidth={2} />;
-  if (contentId === "eye") return <Eye size={18} strokeWidth={2} />;
-  return <FlaskConical size={18} strokeWidth={2} />;
-}
-
 export function ProgressPage() {
   const user = useAuth((s) => s.user)!;
+  const [searchParams] = useSearchParams();
   const [student, setStudent] = useState(
-    user.role === "STUDENT" ? user.id : "",
+    user.role === "STUDENT" ? user.id : searchParams.get("child") ?? "",
   );
   const children = useQuery({
     queryKey: ["children"],
@@ -179,195 +181,186 @@ export function ProgressPage() {
     setNotice(t.unlinked);
   });
   const status = linkStatus.data;
+  const parent = user.role === "PARENT";
+  const activeChild = children.data?.find((c: any) => c.student.id === student)?.student;
   return (
     <>
       <PageHeading
-        title={
-          user.role === "PARENT" ? t.parentTitle : t.title
-        }
+        title={parent ? t.parentTitle : t.title}
         description={t.description}
       />
-      {user.role === "PARENT" && (
-        <section className="panel">
-          <h3>{t.linked}</h3>
-          {status && (
-            <div className="button-row">
-              <Badge tone={status.emailVerified ? "passed" : "not_passed"}>{status.emailVerified ? t.emailVerified : t.emailNotVerified}</Badge>
-              {!status.emailVerified && (
-                <button className="secondary" disabled={verifyEmail.isPending} onClick={() => verifyEmail.mutate(undefined)}>{t.verifyEmail}</button>
-              )}
-              <Badge tone={status.consent ? "passed" : "not_passed"}>{status.consent ? t.consentDone : t.consentMissing}</Badge>
-              {!status.consent && (
-                <button className="secondary" disabled={consent.isPending} onClick={() => consent.mutate(undefined)}>{t.consent}</button>
-              )}
-            </div>
-          )}
-          <div className="button-row parent-children-row">
-            {children.data?.map((c: any) => (
-              <span key={c.student.id} className="child-chip-wrap">
-                <button
-                  className={`secondary child-pill ${student === c.student.id ? "is-active" : ""}`}
-                  onClick={() => setStudent(c.student.id)}
-                >
-                  <Users size={14} aria-hidden="true" />
-                  <span>{c.student.fullName}</span>
-                </button>
-                <button
-                  className="icon-button child-unlink-btn"
-                  aria-label={t.unlink}
-                  disabled={unlink.isPending}
-                  onClick={() => window.confirm(t.confirmUnlink(c.student.fullName)) && unlink.mutate(c.student.id)}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-          {status?.pending.length ? (
-            <div>
-              <h4>{t.pendingTitle}</h4>
-              <ul>
-                {status.pending.map((p) => (
-                  <li key={p.studentId}>{p.fullName}</li>
-                ))}
-              </ul>
-              <p className="tiny muted">{t.pendingHint}</p>
-            </div>
-          ) : null}
-          <form
-            className="inline-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              link.mutate(String(new FormData(e.currentTarget).get("code")));
-            }}
-          >
-            <Field label={t.code} name="code" required />
-            <button className="primary" disabled={link.isPending}>
-              {t.link}
-            </button>
-          </form>
-          <p className="tiny muted">
-            {t.linkScope}
-          </p>
-          {notice && <p className="notice" role="status">{notice}</p>}
-          <ErrorBox error={link.error || verifyEmail.error || consent.error || unlink.error || children.error || linkStatus.error} />
-        </section>
-      )}
       {user.role === "STUDENT" ? (
         <StudentProgress />
       ) : ["TEACHER", "ADMIN"].includes(user.role) ? (
         <Empty>
           {user.role === "TEACHER" ? (
-            <Link to="/classes">
-              {t.openClasses} →
-            </Link>
+            <Link to="/classes">{t.openClasses}</Link>
           ) : (
-            <Link to="/admin">{t.openAdmin} →</Link>
+            <Link to="/admin">{t.openAdmin}</Link>
           )}
         </Empty>
       ) : (
-        <>
+        <div className="pp-page">
+          <section className="pp-section" aria-labelledby="parent-linked-title">
+            <div className="pp-section-head"><h2 id="parent-linked-title">{t.linked}</h2></div>
+            {!!children.data?.length && (
+              <ul className="pp-picker">
+                {children.data.map((c: any) => (
+                  <li key={c.student.id} className={student === c.student.id ? "is-active" : ""}>
+                    <button type="button" className="pp-pick" aria-pressed={student === c.student.id} onClick={() => setStudent(c.student.id)}>
+                      {c.student.fullName}
+                    </button>
+                    <button
+                      type="button"
+                      className="pp-text-btn"
+                      disabled={unlink.isPending}
+                      onClick={() => window.confirm(t.confirmUnlink(c.student.fullName)) && unlink.mutate(c.student.id)}
+                    >
+                      {t.unlink}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {status && (
+              <ul className="pp-checks">
+                <li className={status.emailVerified ? "is-ok" : "is-todo"}>
+                  <span>{status.emailVerified ? t.emailVerified : t.emailNotVerified}</span>
+                  {!status.emailVerified && <button type="button" className="pp-text-btn" disabled={verifyEmail.isPending} onClick={() => verifyEmail.mutate(undefined)}>{t.verifyEmail}</button>}
+                </li>
+                <li className={status.consent ? "is-ok" : "is-todo"}>
+                  <span>{status.consent ? t.consentDone : t.consentMissing}</span>
+                  {!status.consent && <button type="button" className="pp-text-btn" disabled={consent.isPending} onClick={() => consent.mutate(undefined)}>{t.consent}</button>}
+                </li>
+              </ul>
+            )}
+            {status?.pending.length ? (
+              <div>
+                <h3 className="pp-sub">{t.pendingTitle}</h3>
+                <ul className="pp-plain">
+                  {status.pending.map((p) => (
+                    <li key={p.studentId}>{p.fullName}</li>
+                  ))}
+                </ul>
+                <p className="pp-note">{t.pendingHint}</p>
+              </div>
+            ) : null}
+            <form
+              className="pp-link-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                link.mutate(String(new FormData(e.currentTarget).get("code")));
+              }}
+            >
+              <Field label={t.code} name="code" required />
+              <button className="primary pp-btn" disabled={link.isPending}>
+                {t.link}
+              </button>
+            </form>
+            <p className="pp-note">{t.linkScope}</p>
+            {notice && <p className="notice" role="status">{notice}</p>}
+            <ErrorBox error={link.error || verifyEmail.error || consent.error || unlink.error || children.error || linkStatus.error} />
+          </section>
+
           <ErrorBox error={q.error} />
-          {user.role === "PARENT" && student && (
-            <section className="panel" aria-labelledby="parent-notices-title">
-              <h2 id="parent-notices-title">{t.overdueNotices}</h2>
+          {student && (
+            <section className="pp-section" aria-labelledby="parent-notices-title">
+              <div className="pp-section-head"><h2 id="parent-notices-title">{t.overdueNotices}</h2></div>
               <ErrorBox error={notices.error} />
               {notices.data?.length ? (
-                notices.data.map((notice) => (
-                  <div className="assignment-row" key={notice.id}>
-                    <div>
-                      <b>{notice.title}</b>
-                      <small>
-                        {notice.className} · {t.overdueSince(dateTime(notice.dueAt))}
-                        {notice.extended ? t.extended : ""} · {t.notSubmitted}
-                      </small>
+                <div className="pp-rows">
+                  {notices.data.map((notice) => (
+                    <div className="pp-row" key={notice.id}>
+                      <div>
+                        <b>{notice.title}</b>
+                        <small>
+                          {notice.className}, {t.overdueSince(dateTime(notice.dueAt))}
+                          {notice.extended ? t.extended : ""}. {t.notSubmitted}
+                        </small>
+                      </div>
+                      <div className="pp-row-end">
+                        <span className="pp-row-state">{t.overdue}</span>
+                        {!notice.readAt && (
+                          <button type="button" className="pp-text-btn" disabled={markSeen.isPending} onClick={() => markSeen.mutate(notice.id)}>
+                            {t.markSeen}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <Badge tone="not_passed">{t.overdue}</Badge>
-                    {!notice.readAt && (
-                      <button type="button" className="text-button" disabled={markSeen.isPending} onClick={() => markSeen.mutate(notice.id)}>
-                        {t.markSeen}
-                      </button>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : notices.isLoading ? (
-                <InlineLoader message={t.loadingNotices} />
+                <ParentRowsSkeleton label={t.loadingNotices} />
               ) : (
                 <Empty>{t.noOverdue}</Empty>
               )}
-              <p className="tiny muted">{t.parentNote}</p>
+              <p className="pp-note">{t.parentNote}</p>
             </section>
           )}
-          {user.role === "PARENT" && student && <HelpSeekingPanel key={student} studentId={student} />}
+          {student && <HelpSeekingPanel key={student} studentId={student} />}
           {q.data ? (
             <>
-              <div className="progress-cards">
-                {q.data.progress.map((p: any) => (
-                  <div className="panel progress-lab-card" key={p.contentId}>
-                    <div className="progress-lab-card-header">
-                      <span className="progress-lab-icon">
-                        <LabIcon contentId={p.contentId} />
-                      </span>
-                      <Badge tone={p.status === "completed" ? "passed" : "neutral"}>
+              <section className="pp-section" aria-labelledby="parent-labs-title">
+                <div className="pp-section-head"><h2 id="parent-labs-title">{t.labsTitle(activeChild?.fullName)}</h2></div>
+                <div className="pp-labs">
+                  {q.data.progress.map((p: any) => (
+                    <article className="pp-lab" key={p.contentId}>
+                      <h3>{t.labs[p.contentId as string] ?? p.contentId}</h3>
+                      <span className={`pp-lab-state ${p.status === "completed" ? "is-done" : "is-doing"}`}>
                         {p.status === "completed" ? t.completed : t.inProgress}
-                      </Badge>
-                    </div>
-                    <h3>
-                      {t.labs[p.contentId as string] ?? p.contentId}
-                    </h3>
-                    <div className="progress-track" role="progressbar" aria-valuenow={Math.round(p.score)} aria-valuemin={0} aria-valuemax={100}>
-                      <i style={{ width: p.score + "%" }} />
-                    </div>
-                    <p className="progress-lab-score">
-                      {t.scoreAttempts(Math.round(p.score), p.attemptsCount)}
-                    </p>
-                    <small>{t.highestHint(p.lastHintLevel)}</small>
-                  </div>
-                ))}
-              </div>
-              <section className="panel">
-                <h2>{t.history}</h2>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t.time}</th>
-                        <th>{t.challenge}</th>
-                        <th>{t.result}</th>
-                        <th>{t.duration}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(q.data.attempts ?? []).map((a: any) => (
-                        <tr key={a.id}>
-                          <td>
-                            {formatDateTime(a.createdAt)}
-                          </td>
-                          <td>{a.challengeId}</td>
-                          <td>
-                            <Badge tone={a.verdict}>
-                              {verdictLabel(a.verdict)}
-                            </Badge>
-                          </td>
-                          <td>{t.seconds(Math.round(a.durationMs / 1000))}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </span>
+                      <p className="pp-lab-score nx-reading"><span className="nx-value">{Math.round(p.score)}</span><span className="nx-unit">{t.points}</span></p>
+                      <div className="progress-track" role="progressbar" aria-valuenow={Math.round(p.score)} aria-valuemin={0} aria-valuemax={100}>
+                        <i style={{ width: p.score + "%" }} />
+                      </div>
+                      <small>{t.attemptsOf(p.attemptsCount)}. {t.highestHint(p.lastHintLevel)}</small>
+                    </article>
+                  ))}
                 </div>
+              </section>
+              <section className="pp-section" aria-labelledby="parent-history-title">
+                <div className="pp-section-head"><h2 id="parent-history-title">{t.history}</h2></div>
+                {!!q.data.attempts?.length && (
+                  <div className="pp-table-wrap">
+                    <table className="pp-table">
+                      <thead>
+                        <tr>
+                          <th>{t.time}</th>
+                          <th>{t.challenge}</th>
+                          <th>{t.result}</th>
+                          <th>{t.duration}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {q.data.attempts.map((a: any) => (
+                          <tr key={a.id}>
+                            <td>{formatDateTime(a.createdAt)}</td>
+                            <td>{a.challengeId}</td>
+                            <td>
+                              <span className={`pp-result ${a.verdict === "passed" ? "is-passed" : a.verdict === "partial" ? "is-partial" : ""}`}>
+                                {verdictLabel(a.verdict)}
+                              </span>
+                            </td>
+                            <td>{t.seconds(Math.round(a.durationMs / 1000))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
                 {!q.data.attempts?.length && (
                   <Empty>{t.noPractice}</Empty>
                 )}
               </section>
             </>
           ) : q.isLoading && student ? (
-            <InlineLoader message={t.analysing} />
+            <ParentLabsSkeleton label={t.analysing} />
           ) : (
             <Empty>
               {student ? t.noData : t.chooseStudent}
             </Empty>
           )}
-        </>
+        </div>
       )}
     </>
   );
