@@ -131,3 +131,23 @@
 @media (prefers-reduced-motion: reduce) {
   .lab-space .explore-btn, .lab-space .explore-select, .lab-space .explore-textarea { transition: none; }
 }
+
+/* Station picker and shared pieces of the Sinh học Explore stations (studio, data table, builders). */
+.explore-stations { display: grid; gap: 8px; margin: 0 0 4px; padding: 0 0 12px; border: 0; border-bottom: 1px solid var(--explore-card-line, var(--line)); }
+.explore-stations legend { margin-bottom: 8px; padding: 0; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted, var(--muted)); }
+.explore-stations-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.explore-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.explore-table th, .explore-table td { padding: 6px 8px; border-bottom: 1px solid var(--explore-card-line, var(--line)); text-align: left; }
+.explore-table th { font-weight: 650; color: var(--text-muted, var(--muted)); }
+.explore-table td[data-tone="ok"] { color: #1f7a4d; font-weight: 650; }
+.explore-table td[data-tone="warn"] { color: #b42318; font-weight: 650; }
+.explore-progress { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
+.explore-progress meter { flex: 1; height: 8px; }
+.explore-feedback { margin: 0; font-size: 13px; font-weight: 600; }
+.explore-feedback[data-tone="ok"] { color: #1f7a4d; }
+.explore-feedback[data-tone="warn"] { color: #b42318; }
+
+/* A checkbox with a visible box and brand tick (every Explore bench). */
+.explore-check { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 600; color: var(--text-base); cursor: pointer; }
+.lab-space .explore-check input { flex: none;  width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--brand); cursor: pointer; }
+.lab-space .explore-check input:focus-visible { outline: 3px solid rgb(31 111 120 / 40%); outline-offset: 2px; }

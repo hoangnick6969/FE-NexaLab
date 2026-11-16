@@ -24,3 +24,43 @@
 .eye-diagram-legend [data-tone="focus"]::before { background: #dc2626; }
 .eye-diagram-legend [data-tone="sharp"]::before { background: #2f6b52; }
 .eye-tag-muted { font-weight: 500; fill: #4b5a62; }
+
+/* FL-16 studio stations: 2D section with pickable parts (structure and label stations). */
+.eye-parts-2d { margin: 0; }
+.eye-parts-2d svg { display: block; width: min(100%, calc((100dvh - 330px) * 1.94)); height: auto; margin: 0 auto; border: 1px solid var(--explore-card-line); border-radius: 16px; }
+.eye-part path, .eye-part ellipse, .eye-part rect { fill: rgb(255 255 255 / 0%); stroke: #6b7c85; stroke-width: 2; cursor: pointer; transition: fill .15s; }
+.eye-part[data-part="sclera"] ellipse { fill: #fdf3ee; stroke: #9c6b5a; stroke-width: 5; }
+.eye-part[data-part="vitreous"] ellipse { fill: #eef6fb; stroke: #b9d3e2; }
+.eye-part[data-part="retina"] path { fill: none; stroke: #c2410c; stroke-width: 9; stroke-linecap: round; }
+.eye-part[data-part="lens"] ellipse { fill: rgb(147 197 253 / 70%); stroke: #2563eb; }
+.eye-part[data-part="aqueous"] ellipse { fill: #dff1fb; stroke: #9cc7de; }
+.eye-part[data-part="pupil"] .eye-iris-piece { fill: #5b4636; stroke: #3b2a1f; }
+.eye-part[data-part="pupil"] .eye-pupil-gap { fill: rgb(17 24 39 / 8%); stroke: #3b2a1f; stroke-dasharray: 3 3; }
+.eye-part[data-part="cornea"] path { fill: #bfe3f5; stroke: #2b6c8f; }
+.eye-part[data-part="nerve"] path { fill: #f5d7a8; stroke: #a16207; }
+.eye-part:hover :is(path, ellipse, rect) { stroke: #0f766e; }
+.eye-part[data-selected="true"] :is(path, ellipse, rect) { stroke: #0f766e; filter: drop-shadow(0 0 6px rgb(15 118 110 / 60%)); }
+.eye-part[data-selected="true"]:not([data-part="retina"]) :is(path, ellipse, rect) { stroke-width: 4; }
+.eye-part[data-part="retina"][data-selected="true"] path { stroke: #0f766e; stroke-width: 11; }
+.eye-part[data-hidden] { opacity: .12; pointer-events: none; }
+.eye-part:focus-visible { outline: none; }
+.eye-part:focus-visible :is(path, ellipse, rect) { stroke: #0f766e; stroke-width: 4; }
+.eye-part-tag line { stroke: #4b5a62; stroke-width: 1; }
+.eye-part-tag circle { fill: #4b5a62; }
+.eye-part-tag text { font: 650 12px system-ui, sans-serif; fill: #24323a; paint-order: stroke; stroke: #f6f9fb; stroke-width: 4px; }
+.eye-part-tag[data-selected="true"] text { fill: #0f766e; }
+.anatomy-part-card { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--explore-card-line, var(--line)); border-radius: 12px; background: var(--surface); }
+.anatomy-part-card b { font-size: 14px; }
+.anatomy-part-card p { margin: 0; font-size: 13px; }
+
+/* FL-16 Đèn chiếu: object rail (2D) — drag the handle along the optical axis. */
+.eye-rail { cursor: ew-resize; touch-action: none; }
+.eye-rail-hit { fill: rgb(47 107 82 / 6%); stroke: rgb(47 107 82 / 25%); stroke-dasharray: 4 4; }
+.eye-rail-line { stroke: #2f6b52; stroke-width: 3; stroke-linecap: round; }
+.eye-rail-tick line { stroke: #2f6b52; stroke-width: 1.5; }
+.eye-rail-tick text { font: 600 11px system-ui, sans-serif; fill: #4b5a62; }
+.eye-rail-handle { fill: #2f6b52; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 1px 3px rgb(0 0 0 / 30%)); }
+.eye-rail:hover .eye-rail-handle { fill: #24563f; }
+.eye-3d-rail-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgb(47 107 82 / 92%); color: #fff; font: 700 11px system-ui, sans-serif; white-space: nowrap; pointer-events: none; }
+
+.eye-rail, .eye-rail text { user-select: none; -webkit-user-select: none; }

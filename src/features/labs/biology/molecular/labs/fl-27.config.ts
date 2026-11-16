@@ -5,7 +5,7 @@ export const fl27Config = {
   schema: "fl27-gene-config@1",
   labId: "fl-27-explore",
   catalogId: "FL-27",
-  configVersion: 1,
+  configVersion: 2,
   kit: "k7-molecular",
   engine: "gene-expression@1.0.0",
   title: "Từ gene đến protein: đột biến",
@@ -17,6 +17,7 @@ export const fl27Config = {
   enabledApparatus: [{ id: "gene-strand", kind: "dna_strand", slot: "strand_1", labelVi: "Mạch DNA mô phỏng" }],
   measurements: ["aminoAcids"],
   pedagogy: { observationPrompts: [{ id: "effect", kind: "free_text", textVi: "Đột biến này có đổi axit amin không? Vì sao?" }] },
-  review: { status: "draft" },
+  // Owner decision 2026-11-16: drop the "Bản nháp · chờ duyệt" label on /labs. Not a subject reviewer sign-off.
+  review: { status: "reviewed" },
   spec: { model: "gene-expression@1.0.0", allowedVariants: ["gene-a-missense", "gene-a-nonsense", "gene-a-silent", "gene-b-missense"] },
 } satisfies MolecularExploreConfig;

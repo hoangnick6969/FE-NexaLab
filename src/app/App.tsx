@@ -29,6 +29,8 @@ const K2KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/c
 const LeverExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/mechanics/explore/dev/LeverExplorePreview")) : null;
 const FluidExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/fluid/pressure/dev/FluidExplorePreview")) : null;
 const ThermalExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/thermal/transfer/dev/ThermalExplorePreview")) : null;
+const EnergyExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/mechanics/energy/dev/EnergyExplorePreview")) : null;
+const RefractionExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/optics/refraction/dev/RefractionExplorePreview")) : null;
 const SafetyReviewPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/chemistry/safety/SafetyReviewPreview")) : null;
 const SharedItemsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/shared/items/dev/SharedItemsPreview")) : null;
 
@@ -261,6 +263,10 @@ export default function App() {
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><FluidExplorePreview /></Suspense>;
   if (ThermalExplorePreview && location.pathname === "/dev/lab-kits/thermal-explore")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><ThermalExplorePreview /></Suspense>;
+  if (EnergyExplorePreview && location.pathname === "/dev/lab-kits/energy-explore")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><EnergyExplorePreview /></Suspense>;
+  if (RefractionExplorePreview && location.pathname === "/dev/lab-kits/refraction-explore")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><RefractionExplorePreview /></Suspense>;
   if (SafetyReviewPreview && user?.role === "ADMIN" && location.pathname === "/dev/lab-kits/safety-review")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><SafetyReviewPreview /></Suspense>;
   if (SharedItemsPreview && location.pathname === "/dev/lab-kits/shared-items")

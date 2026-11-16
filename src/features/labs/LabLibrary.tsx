@@ -1,11 +1,13 @@
 import { FlaskConical, ArrowUpRight, Zap, Eye, Magnet, Scale, Search, X, RotateCcw, SlidersHorizontal, Dna, Fish, Network } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo } from "react";
 import { api, useAuth } from "../../lib/api";
 import { Skeleton } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
 import { labInfo } from "./lab-info";
+import { foldModeCards } from "./lab-modes";
+import { rememberLabsSearch } from "./labs-return";
 import { defineText } from "../../i18n";
 import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { labCurriculumLabel } from "./lab-curriculum-label";
@@ -44,6 +46,10 @@ const text = defineText({
     resetFilters: "Đặt lại bộ lọc",
     filterGradeLabel: "Lớp:",
     filterSubjectLabel: "Môn:",
+    twoModes: "2 chế độ",
+    modesLabel: "Chế độ:",
+    guidedMode: "Có hướng dẫn",
+    exploreMode: "Khám phá tự do",
   },
   en: {
     grades: "Grades 8–9",
@@ -77,6 +83,10 @@ const text = defineText({
     resetFilters: "Reset filters",
     filterGradeLabel: "Grade:",
     filterSubjectLabel: "Subject:",
+    twoModes: "2 modes",
+    modesLabel: "Modes:",
+    guidedMode: "Guided",
+    exploreMode: "Free explore",
   },
 });
 const t = text();
@@ -107,12 +117,31 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
   const role = useAuth((s) => s.user!.role);
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(role) });
 
-  const [selectedGrade, setSelectedGrade] = useState<string>("all");
-  const [selectedSubject, setSelectedSubject] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("default");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // Filters live in the URL (`/labs?grade=8&subject=biology&sort=…&q=…`) so "← Quay về" from a Lab, reload and shared
+  // links keep them. Only the library page (showFilters) owns the query; embedded card lists keep defaults.
+  const [params, setParams] = useSearchParams();
+  const read = (key: string, fallback: string, allowed?: readonly string[]) => {
+    if (!showFilters) return fallback;
+    const value = params.get(key);
+    return value && (!allowed || allowed.includes(value)) ? value : fallback;
+  };
+  const selectedGrade = read("grade", "all", ["8", "9"]);
+  const selectedSubject = read("subject", "all", ["physics", "chemistry", "biology"]);
+  const sortBy = read("sort", "default", ["grade-asc", "title-asc", "title-desc"]);
+  const searchQuery = read("q", "");
+  const setParam = (key: string, value: string, fallback: string) => setParams((current) => {
+    const next = new URLSearchParams(current);
+    if (value === fallback || value === "") next.delete(key); else next.set(key, value);
+    return next;
+  }, { replace: true });
+  const setSelectedGrade = (value: string) => setParam("grade", value, "all");
+  const setSelectedSubject = (value: string) => setParam("subject", value, "all");
+  const setSortBy = (value: string) => setParam("sort", value, "default");
+  const setSearchQuery = (value: string) => setParam("q", value, "");
+  const filterQuery = showFilters ? params.toString() : null;
+  useEffect(() => { if (filterQuery !== null) rememberLabsSearch(filterQuery ? `?${filterQuery}` : ""); }, [filterQuery]);
 
-  const cards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
+  const allCards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
     const visual = labInfo.find((item) => item.id === lab.id);
     const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
     return visual ? [{ ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab.title, description: visual.localizedCopy ? visual.description : lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
@@ -121,6 +150,9 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
     const label = labCurriculumLabel(lab, visual.subject, t.grades);
     return { ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab?.title ?? visual.title, description: visual.localizedCopy ? visual.description : lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
   });
+
+  // One card per FL slot: the Explore mode of a Lab that also has Guided folds into the Guided card (interim D-5).
+  const cards = foldModeCards(allCards);
 
   const gradeCounts = useMemo(() => {
     let g8 = 0;
@@ -147,7 +179,8 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
         const desc = (l.description || "").toLowerCase();
         const subj = (l.subject || "").toLowerCase();
         const tag = (l.tag || "").toLowerCase();
-        if (!title.includes(query) && !desc.includes(query) && !subj.includes(query) && !tag.includes(query)) {
+        const explore = l.exploreCard ? `${l.exploreCard.title} ${l.exploreCard.description} ${l.exploreCard.tag}`.toLowerCase() : "";
+        if (!title.includes(query) && !desc.includes(query) && !subj.includes(query) && !tag.includes(query) && !explore.includes(query)) {
           return false;
         }
       }
@@ -173,12 +206,11 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
 
   if (labs.isLoading) return <LabCardsSkeleton showFilters={showFilters} message={t.loading} />;
 
-  const handleResetFilters = () => {
-    setSelectedGrade("all");
-    setSelectedSubject("all");
-    setSearchQuery("");
-    setSortBy("default");
-  };
+  const handleResetFilters = () => setParams((current) => {
+    const next = new URLSearchParams(current);
+    ["grade", "subject", "sort", "q"].forEach((key) => next.delete(key));
+    return next;
+  }, { replace: true });
 
   if (labs.isError && labs.data === undefined) return <div className="notice lab-library-load-error" role="alert">
     <span>{t.loadFailed}</span>
@@ -339,6 +371,7 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
               <div className="lab-copy">
                 <div className="lab-meta">
                   <span className="lab-tag-badge">{l.tag}</span>
+                  {l.exploreCard && <span className="lab-tag-badge lab-modes-badge">{t.twoModes}</span>}
                   <span className="lab-grade-badge">{l.gradeLabel}</span>
                 </div>
                 <h3>{l.title}</h3>
@@ -351,6 +384,11 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
                 </div>
               </div>
             </Link>
+            {l.exploreCard && ["STUDENT", "TEACHER"].includes(role) && !(guided && role === "STUDENT") && <div className="lab-library-mode-row" data-testid="lab-mode-row">
+              <span className="lab-library-lesson-label">{t.modesLabel}</span>
+              <Link to={"/labs/" + l.id} className="lab-mode-chip">{t.guidedMode}</Link>
+              <Link to={"/labs/" + l.exploreCard.id} className="lab-mode-chip" aria-label={`${t.exploreMode}: ${l.exploreCard.title}`}>{t.exploreMode}<ArrowUpRight size={14} aria-hidden="true" /></Link>
+            </div>}
             {!!l.lessonLinks?.length && <div className="lab-library-lesson-row">
               <span className="lab-library-lesson-label">{t.relatedLesson}:</span>
               <Link

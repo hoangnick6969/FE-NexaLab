@@ -7,6 +7,8 @@ import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
 import { deriveLeverEffectiveConfig, validateLeverLabConfig } from "@nexalab/sim/mechanics";
 import { validateFluidLabConfig } from "@nexalab/sim/fluid";
 import { validateThermalLabConfig } from "@nexalab/sim/thermal";
+import { validateEnergyLabConfig } from "@nexalab/sim/mechanics/energy";
+import { validateRefractionLabConfig } from "@nexalab/sim/optics";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
@@ -16,6 +18,8 @@ import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
 import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
 import { listThermalKitItems } from "../physics/thermal/transfer/kit-items";
+import { listEnergyKitItems } from "../physics/mechanics/energy/kit-items";
+import { listRefractionKitItems } from "../physics/optics/refraction/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
 import type { ExploreActivity } from "./explore-labs";
@@ -132,6 +136,28 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/thermal/transfer/ThermalExploreLabPage"),
     listKitItems: listThermalKitItems,
+  },
+  {
+    // FL-24 mechanical energy (D1-3.2). A K5 bench next to the lever bench; no Class Explore templates yet (spec fl-24-mechanical-energy-explore-spec.md §4–9).
+    kit: "k5-energy-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateEnergyLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/mechanics/energy/EnergyExploreLabPage"),
+    listKitItems: listEnergyKitItems,
+  },
+  {
+    // FL-23 refraction slice (D1-3.2). First bench of the K6 optics kit; no Class Explore templates yet (spec fl-23-refraction-explore-spec.md §6–9).
+    kit: "k6-optics-bench@1",
+    group: "physics",
+    validate: (raw) => {
+      const result = validateRefractionLabConfig(raw);
+      return result.ok ? { ok: true, config: result.config } : { ok: false };
+    },
+    loadPage: () => import("../physics/optics/refraction/RefractionExploreLabPage"),
+    listKitItems: listRefractionKitItems,
   },
   {
     kit: SAFETY_SCENARIO_KIT,
