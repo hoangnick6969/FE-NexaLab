@@ -288,7 +288,7 @@ small {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink-neutral-53);
   margin: 0 8px 8px;
   font-weight: 700;
 }
@@ -307,7 +307,7 @@ small {
   min-height: 38px;
   border-radius: 8px;
   font-size: 13.5px;
-  color: var(--muted);
+  color: var(--ink-neutral-53);
   font-weight: 500;
   transition: all 0.15s ease;
 }
@@ -1075,7 +1075,7 @@ small {
 .lab-group-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink-neutral-60);
+  color: var(--ink-neutral-53);
   margin-right: 2px;
 }
 
@@ -1129,7 +1129,7 @@ small {
 
 .lab-results-count {
   font-size: 12px;
-  color: var(--ink-neutral-65);
+  color: var(--ink-neutral-53);
   font-weight: 500;
 }
 
@@ -1243,6 +1243,13 @@ small {
   z-index: 1;
   color: #fff;
   text-shadow: 0 1px 4px rgb(0 0 0 / 82%);
+  /* White text needs a dark chip: the glass background is near-white, and the image may still be loading. */
+  background: rgb(10 18 22 / 62%);
+}
+
+.lab-art.has-thumbnail:not(.thumbnail-failed) .art-caption {
+  padding: 2px 6px;
+  border-radius: 5px;
 }
 
 .lab-art.has-thumbnail:not(.thumbnail-failed) .art-symbol {
@@ -1268,7 +1275,7 @@ small {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.8px;
-  color: var(--ink-amber-60);
+  color: var(--ink-amber-49);
   padding: 3px 8px;
   border-radius: 6px;
   background: var(--surface-glass-light);
@@ -1277,11 +1284,11 @@ small {
 }
 
 .biology .lab-subject {
-  color: var(--ink-green-60);
+  color: var(--ink-green-43);
 }
 
 .chemistry .lab-subject {
-  color: var(--ink-blue-62);
+  color: var(--ink-neutral-51);
 }
 
 .art-number {
@@ -1289,7 +1296,7 @@ small {
   right: 14px;
   top: 12px;
   font: 600 15px "Manrope";
-  color: var(--ink-neutral-40);
+  color: var(--ink-neutral-51);
   padding: 2px 7px;
   border-radius: 6px;
   background: var(--surface-glass-light);
@@ -1336,7 +1343,7 @@ small {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 1.2px;
-  color: var(--ink-amber-68-2);
+  color: var(--ink-green-37);
 }
 
 .lab-copy {
@@ -1355,7 +1362,7 @@ small {
 
 .lab-tag-badge {
   background: var(--fill-neutral-96);
-  color: var(--ink-neutral-40);
+  color: var(--ink-neutral-51);
   padding: 2px 7px;
   border-radius: 5px;
   letter-spacing: 0.5px;
@@ -1379,7 +1386,7 @@ small {
 
 .lab-copy p {
   font-size: 12px;
-  color: var(--ink-neutral-65);
+  color: var(--ink-neutral-53);
   line-height: 1.6;
   min-height: 38px;
 }
@@ -6797,7 +6804,7 @@ td small {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink-neutral-53);
 }
 
 .app-shell-student .sidebar nav {
@@ -6810,7 +6817,7 @@ td small {
   min-height: 38px;
   padding: 8px 12px;
   border-radius: 8px;
-  color: var(--muted);
+  color: var(--ink-neutral-53);
   font-size: 13.5px;
   font-weight: 500;
   display: flex;

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { Beaker3D, DigitalBalance3D, GraduatedCylinder3D, K3_SLOTS, BALANCE_PAN_TOP_MM, cylinderHeightMm, cylinderLevelMm, usePrefersReducedMotion, PourStream3D, type PourStreamSample } from "../kit";
+import { Beaker3D, DigitalBalance3D, GraduatedCylinder3D, K3_SLOTS, BALANCE_PAN_TOP_MM, BALANCE_PAN_Z_MM, cylinderHeightMm, cylinderLevelMm, usePrefersReducedMotion, PourStream3D, type PourStreamSample } from "../kit";
 import type { BalanceSample, LiquidSample } from "../kit/k3-motion";
 import { fl03DensityConfig as config } from "./fl03-density.config";
 import type { Bench } from "./Density2DStage";
@@ -40,7 +40,7 @@ export function DensityWaterScene({ evidence, bench }: { evidence: DensityEviden
   // Additional clicks are coalesced into the next pour; a source always returns before starting again.
   useFrame((state, delta) => {
     const groups = { cylinder: cylinderGroup.current, cup: cupGroup.current, supply: supplyGroup.current };
-    const homes = { cylinder: K3_SLOTS.cylinder, cup: bench.onPan ? [K3_SLOTS.balance[0], BALANCE_PAN_TOP_MM - 0.5, K3_SLOTS.balance[2] - 12] : K3_SLOTS.beaker, supply: SUPPLY };
+    const homes = { cylinder: K3_SLOTS.cylinder, cup: bench.onPan ? [K3_SLOTS.balance[0], BALANCE_PAN_TOP_MM - 0.5, K3_SLOTS.balance[2] + BALANCE_PAN_Z_MM] : K3_SLOTS.beaker, supply: SUPPLY };
     const heights = { cylinder: cylinderHeightMm(cylinder), cup: beaker.heightMm, supply: beaker.heightMm };
     const radii = { cylinder: cylinder.innerDiameterMm / 2, cup: beaker.innerDiameterMm / 2, supply: beaker.innerDiameterMm / 2 };
     if (reduced) {

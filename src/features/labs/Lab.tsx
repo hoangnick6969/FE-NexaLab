@@ -33,6 +33,7 @@ import { StudentClassLabAdditionalResponses } from "../classes/ClassLabAdditiona
 
 import { loadLabActivity } from "./runtime/lazy-lab-activity";
 import { resolveExploreConfig, type ExploreRow } from "./runtime/explore-labs";
+import { devExploreRow } from "./runtime/dev-explore-fixtures";
 import type { ExploreBenchEntry, ExplorePageProps } from "./runtime/explore-registry";
 
 /** One lazy page per Explore bench, created once so React keeps it mounted across renders. */
@@ -200,12 +201,14 @@ export default function Lab() {
 function LibraryLab() {
   const { id = "" } = useParams();
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
-  if (labs.isPending) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><p role="status" className="panel">Đang tải bài thực hành…</p></LabSpace>;
-  if (labs.isError) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><section className="panel" role="alert">
+  // DEV only: a bundled Sinh học bench opens without a server row (see dev-explore-fixtures.ts).
+  const devRow = devExploreRow(id);
+  if (!devRow && labs.isPending) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><p role="status" className="panel">Đang tải bài thực hành…</p></LabSpace>;
+  if (!devRow && labs.isError) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><section className="panel" role="alert">
     <p>Không tải được danh sách bài thực hành.</p>
     <button type="button" className="primary" onClick={() => void labs.refetch()}>Thử lại</button>
   </section></LabSpace>;
-  const row = labs.data.find((item) => item.id === id);
+  const row = devRow ?? labs.data?.find((item) => item.id === id);
   // No row: GuidedLab keeps its existing "chưa được phát hành" screen.
   if (!row || row.mode !== "explore") return <GuidedLab key="guided" />;
   const resolved = resolveExploreConfig(row);
