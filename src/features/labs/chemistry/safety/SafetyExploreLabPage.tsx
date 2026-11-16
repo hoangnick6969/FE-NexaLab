@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Download, RotateCcw } from "lucide-react";
 import { listSafetyScenarioReagents, replaySafetyScenario, type SafetyScenarioConfig } from "@nexalab/sim/safety-scenario";
 import { defineText, getLocale } from "../../../../i18n";
 import type { ExplorePageProps } from "../../runtime/explore-registry";
-import { LabSpace } from "../../shared/LabSpace";
+import { LabHeaderSlot, LabSpace } from "../../shared/LabSpace";
+import { LabKitItemsPanel, LabKitItemsToggle } from "../../shared/LabKitItemsPanel";
+import { LabRendererToggle, type LabRendererMode } from "../../shared/LabRendererToggle";
 import {
   buildObservationLogExport, createObservationLogStore, observationLogKey, OBSERVATION_LOG_LIMIT,
 } from "../../shared/explore/observation-log";
-import { formatSafetyHazard, listSafetyKitItems, safetyReagentLabel } from "./kit-items";
+import { formatSafetyHazard, listSafetyKitItems, listSafetySceneItems, safetyReagentLabel } from "./kit-items";
 import { SafetyBenchArt } from "./SafetyBenchArt";
+
+const SafetyBenchStage = lazy(() => import("./SafetyBenchStage"));
 
 const text = defineText({
   vi: {
@@ -38,9 +42,13 @@ export default function SafetyExploreLabPage({ labId, config: raw, activity }: E
   const [sceneId, setSceneId] = useState(config.scenes[0].id);
   const [choiceIds, setChoiceIds] = useState<string[]>([]);
   const [log, setLog] = useState<LogEntry[] | null>(null);
+  const [view, setView] = useState<LabRendererMode>("2d");
+  const [kitOpen, setKitOpen] = useState(false);
   const saves = useRef(Promise.resolve());
   const feedback = useRef<HTMLElement>(null);
   const scene = config.scenes.find((item) => item.id === sceneId)!;
+  const kitItems = listSafetyKitItems(config);
+  const sceneItems = listSafetySceneItems(config, scene);
   const result = replaySafetyScenario(scene, choiceIds);
   const latest = result.ok ? result.history.at(-1) : undefined;
 
@@ -77,6 +85,8 @@ export default function SafetyExploreLabPage({ labId, config: raw, activity }: E
   }
 
   return <LabSpace title={title} exitTo="/labs">
+    <LabHeaderSlot><LabRendererToggle mode={view} onChange={setView} /></LabHeaderSlot>
+    <LabKitItemsPanel items={kitItems} open={kitOpen} onOpenChange={setKitOpen} />
     <main className="safety-bench" data-testid="safety-bench">
       <header className="safety-bench__intro">
         {config.review.status === "draft" && <p className="safety-bench__draft">{t.draft}</p>}
@@ -85,17 +95,18 @@ export default function SafetyExploreLabPage({ labId, config: raw, activity }: E
           {config.scenes.map((item) => <button key={item.id} type="button" className="secondary" aria-pressed={item.id === sceneId}
             onClick={() => { if (item.id !== sceneId) { setSceneId(item.id); setChoiceIds([]); } }}>{item.title[locale]}</button>)}
         </nav>
+        <div className="safety-bench__kit-toggle"><LabKitItemsToggle open={kitOpen} onOpenChange={setKitOpen} count={kitItems.length} /></div>
       </header>
       <div className="safety-bench__layout">
         <section className="safety-bench__card safety-bench__scene" aria-labelledby="safety-scene-title">
-          <SafetyBenchArt sceneId={scene.id} />
+          {view === "3d" ? <Suspense fallback={<SafetyBenchArt items={sceneItems} />}><SafetyBenchStage items={sceneItems} /></Suspense>
+            : <SafetyBenchArt items={sceneItems} />}
           <div className="safety-bench__card-inner">
             <h2 id="safety-scene-title">{scene.title[locale]}</h2>
             <p>{scene.description[locale]}</p>
-            <h3>{t.items}</h3>
-            <ul className="safety-bench__items">
-              {listSafetyKitItems(config, scene.itemRefs).map((item) => <li key={item.id}>{item.labelVi}</li>)}
-            </ul>
+            {view === "3d" && <><h3>{t.items}</h3><ul className="safety-bench__items">
+              {sceneItems.map((item) => <li key={item.id}>{item.labelVi}</li>)}
+            </ul></>}
           </div>
         </section>
         <div className="safety-bench__flow">
