@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { LeverClassTemplate } from "@nexalab/sim/mechanics";
 import { defineText } from "../../../../../i18n";
 import type { ClassTemplateFormProps } from "../../../runtime/explore-registry";
-import { formatNewtons } from "./kit-items";
+import { formatNewtons, weightSetThumbnailKey } from "./kit-items";
 
 const text = defineText({
   vi: {
@@ -19,7 +19,7 @@ const text = defineText({
   },
 });
 
-export function LeverClassTemplateForm({ config, template: raw, onChange }: ClassTemplateFormProps) {
+export function LeverClassTemplateForm({ config, template: raw, thumbnailFor, onChange }: ClassTemplateFormProps) {
   const t = text();
   const template = raw as LeverClassTemplate;
   const [loadPresetId, setLoadPresetId] = useState("");
@@ -48,11 +48,16 @@ export function LeverClassTemplateForm({ config, template: raw, onChange }: Clas
         <input type="radio" name="lever-load" checked={loadPresetId === item.id} onChange={() => setLoadPresetId(item.id)} />{item.labelVi}
       </label>)}
     </fieldset>
-    {template.weightOptions.length > 1 && <fieldset className="segmented" aria-label={t.weights}>
+    {template.weightOptions.length > 1 && <fieldset className="segmented explore-template-options" aria-label={t.weights}>
       <legend>{t.weights}</legend>
-      {template.weightOptions.map((set, index) => <label className="check" key={index}>
-        <input type="radio" name="lever-weights" checked={weightOptionIndex === index} onChange={() => setWeightOptionIndex(index)} />{set.map(formatNewtons).join(" · ")}
-      </label>)}
+      {template.weightOptions.map((set, index) => {
+        const image = thumbnailFor?.(weightSetThumbnailKey(set));
+        return <label className="check explore-template-option" key={index}>
+          <input type="radio" name="lever-weights" checked={weightOptionIndex === index} onChange={() => setWeightOptionIndex(index)} />
+          {image && <img src={image} alt="" width={44} height={44} loading="lazy" decoding="async" />}
+          <span>{set.map(formatNewtons).join(" · ")}</span>
+        </label>;
+      })}
     </fieldset>}
     {template.gauge === "teacher_choice" && <label className="check"><input type="checkbox" checked={gauge} onChange={(event) => setGauge(event.target.checked)} />{t.gauge}</label>}
     {template.momentTable === "teacher_choice" && <label className="check"><input type="checkbox" checked={momentTable} onChange={(event) => setMomentTable(event.target.checked)} />

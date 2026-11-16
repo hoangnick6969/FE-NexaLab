@@ -3,6 +3,7 @@ import type { LeverLabConfig } from "@nexalab/sim/mechanics";
 import type { KitItem } from "../../../runtime/explore-registry";
 
 export const formatNewtons = (milliNewtons: number) => `${(milliNewtons / 1000).toFixed(1).replace(".", ",")} N`;
+export const weightSetThumbnailKey = (forces: readonly number[]) => `weights-${forces.join("-")}`;
 
 export function listLeverKitItems(config: LeverLabConfig): KitItem[] {
   return config.enabledApparatus.map((item): KitItem => {

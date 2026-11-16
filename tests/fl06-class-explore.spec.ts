@@ -106,6 +106,9 @@ test("teacher picks a load, weights and switches inside the FL-06 template, sees
   await openExploreAssign(page);
   const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
   await expect(dialog.getByText("Làm thanh đòn cân bằng")).toBeVisible();
+  const weights = dialog.getByRole("group", { name: "Bộ quả nặng cho học sinh" });
+  await expect(weights.locator("img")).toHaveCount(2);
+  await expect(weights).toContainText("0,5 N · 1,0 N · 2,0 N");
   const assign = dialog.getByRole("button", { name: "Lưu và giao bài" });
 
   // 0.5 N at 250 mm cannot be levelled with 1 N weights alone: the sim refuses it, the same check the server runs.

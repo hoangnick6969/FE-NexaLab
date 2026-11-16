@@ -10,6 +10,7 @@ import { Field, Modal } from "../../../components/ui";
 import { defineText, formatDateTime } from "../../../i18n";
 import { labInfo } from "../../labs/lab-info";
 import { classItemLabels, exploreBench, type ClassDerivation } from "../../labs/runtime/explore-registry";
+import { kitThumbnail } from "../../labs/kit-catalog/kit-thumbnails";
 import { measureText, type ExploreRequirement } from "../../labs/class-explore/class-explore";
 import type { ClassSummary } from "../class-types";
 import { LoadError } from "../class-ui";
@@ -139,7 +140,7 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
       </label>
       : <p><strong>{lab.title}</strong> · {template.titleVi}</p>}
 
-    <TemplateForm key={template.id} config={config} template={template} labels={labels} onChange={setChoice} />
+    <TemplateForm key={template.id} config={config} template={template} labels={labels} thumbnailFor={(key) => kitThumbnail(bench.group, key)} onChange={setChoice} />
 
     <label className="field"><span>{t.instructions}</span><textarea rows={3} maxLength={10000} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
     <label className="field"><span>{t.lesson}</span>

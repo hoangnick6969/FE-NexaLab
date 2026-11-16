@@ -13,7 +13,7 @@ const text = defineText({
 
 type Template = { id: string; titleVi: string; reagentGroups: Array<{ id: string; labelVi: string; options: string[]; count: number }>; promptChoices: Array<{ promptId: string; onlyWithReagents?: string[] }> };
 
-export function WetBenchClassTemplateForm({ config, template: raw, labels, onChange }: ClassTemplateFormProps) {
+export function WetBenchClassTemplateForm({ config, template: raw, labels, thumbnailFor, onChange }: ClassTemplateFormProps) {
   const t = text();
   const template = raw as Template;
   const [picks, setPicks] = useState<Record<string, string[]>>({});
@@ -35,14 +35,16 @@ export function WetBenchClassTemplateForm({ config, template: raw, labels, onCha
     return { ...current, [groupId]: now.includes(id) ? now.filter((item) => item !== id) : now.length < count ? [...now, id] : now };
   });
   return <>
-    {template.reagentGroups.map((group) => <fieldset className="segmented" key={group.id} aria-label={group.labelVi}>
+    {template.reagentGroups.map((group) => <fieldset className="segmented explore-template-options" key={group.id} aria-label={group.labelVi}>
       <legend>{group.labelVi} <span className="tiny muted">{t.pickCount(picks[group.id]?.length ?? 0, group.count)}</span></legend>
       {group.options.map((id) => {
         const on = (picks[group.id] ?? []).includes(id);
         const full = (picks[group.id]?.length ?? 0) >= group.count;
-        return <label className="check" key={id}>
+        const image = thumbnailFor?.(`reagent-${id}`);
+        return <label className="check explore-template-option" key={id}>
           <input type="checkbox" checked={on} disabled={!on && full} onChange={() => toggle(group.id, id, group.count)} />
-          {labels[id] ?? id}
+          {image && <img src={image} alt="" width={44} height={44} loading="lazy" decoding="async" />}
+          <span>{labels[id] ?? id}</span>
         </label>;
       })}
     </fieldset>)}

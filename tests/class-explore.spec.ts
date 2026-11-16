@@ -299,6 +299,7 @@ test.describe("teacher reviews Class Explore submissions", () => {
     let feedback: string | null = null;
     const puts: any[] = [];
     await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
+    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [], labs: [], classLabs: [] } }));
     await page.route("**/api/classes/class-1/assignments", (route) => route.fulfill({ json: [
       { id: "a1", title: "Đo pH hai mẫu", contentId: "acid-base-indicators", contentType: "explore_lab", dueDate: null, overdue: false, audience: "CLASS", status: "ACTIVE", recipientCount: 2, explore: { resourceId: "res-1", version: 1, templateId: "ph-compare-two-samples", requirementCount: 3 } },
     ] }));

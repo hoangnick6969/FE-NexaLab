@@ -55,6 +55,8 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     await page.getByRole("button", { name: "Giao lab", exact: true }).click();
     await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
     const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
+    await expect(dialog.locator("label").filter({ has: page.getByRole("checkbox", { name: /HCl 0,1 M/ }) }).locator("img"))
+      .toHaveAttribute("src", /reagent-HCl_0_1M/);
     await dialog.getByRole("checkbox", { name: /HCl 0,1 M/ }).check();
     await dialog.getByRole("checkbox", { name: /NaOH 0,1 M/ }).check();
     await dialog.getByRole("radio", { name: /đo hai mẫu/ }).check();

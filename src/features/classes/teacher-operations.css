@@ -2531,6 +2531,39 @@ body {
   font-weight: 600;
 }
 
+.segmented.explore-template-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 8px;
+}
+
+.explore-template-options > .explore-template-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.explore-template-option > input,
+.explore-template-option > img { flex: none; }
+.explore-template-option > input { margin: 0; }
+.explore-template-option > img { border-radius: 5px; object-fit: contain; }
+.explore-template-option > span { overflow-wrap: anywhere; }
+.explore-template-option:has(input:checked) {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+}
+.explore-template-option:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.explore-template-option:has(input:disabled) { color: var(--muted); cursor: default; }
+
 .explore-lab-card {
   position: relative;
   display: grid;
