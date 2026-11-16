@@ -2,7 +2,7 @@
  * "Dụng cụ theo bộ Kit" on /labs: every apparatus, instrument and reagent of the published Explore benches, grouped by Kit,
  * with a placeholder picture, what it is for, and which Labs use it. Admins (or ?debug=1) also see the ids behind each entry, to debug.
  */
-import { Beaker, Box, Cylinder, Droplet, FileText, FlaskConical, Gauge, Pipette, Scale, Scissors, TestTube, TestTubes, Trash2, type LucideIcon, FlaskRound, Ruler, Shovel, Minus, Timer, Thermometer } from "lucide-react";
+import { Beaker, Box, Cylinder, Droplet, FileText, Flame, FlaskConical, Gauge, Glasses, Hand, Pipette, Scale, Scissors, Shirt, TestTube, TestTubes, Trash2, type LucideIcon, FlaskRound, Ruler, Shovel, Minus, Timer, Thermometer } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, useAuth } from "../../../lib/api";
@@ -35,6 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
   test_tube: TestTube, test_tube_rack_6: TestTubes, beaker_100ml: Beaker, waste_beaker: Trash2, erlenmeyer_flask_100ml: FlaskConical,
   dropper_pipette: Pipette, litmus_strip_dispenser: FileText, digital_ph_meter: Gauge, tongs: Scissors, stopper: Cylinder, electronic_scale: Scale, stopwatch: Timer, thermometer: Thermometer,
   graduated_cylinder_100ml: Ruler, volumetric_flask_100ml: FlaskRound, spatula: Shovel, glass_rod: Minus,
+  safety_goggles: Glasses, protective_gloves: Hand, lab_coat: Shirt, test_tube_holder: Scissors, alcohol_lamp: Flame,
 };
 export const iconFor = (entry: Pick<CatalogEntry, "key" | "category">): LucideIcon => (entry.category === "material" ? Droplet : ICONS[entry.key] ?? Box);
 

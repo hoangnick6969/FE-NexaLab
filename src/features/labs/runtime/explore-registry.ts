@@ -9,6 +9,8 @@ import { validateFluidLabConfig } from "@nexalab/sim/fluid";
 import { REAGENTS, deriveWetBenchEffectiveConfig, validateChemistryLabConfig } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
 import { WetBenchClassTemplateForm } from "../chemistry/wet-bench/kit/WetBenchClassTemplateForm";
+import { SAFETY_SCENARIO_KIT, validateSafetyScenarioConfig } from "@nexalab/sim/safety-scenario";
+import { listSafetyKitItems } from "../chemistry/safety/kit-items";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import { LeverClassTemplateForm } from "../physics/mechanics/explore/LeverClassTemplateForm";
 import { listFluidKitItems } from "../physics/fluid/pressure/kit-items";
@@ -116,6 +118,13 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/fluid/pressure/PressureExploreLabPage"),
     listKitItems: listFluidKitItems,
+  },
+  {
+    kit: SAFETY_SCENARIO_KIT,
+    group: "chemistry",
+    validate: validateSafetyScenarioConfig,
+    loadPage: () => import("../chemistry/safety/SafetyExploreLabPage"),
+    listKitItems: listSafetyKitItems,
   },
 ];
 

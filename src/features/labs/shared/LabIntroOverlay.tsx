@@ -8,7 +8,7 @@ import "./LabIntro.css";
 export type IntroMaterial = { id: string; label: string; hazardLevel: "none" | "caution" | "warning" | "danger"; hazardTags: readonly string[]; noteSim?: string; noteReal?: string };
 export type IntroApparatus = { id: string; label: string; purpose: string };
 
-export const HAZARD_TAG_VI: Record<string, string> = { corrosive: "Ăn mòn (GHS05)", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy" };
+export const HAZARD_TAG_VI: Record<string, string> = { corrosive: "Ăn mòn (GHS05)", irritant: "Gây kích ứng", toxic_if_swallowed: "Độc khi nuốt", flammable: "Dễ cháy", aquatic_long_lasting: "Có hại lâu dài đối với sinh vật thủy sinh", corrosive_to_metals: "Có thể ăn mòn kim loại" };
 export const HAZARD_LEVEL_VI = { none: "", caution: "Cẩn thận", warning: "Nguy hiểm", danger: "Rất nguy hiểm" } as const;
 
 export function LabIntroOverlay({ title, contextLabel, outcomes, apparatus, materials, safety, limitations, acknowledgeRequired, acknowledged, onEnter, onClose, draftNotice }: {
