@@ -123,3 +123,23 @@ test("FL-16 anatomy: the eye shows where the image forms as the lens power chang
   await saveJournal(page, "Điều tiết tới 20 D thì ảnh rõ");
   expect(requests).toEqual([]);
 });
+
+test("the /labs cards of the Explore benches show their related lesson links", async ({ page }) => {
+  await signIn(page);
+  // GET /labs as the server answers it: each Explore Lab is linked to a released lesson of its topicCode (BE PR #83).
+  const lessons: Record<string, { lessonId: string; title: string; topicCode: string }> = {
+    "fl-26-explore": { lessonId: "pack-khtn9-l41-dot-bien-gene-v1", title: "Đột biến gene", topicCode: "KHTN9-CH11-T01" },
+    "fl-27-explore": { lessonId: "pack-khtn9-l41-dot-bien-gene-v1", title: "Đột biến gene", topicCode: "KHTN9-CH11-T01" },
+    "fl-20-explore": { lessonId: "lesson-khtn8-l41", title: "Môi trường và các nhân tố sinh thái", topicCode: "KHTN8-L41" },
+    "fl-21-explore": { lessonId: "lesson-khtn8-l44", title: "Hệ sinh thái", topicCode: "KHTN8-L44" },
+    "fl-16-explore": { lessonId: "lesson-khtn8-l37", title: "Hệ thần kinh và các giác quan ở người", topicCode: "KHTN8-L37" },
+  };
+  await page.route("**/api/labs", (route) => route.fulfill({ json: configs.map((config) => ({ ...row(config), topicCode: lessons[config.labId].topicCode, lessonLinks: [lessons[config.labId]] })) }));
+  await page.goto("/labs");
+  for (const [id, lesson] of Object.entries(lessons)) {
+    const card = page.locator(`#lab-${id}`);
+    await expect(card.getByText("Bài học liên quan:")).toBeVisible();
+    await expect(card.getByRole("link", { name: lesson.title })).toHaveAttribute("href", new RegExp(`/lessons/${lesson.lessonId}`));
+  }
+  await expect(page.locator("#lab-fl-26-explore img")).toHaveAttribute("src", /fl-26-explore|image\/svg\+xml/);
+});

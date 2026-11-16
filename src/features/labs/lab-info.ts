@@ -6,8 +6,14 @@ const thumbnailAssets = import.meta.glob<string>("./assets/thumbnails/*.webp", {
   import: "default",
 });
 
+const svgThumbnailAssets = import.meta.glob<string>("./assets/thumbnails/*.svg", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
 function thumbnailFor(labId: string) {
-  return thumbnailAssets[`./assets/thumbnails/${labId}.webp`];
+  return thumbnailAssets[`./assets/thumbnails/${labId}.webp`] ?? svgThumbnailAssets[`./assets/thumbnails/${labId}.svg`];
 }
 
 const text = defineText({
@@ -132,7 +138,7 @@ export const labInfo = catalogEntries.map((entry) => {
     ...entry,
     /** Lab id whose icon the card draws; Explore benches borrow the Guided Lab on the same topic. */
     artId: artOf ?? entry.id,
-    // FL-26 has no picture of its own yet: it shows the icon instead of borrowing the gene-protein scene.
-    thumbnail: entry.id === "fl-26-explore" ? undefined : thumbnailFor(artOf ?? entry.id) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
+    // FL-26 has its own SVG banner instead of borrowing the gene-protein scene.
+    thumbnail: thumbnailFor(entry.id === "fl-26-explore" ? entry.id : (artOf ?? entry.id)) ?? (entry.id === "buoyancy" ? thumbnailFor("density") : undefined),
   };
 });
