@@ -27,6 +27,7 @@ const GeneProteinPilotPreview = import.meta.env.DEV ? lazy(() => import("../feat
 const EyeOpticsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/biology/anatomy/eye-optics/dev/EyeOpticsPreview")) : null;
 const K2KitPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/chemistry/wet-bench/kit/dev/K2KitPreview")) : null;
 const LeverExplorePreview = import.meta.env.DEV ? lazy(() => import("../features/labs/physics/mechanics/explore/dev/LeverExplorePreview")) : null;
+const SafetyReviewPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/chemistry/safety/SafetyReviewPreview")) : null;
 const SharedItemsPreview = import.meta.env.DEV ? lazy(() => import("../features/labs/shared/items/dev/SharedItemsPreview")) : null;
 
 const PublicLanding = lazy(() =>
@@ -257,6 +258,8 @@ export default function App() {
   if (SharedItemsPreview && location.pathname === "/dev/lab-kits/shared-items")
     return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><SharedItemsPreview /></Suspense>;
   if (user?.mustChangePassword) return <PasswordGate />;
+  if (SafetyReviewPreview && user?.role === "ADMIN" && location.pathname === "/dev/lab-kits/safety-review")
+    return <Suspense fallback={<PageLoader fullScreen message={t.starting} />}><SafetyReviewPreview /></Suspense>;
   const verifyEmailToken = new URLSearchParams(location.search).get("verifyEmail");
   if (verifyEmailToken) return <EmailVerification token={verifyEmailToken} />;
   if (!user) {

@@ -5,8 +5,10 @@
 import type { ComponentType, ReactNode } from "react";
 import type { ExploreLabEnvelope } from "@nexalab/sim/explore/envelope";
 import { validateLeverLabConfig } from "@nexalab/sim/mechanics";
+import { SAFETY_SCENARIO_KIT, validateSafetyScenarioConfig } from "@nexalab/sim/safety-scenario";
 import { deriveWetBenchEffectiveConfig, validateChemistryLabConfig, type ClassSelection } from "@nexalab/sim/wet-bench";
 import { listWetBenchKitItems } from "../chemistry/wet-bench/kit/kit-items";
+import { listSafetyKitItems } from "../chemistry/safety/kit-items";
 import { listLeverKitItems } from "../physics/mechanics/explore/kit-items";
 import type { SharedItemId } from "../shared/items/catalog";
 import type { LabItemMetadata } from "../shared/items/item";
@@ -71,6 +73,13 @@ const benches: ExploreBenchEntry[] = [
     },
     loadPage: () => import("../physics/mechanics/explore/LeverExploreLabPage"),
     listKitItems: listLeverKitItems,
+  },
+  {
+    kit: SAFETY_SCENARIO_KIT,
+    group: "chemistry",
+    validate: validateSafetyScenarioConfig,
+    loadPage: () => import("../chemistry/safety/SafetyExploreLabPage"),
+    listKitItems: listSafetyKitItems,
   },
 ];
 
