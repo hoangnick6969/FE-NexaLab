@@ -128,25 +128,42 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     expect(calls.at(-1)!.url).toContain("/classes/class-1/assignments/a1/archive");
   });
 
-  test("a Guided lab keeps its entry in the list and both Guided ways in", async ({ page }) => {
+  test("a Guided lab is assigned without leaving Class Lab, and the old link lands in the same flow with the lab kept", async ({ page }) => {
     await signIn(page);
     await mockClasses(page, [classroom], { "class-1": [guidedWork()] });
     await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
+    await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [], classLabs: [], labs: [
+      { id: "circuit", title: "Mạch điện", grade: 8, release: { id: "rel-1", version: 1, digest: "d".repeat(64) }, challenges: [{ id: "ch-1", objective: "Thắp sáng bóng đèn" }] },
+    ] } }));
     await page.goto("/class-labs");
     const row = page.locator(".teacher-class-lab-row", { hasText: "Mạch điện" });
     await expect(row).not.toContainText("Thí nghiệm tự do");
     await expect(row.getByRole("link", { name: "Xem Lab nguồn" })).toHaveAttribute("href", "/labs/circuit");
-    await expect(row.getByRole("link", { name: "Tạo đề bài riêng" })).toHaveAttribute("href", "/classes/class-1?tab=work&assign=lab&labId=circuit");
     // Edit and archive are there for a Guided lab too.
     await expect(row.getByRole("button", { name: "Sửa", exact: true })).toBeVisible();
     await expect(row.getByRole("button", { name: "Lưu trữ", exact: true })).toBeVisible();
 
+    // Chooser -> Guided form, still on the Class Lab page, lab-only (no lesson or test types).
     await page.getByRole("button", { name: "Giao lab", exact: true }).click();
-    const guided = page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("link", { name: /Lab theo bước, sửa câu hỏi/ });
-    await expect(guided).toHaveAttribute("href", "/classes/class-1?tab=work&assign=lab");
-    await guided.click();
-    await expect(page).toHaveURL(/\/classes\/class-1\?tab=work&assign=lab/);
-    await expect(page.getByRole("dialog", { name: "Giao bài" })).toBeVisible();
+    await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Lab theo bước, sửa câu hỏi/ }).click();
+    const dialog = page.getByRole("dialog", { name: "Giao lab theo bước" });
+    await expect(page).toHaveURL(/\/class-labs$/);
+    await expect(dialog.getByRole("radio", { name: "Bài kiểm tra" })).toHaveCount(0);
+    await dialog.getByLabel("Nội dung đã xuất bản").selectOption("circuit");
+    await dialog.getByRole("button", { name: "Mở phòng thí nghiệm để giao bài" }).click();
+    await expect(page).toHaveURL(/\/labs\/circuit\?classId=class-1&customize=1/);
+
+    // "Tạo đề bài riêng" on a row opens the same form with that lab already chosen.
+    await page.goto("/class-labs");
+    const link = page.locator(".teacher-class-lab-row", { hasText: "Mạch điện" }).getByRole("link", { name: "Tạo đề bài riêng" });
+    await expect(link).toHaveAttribute("href", "/class-labs?classId=class-1&assign=guided&labId=circuit");
+    await link.click();
+    await expect(page.getByRole("dialog", { name: "Giao lab theo bước" }).getByLabel("Nội dung đã xuất bản")).toHaveValue("circuit");
+
+    // The old Assign-tab link goes to the same place and keeps the lab.
+    await page.goto("/classes/class-1?tab=work&assign=lab&labId=circuit");
+    await expect(page).toHaveURL(/\/class-labs$/);
+    await expect(page.getByRole("dialog", { name: "Giao lab theo bước" }).getByLabel("Nội dung đã xuất bản")).toHaveValue("circuit");
   });
 
   test("the Archived tab lists archived Explore labs, and says so only when there are none", async ({ page }) => {

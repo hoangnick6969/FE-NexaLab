@@ -15,6 +15,7 @@ import { resourceInput } from "./ResourceEditor";
 import { TeacherClassLabAdditionalResponses } from "./ClassLabAdditionalResponses";
 import { AssignLabChooser } from "./AssignLabChooser";
 import { AssignmentRowActions } from "./AssignmentManage";
+import { AssignModal } from "./Assignments";
 import { ExploreAssignModal } from "./explore/ExploreAssignModal";
 import { ExploreBoard } from "./explore/ExploreBoard";
 import { showsInView, type ClassLabsView } from "./class-labs-view";
@@ -87,6 +88,7 @@ export function ClassLabs() {
   const [notice, setNotice] = useState<string | null>(null);
   const [chooserFor, setChooserFor] = useState<ClassSummary | null>(null);
   const [exploreFor, setExploreFor] = useState<ClassSummary | null>(null);
+  const [guidedFor, setGuidedFor] = useState<{ classroom: ClassSummary; labId?: string } | null>(null);
   const [board, setBoard] = useState<{ classroom: ClassSummary; assignment: TeacherAssignment } | null>(null);
   // Keyed under "classes" so anything that changes a class's counters refreshes this page too.
   const classList = useQuery<ClassSummary[]>({
@@ -115,16 +117,21 @@ export function ClassLabs() {
     || query?.data?.some((assignment) => showsInView(view, classroom, assignment)),
   );
 
-  // Deep link from a class's Assign tab: /class-labs?classId=...&assign=explore opens the Explore flow, anything else the chooser.
+  // Deep link: /class-labs?classId=...&assign=explore opens the Explore flow, assign=guided[&labId=...] the Guided flow, anything else the chooser.
   const requestedClassId = searchParams.get("classId");
   const requestedAssign = searchParams.get("assign");
   useEffect(() => {
     if (!requestedClassId || !requestedAssign || !classList.data) return;
     const target = classList.data.find((classroom) => classroom.id === requestedClassId && classroom.status === "ACTIVE");
-    if (target) (requestedAssign === "explore" ? setExploreFor : setChooserFor)(target);
+    if (target) {
+      if (requestedAssign === "explore") setExploreFor(target);
+      else if (requestedAssign === "guided") setGuidedFor({ classroom: target, labId: searchParams.get("labId") ?? undefined });
+      else setChooserFor(target);
+    }
     const next = new URLSearchParams(searchParams);
     next.delete("classId");
     next.delete("assign");
+    next.delete("labId");
     setSearchParams(next, { replace: true });
   }, [requestedClassId, requestedAssign, classList.data]);
 
@@ -209,7 +216,8 @@ export function ClassLabs() {
         <Empty>{t.noArchived}</Empty>
       )}
 
-      {chooserFor && <AssignLabChooser classroom={chooserFor} onClose={() => setChooserFor(null)} onExplore={() => { setExploreFor(chooserFor); setChooserFor(null); }} />}
+      {chooserFor && <AssignLabChooser classroom={chooserFor} onClose={() => setChooserFor(null)} onExplore={() => { setExploreFor(chooserFor); setChooserFor(null); }} onGuided={() => { setGuidedFor({ classroom: chooserFor }); setChooserFor(null); }} />}
+      {guidedFor && <AssignModal labOnly classroom={guidedFor.classroom} initialContentType="lab" initialLabId={guidedFor.labId} onClose={() => setGuidedFor(null)} onAssigned={(message) => { setNotice(message); setGuidedFor(null); }} />}
       {exploreFor && <ExploreAssignModal classroom={exploreFor} onClose={() => setExploreFor(null)} onAssigned={(message) => { setNotice(message); setExploreFor(null); }} />}
       {board && <ExploreBoard classroom={board.classroom} assignment={board.assignment} onClose={() => setBoard(null)} />}
     </div>
@@ -248,7 +256,7 @@ function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { class
         )}
         {!explore && assignment.classLabSnapshot && view === "active" && <EditAssignedLab classId={classroom.id} assignment={assignment} />}
         {!explore && !assignment.classLabSnapshot && view === "active" && (
-          <Link className="secondary button-compact" to={`/classes/${encodeURIComponent(classroom.id)}?tab=work&assign=lab&labId=${encodeURIComponent(assignment.contentId)}`}>
+          <Link className="secondary button-compact" to={`/class-labs?classId=${encodeURIComponent(classroom.id)}&assign=guided&labId=${encodeURIComponent(assignment.contentId)}`}>
             <Sparkles size={13} aria-hidden="true" />
             <span>Tạo đề bài riêng</span>
           </Link>

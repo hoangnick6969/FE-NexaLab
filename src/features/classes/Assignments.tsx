@@ -19,6 +19,7 @@ const text = defineText({
   vi: {
     types: { lesson: "Bài học", lab: "Phòng lab", test: "Bài kiểm tra", written: "Bài tự luận", explore_lab: "Thực hành Explore", exam: "Đề kiểm tra tổng hợp" },
     assignInClassLab: "Giao lab ở Class Lab",
+    assignGuidedLab: "Giao lab theo bước",
     exploreSubmissions: "Xem bài nộp",
     students: (n: number) => `${n} học sinh`,
     group: " (nhóm)",
@@ -64,6 +65,7 @@ const text = defineText({
   en: {
     types: { lesson: "Lesson", lab: "Lab", test: "Test", written: "Written task", explore_lab: "Explore practical", exam: "Composite exam" },
     assignInClassLab: "Assign a lab in Class Lab",
+    assignGuidedLab: "Assign a step-by-step lab",
     exploreSubmissions: "View submissions",
     students: (n: number) => `${n} ${n === 1 ? "student" : "students"}`,
     group: " (group)",
@@ -128,8 +130,14 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
     queryKey: ["class-assignments", classroom.id],
     queryFn: () => api(`/classes/${classroom.id}/assignments`),
   });
+  // Lab work is assigned from the Class Lab page now; an old link keeps its class and its chosen lab.
+  const navigate = useNavigate();
   useEffect(() => {
-    if (requestedLabAssignment) setAssigning(true);
+    if (!requestedLabAssignment) return;
+    const next = new URLSearchParams({ classId: classroom.id, assign: "guided" });
+    const labId = searchParams.get("labId");
+    if (labId) next.set("labId", labId);
+    navigate(`/class-labs?${next.toString()}`, { replace: true });
   }, [requestedLabAssignment]);
   // Deep link from a similarity insight: open the written tracking modal of that assignment in its similarity view.
   useEffect(() => {
@@ -278,8 +286,6 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
       {assigning && (
         <AssignModal
           classroom={classroom}
-          initialContentType={requestedLabAssignment ? "lab" : undefined}
-          initialLabId={requestedLabAssignment ? searchParams.get("labId") ?? undefined : undefined}
           onClose={closeAssignModal}
           onAssigned={(message) => {
             setNotice(message);
@@ -294,7 +300,7 @@ export function Assignments({ classroom }: { classroom: ClassSummary }) {
   );
 }
 
-function AssignModal({ classroom, onClose, onAssigned, initialContentType, initialLabId }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void; initialContentType?: AssignableType; initialLabId?: string }) {
+export function AssignModal({ classroom, onClose, onAssigned, initialContentType, initialLabId, labOnly = false }: { labOnly?: boolean; classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void; initialContentType?: AssignableType; initialLabId?: string }) {
   const navigate = useNavigate();
   const [contentType, setContentType] = useState<AssignableType>(initialContentType ?? "lesson");
   const [scope, setScope] = useState<"CLASS" | "SUBSET">("CLASS");
@@ -326,7 +332,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
   const isExam = contentType === "exam";
   const isAssessment = isTest || isWritten || isExam;
   return (
-    <Modal title={t.assign} onClose={onClose}>
+    <Modal title={labOnly ? t.assignGuidedLab : t.assign} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -361,15 +367,11 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
           );
         }}
       >
-        <fieldset className="segmented" onChange={() => { setContentId(""); setLabChallengeId(""); }}>
+        {!labOnly && <fieldset className="segmented" onChange={() => { setContentId(""); setLabChallengeId(""); }}>
           <legend>{t.contentType}</legend>
           <label className="check">
             <input type="radio" name="contentType" checked={contentType === "lesson"} onChange={() => setContentType("lesson")} />
             {t.lesson}
-          </label>
-          <label className="check">
-            <input type="radio" name="contentType" checked={contentType === "lab"} onChange={() => setContentType("lab")} />
-            {t.labPractice}
           </label>
           <label className="check">
             <input type="radio" name="contentType" checked={isTest} onChange={() => setContentType("test")} />
@@ -389,7 +391,7 @@ function AssignModal({ classroom, onClose, onAssigned, initialContentType, initi
             }} />
             {t.types.exam}
           </label>
-        </fieldset>
+        </fieldset>}
         <label className="field">
           <span>{t.published}</span>
           <select name="contentId" required value={contentId} onChange={(e) => {

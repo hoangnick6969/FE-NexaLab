@@ -2,7 +2,6 @@
  * First step of "Assign a lab" on the Class Lab page: the teacher picks the kind of lab work, by what the students will do.
  * Explore opens the class-template flow here; a Guided lab keeps its own flow (pick a released lab, edit its questions in the Lab Space).
  */
-import { Link } from "react-router-dom";
 import { FlaskConical, ListChecks } from "lucide-react";
 import { Modal } from "../../components/ui";
 import { defineText } from "../../i18n";
@@ -26,7 +25,7 @@ const text = defineText({
   },
 });
 
-export function AssignLabChooser({ classroom, onExplore, onClose }: { classroom: ClassSummary; onExplore: () => void; onClose: () => void }) {
+export function AssignLabChooser({ classroom, onExplore, onGuided, onClose }: { classroom: ClassSummary; onExplore: () => void; onGuided: () => void; onClose: () => void }) {
   const t = text();
   return (
     <Modal title={t.title(classroom.name)} onClose={onClose}>
@@ -35,10 +34,10 @@ export function AssignLabChooser({ classroom, onExplore, onClose }: { classroom:
           <FlaskConical size={22} aria-hidden="true" />
           <span><strong>{t.explore}</strong><span>{t.exploreHelp}</span></span>
         </button>
-        <Link className="assign-lab-option" to={`/classes/${encodeURIComponent(classroom.id)}?tab=work&assign=lab`}>
+        <button type="button" className="assign-lab-option" onClick={onGuided}>
           <ListChecks size={22} aria-hidden="true" />
           <span><strong>{t.guided}</strong><span>{t.guidedHelp}</span></span>
-        </Link>
+        </button>
       </div>
     </Modal>
   );
