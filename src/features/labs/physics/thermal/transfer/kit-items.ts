@@ -20,6 +20,6 @@ const ITEM_TEXT: Record<string, { label: string; category: KitItem["category"]; 
 export function listThermalKitItems(config: ThermalLabConfig): KitItem[] {
   return config.enabledApparatus.map((item): KitItem => {
     const text = ITEM_TEXT[item.kind];
-    return { id: item.id, category: text.category, labelVi: item.labelVi ?? text.label, purposeVi: text.purpose(config), ...(text.shared ? { sharedItemId: text.shared } : {}) };
+    return { id: item.id, rendererKey: item.kind, category: text.category, labelVi: item.labelVi ?? text.label, purposeVi: text.purpose(config), ...(text.shared ? { sharedItemId: text.shared } : {}) };
   });
 }

@@ -36,7 +36,7 @@ export function K5Stage2D({ attachments, tilt }: { attachments: readonly K5Attac
   </div>;
 }
 
-function Apparatus({ attachments, tilt, reduced }: { attachments: readonly K5Attachment[]; tilt: K5Tilt; reduced: boolean }) {
+export function LeverApparatus3D({ attachments, tilt, reduced }: { attachments: readonly K5Attachment[]; tilt: K5Tilt; reduced: boolean }) {
   const bar = useRef<THREE.Group>(null);
   // Hangers hang plumb from their hole whatever the bar's angle, like real weights and a spring gauge.
   const hangers = useRef<Array<THREE.Group | null>>([]);
@@ -71,5 +71,5 @@ const K5_INSETS = ({ width, height }: { width: number; height: number }, narrow:
 const K5_VIEW: BenchViewPreset = { wide: { position: [0, 3.3, 6.8], target: [0, .75, 0] }, narrow: { position: [0, 4.8, 9], target: [0, .6, 0] }, fitWidth: 5.8, maxDistance: 17, insets: K5_INSETS };
 
 export function K5Stage3D({ attachments, tilt, reduced }: { attachments: readonly K5Attachment[]; tilt: K5Tilt; reduced: boolean }) {
-  return <div className="k5-visual k5-visual-3d" aria-label="Bàn đòn bẩy 3D"><LabSceneContext.Provider value={undefined}><PhysicsStage realism frameloop="always" view={K5_VIEW}><Apparatus attachments={attachments} tilt={tilt} reduced={reduced} /></PhysicsStage></LabSceneContext.Provider></div>;
+  return <div className="k5-visual k5-visual-3d" aria-label="Bàn đòn bẩy 3D"><LabSceneContext.Provider value={undefined}><PhysicsStage realism frameloop="always" view={K5_VIEW}><LeverApparatus3D attachments={attachments} tilt={tilt} reduced={reduced} /></PhysicsStage></LabSceneContext.Provider></div>;
 }
