@@ -1,5 +1,4 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { CalendarClock, Check, Clock, FlaskConical, UserPlus, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -14,29 +13,24 @@ import "../classes/teacher-overview.css";
 
 type ClassWorkSummary = { late: number; overdue: number; soon: number; labs: number };
 
-/** One thing the teacher has to deal with: a big count, what it is, and the classes it sits in. Zero reads as done. */
-function TaskTile({ tone, icon: Icon, label, count, to, note, chips }: {
-  tone: "join" | "late" | "lab"; icon: LucideIcon; label: string; count: ReactNode; to: string; note?: string; chips?: Array<{ id: string; name: string; value: number; to: string }>;
+/** One thing the teacher has to deal with: the question, the reading that answers it, and the classes it sits in. Zero reads as done. */
+function TaskTile({ label, count, unit, to, note, chips, attention }: {
+  label: string; count: ReactNode; unit: string; to: string; note?: string; attention?: boolean; chips?: Array<{ id: string; name: string; value: number; to: string }>;
 }) {
   const clear = count === 0;
   return (
-    <article className={`tov-task is-${tone}${clear ? " is-clear" : ""}`}>
-      <span className="tov-task-icon" aria-hidden="true">{clear ? <Check size={20} /> : <Icon size={20} />}</span>
-      <div className="tov-task-body">
-        <Link className="tov-task-main" to={to}>{label}</Link>
-        {note && <span className="tov-task-note">{note}</span>}
-        {!!chips?.length && (
-          <span className="tov-chips">
-            {chips.map((chip) => <Link key={chip.id} to={chip.to} className="tov-chip">{chip.name} <b>{chip.value}</b></Link>)}
-          </span>
-        )}
-      </div>
-      <strong className="tov-task-count">{count}</strong>
+    <article className={`tov-task${clear ? " is-clear" : attention ? " is-waiting" : ""}`}>
+      <Link className="tov-task-main" to={to}>{label}</Link>
+      <p className="tov-task-count nx-reading"><span className="nx-value">{count}</span><span className="nx-unit">{clear ? "đã xong" : unit}</span></p>
+      {note && <p className="tov-task-note">{note}</p>}
+      {!!chips?.length && (
+        <p className="tov-chips">
+          {chips.map((chip) => <Link key={chip.id} to={chip.to} className="tov-chip">{chip.name}<b>{chip.value}</b></Link>)}
+        </p>
+      )}
     </article>
   );
 }
-
-const gradeTone = (grade: number) => (grade === 8 ? "g8" : grade === 9 ? "g9" : "gx");
 
 export function TeacherDashboard() {
   const classes = useQuery<ClassSummary[]>({
@@ -118,28 +112,27 @@ export function TeacherDashboard() {
             <h2 id="teacher-actions-title">Cần xử lý</h2>
             <div className="tov-tasks">
               <TaskTile
-                tone="join"
-                icon={UserPlus}
+                attention
                 label="Yêu cầu tham gia chờ duyệt"
                 count={totalPending}
+                unit="yêu cầu"
                 to={pendingClasses.length === 1 ? classHref(pendingClasses[0].id, "students") : "/classes"}
                 note={pendingClasses.length === 0 ? "Tất cả học sinh đã được duyệt" : undefined}
                 chips={pendingClasses.length ? pendingClasses.map((c) => ({ id: c.id, name: c.name, value: c.members.pending, to: classHref(c.id, "students") })) : undefined}
               />
               <TaskTile
-                tone="late"
-                icon={Clock}
+                attention
                 label="Bài nộp trễ chờ xem xét"
                 count={summaryValue(totalLate)}
+                unit="bài"
                 to={lateClasses.length === 1 ? classHref(lateClasses[0].classroom.id, "work") : "/classes"}
                 note={summariesLoading ? "Đang tổng hợp bài trễ…" : lateClasses.length === 0 ? "Không có bài trễ cần duyệt" : undefined}
                 chips={lateClasses.length ? lateClasses.map((item) => ({ id: item.classroom.id, name: item.classroom.name, value: item.late, to: classHref(item.classroom.id, "work") })) : undefined}
               />
               <TaskTile
-                tone="lab"
-                icon={FlaskConical}
                 label="Lab đang giao trong các lớp"
                 count={summaryValue(totalLabs)}
+                unit="lab"
                 to="/class-labs"
                 note="Quản lý bài thực hành phòng lab ảo"
               />
@@ -158,7 +151,6 @@ export function TeacherDashboard() {
                 return (
                   <article key={classroom.id} className="tov-class">
                     <header className="tov-class-head">
-                      <span className={`tov-grade ${gradeTone(classroom.grade)}`} aria-hidden="true">{classroom.grade}</span>
                       <div>
                         <h3>{classroom.name}</h3>
                         <p>Khối {classroom.grade}</p>
@@ -168,10 +160,10 @@ export function TeacherDashboard() {
                       )}
                     </header>
                     <dl className="tov-stats">
-                      <div><dt>Học sinh</dt><dd>{classroom.members.approved}</dd></div>
-                      <div><dt>Đang giao</dt><dd>{classroom.assignments.active}</dd></div>
+                      <div><dt>học sinh</dt><dd>{classroom.members.approved}</dd></div>
+                      <div><dt>đang giao</dt><dd>{classroom.assignments.active}</dd></div>
                       <div>
-                        <dt>Sắp đến hạn</dt>
+                        <dt>sắp đến hạn</dt>
                         <dd>
                           {summary?.isPending ? <Bar w="28px" h={22} /> : summary?.isError ? "—" : summary?.data?.soon ?? 0}
                         </dd>
@@ -183,7 +175,7 @@ export function TeacherDashboard() {
                         <button type="button" className="text-button" onClick={() => summary.refetch()}>Thử lại</button>
                       </p>
                     ) : overdue > 0 ? (
-                      <p className="tov-class-alert"><CalendarClock size={15} aria-hidden="true" />{overdue} bài đã quá hạn</p>
+                      <p className="tov-class-alert">{overdue} bài đã quá hạn</p>
                     ) : null}
                     <div className="tov-class-actions">
                       <Link className="primary tov-btn" to={classHref(classroom.id, classroom.members.pending ? "students" : "work")}>Mở lớp</Link>

@@ -20,12 +20,12 @@
   color: var(--text-base); font: inherit; cursor: pointer; transition: background-color 140ms ease;
 }
 .pg-stat:first-child { border-inline-start: 0; padding-inline-start: 0; }
-.pg-stat:hover { background: color-mix(in srgb, var(--brand) 5%, transparent); transform: none; box-shadow: none; }
+.pg-stat:hover { background: var(--fill-neutral-96); transform: none; box-shadow: none; }
 .pg-stat:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; border-radius: 6px; }
 .pg-stat-label { font-size: 14px; font-weight: 600; color: var(--text-base); }
 .pg-stat:hover .pg-stat-label { color: var(--brand); }
-.pg-stat-value { font-size: 40px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text-base); }
-.pg-stat-of { font-size: 22px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.pg-stat-value { font-family: var(--font-display); font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--nx-ink); }
+.pg-stat-of { font-size: 22px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
 .pg-stat-note { font-size: 13px; line-height: 1.4; color: var(--muted); }
 .pg-updated { margin: 0; text-align: end; font-size: 12.5px; color: var(--muted); }
 
@@ -65,7 +65,7 @@
   font: inherit; font-size: 13.5px; color: var(--text-base); cursor: pointer;
 }
 .pg-select:focus-visible, .pg-search:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
-.pg-search { display: flex; align-items: center; gap: 8px; width: 210px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); }
+.pg-search { display: flex; align-items: center; gap: 8px; width: 240px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); }
 .pg-search input { flex: 1; min-width: 0; margin: 0; padding: 8px 0; min-height: 0; border: 0; outline: 0; background: transparent; box-shadow: none; font: inherit; font-size: 13.5px; color: var(--text-base); }
 .pg-search-clear { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; min-height: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
 .pg-search-clear:hover { background: var(--fill-neutral-96); color: var(--text-base); transform: none; box-shadow: none; }
@@ -77,10 +77,10 @@
   border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease;
 }
-.pg-course:hover { border-color: color-mix(in srgb, var(--brand) 55%, var(--line)); }
+.pg-course:hover { border-color: var(--nx-ink); }
 .pg-course:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .pg-course-cover { width: 76px; aspect-ratio: 2 / 3; align-self: start; overflow: hidden; border-radius: 8px; background: var(--fill-neutral-96); }
-.pg-course-cover .subject-icon { display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border-radius: 0; background: none; }
+.pg-course .pg-course-cover > .subject-icon { display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border-radius: 0; background: none; }
 .pg-course-cover .subject-icon img { width: 100%; height: 100%; object-fit: cover; }
 .pg-course-cover .subject-mockup-top, .pg-course-cover .subject-mockup-decor, .pg-course-cover .subject-mockup-footer { display: none; }
 .pg-course-cover .subject-mockup-cover { width: 100%; height: 100%; padding: 6px; }
@@ -92,10 +92,10 @@
 .pg-course-counts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
 .pg-course-counts li { display: inline-flex; align-items: center; gap: 5px; }
 .pg-course-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
-.pg-course-percent { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.pg-course-percent { font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--nx-ink); }
 .pg-course-state { margin-inline-start: 8px; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--muted); }
-.pg-course-state.is-doing { color: var(--ink-amber-49); }
-.pg-course-state.is-done { color: var(--ink-green-43); }
+.pg-course-state.is-doing { color: var(--brand); }
+.pg-course-state.is-done { color: var(--nx-ink); }
 .pg-course-open { font-size: 13px; font-weight: 600; color: var(--brand); }
 .pg-course:hover .pg-course-open { text-decoration: underline; text-underline-offset: 3px; }
 
@@ -128,13 +128,13 @@
 .pg-steps td { padding: 12px 12px 12px 0; font-size: 14px; vertical-align: middle; border-bottom: 1px solid var(--line); }
 .pg-steps tbody tr:last-child td { border-bottom: 0; padding-bottom: 2px; }
 .pg-step-name { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; }
-.pg-step-mark { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--fill-neutral-96); color: var(--muted); }
-.pg-step-mark.is-done { background: color-mix(in srgb, var(--ink-green-43) 14%, var(--surface)); color: var(--ink-green-43); }
-.pg-step-mark.is-doing { background: color-mix(in srgb, var(--ink-amber-49) 14%, var(--surface)); color: var(--ink-amber-49); }
+.pg-step-mark { display: grid; place-items: center; width: 20px; height: 20px; flex: none; color: var(--muted); }
+.pg-step-mark.is-done { color: var(--nx-ink); }
+.pg-step-mark.is-doing { color: var(--brand); }
 .pg-step-optional { font-weight: 400; color: var(--muted); font-size: 13px; }
 .pg-state { font-weight: 600; font-size: 13.5px; color: var(--muted); }
-.pg-state.is-done { color: var(--ink-green-43); }
-.pg-state.is-doing { color: var(--ink-amber-49); }
+.pg-state.is-done { color: var(--nx-ink); }
+.pg-state.is-doing { color: var(--brand); }
 .pg-time { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pg-link { margin: 0; padding: 0; min-height: 0; border: 0; background: none; box-shadow: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--brand); cursor: pointer; text-decoration: none; text-underline-offset: 3px; }
 .pg-link:hover { text-decoration: underline; background: none; transform: none; box-shadow: none; }
@@ -161,9 +161,9 @@
 .pg-history .activity-title b { font-size: 14.5px; font-weight: 650; }
 .pg-history .activity-title span { font-size: 13px; color: var(--muted); }
 .pg-history .activity-result { font-size: 13.5px; font-weight: 600; color: var(--muted); }
-.pg-history .activity-result.is-passed { color: var(--ink-green-43); }
-.pg-history .activity-result.is-partial { color: var(--ink-amber-49); }
-.pg-history .activity-result.is-failed { color: var(--fill-red-54); }
+.pg-history .activity-result.is-passed { color: var(--nx-ink); }
+.pg-history .activity-result.is-partial { color: var(--brand); }
+.pg-history .activity-result.is-failed { color: var(--nx-signal); }
 .pg-history .activity-row time { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pg-more { justify-self: start; }
 

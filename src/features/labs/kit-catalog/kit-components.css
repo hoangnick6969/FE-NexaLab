@@ -15,7 +15,7 @@
 .kit-group h4 { margin: 8px 0 8px; font-size: 14px; font-weight: 650; color: var(--text-base); }
 .kit-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr)); gap: 10px; }
 .kit-card { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.kit-card-icon { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 9px; overflow: hidden; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
+.kit-card-icon { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 9px; overflow: hidden; background: var(--fill-neutral-96); color: var(--muted); }
 .kit-card-icon img { width: 100%; height: 100%; object-fit: contain; }
 .kit-card-icon.is-caution { background: var(--fill-amber-96); color: var(--ink-amber-49); }
 .kit-card-icon.is-warning, .kit-card-icon.is-danger { background: var(--fill-red-92); color: var(--fill-red-54); }
@@ -23,7 +23,7 @@
 .kit-card-purpose { color: var(--muted); font-size: 13px; line-height: 1.4; }
 .kit-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .kit-card-tags:empty { display: none; }
-.kit-tag { font-size: 12px; font-weight: 650; padding: 2px 7px; border-radius: 5px; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
+.kit-tag { font-size: 12.5px; font-weight: 600; color: var(--text-base); }
 .kit-card-used { font-size: 12px; color: var(--muted); }
 .kit-card-debug { font-size: 11px; color: var(--muted); word-break: break-all; }
 
@@ -44,16 +44,16 @@
   border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: none; color: var(--text-base); font: inherit; cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease;
 }
-.kit-rail-btn:hover, .kit-rail-btn.is-open { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); transform: none; box-shadow: none; }
+.kit-rail-btn:hover, .kit-rail-btn.is-open { border-color: var(--nx-ink); background: var(--surface); transform: none; box-shadow: none; }
 .kit-rail-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .kit-rail-thumbs { display: flex; gap: 4px; flex: none; }
-.kit-rail-thumb { display: grid; place-items: center; width: 36px; height: 36px; overflow: hidden; border-radius: 8px; background: color-mix(in srgb, var(--brand) 10%, var(--surface)); color: var(--brand); }
+.kit-rail-thumb { display: grid; place-items: center; width: 36px; height: 36px; overflow: hidden; border-radius: 8px; background: var(--fill-neutral-96); color: var(--muted); }
 .kit-rail-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .kit-rail-name { display: grid; gap: 1px; min-width: 0; flex: 1; }
-.kit-rail-name strong { font-size: 14.5px; font-weight: 650; }
+.kit-rail-name strong { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; }
 .kit-rail-name span { font-size: 13px; color: var(--muted); }
 .kit-rail-chevron { flex: none; color: var(--muted); transition: transform 140ms ease; }
-.kit-rail-btn.is-open .kit-rail-chevron { transform: rotate(180deg); color: var(--brand); }
+.kit-rail-btn.is-open .kit-rail-chevron { transform: rotate(180deg); color: var(--nx-ink); }
 .kit-rail-loading .kit-rail-btn { cursor: default; }
 
 .kit-rail-panel {

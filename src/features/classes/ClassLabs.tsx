@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, BarChart2, CalendarDays, ChevronDown, Edit3, Eye, FlaskConical, Plus, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BarChart2, ChevronDown, Edit3, Eye, FlaskConical, Plus, Sparkles } from "lucide-react";
 import { api } from "../../lib/api";
 import { Empty, ErrorBox } from "../../components/ui";
 import { PageHeading } from "../../components/PageHeading";
@@ -206,7 +206,7 @@ export function ClassLabs() {
                 <h2 id={`class-labs-${classroom.id}`}>{classroom.name}</h2>
                 <p>
                   <span>{t.grade(classroom.grade)}</span>
-                  <span><Users size={14} aria-hidden="true" />{t.students(classroom.members.approved)}</span>
+                  <span>{t.students(classroom.members.approved)}</span>
                 </p>
               </div>
               {classroom.status === "ACTIVE" && view === "active" && (
@@ -267,23 +267,23 @@ function LabWorkRow({ classroom, assignment, view, classHref, onBoard }: { class
   const manageable = view === "active" && classroom.status === "ACTIVE" && assignment.status === "ACTIVE";
   const days = assignment.dueDate ? daysUntil(assignment.dueDate) : null;
   const late = manageable && assignment.overdue;
-  const soon = !late && days !== null && days <= 3;
   const labHref = `/labs/${encodeURIComponent(assignment.contentId)}${assignment.classLabSnapshot ? `?classId=${encodeURIComponent(classroom.id)}&resourceId=${encodeURIComponent(assignment.classLabSnapshot.resourceId)}` : ""}`;
   return (
     <article className="teacher-class-lab-row">
       <div className="tcl-thumb" aria-hidden="true">{thumbnail ? <img src={thumbnail} alt="" loading="lazy" /> : <FlaskConical size={22} />}</div>
       <div className="tcl-main">
-        <div className="tcl-titlerow"><h3>{assignment.title}</h3><span className="tcl-kind">{explore ? t.exploreKind : t.guidedKind}</span></div>
+        <h3>{assignment.title}</h3>
         <p className="tcl-meta">
-          <span><Users size={14} aria-hidden="true" />{t.recipients(assignment.recipientCount)}</span>
+          <span className="tcl-kind">{explore ? t.exploreKind : t.guidedKind}</span>
+          <span>{t.recipients(assignment.recipientCount)}</span>
           <span>{assignment.audience === "CLASS" ? t.wholeClass : t.subset}</span>
         </p>
       </div>
-      <div className={`tcl-due${late ? " is-late" : soon ? " is-soon" : ""}`}>
+      <div className={`tcl-due${late ? " is-late" : ""}`}>
         {assignment.dueDate ? (
           <>
             <span className="tcl-due-when">{late ? t.overdue : t.daysLeft(days ?? 0)}</span>
-            <span className="tcl-due-date"><CalendarDays size={12} aria-hidden="true" /> {t.dueOn(formatDate(assignment.dueDate))}</span>
+            <span className="tcl-due-date">{t.dueOn(formatDate(assignment.dueDate))}</span>
           </>
         ) : (
           <span className="tcl-due-when">{t.noDue}</span>

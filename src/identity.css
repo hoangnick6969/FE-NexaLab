@@ -1,0 +1,39 @@
+/* Hallmark · checked: 2026-11-16 · theme: custom · idea: "every figure is a reading: a value, its unit, and what it was measured against" · vibe: "cool glass, ink, one pink that means a result" */
+/* paper: cool glass #f3f6f8 · ink #142030 · accent: phenolphthalein pink oklch(0.52 0.2 355), the one signal · faces: Lexend (display and every figure), Be Vietnam Pro (body) · hero: none, an app shell · posture: light/geometric-sans/chromatic-magenta */
+/* critique: statuses were three tinted tiles in three hues; now ink carries everything and one pink says "this needs you", so a teacher sees the pink and nothing else competes */
+/* waive: 24b (4px spacing scale, the app's own 6/10/14 rhythm is kept so untouched screens still line up) */
+
+/*
+ * The NexaLab identity layer. Tokens live in tokens.css (--font-display, --nx-ink, --nx-signal); this file is what a screen
+ * reaches for, so adopting the identity is a class name, not a new stylesheet:
+ *
+ *   .nx-reading   a value and its unit on one baseline: <span class="nx-value">34</span><span class="nx-unit">học sinh</span>
+ *   .nx-signal    the one attention colour, for text that needs the person: a count waiting, a date missed
+ *   .nx-link      a text link with an underline that appears on hover, the quiet action next to a reading
+ *
+ * Rules that go with it: no icon inside a tinted tile, no pastel chip for a status, no second attention hue. State is a word
+ * ("Quá hạn", "Còn 3 ngày"), position and weight; colour is ink, the brand teal for the action, and the signal for the person.
+ */
+
+.page-heading h1,
+.app-shell-student .page-heading h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.nx-reading { display: inline-flex; align-items: baseline; gap: 0.4em; }
+.nx-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--nx-ink);
+}
+.nx-unit { font-size: 13.5px; color: var(--muted); }
+.nx-signal, .nx-value.nx-signal { color: var(--nx-signal); }
+
+.nx-link { color: var(--brand); font-weight: 600; text-decoration: none; text-underline-offset: 3px; }
+.nx-link:hover { text-decoration: underline; }
+.nx-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }

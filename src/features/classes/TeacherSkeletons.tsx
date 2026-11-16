@@ -11,15 +11,15 @@ export function TeacherOverviewSkeleton({ label }: { label: string }) {
       <Bar w="120px" h={24} />
       <div className="tov-tasks">
         {count(3).map((i) => <div key={i} className="tov-task sk-card">
-          <Bar w="44px" h={44} className="sk-tile" />
-          <div className="tov-task-body"><Bar w="80%" h={16} /><Bar w="55%" h={13} /></div>
-          <Bar w="30px" h={32} />
+          <Bar w="70%" h={16} />
+          <Bar w="64px" h={40} />
+          <Bar w="50%" h={13} />
         </div>)}
       </div>
       <Bar w="160px" h={24} />
       <div className="tov-classes">
         {count(3).map((i) => <div key={i} className="tov-class sk-card">
-          <div className="tov-class-head"><Bar w="48px" h={48} className="sk-tile" /><div className="tov-skeleton-name"><Bar w="60%" h={18} /><Bar w="30%" h={13} /></div></div>
+          <div className="tov-class-head"><div className="tov-skeleton-name"><Bar w="140px" h={22} /><Bar w="60px" h={13} /></div></div>
           <div className="tov-stats">{count(3).map((c) => <div key={c}><Bar w="60%" h={12} /><Bar w="34px" h={22} /></div>)}</div>
           <div className="tov-class-actions"><Bar w="92px" h={38} className="sk-pill" /><Bar w="92px" h={38} className="sk-pill" /></div>
         </div>)}
