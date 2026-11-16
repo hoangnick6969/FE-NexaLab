@@ -508,3 +508,36 @@ test("assignment catalog uses the enriched list and opens route-based chapter sc
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   expect(detailRequests).toBe(0);
 });
+
+test("YouTube lesson videos play in the embedded player and report progress; a publisher page link opens its source", async ({ page }) => {
+  await mockStudentApi(page);
+  // A stand-in for the YouTube IFrame API: the player "plays" for 2 minutes and ends.
+  await page.route("https://www.youtube.com/iframe_api", (route) => route.fulfill({ contentType: "text/javascript", body: `
+    window.YT = { PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 }, Player: function (el, opts) {
+      const frame = document.createElement("iframe"); frame.setAttribute("data-testid", "yt-frame"); frame.setAttribute("data-video-id", opts.videoId);
+      el.replaceWith(frame); let t = 0;
+      this.getCurrentTime = () => t; this.getDuration = () => 120; this.destroy = () => frame.remove();
+      setTimeout(() => { opts.events.onStateChange({ data: 1 }); t = 120; opts.events.onStateChange({ data: 0 }); }, 50);
+    } };
+    window.onYouTubeIframeAPIReady && window.onYouTubeIframeAPIReady();` }));
+  const lesson = (id: string, url: string) => ({
+    ...released, id, curriculum: "Khoa học tự nhiên THCS", content: "<p>Bài.</p>", materials: [], ebookEditions: [],
+    steps: [{ id: "video-1", type: "VIDEO", state: "NOT_STARTED", progressValue: 0, lastPosition: null, resource: { url, title: "Video bài giảng" } }],
+  });
+  await page.route("**/api/open-curriculum/lessons/lesson-yt", (route) => route.fulfill({ json: lesson("lesson-yt", "https://www.youtube.com/watch?v=mTN7ijVi8GQ") }));
+  await page.route("**/api/open-curriculum/lessons/lesson-page", (route) => route.fulfill({ json: lesson("lesson-page", "https://www.hoc10.vn/bai-giang/khoa-hoc-tu-nhien/lop-6") }));
+  const writes: any[] = [];
+  await page.route("**/api/open-curriculum/lessons/lesson-yt/steps/video-1/progress", async (route) => {
+    writes.push(await route.request().postDataJSON());
+    return route.fulfill({ json: { step: { id: "video-1", state: "COMPLETED", progressValue: 100, lastPosition: 120 } } });
+  });
+
+  await page.goto("/lessons/lesson-yt?tab=video");
+  await expect(page.getByTestId("yt-frame")).toHaveAttribute("data-video-id", "mTN7ijVi8GQ");
+  await expect(page.locator("video.video-player")).toHaveCount(0);
+  await expect.poll(() => writes.some((w) => w.action === "ended" && w.positionSeconds === 120 && w.durationSeconds === 120)).toBe(true);
+
+  await page.goto("/lessons/lesson-page?tab=video");
+  await expect(page.getByRole("link", { name: "Mở bài giảng ở trang nguồn" })).toHaveAttribute("href", "https://www.hoc10.vn/bai-giang/khoa-hoc-tu-nhien/lop-6");
+  await expect(page.locator("video.video-player")).toHaveCount(0);
+});
