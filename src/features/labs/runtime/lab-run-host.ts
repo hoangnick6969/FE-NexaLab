@@ -140,9 +140,10 @@ export function useLabRunHost(input: HostInput) {
   const draftKey = launch
     ? `${contextKey}:run:${launch.runId}:schema:${launch.stateSchemaVersion}`
     : null;
-  // FL-07 evidence lives on the server; retain the launch identity across F5.
+  // Retain the run ID for server-recorded progress across reloads and mode switches.
   const serverSessionKey = `nexalab:server-event-run:${contextKey}`;
-  const restoresServerEvents = input.labId === "thermal-energy" || (!!input.exam && ["mass-conservation", "lever-equilibrium"].includes(input.labId));
+  const restoresServerEvents = input.labId === "thermal-energy" || input.labId === "lever-equilibrium"
+    || (!!input.exam && input.labId === "mass-conservation");
 
   const draftFor = (currentLaunch: LabLaunch, state: unknown): LabDraft => ({
     key: `${contextKey}:run:${currentLaunch.runId}:schema:${currentLaunch.stateSchemaVersion}`,

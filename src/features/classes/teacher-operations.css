@@ -2058,15 +2058,16 @@ body {
 
 .assign-lab-options {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--teacher-space-sm);
 }
 
 .assign-lab-option {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template: "image image" auto "copy arrow" 1fr / minmax(0, 1fr) auto;
   align-items: start;
-  gap: var(--teacher-space-md);
-  padding: var(--teacher-space-md);
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--teacher-rule);
   border-radius: 12px;
   background: var(--surface);
@@ -2079,6 +2080,7 @@ body {
 
 .assign-lab-option:hover {
   border-color: var(--teacher-accent);
+  background: color-mix(in srgb, var(--teacher-accent) 4%, var(--surface));
 }
 
 .assign-lab-option:focus-visible {
@@ -2086,21 +2088,62 @@ body {
   outline-offset: 2px;
 }
 
-.assign-lab-option > span {
+.assign-lab-option-image {
+  grid-area: image;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background: var(--teacher-paper);
+}
+
+.assign-lab-option-copy {
+  grid-area: copy;
   display: grid;
   gap: var(--teacher-space-xs);
+  padding: var(--teacher-space-md);
   min-width: 0;
 }
 
-.assign-lab-option > span > span {
+.assign-lab-option-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.assign-lab-option-title svg,
+.assign-lab-option-arrow {
+  flex: none;
+  color: var(--teacher-accent);
+}
+
+.assign-lab-option-help {
   color: var(--teacher-muted);
   font-size: 14px;
   line-height: 1.5;
 }
 
+.assign-lab-option-arrow {
+  grid-area: arrow;
+  margin: var(--teacher-space-md) var(--teacher-space-md) 0 0;
+}
+
+@media (max-width: 600px) {
+  .assign-lab-options { grid-template-columns: 1fr; }
+  .assign-lab-option {
+    grid-template: "image copy arrow" 1fr / clamp(56px, 19vw, 88px) minmax(0, 1fr) auto;
+  }
+  .assign-lab-option-image { height: 100%; aspect-ratio: auto; align-self: stretch; }
+  .assign-lab-option-copy { padding: var(--teacher-space-sm); }
+  .assign-lab-option-title svg { display: none; }
+  .assign-lab-option-arrow { margin: var(--teacher-space-sm) var(--teacher-space-sm) 0 0; }
+}
+
 .explore-lab-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 248px), 1fr));
   gap: var(--teacher-space-sm);
   margin: 0 0 var(--teacher-space-md);
   padding: 0;
@@ -2113,6 +2156,27 @@ body {
   padding: 0;
   font-weight: 600;
 }
+
+.explore-assignment-template {
+  margin-block: 0 var(--teacher-space-md);
+  padding: var(--teacher-space-md);
+  border: 1px solid var(--teacher-rule);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--teacher-paper) 55%, var(--surface));
+}
+
+.explore-assignment-template-name {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 var(--teacher-space-sm);
+}
+
+.explore-assignment-template-name > span {
+  color: var(--teacher-muted);
+  font-size: 13px;
+}
+
+.explore-assignment-lesson-hint { margin: -4px 0 var(--teacher-space-sm); }
 
 .segmented.explore-template-options {
   display: grid;
@@ -2150,8 +2214,9 @@ body {
 .explore-lab-card {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: var(--teacher-space-xs);
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--teacher-space-sm);
   min-width: 0;
   padding: var(--teacher-space-xs);
   border: 1px solid var(--teacher-rule);
@@ -2179,7 +2244,7 @@ body {
 
 .explore-lab-card-art {
   display: grid;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   place-items: center;
   overflow: hidden;
   border-radius: 8px;
@@ -2194,7 +2259,7 @@ body {
 }
 
 .explore-lab-card-title {
-  padding: 2px 4px 4px;
+  padding-inline-end: 4px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;

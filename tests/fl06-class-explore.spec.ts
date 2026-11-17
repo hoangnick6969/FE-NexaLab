@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fl13Config } from "../src/features/labs/chemistry/wet-bench/labs/fl-13.config";
 
 // fl-06-class-explore-spec §7 (D1-3.1): a teacher picks inside the FL-06 class template and assigns, a student levels the
 // bar with the load fixed and hands in both moments, the teacher reads them. Mocked API, no Supabase, no run.
@@ -49,7 +50,9 @@ const config = {
     requirements: { measure: "balance_moments", explain: true },
   }],
 };
-const labRow = { id: "lever-equilibrium", title: "Moment lực và đòn bẩy", mode: "explore", explore: { ok: true, kit: "k5-lever-bench@1", engine: "lever-bench@1.0.0", activity, config } };
+const labRow = { id: "lever-equilibrium", title: "Moment lực và đòn bẩy", mode: "guided", modes: ["guided", "explore"],
+  lessonLinks: [{ lessonId: "lesson-lever" }, { lessonId: "lesson-related" }],
+  explore: { ok: true, kit: "k5-lever-bench@1", engine: "lever-bench@1.0.0", activity, config } };
 
 /** What the server derives for 2 N at -200 mm, 1 N weights, no gauge, no moment table, the explain prompt. */
 const effectiveConfig = {
@@ -82,15 +85,23 @@ async function signIn(page: Page, user: typeof teacher | typeof student) {
 async function openExploreAssign(page: Page) {
   await page.goto("/class-labs");
   await page.getByRole("button", { name: "Giao lab", exact: true }).click();
-  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
+  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: "Khám phá tự do" }).click();
 }
 
 test("teacher picks a load, weights and switches inside the FL-06 template, sees a load that cannot be levelled refused, previews and assigns", async ({ page }) => {
   await signIn(page, teacher);
   const writes: Array<{ path: string; body: any }> = [];
   await page.route("**/api/classes?status=*", (route) => route.fulfill({ json: [classroom] }));
-  await page.route("**/api/labs", (route) => route.fulfill({ json: [labRow] }));
-  await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [{ id: "lesson-lever", title: "Đòn bẩy và moment lực", grade: 8, subject: { id: "khtn", name: "KHTN" }, labId: "lever-equilibrium" }], labs: [], classLabs: [] } }));
+  await page.route("**/api/labs", (route) => route.fulfill({ json: [
+    { id: fl13Config.labId, title: fl13Config.title, mode: "explore", explore: { ok: true, kit: fl13Config.kit, engine: fl13Config.engine, activity, config: fl13Config } },
+    labRow,
+  ] }));
+  await page.route("**/api/classes/class-1/assignable-content", (route) => route.fulfill({ json: { lessons: [
+    { id: "lesson-ph", title: "Base. Thang pH", grade: 8, labId: "acid-base-indicators" },
+    { id: "lesson-lever", title: "Đòn bẩy và moment lực", grade: 8 },
+    { id: "lesson-related", title: "Đòn bẩy và ứng dụng", grade: 8 },
+    { id: "lesson-grade-9", title: "Cơ năng", grade: 9 },
+  ].map((lesson) => ({ ...lesson, subject: { id: "khtn", name: "KHTN" } })), labs: [], classLabs: [] } }));
   await page.route("**/api/classes/class-1/assignments", (route) => {
     if (route.request().method() === "GET") return route.fulfill({ json: [] });
     writes.push({ path: "assignments", body: route.request().postDataJSON() });
@@ -105,6 +116,16 @@ test("teacher picks a load, weights and switches inside the FL-06 template, sees
 
   await openExploreAssign(page);
   const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
+  const picker = dialog.getByTestId("explore-lab-picker");
+  await expect(picker.getByRole("radio")).toHaveCount(2);
+  await expect(dialog.getByLabel("Bài học liên quan")).toHaveValue("lesson-ph");
+  await picker.getByRole("radio", { name: labRow.title }).check();
+  await expect(dialog.getByLabel("Bài học liên quan")).toHaveValue("lesson-lever");
+  const suggested = dialog.getByLabel("Bài học liên quan").locator('optgroup[label="Gợi ý cho lab này"]');
+  await expect(suggested.locator("option")).toHaveCount(2);
+  await expect(suggested).toContainText("Đòn bẩy và ứng dụng");
+  await expect(dialog.getByLabel("Bài học liên quan").locator('option[value="lesson-grade-9"]')).toHaveCount(0);
+  await dialog.getByLabel("Bài học liên quan").selectOption("lesson-related");
   await expect(dialog.getByText("Làm thanh đòn cân bằng")).toBeVisible();
   const weights = dialog.getByRole("group", { name: "Bộ quả nặng cho học sinh" });
   await expect(weights.locator("img")).toHaveCount(2);
@@ -144,6 +165,7 @@ test("teacher picks a load, weights and switches inside the FL-06 template, sees
   await assign.click();
   await expect(page.getByRole("status").filter({ hasText: "Đã giao cho 3 học sinh." })).toBeVisible();
   expect(writes.map((item) => item.path)).toEqual(["resources", "publish", "assignments"]);
+  expect(writes[0].body.lessonId).toBe("lesson-related");
   expect(writes[0].body.content.selection).toEqual({ templateId: "balance-the-lever", loadPresetId: "load-2n-left-200", weightOptionIndex: 1, gauge: false, momentTable: false, promptId: "explain-balance" });
   expect(writes[2].body).toMatchObject({ contentType: "explore_lab", contentId: "lever-equilibrium", exploreResourceId: "res-1" });
 });

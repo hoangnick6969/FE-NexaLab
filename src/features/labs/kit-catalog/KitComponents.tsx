@@ -73,7 +73,7 @@ export function KitCard({ entry, group, debug }: { entry: CatalogEntry; group: K
         {sharing && <span className="kit-tag">{sharing}</span>}
         {hazard && <span className={`lab-intro-hazard is-${entry.safety!.level}`}>{hazard}</span>}
       </span>
-      <span className="kit-card-used">{t.usedIn}: {entry.usedIn.map((lab, index) => <span key={lab.id}>{index > 0 && " · "}<Link to={`/labs/${encodeURIComponent(lab.id)}`} title={lab.title}>{lab.catalogId}</Link></span>)}</span>
+      <span className="kit-card-used">{t.usedIn}: {entry.usedIn.map((lab, index) => <span key={lab.id}>{index > 0 && " · "}<Link to={lab.href} title={lab.title}>{lab.catalogId}</Link></span>)}</span>
       {debug && <code className="kit-card-debug" data-testid="kit-debug">{t.renderer}: {entry.key} · {entry.sharedItemId ? `${t.sharedItem}: ${entry.sharedItemId}` : t.own}</code>}
     </div>
   </li>;

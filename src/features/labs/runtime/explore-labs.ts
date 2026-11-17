@@ -16,6 +16,15 @@ export type ExploreRow = {
   explore?: { ok: true; kit: string; engine: string; activity: ExploreActivity; config: unknown } | { ok: false; code: ExploreResolveError };
 };
 
+export function hasAttachedExplore(row: Partial<Pick<ExploreRow, "mode" | "modes" | "explore">> | undefined): boolean {
+  return row?.mode === "guided" && row.modes?.includes("guided") === true
+    && row.modes.includes("explore") && row.explore?.ok === true;
+}
+
+export function exploreLabHref(id: string, mode?: string): string {
+  return `/labs/${encodeURIComponent(id)}${mode === "guided" ? "?mode=explore" : ""}`;
+}
+
 /** Server config re-validated with the bench schema (bench looked up by `explore.kit`); any failure stops the bench, with no bundled fallback. */
 export function resolveExploreConfig(row: ExploreRow):
   | { ok: true; bench: ExploreBenchEntry; config: BenchConfig; activity: ExploreActivity }

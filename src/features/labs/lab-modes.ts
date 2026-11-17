@@ -5,6 +5,7 @@
  * so /labs shows one card per slot (like the K2 Hóa học Labs) and the Lab page offers a mode switch.
  */
 import { labInfo } from "./lab-info";
+import type { ExploreRow } from "./runtime/explore-labs";
 
 export type LabModePair = { guidedId: string; exploreId: string };
 
@@ -16,21 +17,23 @@ export function labModePair(id: string): LabModePair | undefined {
   return PAIRS.find((pair) => pair.guidedId === id || pair.exploreId === id);
 }
 
-/** Explore Lab IDs that fold into their Guided card on /labs. */
-export const exploreIdOf = (guidedId: string) => PAIRS.find((pair) => pair.guidedId === guidedId)?.exploreId;
-export const guidedIdOf = (exploreId: string) => PAIRS.find((pair) => pair.exploreId === exploreId)?.guidedId;
+type LabModeRow = Partial<Pick<ExploreRow, "mode" | "explore">>;
+
+export function hasPublishedModePair(guided: LabModeRow | undefined, explore: LabModeRow | undefined): boolean {
+  return !!guided && guided.mode !== "explore" && explore?.mode === "explore" && explore.explore?.ok === true;
+}
 
 /**
  * Folds each paired Explore card into its Guided card. A card keeps its own slot when its partner is not in the list
  * (for example only the Explore mode is published to this student), so no published Lab disappears from /labs.
  */
-export function foldModeCards<T extends { id: string }>(cards: readonly T[]): Array<T & { exploreCard?: T }> {
-  const ids = new Set(cards.map((card) => card.id));
+export function foldModeCards<T extends { id: string }>(cards: readonly T[], published: ReadonlyMap<string, LabModeRow>): Array<T & { exploreCard?: T }> {
+  const byId = new Map(cards.map((card) => [card.id, card]));
   return cards.flatMap((card) => {
-    const guided = guidedIdOf(card.id);
-    if (guided && ids.has(guided)) return [];
-    const explore = exploreIdOf(card.id);
-    const exploreCard = explore && ids.has(explore) ? cards.find((item) => item.id === explore) : undefined;
+    const pair = labModePair(card.id);
+    if (!pair || !byId.has(pair.guidedId) || !hasPublishedModePair(published.get(pair.guidedId), published.get(pair.exploreId))) return [card];
+    if (card.id === pair.exploreId) return [];
+    const exploreCard = byId.get(pair.exploreId);
     return [exploreCard ? { ...card, exploreCard } : card];
   });
 }

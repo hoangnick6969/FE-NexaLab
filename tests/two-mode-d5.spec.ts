@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fl20Config } from "../src/features/labs/biology/ecology/labs/fl-20.config";
 
 // lab-two-mode-d5-spec.md (D-5): a Guided Lab with Explore attached on the same Lab ID. The `GET /labs` row declares
 // `mode: "guided"` and `modes: ["guided", "explore"]`; Guided opens by default, `?mode=explore` and the header switch open Explore,
@@ -24,6 +25,7 @@ const config = {
   review: { status: "draft" },
 };
 const twoModeRow = { id: "lever-equilibrium", title: "Moment lực và đòn bẩy", grade: 8, mode: "guided", modes: ["guided", "explore"],
+  challenges: [{ id: "fl06_001" }],
   explore: { ok: true, kit: "k5-lever-bench@1", engine: "lever-bench@1.0.0", activity, config } };
 
 async function signIn(page: Page, rows: unknown[]) {
@@ -42,8 +44,20 @@ async function signIn(page: Page, rows: unknown[]) {
 }
 const enter = (page: Page) => page.getByRole("dialog").getByRole("button", { name: /Vào bàn thí nghiệm|Quay lại bàn thí nghiệm/ }).click();
 
-test("D-5: ?mode=explore opens the Explore bench on the Guided Lab ID with the header switch; default stays Guided", async ({ page }) => {
+test("D-5: switching away from a Guided run preserves its recorded progress", async ({ page }) => {
   const requests = await signIn(page, [twoModeRow]);
+  await page.route("**/api/labs/lever-equilibrium/runs", (route) => route.fulfill({ json: {
+    contract: "lab-contract/1", runId: "d5-guided-run", labId: "lever-equilibrium", challengeId: "fl06_001",
+    modelRef: "lever-bench@1.0.0", engineVersion: "1.0.0", rendererKey: "lever-bench",
+    activityVersionId: "lever-guided-v1", activityVersion: 1, rubricVersion: "lever-investigation@1.0.0",
+    stateSchemaVersion: 1, evidenceSchemaVersion: 1, constraints: {}, initialState: null, expiresAt: null,
+    context: "FOUNDATIONAL", assignmentId: null, versionBinding: "RELEASE_ACTIVE",
+  } }));
+  const events: unknown[] = [];
+  await page.route("**/api/lab-runs/d5-guided-run/events", (route) => {
+    if (route.request().method() === "POST") events.push(route.request().postDataJSON().event);
+    return route.fulfill({ json: { events, observation: null } });
+  });
   await page.goto("/labs/lever-equilibrium?mode=explore");
   await enter(page);
   await expect(page.getByTestId("lever-explore")).toHaveAttribute("data-kit", "k5-lever-bench@1");
@@ -54,19 +68,52 @@ test("D-5: ?mode=explore opens the Explore bench on the Guided Lab ID with the h
   await expect(page).toHaveURL(/\/labs\/lever-equilibrium$/);
   await expect(page.getByTestId("lever-explore")).toHaveCount(0);
   expect(requests).toEqual([]);
+
+  await page.getByRole("button", { name: "Bắt đầu thí nghiệm" }).click();
+  for (const [position, answer] of [["bên trái", "Nghiêng trái"], ["tại o", "Nằm ngang"], ["bên phải", "Nghiêng phải"]]) {
+    await page.getByRole("group", { name: `Dự đoán ${position}`, exact: true }).getByRole("radio", { name: answer }).check();
+  }
+  await page.getByRole("button", { name: "Ghi dự đoán" }).click();
+  await expect(page.getByRole("heading", { name: "A · Quan sát ba vị trí" })).toBeVisible();
+  await toggle.getByRole("link", { name: "Khám phá tự do" }).click();
+  await enter(page);
+  await expect(page.getByTestId("lever-explore")).toBeVisible();
+  await toggle.getByRole("link", { name: "Có hướng dẫn" }).click();
+  await expect(page.getByRole("heading", { name: "A · Quan sát ba vị trí" })).toBeVisible();
+  expect(events).toHaveLength(1);
+  expect(requests.filter((url) => url.endsWith("/labs/lever-equilibrium/runs"))).toHaveLength(1);
 });
 
-test("D-5: an Explore error on a two-mode row falls back to Guided for students (the server already drops the Explore part)", async ({ page }) => {
-  await signIn(page, [{ ...twoModeRow, modes: ["guided"], explore: undefined }]);
+test("D-5: an Explore error does not advertise a second mode or stop Guided", async ({ page }) => {
+  await signIn(page, [{ ...twoModeRow, explore: { ok: false, code: "EXPLORE_VERSION_MISSING" } }]);
   await page.goto("/labs/lever-equilibrium?mode=explore");
   await expect(page.getByTestId("lever-explore")).toHaveCount(0);
   await expect(page.getByTestId("lab-mode-switch")).toHaveCount(0);
 });
 
-test("D-5: /labs shows one card with the 2-mode badge and an Explore chip on the same Lab ID", async ({ page }) => {
-  await signIn(page, [twoModeRow]);
+test("The library exposes every published lab and offers working links for each available mode", async ({ page }) => {
+  const physicsExplore = ["liquid-pressure", "heat-transfer", "light-refraction", "thin-lens", "mechanical-energy"];
+  await signIn(page, [
+    twoModeRow,
+    { id: "buoyancy", title: "Lực đẩy Ác-si-mét", grade: 8, mode: "guided", modes: ["guided"] },
+    { id: "ecology-tolerance", title: "Giới hạn sinh thái", grade: 8, mode: "guided", modes: ["guided"] },
+    { id: fl20Config.labId, title: fl20Config.title, grade: 8, mode: "explore", modes: ["explore"], explore: { ok: true, kit: fl20Config.kit, engine: fl20Config.engine, activity, config: fl20Config } },
+    ...physicsExplore.map((id) => ({ id, title: id, mode: "explore" })),
+    { id: "new-published-lab", title: "Bài mới đã phát hành", grade: 9, mode: "guided" },
+  ]);
   await page.goto("/labs");
-  const chip = page.locator('a.lab-mode-chip[href="/labs/lever-equilibrium?mode=explore"]');
-  await expect(chip).toHaveCount(1);
-  await expect(page.locator(".lab-modes-badge").first()).toBeVisible();
+  await expect(page.locator(".lab-library-item")).toHaveCount(9);
+  for (const id of physicsExplore) {
+    await expect(page.locator(`#lab-${id} a.lab-card`)).toHaveAttribute("href", `/labs/${id}`);
+  }
+  await expect(page.locator("#lab-new-published-lab")).toContainText("Bài mới đã phát hành");
+  const lever = page.locator("#lab-lever-equilibrium").getByTestId("lab-mode-row");
+  await expect(lever.getByRole("link", { name: "Có hướng dẫn" })).toHaveAttribute("href", "/labs/lever-equilibrium");
+  await expect(lever.getByRole("link", { name: /Khám phá tự do/ })).toHaveAttribute("href", "/labs/lever-equilibrium?mode=explore");
+  const ecology = page.locator("#lab-ecology-tolerance").getByTestId("lab-mode-row");
+  await expect(ecology.getByRole("link", { name: "Có hướng dẫn" })).toHaveAttribute("href", "/labs/ecology-tolerance");
+  await expect(ecology.getByRole("link", { name: /Khám phá tự do/ })).toHaveAttribute("href", "/labs/fl-20-explore");
+  const buoyancy = page.locator("#lab-buoyancy");
+  await expect(buoyancy).toContainText("Mở bài thực hành");
+  await expect(buoyancy.getByTestId("lab-mode-row")).toHaveCount(0);
 });

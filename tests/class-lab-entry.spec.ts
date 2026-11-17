@@ -8,7 +8,9 @@ const classroom = { ...base, id: "class-1", name: "8A", grade: 8, status: "ACTIV
 const otherClass = { ...base, id: "class-2", name: "8B", grade: 8, status: "ACTIVE" };
 const activity = { id: "pav-fl13-v3", key: "acid-base-indicators-explore", version: 3, digest: "d" };
 const labRow = { id: "acid-base-indicators", title: "Acid – base, chỉ thị và pH", mode: "explore", explore: { ok: true, kit: "k2-wet-bench@1", engine: "wet-bench@1.0.0", activity, config: fl13Config } };
-const secondLabRow = { ...labRow, id: "acid-base-copy", title: "Acid – base (bản 2)" };
+const secondLabRow = { ...labRow, id: "acid-base-copy", title: "Acid – base (bản 2)", explore: {
+  ...labRow.explore, config: { ...fl13Config, labId: "acid-base-copy" },
+} };
 
 const exploreWork = (over: Record<string, unknown> = {}) => ({
   id: "a1", title: "Đo pH hai mẫu", contentId: "acid-base-indicators", contentType: "explore_lab", dueDate: null, overdue: false, audience: "CLASS", status: "ACTIVE", recipientCount: 3,
@@ -53,7 +55,7 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     await page.goto("/class-labs");
     await expect(page.getByText("Chưa có bài lab nào được giao.")).toBeVisible();
     await page.getByRole("button", { name: "Giao lab", exact: true }).click();
-    await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
+    await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: "Khám phá tự do" }).click();
     const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
     await expect(dialog.locator("label").filter({ has: page.getByRole("checkbox", { name: /HCl 0,1 M/ }) }).locator("img"))
       .toHaveAttribute("src", /reagent-HCl_0_1M/);
@@ -159,7 +161,7 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
 
     // Chooser -> Guided form, still on the Class Lab page, lab-only (no lesson or test types).
     await page.getByRole("button", { name: "Giao lab", exact: true }).click();
-    await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Lab theo bước, sửa câu hỏi/ }).click();
+    await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: "Có hướng dẫn" }).click();
     const dialog = page.getByRole("dialog", { name: "Giao lab theo bước" });
     await expect(page).toHaveURL(/\/class-labs$/);
     await expect(dialog.getByRole("radio", { name: "Bài kiểm tra" })).toHaveCount(0);
@@ -236,6 +238,8 @@ test.describe("Class Lab is the one place to assign and manage lab work", () => 
     await expect(picker.locator("label", { hasText: labRow.title }).locator("img")).toHaveCount(1);
     await expect(picker.locator("label", { hasText: secondLabRow.title }).locator("img")).toHaveCount(0);
     await picker.getByRole("radio", { name: secondLabRow.title }).check();
-    await expect(page.getByTestId("explore-assign-form")).toContainText(secondLabRow.title);
+    await expect(picker.getByRole("radio", { name: secondLabRow.title })).toBeChecked();
+    await expect(page.getByLabel("Bài học liên quan")).toHaveValue("");
+    await expect(page.getByLabel("Bài học liên quan").locator('optgroup[label="Bài học cùng khối"]')).toContainText("Bài của lớp 8A");
   });
 });
