@@ -24,7 +24,7 @@ async function signIn(page: Page, user: typeof teacher | typeof student) {
 async function openExploreAssign(page: Page) {
   await page.goto("/class-labs");
   await page.getByRole("button", { name: "Giao lab", exact: true }).click();
-  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: /Thí nghiệm tự do có đề/ }).click();
+  await page.getByRole("dialog", { name: "Giao lab cho 8A" }).getByRole("button", { name: "Khám phá tự do" }).click();
 }
 
 test.describe("teacher assigns a Class Explore lab", () => {
@@ -50,6 +50,9 @@ test.describe("teacher assigns a Class Explore lab", () => {
     await openExploreAssign(page);
     const dialog = page.getByRole("dialog", { name: "Giao bài Explore" });
     await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId("explore-lab-picker").getByRole("radio")).toBeChecked();
+    await expect(dialog.getByRole("region", { name: "Tùy chọn trong mẫu" }).getByRole("checkbox")).toHaveCount(6);
+    await expect(dialog.getByLabel("Bài học liên quan")).toHaveValue("lesson-ph");
     const assign = dialog.getByRole("button", { name: "Lưu và giao bài" });
     await expect(assign).toBeDisabled();
 

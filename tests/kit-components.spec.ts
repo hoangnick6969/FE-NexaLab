@@ -87,6 +87,7 @@ test("Physics previews cover pressure and lens models and keep each screen on a 
   await open(page, student, [
     row("FL-04", "k3-fluid-bench@1", [["tank", "tall_tank"], ["probe", "membrane_probe"], ["pistons", "piston_pair"], ["weights", "weight_set"]]),
     row("FL-08", "k4-thermal-bench@1", [["screen", "wood_screen"]]),
+    { ...row("FL-06", "k5-lever-bench@1", [["bar", "lever_bar"]], "lever-equilibrium"), mode: "guided", modes: ["guided", "explore"] },
     row("FL-23", "k6-optics-bench@1", [["screen", "screen"], ["table", "measurement_table"], ["speed", "speed_card"]]),
     row("FL-23", "k6-lens-bench@1", [
       ["bench", "optical_bench"], ["lens", "lens"], ["lamp", "object_lamp"],
@@ -95,8 +96,9 @@ test("Physics previews cover pressure and lens models and keep each screen on a 
   ]);
   await openKit(page, "Kit Vật lý");
   const physics = page.getByRole("region", { name: "Kit Vật lý" });
-  await expect(physics.locator(".kit-card")).toHaveCount(14);
-  await expect(physics.locator(".kit-card img")).toHaveCount(11);
+  await expect(physics.locator(".kit-card")).toHaveCount(15);
+  await expect(physics.locator(".kit-card img")).toHaveCount(12);
+  await expect(physics.locator('[data-key="bar"]').getByRole("link", { name: "FL-06" })).toHaveAttribute("href", "/labs/lever-equilibrium?mode=explore");
   for (const [key, label, lab] of [["wood_screen", "Tấm gỗ dày", "FL-08"], ["screen", "Màn hứng", "FL-23"], ["lens_screen", "Màn hứng ảnh", "thin-lens"]]) {
     const card = physics.locator(`[data-key="${key}"]`);
     await expect(card).toContainText(label);

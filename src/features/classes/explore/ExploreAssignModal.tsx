@@ -10,6 +10,7 @@ import { Field, Modal } from "../../../components/ui";
 import { defineText, formatDateTime } from "../../../i18n";
 import { labInfo } from "../../labs/lab-info";
 import { classItemLabels, exploreBench, type ClassDerivation } from "../../labs/runtime/explore-registry";
+import { resolveExploreConfig, type ExploreRow } from "../../labs/runtime/explore-labs";
 import { kitThumbnail } from "../../labs/kit-catalog/kit-thumbnails";
 import { measureText, type ExploreRequirement } from "../../labs/class-explore/class-explore";
 import type { ClassSummary } from "../class-types";
@@ -20,11 +21,12 @@ const text = defineText({
   vi: {
     title: "Giao bài Explore", lab: "Phòng thí nghiệm", chooseLab: "Chọn Lab Explore",
     none: "Chưa có Lab Explore nào có mẫu cho lớp. Mẫu xuất hiện khi NexaLab phát hành phiên bản mới của Lab.",
-    template: "Mẫu",
+    template: "Mẫu cho lớp", templateOptions: "Tùy chọn trong mẫu",
     lesson: "Bài học liên quan", chooseLesson: "Chọn bài học", noLesson: "Chưa có bài học cùng khối để gắn bài này.",
+    suggestedLessons: "Gợi ý cho lab này", otherLessons: "Bài học cùng khối", lessonHint: "Chọn bài học để gắn bài giao vào chương trình của lớp.",
     instructions: "Lời dặn cho học sinh (không bắt buộc)", taskName: "Tên bài giao", due: "Hạn nộp (không bắt buộc)",
     audience: (n: number) => `Giao cho cả lớp`, previewHeading: "Học sinh sẽ nhận", requirements: "Yêu cầu nộp",
-    explain: "Một lời giải thích", items: "Dụng cụ và hoá chất trên bàn", question: "Câu hỏi",
+    explain: "Một lời giải thích", items: "Dụng cụ và vật liệu trên bàn", question: "Câu hỏi",
     openBench: "Mở bàn xem trước", previewNote: "Xem trước: đây là bàn học sinh sẽ mở. Số em đo ở đây không được lưu.",
     cancel: "Hủy", assign: "Lưu và giao bài", assigning: "Đang giao…",
     selectionInvalid: "Lựa chọn chưa hợp lệ", failed: "Chưa giao được bài.", retryKept: "Bài nháp đã lưu; bấm giao lại sẽ dùng tiếp, không tạo bản mới.",
@@ -33,11 +35,12 @@ const text = defineText({
   en: {
     title: "Assign an Explore lab", lab: "Lab", chooseLab: "Choose an Explore lab",
     none: "No Explore lab has a class template yet. Templates appear when NexaLab publishes a new version of the Lab.",
-    template: "Template",
+    template: "Class template", templateOptions: "Template options",
     lesson: "Related lesson", chooseLesson: "Choose a lesson", noLesson: "There is no lesson of this grade to attach this to.",
+    suggestedLessons: "Suggested for this lab", otherLessons: "Lessons for this grade", lessonHint: "Choose where this assignment belongs in the class curriculum.",
     instructions: "Note for students (optional)", taskName: "Assignment name", due: "Due (optional)",
     audience: () => "Assign to the whole class", previewHeading: "Students will get", requirements: "What they hand in",
-    explain: "One explanation", items: "Apparatus and reagents on the bench", question: "Question",
+    explain: "One explanation", items: "Equipment and materials on the bench", question: "Question",
     openBench: "Open the bench preview", previewNote: "Preview: this is the bench students open. Readings taken here are not saved.",
     cancel: "Cancel", assign: "Save and assign", assigning: "Assigning…",
     selectionInvalid: "This selection is not valid", failed: "Could not assign.", retryKept: "The draft was saved; assigning again reuses it and creates no new one.",
@@ -45,30 +48,39 @@ const text = defineText({
   },
 });
 
-type LabRow = { id: string; title: string; mode: string; explore?: { ok: true; kit: string; config: any } | { ok: false } };
+type LabRow = ExploreRow & { lessonLinks?: Array<{ lessonId: string }> };
+type ClassExploreLab = LabRow & { explore: Extract<ExploreRow["explore"], { ok: true }> & { config: any } };
+type AssignableLesson = { id: string; title: string; grade: number; labId?: string | null };
 type Template = { id: string; titleVi: string };
 
 export function ExploreAssignModal({ classroom, onClose, onAssigned }: { classroom: ClassSummary; onClose: () => void; onAssigned: (message: string) => void }) {
   const t = text();
   const labs = useQuery<LabRow[]>({ queryKey: ["labs"], queryFn: () => api("/labs") });
-  const content = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; labId?: string | null }> }>({ queryKey: ["assignable", classroom.id], queryFn: () => api(`/classes/${classroom.id}/assignable-content`) });
-  const candidates = (labs.data ?? []).filter((row): row is LabRow & { explore: { ok: true; kit: string; config: any } } =>
-    row.mode === "explore" && row.explore?.ok === true && Boolean(row.explore.config?.classTemplates?.length) && Boolean(exploreBench(row.explore.kit)?.deriveClass) && Boolean(exploreBench(row.explore.kit)?.ClassTemplateForm));
+  const content = useQuery<{ lessons: AssignableLesson[] }>({ queryKey: ["assignable", classroom.id], queryFn: () => api(`/classes/${classroom.id}/assignable-content`) });
+  const candidates = useMemo(() => (labs.data ?? []).filter((row): row is ClassExploreLab => {
+    if (row.explore?.ok !== true) return false;
+    const templates = (row.explore.config as { classTemplates?: unknown } | null)?.classTemplates;
+    if (!Array.isArray(templates) || !templates.length) return false;
+    const resolved = resolveExploreConfig(row);
+    return resolved.ok && Boolean(resolved.bench.deriveClass && resolved.bench.ClassTemplateForm);
+  }), [labs.data]);
 
   const [labId, setLabId] = useState("");
   const lab = candidates.find((row) => row.id === labId) ?? candidates[0];
   if (lab && lab.id !== labId) setLabId(lab.id);
   return <Modal title={t.title} onClose={onClose}>
     <LoadError query={labs} what={t.lab} />
+    {lab && <LoadError query={content} what={t.lesson} />}
     {labs.isPending && <p role="status">{t.loading}</p>}
     {labs.data && !lab && <p className="notice" data-testid="explore-none">{t.none}</p>}
-    {lab && <ExploreAssignForm key={lab.id} classroom={classroom} lab={lab} labs={candidates} onLab={setLabId} lessons={content.data?.lessons ?? []} onClose={onClose} onAssigned={onAssigned} />}
+    {lab && <ExploreAssignForm key={lab.id} classroom={classroom} lab={lab} labs={candidates} onLab={setLabId}
+      lessons={content.data?.lessons} loadingLessons={content.isPending} onClose={onClose} onAssigned={onAssigned} />}
   </Modal>;
 }
 
-function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAssigned }: {
-  classroom: ClassSummary; lab: LabRow & { explore: { ok: true; kit: string; config: any } }; labs: LabRow[]; onLab: (id: string) => void;
-  lessons: Array<{ id: string; title: string; grade: number; labId?: string | null }>; onClose: () => void; onAssigned: (message: string) => void;
+function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, loadingLessons, onClose, onAssigned }: {
+  classroom: ClassSummary; lab: ClassExploreLab; labs: LabRow[]; onLab: (id: string) => void;
+  lessons?: AssignableLesson[]; loadingLessons: boolean; onClose: () => void; onAssigned: (message: string) => void;
 }) {
   const t = text();
   const { config, kit } = lab.explore;
@@ -78,7 +90,7 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
   const template = templates.find((item) => item.id === templateId) ?? templates[0];
   const [choice, setChoice] = useState<{ selection: Record<string, unknown> | null; summary: string }>({ selection: null, summary: "" });
   const [instructions, setInstructions] = useState("");
-  const [lessonId, setLessonId] = useState("");
+  const [lessonId, setLessonId] = useState<string>();
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -91,9 +103,13 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
   const asked = (item: ExploreRequirement) => (item.kind === "measure" ? words[item.measurement].asked(labels[item.itemId] ?? item.itemId) : t.explain);
   const TemplateForm = bench.ClassTemplateForm!;
 
-  const matchingLessons = lessons.filter((lesson) => lesson.grade === classroom.grade);
-  const defaultLesson = (matchingLessons.find((lesson) => lesson.labId === lab.id) ?? matchingLessons[0])?.id ?? "";
-  const lesson = lessonId || defaultLesson;
+  const matchingLessons = (lessons ?? []).filter((lesson) => lesson.grade === classroom.grade);
+  const linkedLessonIds = new Set(lab.lessonLinks?.map(({ lessonId }) => lessonId));
+  const isSuggested = (lesson: AssignableLesson) => lesson.labId === lab.id || linkedLessonIds.has(lesson.id);
+  const suggestedLessons = matchingLessons.filter(isSuggested);
+  const otherLessons = matchingLessons.filter((lesson) => !isSuggested(lesson));
+  const selectedLesson = lessonId ?? suggestedLessons[0]?.id;
+  const lesson = matchingLessons.some((item) => item.id === selectedLesson) ? selectedLesson ?? "" : "";
   const stamp = useRef(formatDateTime(new Date())).current;
   const name = title.trim() || `${lab.title}: ${choice.summary || template.titleVi} · ${stamp}`;
 
@@ -133,23 +149,31 @@ function ExploreAssignForm({ classroom, lab, labs, onLab, lessons, onClose, onAs
   const canAssign = Boolean(derived?.ok) && Boolean(lesson) && !run.isPending;
 
   return <form onSubmit={(event) => { event.preventDefault(); if (canAssign) run.mutate(); }} data-testid="explore-assign-form">
-    {labs.length > 1 && <LabPicker labs={labs} value={lab.id} onChange={onLab} />}
-    {templates.length > 1
-      ? <label className="field"><span>{t.template}</span>
-        <select value={template.id} onChange={(event) => { setTemplateId(event.target.value); setChoice({ selection: null, summary: "" }); }}>{templates.map((item) => <option key={item.id} value={item.id}>{item.titleVi}</option>)}</select>
-      </label>
-      : <p><strong>{lab.title}</strong> · {template.titleVi}</p>}
+    <LabPicker labs={labs} value={lab.id} onChange={onLab} />
+    <section className="explore-assignment-template" aria-label={t.templateOptions}>
+      {templates.length > 1
+        ? <label className="field"><span>{t.template}</span>
+          <select value={template.id} onChange={(event) => { setTemplateId(event.target.value); setChoice({ selection: null, summary: "" }); }}>{templates.map((item) => <option key={item.id} value={item.id}>{item.titleVi}</option>)}</select>
+        </label>
+        : <p className="explore-assignment-template-name"><span>{t.template}</span><strong>{template.titleVi}</strong></p>}
 
-    <TemplateForm key={template.id} config={config} template={template} labels={labels} thumbnailFor={(key) => kitThumbnail(bench.group, key)} onChange={setChoice} />
+      <TemplateForm key={template.id} config={config} template={template} labels={labels} thumbnailFor={(key) => kitThumbnail(bench.group, key)} onChange={setChoice} />
+    </section>
 
-    <label className="field"><span>{t.instructions}</span><textarea rows={3} maxLength={10000} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
     <label className="field"><span>{t.lesson}</span>
-      <select required value={lesson} onChange={(event) => setLessonId(event.target.value)}>
+      <select required disabled={matchingLessons.length === 0} value={lesson} onChange={(event) => setLessonId(event.target.value)}>
         <option value="">{t.chooseLesson}</option>
-        {matchingLessons.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+        {suggestedLessons.length > 0 && <optgroup label={t.suggestedLessons}>
+          {suggestedLessons.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </optgroup>}
+        {otherLessons.length > 0 && <optgroup label={t.otherLessons}>
+          {otherLessons.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </optgroup>}
       </select>
     </label>
-    {matchingLessons.length === 0 && <p className="notice">{t.noLesson}</p>}
+    {loadingLessons && <p role="status" className="tiny muted">{t.loading}</p>}
+    {lessons && (matchingLessons.length === 0 ? <p className="notice">{t.noLesson}</p> : <p className="tiny muted explore-assignment-lesson-hint">{t.lessonHint}</p>)}
+    <label className="field"><span>{t.instructions}</span><textarea rows={3} maxLength={10000} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
     <Field label={t.taskName} value={title} placeholder={name} maxLength={160} onChange={(event) => setTitle(event.target.value)} />
     <Field label={t.due} type="datetime-local" value={due} onChange={(event) => setDue(event.target.value)} />
     <p className="tiny muted">{t.audience(0)}</p>

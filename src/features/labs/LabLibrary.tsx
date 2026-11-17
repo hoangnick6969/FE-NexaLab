@@ -1,4 +1,4 @@
-import { FlaskConical, ArrowUpRight, Zap, Eye, Magnet, Scale, Search, X, RotateCcw, SlidersHorizontal, Dna, Fish, Network } from "lucide-react";
+import { FlaskConical, ArrowUpRight, Zap, Eye, Magnet, Scale, Search, X, RotateCcw, SlidersHorizontal, Dna, Fish, Network, Compass, ListChecks } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo } from "react";
@@ -12,12 +12,14 @@ import { defineText } from "../../i18n";
 import { relatedLessonHref, type RelatedLesson } from "./pathways/lesson-lab-navigation";
 import { labCurriculumLabel } from "./lab-curriculum-label";
 import { KitRail } from "./kit-catalog/KitRail";
+import { exploreLabHref, hasAttachedExplore, type ExploreRow } from "./runtime/explore-labs";
+import { exploreBench } from "./runtime/explore-registry";
 
 const text = defineText({
   vi: {
     grades: "Lớp 8–9",
     basicsFirst: "Học kiến thức nền trước",
-    explore: "Khám phá phòng lab",
+    openLab: "Mở bài thực hành",
     relatedLesson: "Bài học liên quan",
     moreRelatedLessons: (count: number) => `Xem thêm ${count} bài học liên quan`,
     nonePublished: "Chưa có phòng thực hành nền tảng nào được phát hành.",
@@ -54,7 +56,7 @@ const text = defineText({
   en: {
     grades: "Grades 8–9",
     basicsFirst: "Learn the basics first",
-    explore: "Explore the lab",
+    openLab: "Open lab",
     relatedLesson: "Related lesson",
     moreRelatedLessons: (count: number) => `Show ${count} more related lessons`,
     nonePublished: "No foundation labs are published yet.",
@@ -91,6 +93,30 @@ const text = defineText({
 });
 const t = text();
 
+type CatalogRow = ExploreRow & { grade?: number; learningObjective?: string; lessonLinks?: RelatedLesson[] };
+type LabVisual = (typeof labInfo)[number];
+const visualsById = new Map(labInfo.map((visual) => [visual.id, visual]));
+
+function labCard(id: string, lab?: CatalogRow, visual?: LabVisual) {
+  const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
+  const group = lab?.explore?.ok ? exploreBench(lab.explore.kit)?.group : undefined;
+  return {
+    id,
+    className: visual?.className ?? (group === "explore-support" ? "biology" : group),
+    artId: visual?.artId ?? id,
+    number: visual?.number,
+    thumbnail: visual?.thumbnail,
+    title: (visual?.localizedCopy ? visual.title : lab?.title) ?? visual?.title ?? id,
+    description: (visual?.localizedCopy ? visual.description : lab?.learningObjective) ?? visual?.description,
+    tag: visual?.tag ?? (lab?.mode === "explore" ? t.exploreMode : undefined),
+    subject: label.subject,
+    gradeLabel: label.grade,
+    grade: visual && "grade" in visual ? visual.grade : lab?.grade,
+    lessonLinks: lab?.lessonLinks,
+    mode: lab?.mode,
+  };
+}
+
 function LabCardsSkeleton({ showFilters, message }: { showFilters: boolean; message: string }) {
   return (
     <div className="lab-library-loading" role="status" aria-live="polite" aria-busy="true" aria-label={message}>
@@ -115,7 +141,7 @@ function LabCardsSkeleton({ showFilters, message }: { showFilters: boolean; mess
 
 export function LabCards({ guided = false, showFilters = false, showDisclaimer = false }: { guided?: boolean; showFilters?: boolean; showDisclaimer?: boolean } = {}) {
   const role = useAuth((s) => s.user!.role);
-  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs"), enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(role) });
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<CatalogRow[]>("/labs"), enabled: ["STUDENT", "TEACHER", "ADMIN"].includes(role) });
 
   // Filters live in the URL (`/labs?grade=8&subject=biology&sort=…&q=…`) so "← Quay về" from a Lab, reload and shared
   // links keep them. Only the library page (showFilters) owns the query; embedded card lists keep defaults.
@@ -141,20 +167,19 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
   const filterQuery = showFilters ? params.toString() : null;
   useEffect(() => { if (filterQuery !== null) rememberLabsSearch(filterQuery ? `?${filterQuery}` : ""); }, [filterQuery]);
 
-  const allCards = role === "STUDENT" ? (labs.data ?? []).flatMap((lab: any) => {
-    const visual = labInfo.find((item) => item.id === lab.id);
-    const label = labCurriculumLabel(lab, visual?.subject ?? "", t.grades);
-    return visual ? [{ ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab.title, description: visual.localizedCopy ? visual.description : lab.learningObjective, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab.lessonLinks as RelatedLesson[] | undefined }] : [];
-  }) : labInfo.map((visual) => {
-    const lab = labs.data?.find((item) => item.id === visual.id);
-    const label = labCurriculumLabel(lab, visual.subject, t.grades);
-    return { ...visual, grade: "grade" in visual ? visual.grade : undefined, title: visual.localizedCopy ? visual.title : lab?.title ?? visual.title, description: visual.localizedCopy ? visual.description : lab?.learningObjective ?? visual.description, subject: label.subject, gradeLabel: label.grade, lessonLinks: lab?.lessonLinks as RelatedLesson[] | undefined };
-  });
-
-  // One card per FL slot: the Explore mode of a Lab that also has Guided folds into the Guided card (interim D-5).
-  // D-5: a Guided Lab with Explore on the same Lab ID shows one card whose Explore chip opens `?mode=explore`.
-  const twoMode = new Set((labs.data ?? []).filter((lab: any) => lab.modes?.includes("guided") && lab.modes?.includes("explore")).map((lab: any) => lab.id as string));
-  const cards = foldModeCards(allCards).map((card) => !card.exploreCard && twoMode.has(card.id) ? { ...card, exploreCard: { ...card, id: `${card.id}?mode=explore` } } : card);
+  const cards = useMemo(() => {
+    const rows = labs.data ?? [];
+    const published = new Map(rows.map((lab) => [lab.id, lab]));
+    const allCards = role === "STUDENT"
+      ? rows.map((lab) => labCard(lab.id, lab, visualsById.get(lab.id)))
+      : labInfo.map((visual) => labCard(visual.id, published.get(visual.id), visual));
+    return foldModeCards(allCards, published).map((card) => ({
+      ...card,
+      exploreHref: hasAttachedExplore(published.get(card.id))
+        ? exploreLabHref(card.id, "guided")
+        : card.exploreCard && exploreLabHref(card.exploreCard.id),
+    }));
+  }, [labs.data, role]);
 
   const gradeCounts = useMemo(() => {
     let g8 = 0;
@@ -355,41 +380,40 @@ export function LabCards({ guided = false, showFilters = false, showDisclaimer =
                 guided && role === "STUDENT"
                   ? (l.lessonLinks?.[0]?.lessonId ? `/lessons/${encodeURIComponent(l.lessonLinks[0].lessonId)}` : "/lessons")
                   : ["STUDENT", "TEACHER"].includes(role)
-                    ? "/labs/" + l.id
+                    ? "/labs/" + encodeURIComponent(l.id)
                     : "/labs"
               }
               className="lab-card"
               key={l.id}
             >
-              <div className={"lab-art " + l.className + (l.thumbnail ? " has-thumbnail" : "")}>
+              <div className={`lab-art ${l.className ?? ""}${l.thumbnail ? " has-thumbnail" : ""}`}>
                 {l.thumbnail && <img className="lab-thumbnail-image" src={l.thumbnail} alt="" aria-hidden="true" loading="lazy" decoding="async" width="1280" height="720" onError={(event) => event.currentTarget.parentElement?.classList.add("thumbnail-failed")} />}
-                <span className="lab-subject">{l.subject}</span>
-                <span className="art-number">{l.number}</span>
+                {l.subject && <span className="lab-subject">{l.subject}</span>}
+                {l.number && <span className="art-number">{l.number}</span>}
                 <div className="art-symbol">
                   {l.artId === "circuit" ? <Zap size={34} strokeWidth={1.75} /> : l.artId === "eye" || l.artId === "eye-optics" ? <Eye size={34} strokeWidth={1.75} /> : l.artId === "em-induction" ? <Magnet size={34} strokeWidth={1.75} /> : l.artId === "density" || l.artId === "mass-conservation" ? <Scale size={34} strokeWidth={1.75} /> : l.artId === "gene-protein" ? <Dna size={34} strokeWidth={1.75} /> : l.artId === "ecology-tolerance" ? <Fish size={34} strokeWidth={1.75} /> : l.artId === "food-web" ? <Network size={34} strokeWidth={1.75} /> : <FlaskConical size={34} strokeWidth={1.75} />}
                 </div>
-                <span className="art-caption">NEXALAB / EXPERIMENT {l.number}</span>
+                {l.number && <span className="art-caption">NEXALAB / EXPERIMENT {l.number}</span>}
               </div>
               <div className="lab-copy">
                 <div className="lab-meta">
-                  <span className="lab-tag-badge">{l.tag}</span>
-                  {l.exploreCard && <span className="lab-tag-badge lab-modes-badge">{t.twoModes}</span>}
+                  {l.tag && <span className="lab-tag-badge">{l.tag}</span>}
+                  {l.exploreHref && <span className="lab-tag-badge lab-modes-badge">{t.twoModes}</span>}
                   <span className="lab-grade-badge">{l.gradeLabel}</span>
                 </div>
                 <h3>{l.title}</h3>
-                <p>{l.description}</p>
+                {l.description && <p>{l.description}</p>}
                 <div className="card-footer">
-                  <span>{guided && role === "STUDENT" ? t.basicsFirst : t.explore}</span>
+                  <span>{guided && role === "STUDENT" ? t.basicsFirst : l.mode === "explore" ? t.exploreMode : t.openLab}</span>
                   <span className="round-arrow">
                     <ArrowUpRight size={17} />
                   </span>
                 </div>
               </div>
             </Link>
-            {l.exploreCard && ["STUDENT", "TEACHER"].includes(role) && !(guided && role === "STUDENT") && <div className="lab-library-mode-row" data-testid="lab-mode-row">
-              <span className="lab-library-lesson-label">{t.modesLabel}</span>
-              <Link to={"/labs/" + l.id} className="lab-mode-chip">{t.guidedMode}</Link>
-              <Link to={"/labs/" + l.exploreCard.id} className="lab-mode-chip" aria-label={`${t.exploreMode}: ${l.exploreCard.title}`}>{t.exploreMode}<ArrowUpRight size={14} aria-hidden="true" /></Link>
+            {l.exploreHref && ["STUDENT", "TEACHER"].includes(role) && !(guided && role === "STUDENT") && <div className="lab-library-mode-row" role="group" aria-label={`${t.modesLabel} ${l.title}`} data-testid="lab-mode-row">
+              <Link to={`/labs/${encodeURIComponent(l.id)}`} className="lab-mode-chip"><ListChecks size={15} aria-hidden="true" />{t.guidedMode}</Link>
+              <Link to={l.exploreHref} className="lab-mode-chip" aria-label={`${t.exploreMode}: ${l.exploreCard?.title ?? l.title}`}><Compass size={15} aria-hidden="true" />{t.exploreMode}</Link>
             </div>}
             {!!l.lessonLinks?.length && <div className="lab-library-lesson-row">
               <span className="lab-library-lesson-label">{t.relatedLesson}:</span>

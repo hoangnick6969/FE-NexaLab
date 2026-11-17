@@ -27,14 +27,14 @@ import { lessonLabSection, relatedLessonHref, type RelatedLesson } from "./pathw
 import { revealInPanel } from "./shared/question-panel/LabQuestionPanel";
 import { LabSpace } from "./shared/LabSpace";
 import { labInfo } from "./lab-info";
-import { labModePair } from "./lab-modes";
+import { hasPublishedModePair, labModePair } from "./lab-modes";
 import { LabModeContext, type LabModeValue } from "./shared/LabModeSwitch";
 import { buoyancyStepQuestions } from "./physics/fluid/buoyancy/buoyancy-questions";
 import { toLocalInput } from "../classes/class-ui";
 import { StudentClassLabAdditionalResponses } from "../classes/ClassLabAdditionalResponses";
 
 import { loadLabActivity } from "./runtime/lazy-lab-activity";
-import { resolveExploreConfig, type ExploreRow } from "./runtime/explore-labs";
+import { exploreLabHref, hasAttachedExplore, resolveExploreConfig, type ExploreRow } from "./runtime/explore-labs";
 import { devExploreRow } from "./runtime/dev-explore-fixtures";
 import type { ExploreBenchEntry, ExplorePageProps } from "./runtime/explore-registry";
 
@@ -200,10 +200,6 @@ export default function Lab() {
   return <LibraryLabWithModes />;
 }
 
-/** D-5 (lab-two-mode-d5-spec.md §2.4): the mode a two-mode Lab opens in. Guided by default; `?mode=explore` opens Explore. */
-export const twoModeCurrent = (modes: ReadonlyArray<"guided" | "explore"> | undefined, query: string | null): "guided" | "explore" | null =>
-  modes?.includes("guided") && modes.includes("explore") ? (query === "explore" ? "explore" : "guided") : null;
-
 /**
  * Lab with both modes: a Guided / Explore switch in the Lab Space header. D-5: both modes on one Lab ID (`modes` of the row,
  * `?mode=`). Interim pairs (`exploreOf`, two Lab IDs) keep working until Dev 2 republishes them, only when both are available.
@@ -212,32 +208,35 @@ function LibraryLabWithModes() {
   const { id = "" } = useParams();
   const [searchParams] = useSearchParams();
   const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
-  const row = labs.data?.find((item) => item.id === id);
-  const current = twoModeCurrent(row?.modes, searchParams.get("mode"));
-  const pair = labModePair(id);
-  const available = (labId: string) => Boolean(devExploreRow(labId) || labs.data?.some((item) => item.id === labId));
-  const mode: LabModeValue | null = current
-    ? { guidedHref: `/labs/${id}`, exploreHref: `/labs/${id}?mode=explore`, current }
-    : pair && available(pair.guidedId) && available(pair.exploreId)
-      ? { guidedHref: `/labs/${pair.guidedId}`, exploreHref: `/labs/${pair.exploreId}`, current: id === pair.exploreId ? "explore" : "guided" }
-      : null;
-  return <LabModeContext.Provider value={mode}><LibraryLab key={`${id}:${current ?? ""}`} explore={current === "explore"} /></LabModeContext.Provider>;
-}
-
-function LibraryLab({ explore = false }: { explore?: boolean }) {
-  const { id = "" } = useParams();
-  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<ExploreRow[]>("/labs") });
-  // DEV only: a bundled Sinh học bench opens without a server row (see dev-explore-fixtures.ts).
-  const devRow = devExploreRow(id);
-  if (!devRow && labs.isPending) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><p role="status" className="panel">Đang tải bài thực hành…</p></LabSpace>;
-  if (!devRow && labs.isError) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><section className="panel" role="alert">
+  const publishedRow = (labId: string) => labs.data?.find((item) => item.id === labId);
+  const serverRow = publishedRow(id);
+  const devRow = serverRow ? undefined : devExploreRow(id);
+  if (!devRow && !labs.data && labs.isPending) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><p role="status" className="panel">Đang tải bài thực hành…</p></LabSpace>;
+  if (!devRow && !labs.data && labs.isError) return <LabSpace title="Phòng thí nghiệm" exitTo="/labs"><section className="panel" role="alert">
     <p>Không tải được danh sách bài thực hành.</p>
     <button type="button" className="primary" onClick={() => void labs.refetch()}>Thử lại</button>
   </section></LabSpace>;
-  const row = devRow ?? labs.data?.find((item) => item.id === id);
-  // No row: GuidedLab keeps its existing "chưa được phát hành" screen.
-  // Explore-only rows open Explore; a two-mode row opens Explore only when the switch or `?mode=explore` asks for it.
-  if (!row || (row.mode !== "explore" && !(explore && row.modes?.includes("explore")))) return <GuidedLab key="guided" />;
+
+  const row = serverRow ?? devRow;
+  const pair = labModePair(id);
+  const pairedGuided = pair && publishedRow(pair.guidedId);
+  const pairedExplore = pair && publishedRow(pair.exploreId);
+  let mode: LabModeValue | null = null;
+  if (hasAttachedExplore(row)) {
+    mode = { guidedHref: `/labs/${encodeURIComponent(id)}`, exploreHref: exploreLabHref(id, "guided"), current: searchParams.get("mode") === "explore" ? "explore" : "guided" };
+  } else if (pair && hasPublishedModePair(pairedGuided, pairedExplore)) {
+    const attached = hasAttachedExplore(pairedGuided);
+    mode = { guidedHref: `/labs/${pair.guidedId}`, exploreHref: attached ? exploreLabHref(pair.guidedId, "guided") : exploreLabHref(pair.exploreId),
+      current: id === pair.exploreId ? "explore" : "guided" };
+  }
+  return <LabModeContext.Provider value={mode}>
+    {row && (row.mode === "explore" || mode?.current === "explore")
+      ? <LibraryExploreLab key={id} row={row} />
+      : <GuidedLab key={id} />}
+  </LabModeContext.Provider>;
+}
+
+function LibraryExploreLab({ row }: { row: ExploreRow }) {
   const resolved = resolveExploreConfig(row);
   if (!resolved.ok) return <LabSpace title={row.title || "Phòng thí nghiệm"} exitTo="/labs"><section className="panel" role="alert" data-testid="explore-error">
     <h1>Không mở được bàn thí nghiệm</h1>
@@ -246,7 +245,7 @@ function LibraryLab({ explore = false }: { explore?: boolean }) {
   </section></LabSpace>;
   const ExplorePage = explorePage(resolved.bench);
   return <Suspense fallback={<p role="status" className="panel">Đang mở bàn thí nghiệm…</p>}>
-    <ExplorePage key={`explore:${id}@${resolved.activity.id}`} labId={id} title={row.title} config={resolved.config} activity={resolved.activity} />
+    <ExplorePage key={`explore:${row.id}@${resolved.activity.id}`} labId={row.id} title={row.title} config={resolved.config} activity={resolved.activity} />
   </Suspense>;
 }
 
