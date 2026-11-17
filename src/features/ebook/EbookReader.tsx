@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { RenderTask, TextLayer as PdfTextLayer } from "pdfjs-dist";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Columns2, ExternalLink, Highlighter, List, LoaderCircle, Maximize2, Minimize2, Minus, Plus, Sparkles, StickyNote, Underline } from "lucide-react";
-import { api, useAuth } from "../../lib/api";
-import { ErrorBox, PageLoader } from "../../components/ui";
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, Columns2, ExternalLink, Highlighter, List, LoaderCircle, Maximize2, Minimize2, Minus, Plus, Sparkles, StickyNote, Underline } from "lucide-react";
+import { api, inlineMaterial, useAuth } from "../../lib/api";
+import { ErrorBox, Modal, PageLoader } from "../../components/ui";
 import { httpsUrl } from "../../lib/urls";
 import { t } from "./ebookText";
 import { rangeForOffsets, type Annotation, type FallbackMark } from "./annotations";
@@ -43,7 +43,7 @@ export function EbookReader() {
   const subject = subjectQuery.data?.find((item) => item.id === subjectId);
   const curriculumSubject = curriculumQuery.data?.subjects?.find((item) => item.id === subjectId);
   const editions = useMemo(() => {
-    const raw = (subject?.ebookEditions?.length ? subject.ebookEditions : curriculumSubject?.ebookEditions ?? []) as Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; isCurrent?: boolean }>;
+    const raw = (subject?.ebookEditions?.length ? subject.ebookEditions : curriculumSubject?.ebookEditions ?? []) as Array<{ id: string; version: string; url: string; fallbackPhysicalPage?: number; isCurrent?: boolean; coverAssetVersionId?: string | null }>;
     return raw.map((ed) => ({ ...ed, safeUrl: httpsUrl(ed.url), grade: parseEditionGrade(ed.version, ed.url) })).filter((ed) => Boolean(ed.safeUrl));
   }, [subject?.ebookEditions, curriculumSubject?.ebookEditions]);
 
@@ -51,6 +51,16 @@ export function EbookReader() {
   useEffect(() => {
     if (routeState?.editionId) setSelectedEditionId(routeState.editionId);
   }, [routeState?.editionId]);
+  // A subject with several grade editions asks which book to open, unless the link already names one
+  // (library card, lesson link with a grade or a URL). Asked once per visit; the header button reopens it.
+  const [gradePickerOpen, setGradePickerOpen] = useState(false);
+  const gradePickerAsked = useRef(false);
+  const linkNamesEdition = Boolean(routeState?.editionId || routeState?.ebookUrl || routeState?.grade);
+  useEffect(() => {
+    if (gradePickerAsked.current || linkNamesEdition || editions.length < 2) return;
+    gradePickerAsked.current = true;
+    setGradePickerOpen(true);
+  }, [editions.length, linkNamesEdition]);
 
   const activeEdition = useMemo(() => {
     if (!editions.length) return null;
@@ -339,23 +349,17 @@ export function EbookReader() {
               <strong>{t.textbookShort(`${subject.name}${activeGrade ? ` ${activeGrade}` : ""}`)}</strong>
               <small>{t.digitalTextbook}</small>
             </div>
-            {editions.length > 1 && (
-              <div className="ebook-edition-switcher" role="group" aria-label={t.digitalTextbook}>
-                {editions.map((ed) => {
-                  const isCurrent = activeEdition?.id === ed.id;
-                  return (
-                    <button
-                      key={ed.id}
-                      type="button"
-                      className={isCurrent ? "active" : ""}
-                      aria-pressed={isCurrent}
-                      onClick={() => setSelectedEditionId(ed.id)}
-                    >
-                      {ed.grade ? t.gradeEdition(ed.grade) : ed.version}
-                    </button>
-                  );
-                })}
-              </div>
+            {editions.length > 1 && activeEdition && (
+              <button
+                type="button"
+                className="ebook-edition-trigger"
+                aria-haspopup="dialog"
+                aria-label={t.changeGrade(activeEdition.grade ? t.gradeEdition(activeEdition.grade) : activeEdition.version)}
+                onClick={() => setGradePickerOpen(true)}
+              >
+                {activeEdition.grade ? t.gradeEdition(activeEdition.grade) : activeEdition.version}
+                <ChevronDown size={15} aria-hidden="true" />
+              </button>
             )}
           </div>
           <div className="ebook-page-controls ebook-page-controls-primary">
@@ -469,5 +473,47 @@ export function EbookReader() {
       />
       {mode === "ask" && canAsk && <TextbookAsk subjectId={subjectId} pageNumber={pageNumber} selection={selection} maxMessage={studentAi.maxMessage} onClose={() => { setSelection(null); setMode("read"); }} />}
     </div>
+    {gradePickerOpen && editions.length > 1 && (
+      <Modal title={t.chooseGradeTitle} onClose={() => setGradePickerOpen(false)}>
+        <p className="ebook-grade-intro">{t.chooseGradeIntro}</p>
+        <div className="ebook-grade-options">
+          {editions.map((ed) => {
+            const current = activeEdition?.id === ed.id;
+            const label = ed.grade ? t.gradeEdition(ed.grade) : ed.version;
+            return (
+              <button
+                key={ed.id}
+                type="button"
+                className={`ebook-grade-option${current ? " active" : ""}`}
+                aria-pressed={current}
+                onClick={() => { setSelectedEditionId(ed.id); setGradePickerOpen(false); }}
+              >
+                <EditionCover coverAssetVersionId={ed.coverAssetVersionId} label={label} />
+                <span className="ebook-grade-option-text">
+                  <strong>{t.textbookShort(`${subject.name}${ed.grade ? ` ${ed.grade}` : ""}`)}</strong>
+                  <small>{current ? <><Check size={13} aria-hidden="true" /> {t.readingNow}</> : label}</small>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
+    )}
   </div>;
+}
+
+function EditionCover({ coverAssetVersionId, label }: { coverAssetVersionId?: string | null; label: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    let revoke: () => void = () => undefined;
+    setSrc(null);
+    if (coverAssetVersionId) inlineMaterial(`assetv:${coverAssetVersionId}`).then((image) => {
+      if (active) { revoke = image.revoke; setSrc(image.src); }
+      else image.revoke();
+    }).catch(() => undefined);
+    return () => { active = false; revoke(); };
+  }, [coverAssetVersionId]);
+  if (src) return <img className="ebook-grade-cover" src={src} alt="" decoding="async" onError={() => setSrc(null)} />;
+  return <span className="ebook-grade-cover ebook-grade-cover-fallback" aria-hidden="true"><BookOpen size={28} strokeWidth={1.5} /><b>{label}</b></span>;
 }
