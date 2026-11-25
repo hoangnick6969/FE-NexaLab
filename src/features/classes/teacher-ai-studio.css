@@ -1,0 +1,1005 @@
+/* Teacher AI Studio — UX redesign (TAI-01 authoring, U-1 ... U-8)
+   Uses existing theme tokens from src/tokens.css with zero custom hex codes.
+   Fully dark-theme compatible through tokens override.
+   All classes prefixed with .tai-studio- */
+
+/* U-1: Studio shell layout */
+.tai-studio-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tai-studio-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.tai-studio-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* Common panels within Studio */
+.tai-studio-composer.panel,
+.tai-studio-recent.panel,
+.tai-studio-workspace.panel,
+.tai-studio-running.panel,
+.tai-studio-cancelled.panel,
+.tai-studio-failed.panel,
+.tai-studio-review-container {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  margin-bottom: 0;
+}
+
+/* U-2: Composer header and eyebrow */
+.tai-studio-composer-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tai-studio-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--brand-ink);
+}
+
+.tai-studio-brand-icon {
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.tai-studio-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-ink);
+}
+
+.tai-studio-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tai-studio-title-row h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tai-studio-lead {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.tai-studio-collapse-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tai-studio-collapse-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Form layout */
+.tai-studio-form {
+  display: block;
+}
+
+.tai-studio-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tai-studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tai-studio-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-select,
+.tai-studio-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tai-studio-select {
+  min-height: 38px;
+}
+
+.tai-studio-textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.45;
+}
+
+.tai-studio-select:focus,
+.tai-studio-textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(31, 111, 120, 0.15);
+}
+
+/* Segmented controls */
+.tai-studio-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+/* The composer column is 320-380px wide: four labels such as "Không chỉ định" do not fit on one row. */
+.tai-studio-segmented-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tai-studio-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.tai-studio-seg-btn:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.tai-studio-seg-btn.is-active {
+  background: var(--surface);
+  color: var(--brand-ink);
+  font-weight: 600;
+  border-color: var(--line);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tai-studio-seg-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* Stepper -/+ */
+.tai-studio-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.tai-studio-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  width: 40px;
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.tai-studio-stepper-btn:hover:not(:disabled) {
+  background: var(--line);
+  color: var(--text);
+}
+
+.tai-studio-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tai-studio-stepper-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.tai-studio-stepper-input {
+  width: 58px;
+  min-height: 36px;
+  text-align: center;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.tai-studio-stepper-input::-webkit-outer-spin-button,
+.tai-studio-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.tai-studio-stepper-input:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* Instruction counter row */
+.tai-studio-counter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.4;
+}
+
+/* Usage meter box */
+.tai-studio-usage-box {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tai-studio-usage-box .ai-quota-meter {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+/* Submit button block */
+.tai-studio-submit-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tai-studio-submit-btn {
+  width: 100%;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tai-studio-disabled-reason {
+  margin: 0;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* U-3: Recent requests card */
+.tai-studio-recent-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tai-studio-recent-head h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-no-jobs {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
+.tai-studio-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tai-studio-job-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tai-studio-job-card:hover {
+  border-color: var(--brand);
+  background: var(--bg);
+}
+
+.tai-studio-job-card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.tai-studio-job-card-active {
+  border-color: var(--brand);
+  background: var(--fill-neutral-95);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.tai-studio-job-card-icon {
+  margin-top: 2px;
+  color: var(--brand-ink);
+  flex-shrink: 0;
+}
+
+.tai-studio-job-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tai-studio-job-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.tai-studio-job-kind {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-job-count {
+  font-size: 12px;
+}
+
+.tai-studio-job-lesson {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tai-studio-job-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* U-4: Empty workspace */
+.tai-studio-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.tai-studio-empty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--brand-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tai-studio-empty-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Exactly three steps: three equal columns, so step 3 never sits alone on a second row. */
+.tai-studio-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tai-studio-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  transition: border-color 0.15s ease;
+}
+
+.tai-studio-step-card:hover {
+  border-color: var(--brand);
+}
+
+.tai-studio-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tai-studio-step-content h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-step-content p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.tai-studio-empty-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--fill-amber-85-a17);
+  border: 1px solid var(--line-amber-68);
+  color: var(--ink-amber-56);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* U-5: Running state */
+.tai-studio-running {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tai-studio-running-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tai-studio-running-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tai-studio-running-title-block h4 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-elapsed {
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+
+.tai-studio-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tai-studio-skeleton-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tai-studio-skeleton-line {
+  height: 14px;
+  background: var(--line);
+  border-radius: 6px;
+  animation: tai-studio-shimmer 1.5s infinite ease-in-out;
+}
+
+.tai-studio-skeleton-line.short {
+  width: 28%;
+}
+
+.tai-studio-skeleton-line.medium {
+  width: 65%;
+}
+
+.tai-studio-skeleton-line.long {
+  width: 92%;
+}
+
+.tai-studio-skeleton-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.tai-studio-skeleton-line.option {
+  width: 100%;
+  height: 32px;
+  border-radius: 8px;
+}
+
+@keyframes tai-studio-shimmer {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* U-6: Review workspace */
+.tai-studio-review-space {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tai-studio-sticky-header {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.tai-studio-sticky-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tai-studio-sticky-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tai-studio-sticky-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tai-studio-sticky-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tai-studio-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.tai-studio-progress-track {
+  flex: 1 1 auto;
+  height: 8px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 100px;
+}
+
+.tai-studio-progress-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.tai-studio-progress-fill.is-all-decided {
+  background: var(--green);
+}
+
+.tai-studio-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tai-studio-sticky-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tai-studio-sticky-actions button {
+  min-height: 36px;
+}
+
+.tai-studio-mat-hint {
+  display: block;
+  text-align: right;
+  margin-top: -6px;
+  color: var(--muted);
+}
+
+/* Filter bar & chips */
+.tai-studio-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tai-studio-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tai-studio-filter-chip:hover {
+  color: var(--text);
+  border-color: var(--brand);
+  background: var(--bg);
+}
+
+.tai-studio-filter-chip.is-active {
+  background: var(--brand);
+  color: var(--on-accent);
+  border-color: var(--brand);
+  font-weight: 600;
+}
+
+.tai-studio-filter-count {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.tai-studio-filter-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Navigator strip */
+.tai-studio-navigator-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tai-studio-navigator-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tai-studio-navigator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.tai-studio-nav-chip {
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0 6px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.tai-studio-nav-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tai-studio-nav-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.tai-studio-nav-chip.tone-pending {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.tai-studio-nav-chip.tone-kept {
+  border-color: var(--green);
+  background: var(--fill-green-94);
+  color: var(--green);
+}
+
+.tai-studio-nav-chip.tone-edited {
+  border-color: var(--brand);
+  background: var(--fill-sky-89);
+  color: var(--brand-ink);
+}
+
+.tai-studio-nav-chip.tone-rejected {
+  border-color: var(--line-red-59);
+  background: var(--fill-red-92);
+  color: var(--ink-red-47);
+}
+
+.tai-studio-nav-chip[aria-current="true"] {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+/* Item cards list */
+.tai-studio-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tai-studio-item-card {
+  scroll-margin-top: 150px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tai-studio-item-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Reset inner border since .tai-studio-item-card already has its own card styling */
+.tai-studio-item-card .teacher-ai-item {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Enhancing decision visual indicators */
+.tai-studio-item-card.decided-accepted {
+  border-color: var(--green);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.tai-studio-item-card.decided-edited {
+  border-color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.tai-studio-item-card.decided-rejected {
+  border-color: var(--line-red-59);
+  box-shadow: inset 3px 0 0 var(--line-red-59);
+}
+
+/* Amber warning tags inside review items (Audit A-7 & U-6) */
+.tai-studio-item-card .badge.outline {
+  background: var(--fill-amber-85-a17);
+  color: var(--ink-amber-56);
+  border: 1px solid var(--line-amber-68);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.tai-studio-empty-filter {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* U-7: Done and Failed cards */
+.tai-studio-cancelled,
+.tai-studio-failed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.tai-studio-msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tai-studio-msg-row h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tai-studio-done-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1099px) {
+  .tai-studio-shell {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .tai-studio-collapse-toggle {
+    display: inline-flex;
+  }
+
+  .tai-studio-form-collapsed {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .tai-studio-shell {
+    gap: 14px;
+  }
+
+  .tai-studio-segmented-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tai-studio-sticky-header {
+    position: static;
+    top: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .tai-studio-item-card {
+    scroll-margin-top: 20px;
+    padding: 14px 16px;
+  }
+
+  .tai-studio-skeleton-options {
+    grid-template-columns: 1fr;
+  }
+
+  .tai-studio-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .tai-studio-nav-chip {
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    font-size: 12px;
+  }
+}

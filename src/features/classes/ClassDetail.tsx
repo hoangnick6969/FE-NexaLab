@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { KeyRound, Archive, Edit3, Power, Users, ClipboardList, Layers, BarChart2, Lightbulb } from "lucide-react";
+import { KeyRound, Archive, Edit3, Power, Users, ClipboardList, Layers, BarChart2, Lightbulb, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../lib/api";
 import { ErrorBox, Field, Modal } from "../../components/ui";
 import { TeacherClassResources } from "./ClassSpaceResources";
+import { TeacherAiStudio } from "./TeacherAiStudio";
 import { type ClassSummary } from "./class-types";
 import { Confirm, ShownOnce, useMutate } from "./class-ui";
 import { Roster } from "./Roster";
@@ -38,6 +41,7 @@ const text = defineText({
     studentsTab: "Học sinh",
     workTab: "Bài đã giao",
     resourcesTab: "Tài nguyên lớp",
+    aiTab: "Trợ lý AI",
     progressTab: "Theo dõi",
   },
   en: {
@@ -63,6 +67,7 @@ const text = defineText({
     studentsTab: "Students",
     workTab: "Assigned work",
     resourcesTab: "Class resources",
+    aiTab: "AI assistant",
     progressTab: "Progress",
   },
 });
@@ -72,10 +77,19 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   const archived = classroom.status === "ARCHIVED";
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get("tab");
+  useEffect(() => {
+    if (searchParams.get("tab") === "resources" && searchParams.has("aiJob") && !archived) {
+      const next = new URLSearchParams(searchParams);
+      next.set("tab", "ai");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams, archived]);
+  const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classroom.id], queryFn: () => api(`/classes/${classroom.id}/assignable-content`), enabled: !archived && requestedTab === "ai" });
   const tabs = [
     { id: "students", label: t.studentsTab, icon: Users },
     { id: "work", label: t.workTab, icon: ClipboardList },
     { id: "resources", label: t.resourcesTab, icon: Layers },
+    ...(!archived ? [{ id: "ai", label: t.aiTab, icon: Sparkles }] : []),
     ...(!archived ? [{ id: "progress", label: t.progressTab, icon: BarChart2 }, { id: "insights", label: insightText().tab, icon: Lightbulb }] : []),
   ];
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab! : "students";
@@ -89,6 +103,8 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
   const selectTab = (tab: string) => {
     const next = new URLSearchParams(searchParams);
     next.set("tab", tab);
+    // aiJob belongs to the AI tab; keeping it on another tab would trip the old-link redirect below.
+    if (tab !== "ai") next.delete("aiJob");
     setSearchParams(next);
   };
   return (
@@ -175,6 +191,7 @@ export function ClassDetail({ classroom }: { classroom: ClassSummary }) {
           <Assignments classroom={classroom} />
         </>}
         {activeTab === "resources" && <TeacherClassResources classId={classroom.id} disabled={archived} />}
+        {activeTab === "ai" && !archived && <TeacherAiStudio classId={classroom.id} lessons={lessons.data?.lessons ?? []} onMaterialized={(resourceId) => { const next = new URLSearchParams(searchParams); next.set("tab", "resources"); next.set("focus", resourceId); next.delete("aiJob"); setSearchParams(next); }} />}
         {activeTab === "progress" && !archived && <PracticeAnalytics classId={classroom.id} classroom={classroom} />}
         {activeTab === "insights" && !archived && <ClassInsights classId={classroom.id} />}
       </section>

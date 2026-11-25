@@ -1,23 +1,17 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, lazy, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Check, Pencil, RefreshCw, Sparkles, X } from "lucide-react";
 import { idempotencyKey, isApiError } from "../../lib/api";
+import { useAiJobs, useAiRequestForm, useAiJob, useAiReview, CREDIT_ERROR_CODES } from "./teacher-ai-hooks";
+import { canMaterialize } from "./teacher-ai-view";
 import { Badge, ErrorBox, Modal } from "../../components/ui";
 import { defineText, formatDateTime } from "../../i18n";
-import { AiQuotaMeter, isQuotaFull, useAiQuota } from "../ai-usage/AiQuota";
+import { AiQuotaMeter } from "../ai-usage/AiQuota";
 import {
-  ACTIVE_STATUSES,
-  cancelAiJob,
-  createAiJob,
   decideAiItem,
   effectivePayload,
-  getAiJob,
-  listAiJobs,
-  materializeAiJob,
   MAX_ITEMS,
-  POLL_INTERVAL_MS,
-  POLL_LIMIT_MS,
   type AiCardItem,
   type AiDifficulty,
   type AiItemPayload,
@@ -28,10 +22,8 @@ import {
 } from "./teacher-ai-api";
 
 // TAI-05: credit UI is loaded on demand. This panel is also part of the shared class chunk, so it carries no credit copy.
-const AiCreditEstimate = lazy(() => import("../credits/AiCreditEstimate"));
-const AiJobCredits = lazy(() => import("../credits/AiJobCredits"));
-type CreditEstimateValue = { enabled: boolean; credits: number; available: number } | undefined;
-const CREDIT_ERROR_CODES = ["AI_ESTIMATE_CHANGED", "AI_CREDITS_INSUFFICIENT"];
+export const AiCreditEstimate = lazy(() => import("../credits/AiCreditEstimate"));
+export const AiJobCredits = lazy(() => import("../credits/AiJobCredits"));
 
 const text = defineText({
   vi: {
@@ -133,6 +125,7 @@ const text = defineText({
     materializeHint: "Cần quyết định mọi mục và giữ ít nhất một mục.",
     materializeTitle: "Tạo bản nháp từ các mục đã giữ",
     resourceName: "Tên tài nguyên",
+    titleTaken: "Lớp đã có tài nguyên trùng tên này. Hãy đặt tên khác rồi bấm lại.",
     materializeLead: (kept: number, kind: string) => `${kept} mục sẽ được đưa vào một ${kind} ở trạng thái bản nháp. Học sinh chưa thấy cho đến khi thầy cô xuất bản.`,
     create: "Tạo bản nháp",
     creating: "Đang tạo…",
@@ -239,6 +232,7 @@ const text = defineText({
     materializeHint: "Decide every item and keep at least one.",
     materializeTitle: "Create a draft from the kept items",
     resourceName: "Resource name",
+    titleTaken: "This class already has a resource with this name. Choose another name and try again.",
     materializeLead: (kept: number, kind: string) => `${kept} items go into one ${kind} draft. Students see nothing until you publish.`,
     create: "Create draft",
     creating: "Creating…",
@@ -255,7 +249,6 @@ const JOB_PARAM = "aiJob";
 
 /** Teacher AI workspace (TAI-T5): generate -> follow status -> review each item -> materialize a normal DRAFT. */
 export function TeacherAiPanel({ classId, lessons, onMaterialized }: { classId: string; lessons: Lesson[]; onMaterialized: (resourceId: string) => void }) {
-  const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedJobId = searchParams.get(JOB_PARAM);
   const selectJob = (jobId: string | null) => {
@@ -264,58 +257,9 @@ export function TeacherAiPanel({ classId, lessons, onMaterialized }: { classId: 
     else next.delete(JOB_PARAM);
     setSearchParams(next, { replace: true });
   };
-
-  const quota = useAiQuota("GENERATE_RESOURCE");
-  const jobs = useQuery({ queryKey: ["ai-jobs", classId], queryFn: () => listAiJobs(classId) });
-
-  const [targetKind, setTargetKind] = useState<AiTargetKind>("STUDY_QUIZ");
-  const [lessonId, setLessonId] = useState("");
-  const [itemCount, setItemCount] = useState(10);
-  const [difficulty, setDifficulty] = useState<AiDifficulty | "">("");
-  const [instruction, setInstruction] = useState("");
-  // TAI-05: the estimate shown for the CURRENT inputs (undefined while it is being worked out). `enabled: false` = credits off.
-  const [credit, setCredit] = useState<CreditEstimateValue>();
-  const creditBody = useMemo(
-    () => (lessonId ? { purpose: "GENERATE_RESOURCE" as const, targetKind, lessonId, itemCount, ...(difficulty ? { difficulty } : {}), ...(instruction.trim() ? { instruction: instruction.trim() } : {}) } : null),
-    [targetKind, lessonId, itemCount, difficulty, instruction],
-  );
-  const creditShort = !!credit && credit.enabled && credit.available < credit.credits;
-  const creditWait = !!lessonId && !credit;
-
-  const create = useMutation({
-    mutationFn: () =>
-      createAiJob(
-        classId,
-        {
-          targetKind, lessonId, itemCount, ...(difficulty ? { difficulty } : {}), ...(instruction.trim() ? { instruction: instruction.trim() } : {}),
-          ...(credit?.enabled ? { confirmedCredits: credit.credits } : {}),
-        },
-        idempotencyKey(),
-      ),
-    onError: (error) => {
-      if (isApiError(error, "AI_QUOTA_EXCEEDED")) void quota.refetch();
-    },
-    onSuccess: (job) => {
-      qc.invalidateQueries({ queryKey: ["my-credits"] });
-      qc.invalidateQueries({ queryKey: ["ai-quota"] });
-      qc.invalidateQueries({ queryKey: ["ai-jobs", classId] });
-      qc.setQueryData(["ai-job", classId, job.id], job);
-      selectJob(job.id);
-    },
-  });
-
-  const max = MAX_ITEMS[targetKind];
-  const quotaFull = isQuotaFull(quota.data);
-  const cannotGenerate = create.isPending || !lessonId || quotaFull || creditWait || creditShort;
-  const retryFrom = (job: AiJobView) => {
-    // A legacy DECK job is retried as a Quiz (STUDY_QUIZ, A-D questions with an answer key).
-    const kind: AiTargetKind = job.targetKind === "DECK" ? "STUDY_QUIZ" : job.targetKind;
-    setTargetKind(kind);
-    setLessonId(job.lessonId);
-    setItemCount(Math.min(job.requestedCount, MAX_ITEMS[kind]));
-    selectJob(null);
-    document.getElementById(`ai-form-${classId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const { jobs } = useAiJobs(classId);
+  const { quota, targetKind, setTargetKind, lessonId, setLessonId, itemCount, setItemCount, difficulty, setDifficulty, instruction, setInstruction, setCredit, creditBody, create, max, cannotGenerate, retryFrom } =
+    useAiRequestForm(classId, (id) => selectJob(id), () => selectJob(null));
 
   return (
     <section className="teacher-ai-panel" aria-labelledby={`ai-title-${classId}`}>
@@ -436,7 +380,7 @@ export function TeacherAiPanel({ classId, lessons, onMaterialized }: { classId: 
   );
 }
 
-function StatusBadge({ job }: { job: AiJobView }) {
+export function StatusBadge({ job }: { job: AiJobView }) {
   if (job.materializedResourceId) return <Badge>{t.materialized}</Badge>;
   const tone = job.status === "FAILED" ? "not_passed" : job.status === "SUCCEEDED" ? "passed" : "outline";
   return <Badge tone={tone}>{t.statuses[job.status]}</Badge>;
@@ -457,43 +401,7 @@ function AiJobWorkspace({
   onRetry: (job: AiJobView) => void;
   onMaterialized: (resourceId: string) => void;
 }) {
-  const qc = useQueryClient();
-  const [pollStartedAt, setPollStartedAt] = useState(() => Date.now());
-  const [now, setNow] = useState(() => Date.now());
-  const job = useQuery({
-    queryKey: ["ai-job", classId, jobId],
-    queryFn: () => getAiJob(classId, jobId),
-    refetchInterval: (query) => {
-      const data = query.state.data as AiJobView | undefined;
-      return data && ACTIVE_STATUSES.includes(data.status) && Date.now() - pollStartedAt < POLL_LIMIT_MS ? POLL_INTERVAL_MS : false;
-    },
-  });
-  const data = job.data;
-  const active = !!data && ACTIVE_STATUSES.includes(data.status);
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [active]);
-  useEffect(() => {
-    if (data && !ACTIVE_STATUSES.includes(data.status)) {
-      qc.invalidateQueries({ queryKey: ["ai-jobs", classId] });
-      qc.invalidateQueries({ queryKey: ["ai-quota"] });
-      qc.invalidateQueries({ queryKey: ["my-credits"] });
-    }
-  }, [data?.status]);
-  const stillProcessing = active && now - pollStartedAt >= POLL_LIMIT_MS;
-
-  const cancel = useMutation({
-    mutationFn: () => cancelAiJob(classId, jobId),
-    onSuccess: (view) => {
-      qc.setQueryData(["ai-job", classId, jobId], view);
-      qc.invalidateQueries({ queryKey: ["ai-jobs", classId] });
-      qc.invalidateQueries({ queryKey: ["ai-quota"] });
-      qc.invalidateQueries({ queryKey: ["my-credits"] });
-    },
-  });
-
+  const { job, data, active, stillProcessing, checkAgain, cancel } = useAiJob(classId, jobId);
   const lessonTitle = data ? lessons.find((l) => l.id === data.lessonId)?.title : undefined;
 
   return (
@@ -523,7 +431,7 @@ function AiJobWorkspace({
       {stillProcessing && (
         <div className="notice" role="status">
           {t.stillProcessing}{" "}
-          <button type="button" className="secondary button-compact" onClick={() => { setPollStartedAt(Date.now()); setNow(Date.now()); job.refetch(); }}>
+          <button type="button" className="secondary button-compact" onClick={checkAgain}>
             {t.checkAgain}
           </button>
         </div>
@@ -548,55 +456,7 @@ function AiJobWorkspace({
 }
 
 function AiReview({ classId, job, onMaterialized }: { classId: string; job: AiJobView; onMaterialized: (resourceId: string) => void }) {
-  const items = job.items ?? [];
-  const decided = items.filter((item) => item.decision).length;
-  const kept = items.filter((item) => item.decision && item.decision.decision !== "REJECTED").length;
-  const locked = !!job.materializedResourceId;
-  const [dialog, setDialog] = useState(false);
-  const [created, setCreated] = useState<{ id: string; title: string } | null>(null);
-  const qc = useQueryClient();
-  const undecided = items.filter((item) => !item.decision);
-  const [keepingAll, setKeepingAll] = useState<number | null>(null);
-  const [keepAllFailure, setKeepAllFailure] = useState<{ failed: number; total: number; error: unknown } | null>(null);
-  /**
-   * Keeps every undecided item (edits and rejections stay). Optimistic: the items show "Giữ" at once, then the requests
-   * go out in parallel (the server serializes them with its per-job lock). Their responses are not written to the
-   * cache, since each carries the whole job as of its own moment; one refetch at the end syncs the final state, and an
-   * item whose request failed is rolled back on its own and reported.
-   */
-  const keepAllUndecided = async () => {
-    const ids = undecided.map((item) => item.id);
-    if (!ids.length || keepingAll !== null) return;
-    const key = ["ai-job", classId, job.id];
-    setKeepingAll(ids.length);
-    setKeepAllFailure(null);
-    try {
-      await qc.cancelQueries({ queryKey: key });
-      const pending = new Set(ids);
-      const at = new Date().toISOString();
-      qc.setQueryData<AiJobView>(key, (current) => current && {
-        ...current,
-        items: (current.items ?? []).map((item) => pending.has(item.id) && !item.decision
-          ? { ...item, decision: { decision: "ACCEPTED", editedPayload: null, reasonCode: null, at, flags: [] } }
-          : item),
-      });
-      const results = await Promise.allSettled(ids.map((id) => decideAiItem(classId, job.id, id, { decision: "ACCEPTED" })));
-      const failed = new Set(ids.filter((_, i) => results[i].status === "rejected"));
-      if (failed.size) {
-        qc.setQueryData<AiJobView>(key, (current) => current && {
-          ...current,
-          items: (current.items ?? []).map((item) => (failed.has(item.id) ? { ...item, decision: null } : item)),
-        });
-        const firstError = results.find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
-        setKeepAllFailure({ failed: failed.size, total: ids.length, error: firstError });
-      }
-    } catch (error) {
-      setKeepAllFailure({ failed: ids.length, total: ids.length, error });
-    } finally {
-      setKeepingAll(null);
-      void qc.invalidateQueries({ queryKey: key });
-    }
-  };
+  const { items, decided, kept, locked, dialog, setDialog, created, setCreated, undecided, keepingAll, keepAllFailure, keepAllUndecided, decideItem, materialize } = useAiReview(classId, job);
   return (
     <div className="teacher-ai-review">
       <p className="tiny">{t.summary(job.validCount ?? items.length, job.requestedCount, job.droppedCount ?? 0)}</p>
@@ -618,7 +478,7 @@ function AiReview({ classId, job, onMaterialized }: { classId: string; job: AiJo
         </div>
       )}
       {items.map((item) => (
-        <AiReviewItem key={item.id} classId={classId} job={job} item={item} locked={locked} />
+        <AiReviewItem key={item.id} classId={classId} job={job} item={item} locked={locked} decideItem={decideItem} />
       ))}
       {created && (
         <p className="notice" role="status">
@@ -634,8 +494,8 @@ function AiReview({ classId, job, onMaterialized }: { classId: string; job: AiJo
       )}
       {!locked && (
         <div className="button-row">
-          <button type="button" className="primary" disabled={decided < items.length || kept === 0} onClick={() => setDialog(true)}>{t.materialize}</button>
-          {(decided < items.length || kept === 0) && <small className="tiny muted">{t.materializeHint}</small>}
+          <button type="button" className="primary" disabled={!canMaterialize(job, items)} onClick={() => setDialog(true)}>{t.materialize}</button>
+          {!canMaterialize(job, items) && <small className="tiny muted">{t.materializeHint}</small>}
         </div>
       )}
       {dialog && (
@@ -643,11 +503,11 @@ function AiReview({ classId, job, onMaterialized }: { classId: string; job: AiJo
           classId={classId}
           job={job}
           kept={kept}
+          materialize={materialize}
           onClose={() => setDialog(false)}
           onDone={(resource) => {
             setDialog(false);
             setCreated(resource);
-            onMaterialized(resource.id);
           }}
         />
       )}
@@ -655,31 +515,29 @@ function AiReview({ classId, job, onMaterialized }: { classId: string; job: AiJo
   );
 }
 
-function MaterializeDialog({
+export function MaterializeDialog({
   classId,
   job,
   kept,
+  materialize,
   onClose,
   onDone,
+  defaultTitle,
 }: {
   classId: string;
   job: AiJobView;
   kept: number;
+  materialize: (title: string, key: string, onDone: (resource: { id: string; title: string }) => void) => Promise<unknown>;
   onClose: () => void;
   onDone: (resource: { id: string; title: string }) => void;
+  /** Suggested resource name; class resource titles are unique per class, so callers pass a specific one. */
+  defaultTitle?: string;
 }) {
-  const qc = useQueryClient();
-  const [title, setTitle] = useState(`${t.kinds[job.targetKind]} (AI)`);
+  const [title, setTitle] = useState((defaultTitle ?? `${t.kinds[job.targetKind]} (AI)`).slice(0, 160));
   // One key per dialog: a retried click replays instead of creating a second draft.
   const key = useMemo(() => idempotencyKey(), []);
   const run = useMutation({
-    mutationFn: () => materializeAiJob(classId, job.id, title.trim(), key),
-    onSuccess: (resource) => {
-      qc.invalidateQueries({ queryKey: ["ai-job", classId, job.id] });
-      qc.invalidateQueries({ queryKey: ["ai-jobs", classId] });
-      qc.invalidateQueries({ queryKey: ["class-resources", classId] });
-      onDone({ id: resource.id, title: resource.title });
-    },
+    mutationFn: () => materialize(title, key, onDone),
   });
   return (
     <Modal title={t.materializeTitle} onClose={onClose}>
@@ -689,7 +547,9 @@ function MaterializeDialog({
           <span>{t.resourceName}</span>
           <input required maxLength={160} value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <ErrorBox error={run.error} />
+        {isApiError(run.error, "CONFLICT")
+          ? <p className="error" role="alert">{t.titleTaken}</p>
+          : <ErrorBox error={run.error} />}
         <div className="button-row">
           <button type="button" className="secondary" onClick={onClose}>{t.cancelEdit}</button>
           <button className="primary" disabled={run.isPending || !title.trim()}>{run.isPending ? t.creating : t.create}</button>
@@ -699,25 +559,12 @@ function MaterializeDialog({
   );
 }
 
-function AiReviewItem({ classId, job, item, locked }: { classId: string; job: AiJobView; item: AiJobItem; locked: boolean }) {
-  const qc = useQueryClient();
+export function AiReviewItem({ item, locked, decideItem }: { classId: string; job: AiJobView; item: AiJobItem; locked: boolean; decideItem: (itemId: string, body: Parameters<typeof decideAiItem>[3]) => Promise<AiJobView> }) {
   const [mode, setMode] = useState<"" | "edit" | "reject">("");
   const [reason, setReason] = useState("WRONG_ANSWER");
   const decide = useMutation({
-    mutationFn: (body: Parameters<typeof decideAiItem>[3]) => decideAiItem(classId, job.id, item.id, body),
-    onSuccess: (view) => {
-      // Each response carries the whole job as the server saw it at that moment. When several
-      // decisions are in flight, a slower response would overwrite newer decisions on other
-      // items, so only this item is taken from it; a refetch then brings the authoritative view.
-      const fresh = view.items?.find((candidate) => candidate.id === item.id);
-      qc.setQueryData<AiJobView>(["ai-job", classId, job.id], (current) =>
-        current && fresh
-          ? { ...current, items: (current.items ?? []).map((candidate) => (candidate.id === item.id ? fresh : candidate)) }
-          : view,
-      );
-      qc.invalidateQueries({ queryKey: ["ai-job", classId, job.id] });
-      setMode("");
-    },
+    mutationFn: (body: Parameters<typeof decideAiItem>[3]) => decideItem(item.id, body),
+    onSuccess: () => setMode(""),
   });
   const decision = item.decision?.decision;
   const shown = effectivePayload(item);
@@ -805,7 +652,7 @@ const visibleFlags = (flags: string[]) =>
       !(flag === "NEAR_DUPLICATE_ELSEWHERE" && flags.includes("EXACT_DUPLICATE_ELSEWHERE")),
   );
 
-function ItemView({ payload }: { payload: AiItemPayload }) {
+export function ItemView({ payload }: { payload: AiItemPayload }) {
   if (payload.type === "CARD")
     return (
       <dl className="teacher-ai-card">
@@ -831,7 +678,7 @@ function ItemView({ payload }: { payload: AiItemPayload }) {
   );
 }
 
-function ItemEditor({ initial, pending, onCancel, onSave }: { initial: AiItemPayload; pending: boolean; onCancel: () => void; onSave: (payload: AiItemPayload) => void }) {
+export function ItemEditor({ initial, pending, onCancel, onSave }: { initial: AiItemPayload; pending: boolean; onCancel: () => void; onSave: (payload: AiItemPayload) => void }) {
   const [draft, setDraft] = useState<AiItemPayload>(initial);
   if (draft.type === "CARD") {
     const card = draft as AiCardItem;

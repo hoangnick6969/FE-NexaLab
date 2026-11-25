@@ -76,6 +76,7 @@ const text = defineText({
     modeDirect: "Tạo nội dung trực tiếp",
     modeImport: "Nhập từ file CSV",
     modeAi: "Soạn nháp bằng AI",
+    aiStudio: "Soạn bằng Trợ lý AI",
     downloadTemplate: "Tải file mẫu CSV",
     csvTemplateTip: (kind: string) => `Tải file mẫu định dạng CSV chuẩn UTF-8 cho ${kind}`,
     requiredColumns: "Các cột bắt buộc trong CSV:",
@@ -158,6 +159,7 @@ const text = defineText({
     modeDirect: "Create directly",
     modeImport: "Import from CSV",
     modeAi: "Draft with AI",
+    aiStudio: "Draft with AI assistant",
     downloadTemplate: "Download CSV template",
     csvTemplateTip: (kind: string) => `Download standard UTF-8 CSV template for ${kind}`,
     requiredColumns: "Required columns in CSV:",
@@ -182,7 +184,6 @@ const text = defineText({
 });
 const t = text();
 import { emptyWrittenPrompt, ResourceEditor, resourceInput, type ResourceContent } from "./ResourceEditor";
-import { TeacherAiPanel } from "./TeacherAiPanel";
 // TAI7-T5: the AI exam drafter is teacher-only and loaded on demand, like the other Teacher AI panels.
 const ExamAiPanel = lazy(() => import("./ExamAiPanel"));
 import type { QuestionDuplicateWarning } from "./teacher-ai-api";
@@ -277,8 +278,8 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   const lessons = useQuery<{ lessons: Array<{ id: string; title: string; grade: number; subject: { name: string } }> }>({ queryKey: ["class-resource-lessons", classId], queryFn: () => api(`/classes/${classId}/assignable-content`) });
   
   // Creation Mode (the Teacher AI tab reopens when the URL names an AI job, so a reload keeps the review in view)
-  const [searchParams] = useSearchParams();
-  const [creationMode, setCreationMode] = useState<"direct" | "import" | "ai">(searchParams.has("aiJob") ? "ai" : "direct");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [creationMode, setCreationMode] = useState<"direct" | "import">("direct");
   const [isFormOpen, setIsFormOpen] = useState(true);
   const [focusedResourceId, setFocusedResourceId] = useState<string | null>(null);
   
@@ -304,6 +305,17 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
   const [searchQuery, setSearchQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  useEffect(() => {
+    const focus = searchParams.get("focus");
+    if (!focus) return;
+    setSearchQuery("");
+    setKindFilter("ALL");
+    setStatusFilter("ALL");
+    setFocusedResourceId(focus);
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const action = useMutation({
     mutationFn: ({ path, body, method, key }: any) => key ? mutate(path, method ?? "POST", body, key) : api(path, method ?? "POST", body),
@@ -473,7 +485,7 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
           <div className="resource-create-header">
             <h4 className="resource-create-title">
               <Sparkles size={16} aria-hidden="true" />
-              <span>{creationMode === "direct" ? t.createDirect : creationMode === "import" ? t.importCsv : t.modeAi}</span>
+              <span>{creationMode === "direct" ? t.createDirect : t.importCsv}</span>
             </h4>
             {!labOnly && <div className="resource-mode-tabs" role="tablist" aria-label="Phương thức tạo tài nguyên">
               <button
@@ -495,31 +507,11 @@ export function TeacherClassResources({ classId, disabled, labOnly = false }: { 
                 <FileSpreadsheet size={15} aria-hidden="true" />
                 {t.modeImport}
               </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={creationMode === "ai"}
-                className={creationMode === "ai" ? "active" : ""}
-                onClick={() => setCreationMode("ai")}
-              >
-                <Sparkles size={15} aria-hidden="true" />
-                {t.modeAi}
-              </button>
             </div>}
           </div>
+          {!labOnly && <button type="button" className="secondary button-compact" onClick={() => { const next = new URLSearchParams(searchParams); next.set("tab", "ai"); next.delete("focus"); setSearchParams(next); }}><Sparkles size={15} aria-hidden="true" /> {t.aiStudio}</button>}
 
-          {creationMode === "ai" ? (
-            <TeacherAiPanel
-              classId={classId}
-              lessons={lessons.data?.lessons ?? []}
-              onMaterialized={(resourceId) => {
-                setSearchQuery("");
-                setKindFilter("ALL");
-                setStatusFilter("ALL");
-                setFocusedResourceId(resourceId);
-              }}
-            />
-          ) : creationMode === "direct" ? (
+          {creationMode === "direct" ? (
             <form onSubmit={create}>
               <fieldset className="form-lock" disabled={action.isPending}>
                 <div className="form-grid-2col">
