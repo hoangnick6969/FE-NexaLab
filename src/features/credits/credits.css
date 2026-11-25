@@ -4,6 +4,14 @@
 .credit-estimate-line.is-short { color: #ea580c; }
 .credit-job-line { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); }
 .credits-page { display: grid; gap: 16px; }
+.credits-starter-banner { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-teal-43-a20); border-radius: 12px; background: var(--fill-green-94); color: var(--text); }
+.credits-starter-icon { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px; background: var(--brand); color: var(--on-accent); }
+.credits-starter-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.credits-starter-title { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--green); line-height: 1.4; }
+.credits-starter-text { margin: 0; font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+.credits-starter-close { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; color: var(--muted); transition: background var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.credits-starter-close:hover { background: var(--fill-sky-30-a5); color: var(--text); }
+.credits-starter-close:focus-visible { outline: 2px solid var(--line-focus); outline-offset: 2px; }
 .credits-balance { display: flex; flex-wrap: wrap; gap: 12px; }
 .credits-balance-card { display: flex; align-items: center; gap: 10px; min-width: 220px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--brand-ink); }
 .credits-balance-card small { display: block; color: var(--muted); }

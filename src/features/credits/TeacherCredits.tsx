@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Coins } from "lucide-react";
+import { Coins, Gift, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageHeading } from "../../components/PageHeading";
 import { Badge, Empty, ErrorBox, PageLoader } from "../../components/ui";
@@ -7,6 +8,17 @@ import { defineText, formatDateTime } from "../../i18n";
 import { fetchMyCredits, type CreditTransaction } from "./credits-api";
 import { historyAmount } from "./credits-view";
 import "./credits.css";
+
+const STARTER_BANNER_DISMISSED_KEY = "nexalab.starterBanner.dismissed";
+
+function readBannerDismissed(): boolean {
+  try {
+    const value = localStorage.getItem(STARTER_BANNER_DISMISSED_KEY);
+    return value === "1" || value === "true";
+  } catch {
+    return false;
+  }
+}
 
 const text = defineText({
   vi: {
@@ -16,8 +28,11 @@ const text = defineText({
     available: "Khả dụng",
     reserved: "Đang giữ cho yêu cầu chưa xong",
     unit: "tín dụng",
+    starterTitle: (n: number) => `Quà khởi đầu: ${n} tín dụng miễn phí`,
+    starterBody: (n: number) => `Thầy cô đã nhận ${n} tín dụng để dùng thử Trợ lý AI. Tín dụng này không hết hạn.`,
+    starterDismiss: "Ẩn thông báo",
     historyTitle: "Lịch sử tín dụng AI",
-    empty: "Chưa có giao dịch tín dụng nào. Quản trị viên sẽ cấp tín dụng cho thầy cô.",
+    empty: "Chưa có giao dịch tín dụng nào.",
     disabled: "Tín dụng AI chưa được bật cho hệ thống này.",
     when: "Thời gian",
     what: "Nội dung",
@@ -25,6 +40,10 @@ const text = defineText({
     loadMore: "Xem thêm",
     loading: "Đang tải…",
     back: "Quay lại lớp học",
+    origins: {
+      STARTER: "Quà khởi đầu (miễn phí)",
+      PAYMENT: "Nạp tín dụng",
+    } as Record<string, string>,
     kinds: {
       GRANT: "Được cấp thêm",
       ADJUST: "Điều chỉnh bởi quản trị viên",
@@ -41,8 +60,11 @@ const text = defineText({
     available: "Available",
     reserved: "Held for unfinished requests",
     unit: "credits",
+    starterTitle: (n: number) => `Starter gift: ${n} free credits`,
+    starterBody: (n: number) => `You received ${n} credits to try the AI Assistant. These credits do not expire.`,
+    starterDismiss: "Dismiss notice",
     historyTitle: "AI credit history",
-    empty: "No credit transactions yet. An administrator grants credits to you.",
+    empty: "No credit transactions yet.",
     disabled: "AI credits are not turned on for this system.",
     when: "When",
     what: "What",
@@ -50,6 +72,10 @@ const text = defineText({
     loadMore: "Show more",
     loading: "Loading…",
     back: "Back to classes",
+    origins: {
+      STARTER: "Starter gift (free)",
+      PAYMENT: "Credit top-up",
+    } as Record<string, string>,
     kinds: {
       GRANT: "Credits granted",
       ADJUST: "Adjusted by an administrator",
@@ -64,6 +90,7 @@ const text = defineText({
 /** Teacher credit balance and history (TAI5-T5). Credits only; teacher route, loaded on demand. */
 export default function TeacherCredits() {
   const t = text();
+  const [bannerDismissed, setBannerDismissed] = useState(readBannerDismissed);
   const query = useInfiniteQuery({
     queryKey: ["my-credits", "history"],
     queryFn: ({ pageParam }) => fetchMyCredits(pageParam),
@@ -72,6 +99,16 @@ export default function TeacherCredits() {
   });
   const first = query.data?.pages[0];
   const rows: CreditTransaction[] = query.data?.pages.flatMap((p) => p.transactions) ?? [];
+
+  function dismissStarterBanner() {
+    setBannerDismissed(true);
+    try {
+      localStorage.setItem(STARTER_BANNER_DISMISSED_KEY, "1");
+    } catch {
+      // Page must keep working when storage is unavailable or blocked.
+    }
+  }
+
   return (
     <section className="credits-page" aria-labelledby="credits-title">
       <PageHeading eyebrow={t.eyebrow} title={t.title} description={t.description} />
@@ -80,6 +117,26 @@ export default function TeacherCredits() {
       {first && !first.enabled && <Empty>{t.disabled}</Empty>}
       {first?.enabled && (
         <>
+          {first.starterGrant && !bannerDismissed && (
+            <div className="credits-starter-banner" data-testid="credits-starter-banner">
+              <div className="credits-starter-icon" aria-hidden="true">
+                <Gift size={18} />
+              </div>
+              <div className="credits-starter-body">
+                <p className="credits-starter-title">{t.starterTitle(first.starterGrant.credits)}</p>
+                <p className="credits-starter-text">{t.starterBody(first.starterGrant.credits)}</p>
+              </div>
+              <button
+                type="button"
+                className="credits-starter-close"
+                aria-label={t.starterDismiss}
+                title={t.starterDismiss}
+                onClick={dismissStarterBanner}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+          )}
           <div className="credits-balance" aria-label={t.title}>
             <div className="credits-balance-card" data-testid="credits-available">
               <Coins size={18} aria-hidden="true" />
@@ -110,11 +167,12 @@ export default function TeacherCredits() {
               <tbody>
                 {rows.map((row) => {
                   const shown = historyAmount(row);
+                  const label = (row.origin && t.origins[row.origin]) || t.kinds[row.kind] || row.kind;
                   return (
                     <tr key={row.id} data-kind={row.kind}>
                       <td>{formatDateTime(row.createdAt)}</td>
                       <td>
-                        {t.kinds[row.kind] ?? row.kind}
+                        {label}
                         {row.kind === "SETTLE" && <small className="muted"> · {t.charged(row.charged ?? 0, row.credits)}</small>}
                       </td>
                       <td className="num">

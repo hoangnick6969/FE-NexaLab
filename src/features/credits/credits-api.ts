@@ -16,10 +16,12 @@ export type CreditEstimateBody =
 /** `enabled: false` means the feature is off: no estimate is shown and no `confirmedCredits` is sent. */
 export type CreditEstimate = { enabled: boolean; credits: number; pricingVersion: number | null; available: number };
 
+export type CreditOrigin = "STARTER" | "PAYMENT" | "ADMIN" | null;
 export type CreditTransactionKind = "GRANT" | "ADJUST" | "RESERVE" | "SETTLE" | "REFUND";
 export type CreditTransaction = {
   id: string;
   kind: CreditTransactionKind;
+  origin?: CreditOrigin;
   /** Signed effect on the available balance. */
   credits: number;
   /** SETTLE only: what the job actually cost. */
@@ -27,7 +29,15 @@ export type CreditTransaction = {
   jobId: string | null;
   createdAt: string;
 };
-export type MyCredits = { enabled: boolean; available: number; reserved: number; transactions: CreditTransaction[]; nextCursor: string | null };
+export type StarterGrant = { credits: number; grantedAt: string };
+export type MyCredits = {
+  enabled: boolean;
+  available: number;
+  reserved: number;
+  starterGrant?: StarterGrant | null;
+  transactions: CreditTransaction[];
+  nextCursor: string | null;
+};
 
 /** Per-job credit state returned with an AI job (credits on only). */
 export type JobCredits = { estimated: number; state: "reserved" | "settled" | "refunded"; charged: number | null; refunded: number | null };

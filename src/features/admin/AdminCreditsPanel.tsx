@@ -3,18 +3,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, idempotencyKey, mutate } from "../../lib/api";
 import { ErrorBox } from "../../components/ui";
 import { defineText, formatDateTime } from "../../i18n";
+import type { CreditOrigin } from "../credits/credits-api";
 import { signed } from "../credits/credits-view";
 import "./admin-credits.css";
 
 const text = defineText({
   vi: {
     title: "Tín dụng AI",
-    lead: "Chỉ quản trị viên cấp hoặc điều chỉnh tín dụng. Mọi thay đổi cần lý do và được ghi vào nhật ký; sổ tín dụng không bao giờ bị sửa hay xóa.",
+    lead: "Hệ thống tự tặng quà khởi đầu một lần cho mỗi giáo viên; ngoài ra chỉ quản trị viên cấp hoặc điều chỉnh tín dụng. Mọi thay đổi cần lý do và được ghi vào nhật ký; sổ tín dụng không bao giờ bị sửa hay xóa.",
     available: "Khả dụng",
     reserved: "Đang giữ cho yêu cầu chưa xong",
     unit: "tín dụng",
     recent: "Giao dịch gần đây",
     none: "Chưa có giao dịch.",
+    origins: { STARTER: "Quà khởi đầu (tự động)", PAYMENT: "Nạp qua thanh toán" } as Record<string, string>,
     kinds: { GRANT: "Cấp", ADJUST: "Điều chỉnh", RESERVE: "Giữ trước", SETTLE: "Tính phí", REFUND: "Hoàn lại" } as Record<string, string>,
     grantTitle: "Cấp tín dụng",
     adjustTitle: "Điều chỉnh có dấu",
@@ -29,12 +31,13 @@ const text = defineText({
   },
   en: {
     title: "AI credits",
-    lead: "Only an administrator grants or adjusts credits. Every change needs a reason and is audited; the credit ledger is never edited or deleted.",
+    lead: "The system gives each teacher a one-time starter gift; otherwise only an administrator grants or adjusts credits. Every change needs a reason and is audited; the credit ledger is never edited or deleted.",
     available: "Available",
     reserved: "Held for unfinished requests",
     unit: "credits",
     recent: "Recent transactions",
     none: "No transactions yet.",
+    origins: { STARTER: "Starter gift (automatic)", PAYMENT: "Paid top-up" } as Record<string, string>,
     kinds: { GRANT: "Grant", ADJUST: "Adjustment", RESERVE: "Held", SETTLE: "Charged", REFUND: "Refunded" } as Record<string, string>,
     grantTitle: "Grant credits",
     adjustTitle: "Signed adjustment",
@@ -49,7 +52,7 @@ const text = defineText({
   },
 });
 
-type AdminTransaction = { id: string; kind: string; credits: number; charged: number | null; jobId: string | null; reason: string | null; createdAt: string };
+type AdminTransaction = { id: string; kind: string; origin?: CreditOrigin; credits: number; charged: number | null; jobId: string | null; reason: string | null; createdAt: string };
 type AdminAccount = { teacherId: string; available: number; reserved: number; transactions: AdminTransaction[]; nextCursor: string | null };
 
 /** Admin credits panel on a teacher's account detail (TAI5-T4): balances, recent history, grant and signed adjustment. */
@@ -76,7 +79,7 @@ export function AdminCreditsPanel({ teacherId }: { teacherId: string }) {
             <ul className="tiny" aria-label={t.recent}>
               {account.data.transactions.map((row) => (
                 <li key={row.id}>
-                  {formatDateTime(row.createdAt)} · <b>{t.kinds[row.kind] ?? row.kind}</b> {row.kind === "SETTLE" ? t.chargeNote(row.charged ?? 0) : signed(row.credits)}
+                  {formatDateTime(row.createdAt)} · <b>{(row.origin && t.origins[row.origin]) || t.kinds[row.kind] || row.kind}</b> {row.kind === "SETTLE" ? t.chargeNote(row.charged ?? 0) : signed(row.credits)}
                   {row.reason ? ` · ${row.reason}` : ""}
                 </li>
               ))}
