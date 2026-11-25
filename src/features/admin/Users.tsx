@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Coins } from "lucide-react";
 import { api, isApiError } from "../../lib/api";
 import { ErrorBox, Field, Modal, useAction } from "../../components/ui";
 import { LoadMore, QueryState, ROLE_LABEL, ReasonDialog, SCOPE_LABEL, Status, rowsOf, usePaged, when } from "./admin-ui";
 import { defineText } from "../../i18n";
 import { Avatar } from "../../components/Avatar";
-import { AdminCreditsPanel } from "./AdminCreditsPanel";
+import { AdminCreditsPanel, GrantCreditsDialog } from "./AdminCreditsPanel";
 
 const text = defineText({
   vi: {
@@ -22,6 +23,7 @@ const text = defineText({
     signIn: "Đăng nhập",
     actionsHead: "Thao tác",
     manage: "Quản lý",
+    grantCredits: "Cấp tín dụng",
     createTitle: "Tạo tài khoản",
     created: "Đã tạo tài khoản",
     linkSent: "Liên kết thiết lập mật khẩu (dùng một lần, 60 phút) đã được gửi qua email.",
@@ -86,6 +88,7 @@ const text = defineText({
     signIn: "Sign-in",
     actionsHead: "Actions",
     manage: "Manage",
+    grantCredits: "Grant credits",
     createTitle: "Create account",
     created: "Account created for",
     linkSent: "A one-time password set-up link (60 minutes) was emailed.",
@@ -144,6 +147,7 @@ export function Users() {
   const [filters, setFilters] = useState({ q: "", role: "", status: "" });
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [grantTarget, setGrantTarget] = useState<{ id: string; fullName: string } | null>(null);
   const q = usePaged(["admin", "users"], "/admin/users", filters);
   const rows = rowsOf(q);
   return (
@@ -201,9 +205,21 @@ export function Users() {
                   <Status value={u.status} />
                 </td>
                 <td>
-                  <button type="button" className="text-button" onClick={() => setSelected(u.id)}>
-                    {t.manage}
-                  </button>
+                  <div className="admin-grant-row-actions">
+                    {u.role === "TEACHER" && (
+                      <button
+                        type="button"
+                        className="secondary admin-grant-trigger"
+                        onClick={() => setGrantTarget({ id: u.id, fullName: u.fullName })}
+                      >
+                        <Coins size={14} aria-hidden />
+                        {t.grantCredits}
+                      </button>
+                    )}
+                    <button type="button" className="text-button" onClick={() => setSelected(u.id)}>
+                      {t.manage}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -213,6 +229,13 @@ export function Users() {
       </QueryState>
       {creating && <CreateUser onClose={() => setCreating(false)} />}
       {selected && <UserDetail id={selected} onClose={() => setSelected(null)} />}
+      {grantTarget && (
+        <GrantCreditsDialog
+          teacherId={grantTarget.id}
+          teacherName={grantTarget.fullName}
+          onClose={() => setGrantTarget(null)}
+        />
+      )}
     </section>
   );
 }

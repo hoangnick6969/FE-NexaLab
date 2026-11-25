@@ -21,3 +21,24 @@
 .credit-history { width: 100%; border-collapse: collapse; }
 .credit-history th, .credit-history td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .credit-history .num { text-align: right; white-space: nowrap; }
+
+/* Admin quick grant credits dialog & row trigger (tokens only, dark-theme safe). */
+.admin-grant-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.admin-grant-trigger { min-height: 36px; padding: 6px 12px; }
+.admin-grant-dialog { display: grid; gap: 14px; }
+.admin-grant-dialog .primary,
+.admin-grant-dialog .secondary { min-height: 36px; }
+.admin-grant-balance { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--fill-neutral-97); color: var(--text); }
+.admin-grant-form { display: grid; gap: 10px; }
+.admin-grant-form .field { margin-bottom: 0; }
+.admin-grant-form textarea { width: 100%; resize: vertical; font: inherit; }
+.admin-grant-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-grant-preset { min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--fill-neutral-97); color: var(--text); font-size: 12px; font-weight: 500; }
+.admin-grant-preset:hover { border-color: var(--brand); color: var(--brand-ink); }
+.admin-grant-preset[aria-pressed="true"] { background: var(--fill-green-94); border-color: var(--brand); color: var(--brand-ink); font-weight: 600; }
+.admin-grant-chip { min-height: 36px; padding: 6px 12px; border: 1px dashed var(--line); border-radius: 999px; background: var(--surface); color: var(--brand-ink); font-size: 12px; font-weight: 500; }
+.admin-grant-chip:hover { border-color: var(--brand); background: var(--fill-neutral-97); }
+.admin-grant-preset:focus-visible,
+.admin-grant-chip:focus-visible { outline: 2px solid var(--line-focus); outline-offset: 2px; }
+.admin-grant-success { display: grid; gap: 12px; justify-items: start; }
+.admin-grant-success .notice { margin: 0; width: 100%; }
